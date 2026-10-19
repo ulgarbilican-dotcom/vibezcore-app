@@ -19,6 +19,11 @@ import { getEffectiveTier } from '@/utils/access-tier';
 
 const FREE_AUDIO_COUNT = SESSIONS.filter((x) => getEffectiveTier(x) === 'public').length;
 
+/* App Review 2.3.10: de iPhone-app noemt geen andere platforms (zelfde
+   aanpak als legal-content.ts). Op Android blijft de tekst Android. */
+const IOS = Platform.OS === 'ios';
+const HEALTH_APP = IOS ? 'Apple Health' : 'Health Connect';
+
 export type FaqCategory =
   | 'overview'
   | 'stateControl'
@@ -181,7 +186,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'stateControl',
     question: "Why does State Control use my resting heart rate?",
     answer:
-      "Your rhythm starts where your body is. VIBEZCORE uses your resting heart rate as the starting tempo — measured in the app, entered by you, or read from Apple Health or Health Connect if you turn that on — and then slowly moves toward the tempo of the state you chose.",
+      `Your rhythm starts where your body is. VIBEZCORE uses your resting heart rate as the starting tempo — measured in the app, entered by you, or read from ${HEALTH_APP} if you turn that on — and then slowly moves toward the tempo of the state you chose.`,
   },
   {
     id: 'state-sound',
@@ -236,7 +241,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     answer:
       "On Android, your phone can pause apps running in the background to save battery. If that happens partway through a breathwork session, the voice guidance and vibration can stop as soon as you lock your screen — even though the timer is still running.\n\n" +
       "Allowing VIBEZCORE to run unrestricted in the background (a standard Android permission, the same one apps like Spotify or WhatsApp use for calls and playback) prevents that: your session keeps going with the same voice, visuals and haptic timing whether your screen is on or locked.\n\n" +
-      "It only affects battery while a session is actually running, and it's entirely optional — without it, sessions still work, but may pause if you lock your screen partway through. You can grant it any time from Settings → Keep sessions running when locked, or the first time a session prompts you for it.",
+      "It only affects battery while a session is actually running, and it's entirely optional — without it, sessions still work, but may pause if you lock your screen partway through. You can grant it the first time a session prompts you for it, by tapping Keep sessions running when locked during a breathwork session, or in your phone's settings for VIBEZCORE (Battery → Unrestricted).",
   },
   {
     id: 'breathwork-need-bracelet',
@@ -266,7 +271,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'breathwork',
     question: 'Do I need a membership to practice breathwork?',
     answer:
-      "You can try each of the five states with a short free preview. The full breathwork experience — every technique and duration — is part of VIBEZCORE Premium, together with State Control and the complete Audio Library: one membership unlocks all three. Not ready for a membership? A Day Pass opens everything for 24 hours.",
+      "You can try each of the five states with a free 30-second preview, and after the intro your first full session is free. The full breathwork experience — every technique and duration — is part of VIBEZCORE Premium, together with State Control and the complete Audio Library: one membership unlocks all three. Not ready for a membership? A Day Pass opens everything for 24 hours.",
   },
   {
     id: 'breathwork-professional-help',
@@ -282,15 +287,17 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'smartwatch',
     question: "Does VIBEZCORE work on my smartwatch?",
     answer:
-      "Yes. VIBEZCORE works with Wear OS watches (Wear OS 3 or later, such as Samsung Galaxy Watch4 and newer) and with Apple Watch.\n\n" +
-      "Breathwork and State Control sessions guide you on your wrist with gentle vibration — also when the watch screen is off. You can pause or end a session right from your watch. On Apple Watch, sessions you start on your iPhone are guided on your wrist.",
+      (IOS
+        ? "Yes. VIBEZCORE works with Apple Watch.\n\n"
+        : "Yes. VIBEZCORE works with Wear OS watches (Wear OS 3 or later, such as Samsung Galaxy Watch4 and newer).\n\n") +
+      "Breathwork and State Control sessions guide you on your wrist with gentle vibration — also when the watch screen is off. Start a session on your watch or on your phone, and pause or end it right from your watch.",
   },
   {
     id: 'watch-without-phone',
     category: 'smartwatch',
     question: "Can I use VIBEZCORE on my watch without my phone?",
     answer:
-      "On Wear OS, yes. Open VIBEZCORE on your watch, choose State Control or Breathwork, pick your state, technique and duration, and start — the session runs entirely on your watch.\n\n" +
+      "Yes. Open VIBEZCORE on your watch, choose State Control or Breathwork, pick your state, technique and duration, and start — the session runs entirely on your watch.\n\n" +
       "Open the app on your phone once to set up your watch. Sessions you do on the watch appear in your history on your phone the next time you open the app.",
   },
   {
@@ -298,21 +305,23 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'smartwatch',
     question: "How do I install VIBEZCORE on my watch?",
     answer:
-      "On Wear OS, VIBEZCORE installs from the Play Store on your watch. During a session on your phone, open Audio & Haptics: if your watch is connected but doesn't have the app yet, tap Install on your watch.",
+      IOS
+        ? "Open the Watch app on your iPhone and install VIBEZCORE under Available Apps. During a session on your phone, Audio & Haptics shows whether your watch is ready."
+        : "On Wear OS, VIBEZCORE installs from the Play Store on your watch. During a session on your phone, open Audio & Haptics: if your watch is connected but doesn't have the app yet, tap Install.",
   },
   {
     id: 'watch-membership',
     category: 'smartwatch',
     question: "Do I need a separate membership for my watch?",
     answer:
-      "No. Your watch uses the same membership as your account on your phone: what's unlocked on your phone is unlocked on your watch. After you subscribe, open VIBEZCORE on your phone once so your watch is updated.",
+      "No. Your watch uses the same membership as your phone: what's unlocked on your phone is unlocked on your watch. After you subscribe, open VIBEZCORE on your phone once so your watch is updated.",
   },
   {
     id: 'watch-heart-rate',
     category: 'smartwatch',
     question: "Does VIBEZCORE use my watch's heart rate?",
     answer:
-      "Not live during a session. If you turn on Apple Health or Health Connect in Settings, VIBEZCORE uses the resting heart rate your watch has saved there to set the starting rhythm of State Control. You can also measure or enter your resting heart rate in the app.",
+      `Not live during a session. If you turn on ${HEALTH_APP} in Settings, VIBEZCORE uses the resting heart rate your watch has saved there to set the starting rhythm of State Control. You can also measure or enter your resting heart rate in the app.`,
   },
 
   /* ── SMART BRACELET & TECHNOLOGY ──────────────────────────────── */
@@ -357,14 +366,14 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'Does the Smart Bead Bracelet track personal data?',
     answer:
       "No. The Smart Bead Bracelet is designed without health sensors: it won't monitor heart rate, sleep or other health metrics. Its only job is to deliver the rhythm.\n\n" +
-      "If you choose, the VIBEZCORE app can read your resting heart rate from Apple Health or Health Connect to personalise State Control — only with your permission.",
+      `If you choose, the VIBEZCORE app can read your resting heart rate from ${HEALTH_APP} to personalise State Control — only with your permission.`,
   },
   {
     id: 'bracelet-needs-smartphone',
     category: 'bracelet',
     question: 'Does VIBEZCORE require a smartphone?',
     answer:
-      "Yes. The bracelet will be set up and controlled with the VIBEZCORE app for iOS and Android, where you choose your state and session. Once a session starts, the bracelet runs it on its own — your phone doesn't need to stay nearby.",
+      "Yes. The bracelet will be set up and controlled with the VIBEZCORE app on your phone, where you choose your state and session. Once a session starts, the bracelet runs it on its own — your phone doesn't need to stay nearby.",
   },
   {
     id: 'bracelet-medical-device',
@@ -491,7 +500,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     answer:
       "International orders may be subject to customs duties or import taxes imposed by your country. These charges are determined by local authorities and are the responsibility of the customer.\n\n" +
       "**EU customers** — VAT is included in the product price. No additional import VAT applies for orders shipped within the EU.\n\n" +
-      "**US customers** — import duties typically only apply to orders above $800 USD. Most VIBEZCORE orders fall below this threshold.\n\n" +
+      "**US customers** — import duties and fees may apply to all US orders, regardless of value.\n\n" +
       "**Canadian customers** — GST/HST may apply. You will be contacted by Canada Post or a customs broker if relevant.",
   },
   {
@@ -537,7 +546,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'What is a Day Pass?',
     answer:
       "A Day Pass is a one-time purchase that opens all of VIBEZCORE Premium — State Control, every breathwork session and the complete Audio Library — for 24 hours from the moment you buy it.\n\n" +
-      "It is not a subscription: nothing renews and there is nothing to cancel. Audio streams during your pass; downloads are part of a membership.\n\n" +
+      "It is not a subscription: nothing renews and there is nothing to cancel. Audio streams during your pass.\n\n" +
       "You can buy a new Day Pass whenever you like, or switch to Monthly or Yearly at any time.",
   },
   {
@@ -549,7 +558,9 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'membership',
     question: 'How do I cancel my membership?',
     answer:
-      "Open the Profile tab and, under Membership, tap Manage next to VIBEZCORE Premium — this takes you straight to your device's subscription settings (Apple ID → Subscriptions on iOS, or the Play Store's Subscriptions page on Android), since Apple and Google require cancellations to go through their own systems for in-app purchases.\n\n" +
+      (IOS
+        ? "Open the Profile tab and, under Your plan, tap Manage subscription — this takes you straight to your Apple ID's Subscriptions page, since Apple requires cancellations of in-app purchases to go through its own system. Deleting the app or your VIBEZCORE account does not cancel a subscription.\n\n"
+        : "Open the Profile tab and, under Your plan, tap Manage subscription — this takes you straight to the Play Store's Subscriptions page, since Google requires cancellations of in-app purchases to go through its own system. Deleting the app or your VIBEZCORE account does not cancel a subscription.\n\n") +
       "Cancellation takes effect at the end of your current billing period — you keep full access until then. Need help finding it? Contact us via the Support Center.",
   },
   {
@@ -562,8 +573,9 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     category: 'membership',
     question: 'Can I pause my membership instead of canceling?',
     answer:
-      "**On Android** — yes. Open your Play Store subscription settings (reachable from the Profile tab, under Membership) and choose Pause instead of Cancel. Your plan picks up again when the pause ends.\n\n" +
-      "**On iOS** — Apple doesn't offer a native pause option. You can cancel and resubscribe later.",
+      IOS
+        ? "Apple doesn't offer a native pause option. You can cancel and resubscribe later — you keep full access until the end of your current billing period."
+        : "Yes. Open your Play Store subscription settings (Profile tab → Your plan → Manage subscription) and choose Pause instead of Cancel. Your plan picks up again when the pause ends.",
   },
   {
     id: 'membership-cant-login',
@@ -587,14 +599,16 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'What data does VIBEZCORE collect?',
     answer:
       "VIBEZCORE collects only what is necessary to provide our services — including account information, purchase details, and usage data to improve the platform. No health or biometric data reaches our servers.\n\n" +
-      "If you turn on Apple Health or Health Connect, VIBEZCORE reads your resting heart rate and saves your sessions as mindful minutes — only on your device and in the health app. Sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.",
+      `If you turn on ${HEALTH_APP}, VIBEZCORE reads your resting heart rate and saves your sessions as mindful minutes — only on your device and in the health app. Your session history and progress are stored on your device only; sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.`,
   },
   {
     id: 'privacy-deletion',
     category: 'privacy',
     question: 'How do I request deletion of my data?',
     answer:
-      "You have the right to request full deletion of your personal data at any time. Submit your request through the Support Center and our team will process it in accordance with applicable data protection law (GDPR and CCPA where applicable) within 30 days.",
+      `If you have a VIBEZCORE account, you can delete it yourself at any time in the Profile tab with **Delete account**. This permanently removes your account and its data and cannot be undone. It does not cancel a subscription — cancel that separately in your ${IOS ? 'Apple ID' : 'Google Play'} settings.\n\n` +
+      "Data stored only on your device can be removed with Settings → Clear all local data, or by uninstalling the app.\n\n" +
+      "You can also request full deletion of your personal data through the Support Center; our team will process it in accordance with applicable data protection law (GDPR and CCPA where applicable) within 30 days.",
   },
 ];
 

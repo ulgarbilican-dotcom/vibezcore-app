@@ -829,6 +829,18 @@ function relayToWatch(
   if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode, restingBpm, startBpm);
   const meta = getModeMeta(mode);
+  /* = het moment dat slag 0 van deze curve op de telefoon voelbaar is */
+  const sentAtMs =
+    Platform.OS === 'ios' && isSessionAudioAvailable() && lastAnchorWallMs > 0
+      ? lastAnchorWallMs
+      : Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0);
+  /* 19 okt 2026 (operator, build 38: "telefoon loopt ~1 s voor op het
+     horloge"): beide horloges rekenen het einde als sentAtMs + remainingSec.
+     remainingSec gold echter voor NU (niet voor sentAtMs, dat 0,12–0,16 s
+     later of — na de Smartwatch-schakelaar — ver in het verleden ligt) en
+     werd op hele seconden afgerond (±0,5 s). Nu de rest op sentAtMs, op
+     0,1 s nauwkeurig. */
+  const remainingAtSent = remainingSec - (sentAtMs - Date.now()) / 1000;
   const start = {
     title: meta.name,
     colorHex: meta.color,
@@ -837,13 +849,9 @@ function relayToWatch(
     holdSec: SESSION_HOLD_SECONDS,
     rampSec: spec.rampSec,
     curveOffsetSec,
-    remainingSec: Math.round(remainingSec),
+    remainingSec: Math.round(remainingAtSent * 10) / 10,
     ...watchStrength(spec),
-    /* = het moment dat slag 0 van deze curve op de telefoon voelbaar is */
-    sentAtMs:
-      Platform.OS === 'ios' && isSessionAudioAvailable() && lastAnchorWallMs > 0
-        ? lastAnchorWallMs
-        : Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0),
+    sentAtMs,
   };
   sendWearState(start);
   sendAppleState(start);

@@ -124,7 +124,7 @@ export const TERMS: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'If you are under this age, use of the platform is permitted only with the consent of a parent or legal guardian.',
+      text: 'VIBEZCORE is not intended for children under 13.',
     },
 
     /* ── 03. Intellectual Property ── */
@@ -416,7 +416,7 @@ export const PRIVACY: LegalDoc = {
     { kind: 'h3', text: 'Mobile App Data' },
     {
       kind: 'p',
-      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts and (if you allow it) crash reports are transmitted to our servers or processors.',
+      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts, anonymous play counts (which audio session was played, linked to a random identifier — not to you or your account) and (if you allow it) crash reports are transmitted to our servers or processors.',
     },
     {
       kind: 'tags',
@@ -563,7 +563,7 @@ export const PRIVACY: LegalDoc = {
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
         { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
-        { title: 'Smartwatch',     text: 'Optional — if you pair a Wear OS watch or Apple Watch, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch. (Your resting heart rate is only read through Apple Health or Health Connect, if you turn that on.)' },
+        { title: 'Smartwatch',     text: `Optional — if you pair ${IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch. (Your resting heart rate is only read through ${IOS ? 'Apple Health' : 'Health Connect'}, if you turn that on.)` },
         { title: 'Apple Health / Health Connect', text: 'Optional — only if you turn it on in Settings. Writes your sessions as mindful minutes and reads your resting heart rate to set your rhythm. Never leaves your device or the health app.' },
         { title: 'Camera & flash', text: 'Optional — only when you choose to read your pulse from your fingertip in State Control. Frames are analysed live on your device and never recorded, saved or uploaded. You can always enter your resting heart rate yourself instead.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
@@ -1212,7 +1212,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'All of the above are stored locally on your device. They are not transmitted to our servers unless you sign in to use Premium across devices.',
+      text: 'All of the above are stored locally on your device and are not synced to our servers — signing in does not change this.',
     },
     { kind: 'h3', text: 'Third-party — payments and crash reports' },
     {
@@ -1457,7 +1457,7 @@ export const HEALTH: LegalDoc = {
     {
       kind: 'danger',
       title: '6.3 Children & Choking Hazard',
-      text: 'The Smart Bead Bracelet contains **small beads** that present a serious **choking hazard** for children under 3 years of age. **Keep the bracelet out of reach of infants and young children at all times.** The product is designed and tested for adults only and is not a toy. Do not allow children to handle, wear, or play with the bracelet, charging cable, or any component. If a bead becomes detached or the bracelet is damaged, stop using it and contact support — **never** allow loose beads or small parts near children. If a child swallows a bead, contact poison control or emergency services immediately.',
+      text: 'The Smart Bead Bracelet contains **small beads** that present a serious **choking hazard** for children under 3 years of age. **Keep the bracelet out of reach of infants and young children at all times.** The product is designed and tested for adults only and is not a toy. Do not allow children to handle, wear, or play with the bracelet, charging dock, or any component. If a bead becomes detached or the bracelet is damaged, stop using it and contact support — **never** allow loose beads or small parts near children. If a child swallows a bead, contact poison control or emergency services immediately.',
     },
     { kind: 'h3', text: '6.4 Skin & Allergies' },
     {

@@ -195,9 +195,18 @@ final class StateSessionController: ObservableObject {
     /* Laat afgeleverd (userInfo-wachtrij): de sessie liep op de telefoon
        intussen door. Negatieve vertraging = klokverschil → negeren. */
     if let sentAtMs = sentAtMs {
-      let delaySec = max(0, Date().timeIntervalSince1970 - sentAtMs / 1000)
+      let rawDelaySec = Date().timeIntervalSince1970 - sentAtMs / 1000
+      let delaySec = max(0, rawDelaySec)
       curveOffset += delaySec
-      remainingSec -= delaySec
+      /* 19 okt 2026 (operator, build 38: "telefoon ~1 s voor op het
+         horloge"): remainingSec geldt op `sentAtMs` (de telefoon stuurt
+         sinds vandaag de rest OP dat moment, niet afgerond). `sentAtMs`
+         ligt vaak 0,12–0,16 s in de toekomst (eerste voelbare slag); komt
+         het bericht vroeger aan, dan eindigt de sessie toch op sentAt +
+         rest — een kleine negatieve vertraging (tot 1 s) telt dus mee voor
+         de eindtijd, niet voor de curve. Groter negatief = klokverschil →
+         negeren, zoals voorheen. */
+      remainingSec -= rawDelaySec >= -1.0 ? rawDelaySec : 0
     }
     guard remainingSec > 0.5 else {
       /* Al voorbij tegen de tijd dat het hier aankwam. */

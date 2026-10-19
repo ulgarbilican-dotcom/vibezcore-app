@@ -42,8 +42,15 @@ struct ContentView: View {
 
 // MARK: - Gedeeld
 
-func clockText(_ sec: Double) -> String {
-  let s = max(0, Int(sec.rounded(.up)))
+/// 19 okt 2026 (operator, build 38: "de telefoon loopt ~1 s voor"): State
+/// Control op de telefoon (bracelet-control.tsx) en de Galaxy Watch tonen
+/// de resterende tijd AFGEROND NAAR BENEDEN; hier rondde alles naar boven
+/// af → het horloge stond bijna altijd één seconde hoger. `roundUp: false`
+/// voor State Control. Breathwork blijft naar boven: de telefoon toont daar
+/// totaal − verstreken hele seconden (breath-session.tsx), = naar boven.
+func clockText(_ sec: Double, roundUp: Bool = true) -> String {
+  let v: Double = roundUp ? sec.rounded(.up) : sec.rounded(.down)
+  let s = max(0, Int(v))
   return String(format: "%d:%02d", s / 60, s % 60)
 }
 
@@ -126,7 +133,13 @@ private struct StateSessionScreen: View {
     GeometryReader { geo in
       StateSessionLayout(state: state, size: geo.size, pulses: pulses, ambient: ambient)
     }
-    .ignoresSafeArea(edges: .bottom)
+    /* 19 okt 2026 (operator, build 38: "de cirkel staat niet in het midden,
+       bovenaan afgesneden"): enkel de onderkant negeerde de veilige zone,
+       dus het midden lag een halve statusbalk te laag op het scherm. Nu
+       het VOLLEDIGE scherm (alle randen) — midden en straal komen zo op
+       elke maat (40–49 mm) uit hetzelfde volle scherm; naam, pauze en END
+       staan relatief tot de cirkel, dus altijd erbinnen. */
+    .ignoresSafeArea()
     .onReceive(state.beats) { strong in
       let now = Date()
       pulses.removeAll { now.timeIntervalSince($0.start) > 3 }
@@ -207,13 +220,16 @@ private struct StateFace: View {
         cycleMs: state.lastCycleMs,
         baseR: r
       )
-      Text(clockText(remaining))
-        .font(.system(size: r * 0.42, weight: ambient ? .medium : .bold).monospacedDigit())
+      /* 19 okt 2026 (operator, build 38): teller iets groter (0,42 → 0,47 r)
+         en iets hoger, zodat hij vrij blijft van de pauzeknop; naar beneden
+         afgerond, zoals de telefoon. */
+      Text(clockText(remaining, roundUp: false))
+        .font(.system(size: r * 0.47, weight: ambient ? .medium : .bold).monospacedDigit())
         .foregroundColor(ambient ? Color(white: 0.74) : .white)
         .shadow(color: .black.opacity(0.5), radius: 3)
         .lineLimit(1)
         .minimumScaleFactor(0.6)
-        .position(x: size.width / 2, y: size.height / 2 - r * 0.04)
+        .position(x: size.width / 2, y: size.height / 2 - r * 0.08)
     }
     .frame(width: size.width, height: size.height)
   }
@@ -332,7 +348,9 @@ private struct BreathSessionScreen: View {
     GeometryReader { geo in
       BreathSessionLayout(controller: controller, size: geo.size, ambient: ambient)
     }
-    .ignoresSafeArea(edges: .bottom)
+    /* 19 okt 2026 (operator, build 38): volledig scherm, zoals State
+       Control — figuur en boog gecentreerd op het hele scherm. */
+    .ignoresSafeArea()
   }
 }
 
@@ -348,7 +366,9 @@ private struct BreathSessionLayout: View {
   private var paused: Bool { controller.paused }
   private var tint: Color { sessionTint(controller.colorHex) }
   /// Figuur groot en centraal, iets hoger dan het midden (tekst eronder).
-  private var acy: CGFloat { cy - r * (paused ? 0.02 : 0.16) }
+  /// 19 okt 2026 (operator, build 38: "figuur is het middelpunt, groter en
+  /// hoger"): 0,16 → 0,22 r boven het midden (gepauzeerd 0,02 → 0,10).
+  private var acy: CGFloat { cy - r * (paused ? 0.10 : 0.22) }
 
   var body: some View {
     ZStack {
@@ -369,16 +389,18 @@ private struct BreathSessionLayout: View {
         .position(x: w / 2, y: acy)
         .allowsHitTesting(false)
 
+        /* 19 okt 2026 (operator, build 38): naam boven de (grotere) figuur
+           en binnen de boog, zodat niets over de figuur ligt. */
         NameRow(title: controller.modeName, dot: Color(hex: controller.colorHex) ?? tint, size: 12)
-          .frame(maxWidth: r * 1.4)
-          .position(x: w / 2, y: cy - r * 0.62)
+          .frame(maxWidth: r * 1.1)
+          .position(x: w / 2, y: cy - r * 0.80)
       }
 
       /* Tik op de figuur = pauze / hervatten (het grootste doel op een
          horlogescherm, zoals de Galaxy Watch). */
       Color.clear
         .contentShape(Rectangle())
-        .frame(width: r * 1.3, height: r * 1.1)
+        .frame(width: r * 1.4, height: r * 1.25) // 19 okt 2026 (operator, build 38): mee met de grotere figuur
         .position(x: w / 2, y: acy)
         .onTapGesture { controller.requestPauseOrResume() }
         .accessibilityLabel(paused ? "Resume" : "Pause")
@@ -433,8 +455,13 @@ private struct BreathFace: View {
     paused ? controller.pausedSessionLeftSec : max(0, controller.sessionEnd.timeIntervalSince(now))
   }
 
-  private var glowR: CGFloat { r * 0.56 * CGFloat(0.7 + 0.44 * b) }
-  private var figureSide: CGFloat { r * 1.8 * 0.53 * breathArtOptical(hex) * CGFloat(0.7 + 0.3 * b) }
+  /// 19 okt 2026 (operator, build 38): figuur ~17 % groter (0,53 → 0,62),
+  /// de gloed groeit mee in straal maar wordt zachter (zie body).
+  private var glowR: CGFloat { r * 0.60 * CGFloat(0.7 + 0.44 * b) }
+  private var figureSide: CGFloat { r * 1.8 * 0.62 * breathArtOptical(hex) * CGFloat(0.7 + 0.3 * b) }
+  /// Middelpunt van de faseboog, iets boven het schermmidden (19 okt 2026,
+  /// operator, build 38: "boog iets hoger").
+  private var arcCy: CGFloat { cy - r * 0.04 }
   /// Los uitgeschreven (type-checker): ademend, gedimd bij pauze en pols omlaag.
   private var figureOpacity: Double {
     let base: Double = 0.74 + 0.26 * b
@@ -445,14 +472,16 @@ private struct BreathFace: View {
 
   var body: some View {
     ZStack {
-      /* gloed in de kleur van de toestand, zwelt mee */
+      /* gloed in de kleur van de toestand, zwelt mee.
+         19 okt 2026 (operator, build 38: "gloed te sterk"): zachter verloop
+         (0,85 → 0,45 halfweg) en minder dekking (0,10 + 0,34 b → 0,06 + 0,20 b). */
       Circle()
         .fill(RadialGradient(
-          colors: [tint, tint.opacity(0.85), tint.opacity(0)],
+          colors: [tint.opacity(0.9), tint.opacity(0.45), tint.opacity(0)],
           center: .center, startRadius: 0, endRadius: glowR
         ))
         .frame(width: 2 * glowR, height: 2 * glowR)
-        .opacity(ambient ? 0.08 : 0.10 + 0.34 * b)
+        .opacity(ambient ? 0.05 : 0.06 + 0.20 * b)
         .position(x: w / 2, y: acy)
 
       /* de figuur */
@@ -467,13 +496,14 @@ private struct BreathFace: View {
         /* halve boog bovenaan: de fase telt af, van links naar rechts */
         PhaseArc(progress: phaseProgress, tint: tint, dim: paused)
           .frame(width: 2 * r * 1.04, height: 2 * r * 1.04)
-          .position(x: w / 2, y: cy)
+          .position(x: w / 2, y: arcCy)
 
-        /* seconden van de fase, links */
+        /* seconden van de fase, links (19 okt 2026, operator, build 38:
+           "teller mag iets groter": 17 → 20, mee met de boog omhoog) */
         Text("\(phaseSecondsLeft)")
-          .font(.system(size: 17, weight: .bold).monospacedDigit())
+          .font(.system(size: 20, weight: .bold).monospacedDigit())
           .foregroundColor(Color.white.opacity(paused ? 0.5 : 0.94))
-          .position(x: w / 2 - r * 0.92, y: cy - r * 0.05)
+          .position(x: w / 2 - r * 0.90, y: arcCy - r * 0.05)
       }
 
       /* "Inhale  Nose" + "4:12 left" */
@@ -491,12 +521,14 @@ private struct BreathFace: View {
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         if !paused && !ambient {
+          /* 19 okt 2026 (operator, build 38): 11 → 13 pt */
           Text(clockText(sessionLeft) + " left")
-            .font(.system(size: 11).monospacedDigit())
+            .font(.system(size: 13, weight: .medium).monospacedDigit())
             .foregroundColor(Color.white.opacity(0.59))
         }
       }
-      .position(x: w / 2, y: cy + r * (paused ? 0.42 : 0.56))
+      /* 19 okt 2026 (operator, build 38): iets lager, vrij van de grotere figuur */
+      .position(x: w / 2, y: cy + r * (paused ? 0.58 : 0.62))
     }
     .frame(width: size.width, height: size.height)
   }
@@ -509,12 +541,13 @@ private struct PhaseArc: View {
   let dim: Bool
   var body: some View {
     ZStack {
+      /* 19 okt 2026 (operator, build 38: "boog iets dunner"): 3,5 → 2,5 pt */
       Circle()
         .trim(from: 0.5, to: 1)
-        .stroke(Color.white.opacity(0.14), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+        .stroke(Color.white.opacity(0.14), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
       Circle()
         .trim(from: 0.5, to: 0.5 + 0.5 * min(1, max(0, progress)))
-        .stroke(tint.opacity(dim ? 0.45 : 1), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+        .stroke(tint.opacity(dim ? 0.45 : 1), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
     }
   }
 }
