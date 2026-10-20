@@ -41,7 +41,7 @@ import { VibezAlertHost } from '@/components/VibezAlert';
 import { ConfirmMomentHost } from '@/components/ConfirmMoment';
 import { SalesNudgeHost } from '@/components/SalesNudgeHost';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand } from '@/constants/theme';
 import {
   getAuthUserIdFromToken,
   getToken,
@@ -102,7 +102,7 @@ if (Platform.OS === 'android') {
 import { bootDecided, markBootDecided } from '@/utils/boot';
 import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
 import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
-import { AccessibilityInfo, AppState, Image, Platform, Text as RNText, View } from 'react-native';
+import { AccessibilityInfo, AppState, Image, Platform, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -127,14 +127,9 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
    (MERK_ANKER §1, BrandFonts in src/constants/theme.ts). Schermen die een
    ander gewicht willen (bold/extrabold/etc.) blijven via BrandFonts.X
    overschrijven — dat wint van defaultProps. */
-const RNTextWithDefault = RNText as unknown as {
-  defaultProps?: { style?: unknown };
-};
-RNTextWithDefault.defaultProps = RNTextWithDefault.defaultProps || {};
-RNTextWithDefault.defaultProps.style = [
-  { fontFamily: BrandFonts.regular },
-  RNTextWithDefault.defaultProps.style,
-];
+/* 20 okt 2026: React 19 negeert Text.defaultProps — deze regel deed niets
+   meer. Inter als standaard (en de grens op de lettergrootte) zit nu in
+   patches/react-native+0.83.6.patch (Libraries/Text/Text.js). */
 
 /* `undefined` = nog aan het checken; `null` = gast; string = token. */
 type AuthState = undefined | null | string;

@@ -54,7 +54,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Animated as RNAnimated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated as RNAnimated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setTabBarOverlayHeight, TAB_BAR_CONTENT_HEIGHT } from '@/utils/tab-bar-inset';
 
@@ -238,6 +238,13 @@ export default function TabLayout() {
      zodat er altijd een vaste eigen content-ruimte overblijft, ongeacht
      toestel — zie `tabBarStyle.height` verderop voor de exacte waarde. */
   const insets = useSafeAreaInsets();
+  /* 20 okt 2026 (operator: "iconen en namen staan te dicht tegen de
+     onderkant"): elk toestel heeft een andere onderrand — iPhone met
+     home-indicator (34), Android met 3 knoppen (~48) of veeggebaren (~16–24,
+     soms 0). De labels krijgen daarom altijd minstens 14 pt lucht onder
+     zich, en op Android 6 pt extra boven de navigatieknoppen/gebarenbalk.
+     iPhone met home-indicator blijft exact Apple's maat. */
+  const tabBottom = Math.max(14, insets.bottom + (Platform.OS === 'android' ? 6 : 0));
   /* Actieve State Control-sessie = volledig scherm, geen tabbalk (operator,
      5 okt 2026) — zie utils/state-control-ui.ts. */
   const [sessionVisible, setSessionVisible] = useState(isActiveSessionVisible());
@@ -278,6 +285,7 @@ export default function TabLayout() {
            terugknop op het verborgen audioscherm — dat is nog steeds het
            eerste scherm van de groep, ook al staat het niet in de balk. */
         backBehavior="initialRoute"
+        safeAreaInsets={{ bottom: tabBottom }}
         /* Operator, 8 okt 2026 ("die player blijft overal in de weg staan
            voor CTA's — hoe zou Apple dat doen"): de mini-speler hoort bij
            de tab-bar, als één blok onderaan (Apple Music). Verborgen tab-bar
@@ -366,7 +374,7 @@ export default function TabLayout() {
                Apple's maat, met net genoeg marge (2px) voor de dalende
                "p" in "Profile" die de vorige 56 liet afsnijden; 51 geeft
                diezelfde veiligheid zonder de overmaat van 62. */
-            height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+            height: TAB_BAR_CONTENT_HEIGHT + tabBottom,
             borderRadius: 0,
             backgroundColor: 'transparent',
             borderTopWidth: 0,
