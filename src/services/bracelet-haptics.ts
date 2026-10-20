@@ -105,7 +105,6 @@ import { AppState, Platform } from 'react-native';
 import { startSessionKeepAlive, stopSessionKeepAlive } from './session-keepalive';
 import { getSetting, setSetting } from '@/utils/settings';
 import {
-  STATE_AMP_FACTOR,
   STATE_MS_FACTOR,
   WATCH_HAPTIC_LEVEL,
   getHapticStrength,
@@ -156,6 +155,10 @@ const LUB_DUB_FRACTION = 0.3;
 const LUB_DUB_MAX_MS = 350;
 /** Met amplitude-sturing: vaste tikduur, sterkte via amplitude. */
 const LUB_MS = 45;
+/** Kracht (0–255) op telefoons MET amplitude-regeling, per sterkte — zelfde
+ *  opbouw als het horloge (WATCH_HAPTIC_LEVEL), iets lager want een
+ *  telefoonmotor is krachtiger dan een horlogemotor (20 okt 2026). */
+const PHONE_AMP_LEVEL: Record<HapticStrength, number> = { soft: 120, medium: 175, strong: 255 };
 const DUB_MS = 35;
 
 const S = Haptics.ImpactFeedbackStyle;
@@ -270,12 +273,20 @@ function buildWaveform(
   /* Sterkte (operator, 11 okt 2026): met amplitude-regeling de kracht,
      zonder de tikduur. */
   const st = curStrength();
-  const ampOf = (a: number) => Math.max(1, Math.min(255, Math.round(a * STATE_AMP_FACTOR[st])));
   const msOf = (ms: number) => Math.round(ms * STATE_MS_FACTOR[st]);
   const lubMs = amplitudeControl ? LUB_MS : msOf(spec.lubMsNoAmp);
   const dubMs = amplitudeControl ? DUB_MS : msOf(spec.dubMsNoAmp);
-  const lubAmp = amplitudeControl ? ampOf(spec.lubAmp) : 255;
-  const dubAmp = amplitudeControl ? ampOf(spec.dubAmp) : 255;
+  /* 20 okt 2026 (operator: "voor ELKE gebruiker correct, niet enkel mijn
+     gsm"): de oude krachten (Sleep 18 … Boost 65 van 255, ×0,55–3) zijn
+     nooit gevoeld — de A16 van de operator heeft geen amplitude-regeling en
+     speelt altijd vol. Op telefoons MET regeling (Pixel, Galaxy S, …) is
+     18/255 gedurende 45 ms voor veel trilmotoren onder de voelbare grens.
+     Nu dezelfde opbouw als op het horloge, die op de pols wél gevoeld en
+     goedgekeurd is: een voelbaar basisniveau per sterkte, de toestand
+     schaalt binnen 85–100 % (Sleep zachter dan Boost), dub = 70 % van lub. */
+  const modeScale = st === 'strong' ? 1 : 0.85 + 0.15 * Math.min(1, Math.max(0, (spec.lubAmp - 18) / (65 - 18)));
+  const lubAmp = amplitudeControl ? Math.max(1, Math.min(255, Math.round(PHONE_AMP_LEVEL[st] * modeScale))) : 255;
+  const dubAmp = amplitudeControl ? Math.max(1, Math.min(255, Math.round(lubAmp * 0.7))) : 255;
   const pushBeat = (cycleMs: number, dubAt: number) => {
     timings.push(lubMs, dubAt - lubMs, dubMs, cycleMs - dubAt - dubMs);
     amplitudes.push(lubAmp, 0, dubAmp, 0);

@@ -147,6 +147,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     super.onStart()
     CatalogStore.addListener(catalogListener)
     CatalogStore.refresh(this)
+    ClockSync.refresh(this)
     BreathSessionState.addListener(breathListener)
     StateSessionState.addListener(stateListener)
     BeatBus.add(beatListener)

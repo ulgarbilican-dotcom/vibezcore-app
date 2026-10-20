@@ -50,8 +50,10 @@ private const val NOTIFICATION_ID = 1001
    - de horlogeklok + de reactietijd van de horlogemotor: 20 ms, voor State
      Control op gevoel bijgesteld door de operator ("nu lijkt het goed"). */
 private const val PHONE_VIBRATOR_LAG_MS = 160L
-private const val WATCH_CLOCK_AHEAD_MS = 20L
-private const val CLOCK_MARGIN_MS = PHONE_VIBRATOR_LAG_MS + WATCH_CLOCK_AHEAD_MS
+/* 20 okt 2026: het klokverschil wordt per horloge gemeten (ClockSync).
+   Op gevoel goed was 160 + 20 bij een gemeten verschil van 93 ms → los van
+   de klok blijft 160 + 20 − 93 = 87 ms over. */
+private const val MARGIN_AFTER_CLOCK_MS = PHONE_VIBRATOR_LAG_MS + 20L - ClockSync.LEGACY_AHEAD_MS
 /* 13 okt 2026 (meting: bericht kwam na een koude start pas na 10,5 s aan;
    de oude grens van 8 s liet de pols 2,5 s achter). De klokken verschillen
    maar ~0,2 s (netwerktijd), dus de volle vertraging aftrekken is veilig;
@@ -240,7 +242,7 @@ class WearBreathSessionService : Service() {
        is de vertraging langer dan de lopende fase, dan springt het horloge
        door naar de fase waar de telefoon nu is (en speelt van die fase het
        stuk dat de telefoon nu voelt, zie startVibration). */
-    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - CLOCK_MARGIN_MS).coerceIn(0L, MAX_LAG_MS) else 0L
+    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - MARGIN_AFTER_CLOCK_MS - ClockSync.aheadMs(this)).coerceIn(0L, MAX_LAG_MS) else 0L
     VzLog.d("breath start sentAt=$sentAt now=${System.currentTimeMillis()} lag=${lag}ms")
     val now = SystemClock.uptimeMillis()
     var round = startRound
