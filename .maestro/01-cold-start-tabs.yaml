@@ -3,17 +3,31 @@ appId: com.ubili.vibezcoreapp
 name: 01 Welkom en alle tabbladen
 ---
 - runFlow: _start-guest.yaml
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 01a-welcome
-- tapOn: "Train Your Mind"
+- tapOn:
+    text: "Train Your Mind"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Explore Audio Library"
     timeout: 20000
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 01b-library-intro
-- tapOn: "Activity"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Activity"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 01c-activity
-- tapOn: "Profile"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Profile"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 01d-profile

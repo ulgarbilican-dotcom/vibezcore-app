@@ -3,14 +3,22 @@ appId: com.ubili.vibezcoreapp
 name: 07 Instant Sessions
 ---
 - runFlow: _start-guest.yaml
-- tapOn: "Reset Yourself"
+- tapOn:
+    text: "Reset Yourself"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Not Now"
     timeout: 20000
-- tapOn: "Not Now"
+- tapOn:
+    text: "Not Now"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Instant Sessions"
     timeout: 20000
-- tapOn: "Instant Sessions"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Instant Sessions"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 07a-instant-sessions

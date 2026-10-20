@@ -4,21 +4,35 @@ appId: com.ubili.vibezcoreapp
 name: 03 State Control-onboarding
 ---
 - runFlow: _start-guest.yaml
-- tapOn: "Control Your State"
+- tapOn:
+    text: "Control Your State"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Explore State Control"
     timeout: 20000
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 03a-state-intro-onboarding
 - assertNotVisible: "Library"
-- tapOn: "Explore State Control"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Explore State Control"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 03b-state-onboarding-step1
 - runFlow: _start-guest.yaml
-- tapOn: "Control Your State"
+- tapOn:
+    text: "Control Your State"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Explore State Control"
     timeout: 20000
-- tapOn: "Not Now"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Not Now"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 03c-state-page-after-not-now

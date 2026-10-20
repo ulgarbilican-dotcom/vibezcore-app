@@ -41,7 +41,8 @@
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
-import { BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts } from '@/constants/theme';
+import { ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -234,12 +235,16 @@ function StateControlIntro({
           van de balk (incl. veilige zone) hier zelf bij de 34 optellen,
           zodat titel en knop op exact dezelfde plek blijven. */}
       {onboarding && onNotNow && (
+        /* Exact de plaats en stijl van "Not Now" in breath-welcome
+           (topbar paddingVertical 10 / paddingHorizontal 18 + backBtn). */
         <Pressable
           onPress={onNotNow}
           hitSlop={14}
-          style={[s.notNow, { top: insets.top + 14 }]}
+          style={[s.notNow, { top: insets.top + 10 }]}
           accessibilityRole="button"
+          accessibilityLabel="Not now, look around first"
         >
+          <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
           <Text style={s.notNowTxt}>Not Now</Text>
         </Pressable>
       )}
@@ -268,12 +273,15 @@ function StateControlIntro({
             onPressOut={() => {
               ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
             }}
-            style={onboarding ? s.introCtaGlass : s.introCtaMatch}
+            style={onboarding ? s.introCtaGlassWrap : s.introCtaMatch}
             android_ripple={{ color: onboarding ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)' }}
           >
-            {onboarding && (
-              <>
-                {/* Zelfde matglas-recept als breath-welcome stap 1. */}
+            {onboarding ? (
+              /* Zelfde opbouw als breath-welcome stap 1: Pressable (ctaWrap)
+                 → View (cta + ctaBlurWrap) → BlurView + witte tint + tekst.
+                 Rechtstreeks in de Pressable bleef de knop onzichtbaar
+                 (flowtest 20 okt 2026). */
+              <View style={s.introCtaGlass}>
                 <BlurView
                   intensity={40}
                   tint="dark"
@@ -281,9 +289,11 @@ function StateControlIntro({
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={[StyleSheet.absoluteFill, s.introCtaTint]} />
-              </>
+                <Text style={s.introCtaGlassTxt}>Explore State Control</Text>
+              </View>
+            ) : (
+              <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>Explore State Control</Text>
             )}
-            <Text style={onboarding ? s.introCtaGlassTxt : [s.ctaTxt, { color: '#1D1D1F' }]}>Explore State Control</Text>
             <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
               <LinearGradient
                 colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
@@ -455,27 +465,29 @@ const s = StyleSheet.create({
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
      `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
+  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 14, overflow: 'hidden' },
   introCtaGlass: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'stretch',
-    marginHorizontal: 0,
+    gap: 10,
     borderRadius: 14,
     paddingVertical: 16,
     overflow: 'hidden',
   },
   introCtaTint: { backgroundColor: 'rgba(255,255,255,0.22)' },
   introCtaGlassTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
-  notNow: { position: 'absolute', left: 20, zIndex: 2 },
-  notNowTxt: {
-    color: 'rgba(255,255,255,0.92)',
-    fontFamily: BrandFonts.semibold,
-    fontSize: 15,
-    textShadowColor: 'rgba(0,0,0,0.55)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
+  notNow: {
+    position: 'absolute',
+    left: 18,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
   },
+  notNowTxt: { color: Brand.textDim, fontFamily: BrandFonts.medium, fontSize: 14 },
   introWrap: {
     flex: 1,
     alignItems: 'center',

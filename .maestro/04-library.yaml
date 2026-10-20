@@ -3,16 +3,26 @@ appId: com.ubili.vibezcoreapp
 name: 04 Audio Library
 ---
 - runFlow: _start-guest.yaml
-- tapOn: "Train Your Mind"
+- tapOn:
+    text: "Train Your Mind"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Explore Audio Library"
     timeout: 20000
-- tapOn: "Explore Audio Library"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Explore Audio Library"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 04a-library-top
 - scroll
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 04b-library-scrolled
 - scroll
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 04c-library-scrolled-more

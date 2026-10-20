@@ -3,30 +3,52 @@ appId: com.ubili.vibezcoreapp
 name: 06 Profiel, FAQ en juridisch
 ---
 - runFlow: _start-guest.yaml
-- tapOn: "Train Your Mind"
+- tapOn:
+    text: "Train Your Mind"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Profile"
     timeout: 20000
-- tapOn: "Profile"
-- waitForAnimationToEnd
-- tapOn: "Sign In or Create Account"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Profile"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
+- tapOn:
+    text: "Sign In or Create Account"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 06a-sign-in
 - back
 - scrollUntilVisible:
     element: "FAQ"
-- tapOn: "FAQ"
-- waitForAnimationToEnd
+- tapOn:
+    text: "FAQ"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 06b-faq
 - back
 - scrollUntilVisible:
     element: "Terms of Use"
-- tapOn: "Terms of Use"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Terms of Use"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 06c-terms
 - back
 - scrollUntilVisible:
     element: "Privacy Policy"
-- tapOn: "Privacy Policy"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Privacy Policy"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 06d-privacy

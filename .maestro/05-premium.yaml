@@ -3,14 +3,22 @@ appId: com.ubili.vibezcoreapp
 name: 05 Premium-plannen
 ---
 - runFlow: _start-guest.yaml
-- tapOn: "Train Your Mind"
+- tapOn:
+    text: "Train Your Mind"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Premium"
     timeout: 20000
-- tapOn: "Premium"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Premium"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 05a-plans
 - scroll
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 05b-plans-bottom
 - back

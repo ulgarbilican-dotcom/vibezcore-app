@@ -3,13 +3,21 @@ appId: com.ubili.vibezcoreapp
 name: 02 Breathwork-onboarding en Not Now
 ---
 - runFlow: _start-guest.yaml
-- tapOn: "Reset Yourself"
+- tapOn:
+    text: "Reset Yourself"
+    waitToSettleTimeoutMs: 1500
 - extendedWaitUntil:
     visible: "Personalize My First Session"
     timeout: 20000
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 02a-breath-onboarding-step1
-- tapOn: "Not Now"
-- waitForAnimationToEnd
+- tapOn:
+    text: "Not Now"
+    waitToSettleTimeoutMs: 1500
+- waitForAnimationToEnd:
+    timeout: 2500
+- runFlow: _dismiss-cards.yaml
 - takeScreenshot: 02b-breath-page
 - assertVisible: "Breath"

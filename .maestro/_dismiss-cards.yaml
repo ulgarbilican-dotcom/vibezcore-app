@@ -1,0 +1,11 @@
+# Hulpflow: de Day Pass-kaart verschijnt (zoals bedoeld) na 60 s rondkijken;
+# in een lange test tikken we hem weg zodat hij het scherm niet blokkeert.
+appId: com.ubili.vibezcoreapp
+---
+- runFlow:
+    when:
+      visible: "Get Day Pass.*"
+    commands:
+      - tapOn:
+          text: "Not now"
+          waitToSettleTimeoutMs: 1500
