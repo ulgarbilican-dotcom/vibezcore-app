@@ -111,3 +111,27 @@ export function subscribeStateControlIntroVisible(listener: Listener): () => voi
     introListeners.delete(listener);
   };
 }
+
+/* 20 okt 2026 (operator: "scherm 1 moet voor onboarding eruitzien zoals
+   scherm 2"): het State Control-intro als ONBOARDING-start ziet eruit als
+   stap 1 van de Breathwork-onboarding — volle foto, geen tabbalk, geen
+   Premium-pill. Deze vlag laat (tabs)/_layout.tsx de balk verbergen. */
+let introFullScreen = false;
+const introFullListeners = new Set<Listener>();
+
+export function setStateControlIntroFullScreen(on: boolean): void {
+  if (introFullScreen === on) return;
+  introFullScreen = on;
+  introFullListeners.forEach((l) => l(on));
+}
+
+export function isStateControlIntroFullScreen(): boolean {
+  return introFullScreen;
+}
+
+export function subscribeStateControlIntroFullScreen(listener: Listener): () => void {
+  introFullListeners.add(listener);
+  return () => {
+    introFullListeners.delete(listener);
+  };
+}

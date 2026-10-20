@@ -37,10 +37,12 @@ import {
   isActiveSessionVisible,
   isChooseScreenVisible,
   isStateControlIntroVisible,
+  isStateControlIntroFullScreen,
   setTabsOnTop,
   subscribeActiveSessionVisible,
   subscribeChooseScreenVisible,
   subscribeStateControlIntroVisible,
+  subscribeStateControlIntroFullScreen,
 } from '@/utils/state-control-ui';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { router, Tabs, useFocusEffect } from 'expo-router';
@@ -255,7 +257,10 @@ export default function TabLayout() {
   useEffect(() => subscribeChooseScreenVisible(setChooseVisible), []);
   const [introVisible, setIntroVisible] = useState(isStateControlIntroVisible());
   useEffect(() => subscribeStateControlIntroVisible(setIntroVisible), []);
-  const hideStateControlBar = sessionVisible || (chooseVisible && !introVisible);
+  /* 20 okt 2026: het intro als onboarding-start = volle foto, geen balk. */
+  const [introFull, setIntroFull] = useState(isStateControlIntroFullScreen());
+  useEffect(() => subscribeStateControlIntroFullScreen(setIntroFull), []);
+  const hideStateControlBar = sessionVisible || (chooseVisible && !introVisible) || introFull;
   /* Voor openStateControl: tab wisselen als de tabbladen bovenaan liggen,
      anders terugkeren naar de tabbladen (6 okt 2026). */
   useFocusEffect(

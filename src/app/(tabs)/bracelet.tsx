@@ -63,8 +63,10 @@ import RestingHeartRatePage from '@/components/RestingHeartRatePage';
 import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse } from '@/services/resting-pulse';
-import { setStateControlIntroVisible } from '@/utils/state-control-ui';
-import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
+import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
+import { deferOnboarding, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticPress } from '@/utils/haptics';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import { imageSource } from '@/utils/image-source';
@@ -126,8 +128,28 @@ function photoFrame(w: number, h: number, textTop: number | null) {
   return { position: 'absolute' as const, top, left, height, width };
 }
 
-function StateControlIntro({ onDone }: { onDone: () => void }) {
-  const tabInset = useTabBarInset();
+/** `onboarding` (20 okt 2026, operator: "scherm 1 moet voor onboarding
+ *  eruitzien zoals scherm 2"): dit intro is de start van de onboarding →
+ *  zelfde opbouw als stap 1 van de Breathwork-onboarding (breath-welcome):
+ *  volle foto zonder tabbalk/Premium-pill, "Not Now" linksboven, en de
+ *  doorzichtige matglazen knop met lichtflits. Anders: het gewone
+ *  tab-intro zoals goedgekeurd. */
+function StateControlIntro({
+  onDone,
+  onboarding = false,
+  onNotNow,
+}: {
+  onDone: () => void;
+  onboarding?: boolean;
+  onNotNow?: () => void;
+}) {
+  const barInset = useTabBarInset();
+  const insets = useSafeAreaInsets();
+  const tabInset = onboarding ? 0 : barInset;
+  useEffect(() => {
+    setStateControlIntroFullScreen(onboarding);
+    return () => setStateControlIntroFullScreen(false);
+  }, [onboarding]);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const [textTop, setTextTop] = useState<number | null>(null);
   const ctaScale = useSharedValue(1);
@@ -211,7 +233,17 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
           over dit scherm, dat tot de onderrand doorloopt — dus de hoogte
           van de balk (incl. veilige zone) hier zelf bij de 34 optellen,
           zodat titel en knop op exact dezelfde plek blijven. */}
-      <View style={[s.introWrap, { paddingBottom: 34 + tabInset }]}>
+      {onboarding && onNotNow && (
+        <Pressable
+          onPress={onNotNow}
+          hitSlop={14}
+          style={[s.notNow, { top: insets.top + 14 }]}
+          accessibilityRole="button"
+        >
+          <Text style={s.notNowTxt}>Not Now</Text>
+        </Pressable>
+      )}
+      <View style={[s.introWrap, { paddingBottom: onboarding ? insets.bottom + 24 : 34 + tabInset }]}>
         <View
           style={s.stackTitle}
           onLayout={(e) => {
@@ -236,10 +268,22 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
             onPressOut={() => {
               ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
             }}
-            style={s.introCtaMatch}
-            android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+            style={onboarding ? s.introCtaGlass : s.introCtaMatch}
+            android_ripple={{ color: onboarding ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)' }}
           >
-            <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>Explore State Control</Text>
+            {onboarding && (
+              <>
+                {/* Zelfde matglas-recept als breath-welcome stap 1. */}
+                <BlurView
+                  intensity={40}
+                  tint="dark"
+                  blurMethod="dimezisBlurViewSdk31Plus"
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={[StyleSheet.absoluteFill, s.introCtaTint]} />
+              </>
+            )}
+            <Text style={onboarding ? s.introCtaGlassTxt : [s.ctaTxt, { color: '#1D1D1F' }]}>Explore State Control</Text>
             <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
               <LinearGradient
                 colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
@@ -364,9 +408,17 @@ export default function BraceletScreen() {
      doen (en de tabbalk laten flikkeren). */
   const minimize = useCallback(() => setShowIntro(true), []);
 
+  const introIsOnboarding = needsOnboarding && mayAutoShowOnboarding('state');
   if (showIntro) {
     return (
       <StateControlIntro
+        onboarding={introIsOnboarding}
+        onNotNow={() => {
+          /* Zelfde als "Not Now" in de Breathwork-onboarding: uitstel (deze
+             run niet meer, volgende start nog één keer) → gewone pagina. */
+          deferOnboarding('state');
+          setShowIntro(false);
+        }}
         onDone={() => {
           if (needsOnboarding && mayAutoShowOnboarding('state')) {
             /* Het intro blijft eronder staan: Back in de onboarding komt
@@ -401,6 +453,29 @@ const s = StyleSheet.create({
   braceletLink: { alignSelf: 'center', minHeight: 40, justifyContent: 'center', marginTop: 12 },
   braceletLinkTxt: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontFamily: BrandFonts.medium },
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
+  /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
+     `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
+  introCtaGlass: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    marginHorizontal: 0,
+    borderRadius: 14,
+    paddingVertical: 16,
+    overflow: 'hidden',
+  },
+  introCtaTint: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  introCtaGlassTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
+  notNow: { position: 'absolute', left: 20, zIndex: 2 },
+  notNowTxt: {
+    color: 'rgba(255,255,255,0.92)',
+    fontFamily: BrandFonts.semibold,
+    fontSize: 15,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   introWrap: {
     flex: 1,
     alignItems: 'center',
