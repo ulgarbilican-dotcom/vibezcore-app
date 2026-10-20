@@ -377,13 +377,22 @@ function releaseIosAudioIfIdle(): void {
 /** Native pad: de motor speelt de curve zelf; dit loopt dezelfde tikken
  *  af (zelfde afgeronde cycleMs, zelfde startpunt) puur voor het beeld.
  *  Corrigeert zichzelf op de wandklok, zodat er geen drift opbouwt. */
-/** Gemeten opstarttijd van de trildienst op Android (13 okt 2026: 145–178 ms). */
-const NATIVE_START_LAG_MS = 160;
+/** Zoveel ms vooruit kiest de app het moment van de eerste slag van een
+ *  sessie op Android; de trildienst speelt hem EXACT dan (20 okt 2026,
+ *  operator: "voor elke gebruiker correct"). Vroeger een vaste 160 ms
+ *  opstarttijd, gemeten op één A16 — andere telefoons starten sneller of
+ *  trager. 300 ms dekt ook trage toestellen; beeld, geluid en horloge
+ *  rekenen vanaf hetzelfde moment. */
+const NATIVE_START_LEAD_MS = 300;
 /** Startmoment (wandklok) van de laatst gestarte curve op de telefoon —
  *  het horloge krijgt EXACT dit moment (17 okt 2026: het werd pas na het
  *  opbouwen van de golfvorm genoteerd, ~128 ms te laat → horloge ~150 ms
  *  achter in de voorproef, gemeten op de Watch4). */
 let lastAnchorWallMs = 0;
+/** Plek in de curve (s) op `lastAnchorWallMs` — samen één ankerpunt, zodat
+ *  het horloge ook bij een latere relay (Smartwatch-schakelaar midden in de
+ *  sessie) exact weet waar de telefoon zit (20 okt 2026). */
+let lastAnchorCurveSec = 0;
 /** Zoveel ms vóór een slag krijgen de beelden hem al aangekondigd. */
 const PULSE_AHEAD_MS = 250;
 let syncLogCount = 0;
@@ -563,6 +572,7 @@ function playIos(
   const withSound = !!clock && getStateHear() && heartbeatSoundAllowed() && !isLibraryPlaying();
   const firstAt = Date.now() + IOS_FIRST_BEAT_MS;
   lastAnchorWallMs = firstAt;
+  lastAnchorCurveSec = offsetSec;
   const lub = tapFor(strengthStyle(spec.lubStyle));
   const dub = tapFor(strengthStyle(spec.dubStyle));
   const plan = {
@@ -700,8 +710,9 @@ function play(
        moment dat de eerste tik ECHT voelbaar is — zo vallen cirkel,
        trilling, geluid en pols samen (operator: "horloge loopt een fractie
        vooruit"). */
-    const anchorWallMs = Date.now() + (clock ? NATIVE_START_LAG_MS : 0);
+    const anchorWallMs = Date.now() + (clock ? NATIVE_START_LEAD_MS : 0);
     lastAnchorWallMs = anchorWallMs;
+    lastAnchorCurveSec = offsetSec;
     if (clock) {
       /* Sessie: via de voorgrondservice, zodat het doorloopt op slot. Feel &
          Hear: de service speelt het hartslaggeluid zelf, op elke tik. */
@@ -717,6 +728,7 @@ function play(
         clock?.totalSec ?? totalSec,
         clock?.elapsedSec ?? 0,
         !!clock?.preview,
+        anchorWallMs,
       );
     } else if (totalSec !== undefined) {
       /* Voorproef / proeven (operator, 16 okt 2026: "bij geluid luider zetten
@@ -920,11 +932,15 @@ function relayToWatch(
   if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode, restingBpm, startBpm);
   const meta = getModeMeta(mode);
-  /* = het moment dat slag 0 van deze curve op de telefoon voelbaar is */
-  const sentAtMs =
-    Platform.OS === 'ios' && isSessionAudioAvailable() && lastAnchorWallMs > 0
-      ? lastAnchorWallMs
-      : Date.now() + (hasNativeWaveform() ? NATIVE_START_LAG_MS : 0);
+  /* = het moment dat slag 0 van deze curve op de telefoon voelbaar is.
+     Met een anker (native dienst / iPhone-geluidsmotor) sturen we het
+     ankerpunt zelf: (plek in de curve, moment) — ook als deze relay later
+     komt (Smartwatch-schakelaar); `curveOffsetSec` van de aanroeper geldt
+     voor NU en zou dan dubbel tellen (20 okt 2026). */
+  const anchored =
+    lastAnchorWallMs > 0 && ((Platform.OS === 'ios' && isSessionAudioAvailable()) || hasNativeWaveform());
+  const sentAtMs = anchored ? lastAnchorWallMs : Date.now();
+  if (anchored) curveOffsetSec = lastAnchorCurveSec;
   /* 19 okt 2026 (operator, build 38: "telefoon loopt ~1 s voor op het
      horloge"): beide horloges rekenen het einde als sentAtMs + remainingSec.
      remainingSec gold echter voor NU (niet voor sentAtMs, dat 0,12–0,16 s
@@ -1259,7 +1275,7 @@ function sendPreviewToWatch(mode: BraceletMode, offsetSec: number): void {
        moment, niet de 160 ms van een sessie — met 160 liep het horloge
        ~150 ms achter op de telefoon. */
     /* De voorproef loopt nu via de dienst, net als Premium: het anker
-       bevat de gemeten opstarttijd van de dienst al (NATIVE_START_LAG_MS). */
+       bevat het vaste startmoment van de dienst al (NATIVE_START_LEAD_MS). */
     sentAtMs:
       (hasNativeWaveform() || (Platform.OS === 'ios' && isSessionAudioAvailable())) && lastAnchorWallMs > 0
         ? lastAnchorWallMs

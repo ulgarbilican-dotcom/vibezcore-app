@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 19 okt 2026 (operator: "ons icoon valt weg tussen de gekleurde"):
-     Bio-Teal-vlak met witte V, overal hetzelfde icoon (telefoon, horloge,
-     winkels). Zelfde verloop als assets/icon/*: boven #00A3A3, onder lichter. -->
+<!-- 13 okt 2026: achtergrond van het adaptieve horloge-icoon — dezelfde
+     zwarte glas-look als ic_launcher_vz.png (lichter boven, dieper onder). 14 okt 2026: boven iets lichter zodat
+     de cirkel niet wegvalt tegen de donkere app-lijst. Vervolg (operator:
+     "de cirkel moet even groot als de andere"): gemeten even groot (104 px,
+     adaptief icoon = standaard), maar de donkere rand viel weg → grafiet. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient
         android:angle="270"
-        android:startColor="#00A3A3"
-        android:endColor="#2CCFBF" />
+        android:startColor="#5A5A5E"
+        android:centerColor="#38383B"
+        android:endColor="#1E1E20" />
 </shape>

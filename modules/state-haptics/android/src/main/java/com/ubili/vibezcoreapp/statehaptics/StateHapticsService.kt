@@ -109,6 +109,8 @@ class StateHapticsService : Service() {
     /** Gratis voorproef (17 okt 2026): zelfde dienst en vergrendelscherm,
      *  maar geen "Session complete"-melding op het einde. */
     const val EXTRA_PREVIEW = "preview"
+    /** Wandklok-moment waarop de eerste slag MOET vallen (20 okt 2026). */
+    const val EXTRA_START_AT_WALL_MS = "startAtWallMs"
     /** Een tik die meer dan dit te laat zou komen, wordt overgeslagen. */
     const val LATE_SKIP_MS = 150L
     private const val END_MARGIN_MS = 400L
@@ -456,7 +458,19 @@ class StateHapticsService : Service() {
     timings = t
     amplitudes = a
     totalMs = t.sum()
-    startRealtime = SystemClock.elapsedRealtime()
+    /* 20 okt 2026 (operator: "voor ELKE gebruiker correct"): de app kiest
+       het moment van de eerste slag (ruim vooruit) en wij spelen hem exact
+       dan — hoe lang het opstarten van deze dienst op dit toestel ook duurt.
+       Vroeger rekende de app met een vaste 160 ms, gemeten op één A16.
+       Zijn we toch later (heel trage telefoon), dan vallen de eerste tikken
+       weg maar blijft de rest op het juiste rooster. */
+    val startAtWall = intent?.getLongExtra(EXTRA_START_AT_WALL_MS, 0L) ?: 0L
+    val startDelay = if (startAtWall > 0L) {
+      (startAtWall - System.currentTimeMillis()).coerceIn(-60_000L, 2_000L)
+    } else {
+      0L
+    }
+    startRealtime = SystemClock.elapsedRealtime() + startDelay
     sessionElapsedAtStartMs = intent?.getLongExtra(EXTRA_SESSION_ELAPSED_MS, 0L) ?: 0L
     sessionTotalMs = intent?.getLongExtra(EXTRA_SESSION_TOTAL_MS, sessionElapsedAtStartMs + totalMs)
       ?: (sessionElapsedAtStartMs + totalMs)
@@ -473,7 +487,7 @@ class StateHapticsService : Service() {
     beatHandler.removeCallbacksAndMessages(dubToken)
     units = buildUnits(t, a)
     nextUnit = 0
-    startUptime = SystemClock.uptimeMillis()
+    startUptime = SystemClock.uptimeMillis() + startDelay
     /* Stoppen op dezelfde klok als de tikken, met marge: anders kan de stop
        net vóór de laatste tik van het eindsignaal vallen en die afkappen
        (audit 5 okt 2026). */
