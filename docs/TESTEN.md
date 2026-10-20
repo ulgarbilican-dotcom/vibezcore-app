@@ -60,6 +60,12 @@ Pixel 8a, moto g14, Galaxy A10 (Android 10). Resultaten: Firebase-console →
 Test Lab. Test Lab stopt op 30 september 2027 → dan naar Google's Developer
 Device Platform.
 
+**iPhone in Test Lab:** getest op 20 okt 2026 met de App Store-.ipa van
+build 59 → "Infrastructure failure" op alle iPhones: een App Store-
+ondertekende app kan Apple niet op andere toestellen installeren. Echte
+iPhones in Test Lab vragen een aparte test-.ipa (extra iOS-build). Daarom
+voor iPhone: Maestro-flows op de simulator (EAS, zie laag 2) + TestFlight.
+
 ## Laag 4 — mensen (gevoel)
 
 Testers met verschillende toestellen via de Play-interne test en
