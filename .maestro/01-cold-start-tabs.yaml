@@ -1,11 +1,19 @@
-# Nieuwe gebruiker: koude start → welkomstscherm → elk tabblad opent.
+# Nieuwe gebruiker: welkomstscherm → elk tabblad opent en toont zijn scherm.
 appId: com.ubili.vibezcoreapp
-name: 01 Koude start en alle tabbladen
+name: 01 Welkom en alle tabbladen
 ---
-- launchApp:
-    clearState: true
-- extendedWaitUntil:
-    visible:
-      text: ".*(Reset Yourself|Control Your State|Explore).*"
-    timeout: 30000
+- runFlow: _start-guest.yaml
+- waitForAnimationToEnd
 - takeScreenshot: 01a-welcome
+- tapOn: "Train Your Mind"
+- extendedWaitUntil:
+    visible: "Explore Audio Library"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 01b-library-intro
+- tapOn: "Activity"
+- waitForAnimationToEnd
+- takeScreenshot: 01c-activity
+- tapOn: "Profile"
+- waitForAnimationToEnd
+- takeScreenshot: 01d-profile

@@ -1,0 +1,8 @@
+# Hulpflow: nieuwe gast, app vers geïnstalleerd, welkomstscherm in beeld.
+appId: com.ubili.vibezcoreapp
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Reset Yourself"
+    timeout: 40000

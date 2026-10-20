@@ -1,0 +1,24 @@
+# State Control: eerste keer = intro in onboarding-stijl (geen tabbalk);
+# Explore → onboarding; Not Now op het intro → gewone State Control-pagina.
+appId: com.ubili.vibezcoreapp
+name: 03 State Control-onboarding
+---
+- runFlow: _start-guest.yaml
+- tapOn: "Control Your State"
+- extendedWaitUntil:
+    visible: "Explore State Control"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 03a-state-intro-onboarding
+- assertNotVisible: "Library"
+- tapOn: "Explore State Control"
+- waitForAnimationToEnd
+- takeScreenshot: 03b-state-onboarding-step1
+- runFlow: _start-guest.yaml
+- tapOn: "Control Your State"
+- extendedWaitUntil:
+    visible: "Explore State Control"
+    timeout: 20000
+- tapOn: "Not Now"
+- waitForAnimationToEnd
+- takeScreenshot: 03c-state-page-after-not-now

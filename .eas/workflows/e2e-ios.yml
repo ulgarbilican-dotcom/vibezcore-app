@@ -1,0 +1,22 @@
+# VIBEZCORE — dezelfde Maestro-flowtests (.maestro/) op een iPhone-simulator
+# in de Expo-cloud (20 okt 2026, operator: "iphone flowtests ook meenemen").
+# Kost buildtegoed (een simulator-build + Maestro-minuten): enkel draaien vóór
+# een iOS-store-build, op "bouwen":
+#   npx eas-cli workflow:run .eas/workflows/e2e-ios.yml
+name: e2e-ios
+
+jobs:
+  build_ios_simulator:
+    name: iPhone-simulatorbuild
+    type: build
+    params:
+      platform: ios
+      profile: e2e-test
+
+  maestro_ios:
+    name: Maestro-flows op iPhone
+    needs: [build_ios_simulator]
+    type: maestro
+    params:
+      build_id: ${{ needs.build_ios_simulator.outputs.build_id }}
+      flow_path: ['.maestro/']

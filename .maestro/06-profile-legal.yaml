@@ -1,0 +1,32 @@
+# Profiel: inlogkaart, FAQ en juridische pagina's openen.
+appId: com.ubili.vibezcoreapp
+name: 06 Profiel, FAQ en juridisch
+---
+- runFlow: _start-guest.yaml
+- tapOn: "Train Your Mind"
+- extendedWaitUntil:
+    visible: "Profile"
+    timeout: 20000
+- tapOn: "Profile"
+- waitForAnimationToEnd
+- tapOn: "Sign In or Create Account"
+- waitForAnimationToEnd
+- takeScreenshot: 06a-sign-in
+- back
+- scrollUntilVisible:
+    element: "FAQ"
+- tapOn: "FAQ"
+- waitForAnimationToEnd
+- takeScreenshot: 06b-faq
+- back
+- scrollUntilVisible:
+    element: "Terms of Use"
+- tapOn: "Terms of Use"
+- waitForAnimationToEnd
+- takeScreenshot: 06c-terms
+- back
+- scrollUntilVisible:
+    element: "Privacy Policy"
+- tapOn: "Privacy Policy"
+- waitForAnimationToEnd
+- takeScreenshot: 06d-privacy

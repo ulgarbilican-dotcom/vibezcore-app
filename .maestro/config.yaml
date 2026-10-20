@@ -1,4 +1,5 @@
 # VIBEZCORE flowtests (20 okt 2026). Elke flow = één klanttraject.
-# Draaien: bash scripts/device-matrix.sh   (alle profielen)
+# Draaien: bash scripts/device-matrix.sh   (alle toestelprofielen)
+# Bestanden met _ vooraan zijn hulpflows, geen eigen test.
 flows:
-  - "*.yaml"
+  - "0*.yaml"

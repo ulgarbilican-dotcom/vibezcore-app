@@ -1,0 +1,15 @@
+# Breathwork: eerste keer = onboarding stap 1; Not Now → gewone Breath-pagina.
+appId: com.ubili.vibezcoreapp
+name: 02 Breathwork-onboarding en Not Now
+---
+- runFlow: _start-guest.yaml
+- tapOn: "Reset Yourself"
+- extendedWaitUntil:
+    visible: "Personalize My First Session"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 02a-breath-onboarding-step1
+- tapOn: "Not Now"
+- waitForAnimationToEnd
+- takeScreenshot: 02b-breath-page
+- assertVisible: "Breath"

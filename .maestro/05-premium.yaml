@@ -1,0 +1,16 @@
+# Premium: de plannen openen (prijzen zichtbaar), sluiten zonder kopen.
+appId: com.ubili.vibezcoreapp
+name: 05 Premium-plannen
+---
+- runFlow: _start-guest.yaml
+- tapOn: "Train Your Mind"
+- extendedWaitUntil:
+    visible: "Premium"
+    timeout: 20000
+- tapOn: "Premium"
+- waitForAnimationToEnd
+- takeScreenshot: 05a-plans
+- scroll
+- waitForAnimationToEnd
+- takeScreenshot: 05b-plans-bottom
+- back

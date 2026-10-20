@@ -1,0 +1,16 @@
+# Instant Sessions vanaf de Breath-pagina.
+appId: com.ubili.vibezcoreapp
+name: 07 Instant Sessions
+---
+- runFlow: _start-guest.yaml
+- tapOn: "Reset Yourself"
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 20000
+- tapOn: "Not Now"
+- extendedWaitUntil:
+    visible: "Instant Sessions"
+    timeout: 20000
+- tapOn: "Instant Sessions"
+- waitForAnimationToEnd
+- takeScreenshot: 07a-instant-sessions

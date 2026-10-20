@@ -1,0 +1,18 @@
+# Audio Library: intro → bibliotheek, scrollen door pijlers en sessies.
+appId: com.ubili.vibezcoreapp
+name: 04 Audio Library
+---
+- runFlow: _start-guest.yaml
+- tapOn: "Train Your Mind"
+- extendedWaitUntil:
+    visible: "Explore Audio Library"
+    timeout: 20000
+- tapOn: "Explore Audio Library"
+- waitForAnimationToEnd
+- takeScreenshot: 04a-library-top
+- scroll
+- waitForAnimationToEnd
+- takeScreenshot: 04b-library-scrolled
+- scroll
+- waitForAnimationToEnd
+- takeScreenshot: 04c-library-scrolled-more
