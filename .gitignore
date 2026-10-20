@@ -110,3 +110,4 @@ wear-app/keystore.properties
 
 # Build-uitvoer horloge-app (upload naar Play Console)
 *.aab
+/test-results/

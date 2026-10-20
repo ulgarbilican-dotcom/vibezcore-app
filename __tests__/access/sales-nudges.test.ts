@@ -232,7 +232,7 @@ describe('voor het laden binnengekomen gebeurtenissen gaan niet verloren', () =>
      voor markDayPassShown (dayPassShows) en addActiveSeconds. Smal venster
      (enkel tijdens de eerste AsyncStorage-load), maar in strijd met de eigen
      comment "wat voor het laden binnenkwam, mag het laden niet overschrijven". */
-  test.failing('wegtikken voor de load wordt opgeteld bij de bewaarde stand', async () => {
+  test('wegtikken voor de load wordt opgeteld bij de bewaarde stand', async () => {
     let n = await load();
     n.recordPlansDismissed();
     await coldStart();

@@ -1,0 +1,4 @@
+# VIBEZCORE flowtests (20 okt 2026). Elke flow = één klanttraject.
+# Draaien: bash scripts/device-matrix.sh   (alle profielen)
+flows:
+  - "*.yaml"

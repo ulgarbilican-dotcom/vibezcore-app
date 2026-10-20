@@ -791,9 +791,10 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     artScale: 0.7,
     art: 'tree',
     focusY: 0.5,
-    /* State-level fallback, houdt gelijke tred met Slow Breathing (de
-       standaardtechniek) hieronder, zie de toelichting daar. */
-    phases: [inhale(5, 'Nose'), exhale(10, 'Nose')],
+    /* State-level fallback = de EERSTE techniek (Slow Extended Exhale, 5-7)
+       — sinds de volgorde van 6 okt staat 1:2 Breathing (5-10) als derde.
+       20 okt 2026: gevonden door de logica-tests. */
+    phases: [inhale(5, 'Nose'), exhale(7, 'Nose')],
     techniques: [
       {
         /* Operator, 6 okt 2026 (onderzoeksrapport): niveau en volgorde
@@ -883,12 +884,11 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
         ],
       },
     ],
-    /* State-level fallback — zelfde herberekening als Slow Breathing
-       hierboven (15s-cyclus, 1:2 ratio). */
+    /* State-level fallback — zelfde als de eerste techniek (12 s-cyclus). */
     durations: [
-      { minutes: 5, rounds: 20, name: 'Pulse Down', why: 'A gentle landing when you are already on the edge of sleep.' },
-      { minutes: 10, rounds: 40, name: 'Deep Wind-Down', why: 'The evening standard — so unhurried you will stop counting somewhere along the way.', recommended: true },
-      { minutes: 20, rounds: 80, name: 'Sleep Wind-Down', why: 'For a night with no early alarm, when a full, unhurried wind-down is the priority.' },
+      { minutes: 5, rounds: 25, name: 'Pulse Down', why: 'A quick, comforting transition when fatigue is setting in and you want to drift off soon.' },
+      { minutes: 10, rounds: 50, name: 'Deep Wind-Down', why: 'The evening length, for the nights the day will not quite let go.', recommended: true },
+      { minutes: 20, rounds: 100, name: 'Sleep Wind-Down', why: 'For full wind-down, when the goal is letting go completely.' },
     ],
     defaultDuration: 1,
   },

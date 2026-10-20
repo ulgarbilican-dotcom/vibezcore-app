@@ -59,9 +59,14 @@ describe('Breathwork: een gratis volledige sessie', () => {
      `await loadOnce()` (een microtask later). Twee claims in dezelfde tik
      (dubbeltik, of twee startknoppen in een render) krijgen dus allebei de
      gratis volledige sessie. */
-  test.failing('claim is meteen (synchroon) verbruikt: tweede claim in dezelfde tik krijgt niets', () => {
-    expect(claimFreeSessionParam()).toEqual({ from: 'onboarding' });
-    expect(claimFreeSessionParam()).toEqual({});
+  test('claim is meteen (synchroon) verbruikt: tweede claim in dezelfde tik krijgt niets', () => {
+    /* Verse module (= nieuwe app-run): de claim-vlag leeft per run. */
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fresh = require('@/utils/breath-entry') as typeof import('@/utils/breath-entry');
+      expect(fresh.claimFreeSessionParam()).toEqual({ from: 'onboarding' });
+      expect(fresh.claimFreeSessionParam()).toEqual({});
+    });
   });
 
   test('Free, nog niet gebruikt -> free-full; gebruikt -> preview', () => {

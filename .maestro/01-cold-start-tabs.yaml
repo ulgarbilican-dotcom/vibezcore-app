@@ -1,0 +1,11 @@
+# Nieuwe gebruiker: koude start → welkomstscherm → elk tabblad opent.
+appId: com.ubili.vibezcoreapp
+name: 01 Koude start en alle tabbladen
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: ".*(Reset Yourself|Control Your State|Explore).*"
+    timeout: 30000
+- takeScreenshot: 01a-welcome

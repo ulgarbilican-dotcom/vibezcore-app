@@ -76,9 +76,15 @@ import { getSetting, setSetting } from '@/utils/settings';
 /** Claimt (indien nog niet verbruikt) de ene gratis volledige sessie, en
  *  geeft de route-param terug die `breath-session.tsx` al kent. Leeg object
  *  als 'm al verbruikt was — dan blijft de sessie gewoon vergrendeld. */
+/* 20 okt 2026 (gevonden door de logica-tests): setSetting schrijft pas na
+   een await — twee tikken in dezelfde tel (dubbeltik, twee knoppen) kregen
+   allebei de gratis sessie. Deze vlag maakt de claim echt synchroon. */
+let claimedThisRun = false;
+
 export function claimFreeSessionParam(): { from?: 'onboarding' } {
   const alreadyUsed = getSetting('breathFreeSessionUsedAt');
-  if (alreadyUsed) return {};
+  if (alreadyUsed || claimedThisRun) return {};
+  claimedThisRun = true;
   setSetting('breathFreeSessionUsedAt', Date.now());
   return { from: 'onboarding' };
 }

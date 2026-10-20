@@ -90,7 +90,7 @@ describe('ademtoestanden', () => {
   test.each(firstMatches.map((s) => [s.key, s] as const))('%s: eerste techniek = fallback-fasen', (_k, st) => {
     expect(patternOf(st.techniques[0])).toBe(patternOf(st));
   });
-  test.failing('rest: eerste techniek = fallback-fasen (VERMOEDELIJKE BUG: 5-10 vs 5-7)', () => {
+  test('rest: eerste techniek = fallback-fasen (VERMOEDELIJKE BUG: 5-10 vs 5-7)', () => {
     const st = BREATH_STATES.rest;
     expect(patternOf(st.techniques[0])).toBe(patternOf(st));
   });

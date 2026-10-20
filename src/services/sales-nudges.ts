@@ -90,12 +90,16 @@ function save(): void {
   AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
 }
 
-function patch(next: Partial<State>): void {
-  state = { ...state, ...next };
-  /* Wat vóór het laden binnenkwam, mag het laden niet overschrijven. */
+/** Een wijziging als functie van de huidige stand: komt ze vóór het laden
+ *  binnen, dan wordt ze na het laden OPNIEUW toegepast op de bewaarde stand
+ *  (20 okt 2026, gevonden door de logica-tests: "+1" vóór het laden telde
+ *  vanaf 0 en overschreef daarna de bewaarde teller — zo kon de limiet van
+ *  3 Day Pass-kaarten omzeild worden). */
+function patch(next: (s: State) => Partial<State>): void {
+  state = { ...state, ...next(state) };
   if (loaded) save();
   else void ensureSalesNudgesLoaded().then(() => {
-    state = { ...state, ...next };
+    state = { ...state, ...next(state) };
     save();
   });
 }
@@ -105,24 +109,26 @@ function patch(next: Partial<State>): void {
 /** Een paywall/saleskaart verscheen (PremiumPaywallModal, AccountWall,
  *  /subscribe, bracelet-upsell, of één van onze eigen kaarten). */
 export function markSalesCardShown(): void {
-  patch({ lastSalesShownAt: Date.now() });
+  const now = Date.now();
+  patch(() => ({ lastSalesShownAt: now }));
 }
 
 /** De plannen/paywall dicht zonder te kopen. */
 export function recordPlansDismissed(): void {
-  patch({ planDismissals: state.planDismissals + 1 });
+  patch((s) => ({ planDismissals: s.planDismissals + 1 }));
 }
 
 /** Een aankoop is net gelukt. */
 export function recordPurchase(): void {
-  patch({ lastPurchaseAt: Date.now() });
+  const now = Date.now();
+  patch(() => ({ lastPurchaseAt: now }));
 }
 
 /* ── Voor de host ───────────────────────────────────────────────────── */
 
 export function addActiveSeconds(sec: number): void {
   if (state.activeSec >= DAY_PASS_FIRST_AFTER_SEC) return;
-  patch({ activeSec: Math.min(DAY_PASS_FIRST_AFTER_SEC, state.activeSec + sec) });
+  patch((s) => ({ activeSec: Math.min(DAY_PASS_FIRST_AFTER_SEC, s.activeSec + sec) }));
 }
 
 export function getActiveSeconds(): number {
@@ -152,12 +158,12 @@ export function salesQuietAllows(now = Date.now()): boolean {
 
 export function markDayPassShown(): void {
   const now = Date.now();
-  patch({
-    dayPassShows: state.dayPassShows + 1,
+  patch((s) => ({
+    dayPassShows: s.dayPassShows + 1,
     dayPassLastShownAt: now,
     planDismissals: 0,
     lastSalesShownAt: now,
-  });
+  }));
 }
 
 export function getWinBackShownFor(): string | null {
@@ -165,7 +171,8 @@ export function getWinBackShownFor(): string | null {
 }
 
 export function markWinBackShown(expiry: string): void {
-  patch({ winBackShownFor: expiry, lastSalesShownAt: Date.now() });
+  const now = Date.now();
+  patch(() => ({ winBackShownFor: expiry, lastSalesShownAt: now }));
 }
 
 export function getWasPro(): State['wasPro'] {
@@ -175,7 +182,7 @@ export function getWasPro(): State['wasPro'] {
 export function setWasPro(until: string, email?: string): void {
   const cur = state.wasPro;
   if (cur && cur.until === until && cur.email === email) return;
-  patch({ wasPro: { until, email } });
+  patch(() => ({ wasPro: { until, email } }));
 }
 
 void ensureSalesNudgesLoaded();
