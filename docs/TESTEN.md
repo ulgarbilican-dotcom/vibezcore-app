@@ -30,8 +30,11 @@ Maestro-klanttrajecten in `.maestro/` (01 welkom+tabs, 02 Breathwork-onboarding,
 
 1. Test-APK bouwen (emulator, x86_64):
    ```bash
-   cd android && SENTRY_DISABLE_AUTO_UPLOAD=true ./gradlew.bat :app:assembleRelease -PreactNativeArchitectures=x86_64
+   cd android && rm -rf app/build/generated/assets/createReleaseUpdatesResources && SENTRY_DISABLE_AUTO_UPLOAD=true ./gradlew.bat :app:assembleRelease -PreactNativeArchitectures=x86_64
    ```
+   (De `rm` is nodig: expo-updates maakt zijn lijst met ingebouwde foto's
+   anders niet opnieuw aan en nieuwe foto's tonen dan niet — enkel lokaal,
+   EAS bouwt altijd van nul.)
 2. Emulator starten (Pixel_8, `-gpu swiftshader_indirect`).
 3. Alle profielen: `bash scripts/device-matrix.sh`
    - pixel8 (gewoon), small (360×640 dp, 3 knoppen), tall (360×840 dp), bigfont (letters 1,5×), lightmode (systeem licht).
@@ -49,14 +52,13 @@ Robo-test: Google installeert de APK op echte telefoons van verschillende
 merken en doorloopt de app zelf; rapport met crashes en screenshots.
 Gratis tegoed: 5 echte-toesteltests en 10 virtuele per dag.
 
-**Eenmalig door de operator** (Google Cloud-project `vibezcore1-ziub6j`
-bestaat al, het project van de Play Console):
-1. Open https://console.firebase.google.com → **Project toevoegen** → kies
-   het bestaande Google Cloud-project **vibezcore1-ziub6j** → plan **Spark (gratis)**.
-2. Daarna installeert Claude de Google Cloud CLI en logt de operator één
-   keer in (`gcloud auth login`, in de browser).
-3. Claude draait per Android-build: `gcloud firebase test android run --type robo --app <apk> --device model=…`
-   op ±5 toestellen (Samsung A-reeks, Pixel, Xiaomi, oud Android 8, tablet).
+**Ingesteld op 20 okt 2026:** Firebase-project vibezcore1 (Spark, gratis),
+Test Lab aan, Google Cloud CLI geïnstalleerd en ingelogd als de operator.
+
+Per Android-build (ARM-APK): `bash scripts/testlab.sh` — Galaxy S24, Galaxy A15,
+Pixel 8a, moto g14, Galaxy A10 (Android 10). Resultaten: Firebase-console →
+Test Lab. Test Lab stopt op 30 september 2027 → dan naar Google's Developer
+Device Platform.
 
 ## Laag 4 — mensen (gevoel)
 
