@@ -5,10 +5,10 @@ import { PILLAR_META, PILLAR_ORDER } from '@/data/audio-library-data';
 import { allSourceStrings, findInDisplayText, fmt } from './source-strings';
 
 const PILLARS = [
-  { name: 'Psychological Resilience', tagline: 'Build what cannot break.' },
-  { name: 'Inner Sovereignty', tagline: 'Master what is yours.' },
-  { name: 'Social Mastery', tagline: 'Command without force.' },
-  { name: 'Strategic Execution & Wealth', tagline: 'Engineer your autonomy.' },
+  { name: 'Psychological Resilience', tagline: 'Build what cannot break' },
+  { name: 'Inner Sovereignty', tagline: 'Master what is yours' },
+  { name: 'Social Mastery', tagline: 'Command without force' },
+  { name: 'Strategic Execution & Wealth', tagline: 'Engineer your autonomy' },
 ];
 const NAMES = PILLARS.map((p) => p.name);
 const TAGLINES = PILLARS.map((p) => p.tagline);

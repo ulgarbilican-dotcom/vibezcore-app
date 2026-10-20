@@ -420,10 +420,10 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'What topics do the audio sessions cover?',
     answer:
       "The VIBEZCORE Audio Library covers four core pillars:\n\n" +
-      "**Psychological Resilience** — Build what cannot break.\n\n" +
-      "**Inner Sovereignty** — Master what is yours.\n\n" +
-      "**Social Mastery** — Command without force.\n\n" +
-      "**Strategic Execution & Wealth** — Engineer your autonomy.",
+      "**Psychological Resilience** — Build what cannot break\n\n" +
+      "**Inner Sovereignty** — Master what is yours\n\n" +
+      "**Social Mastery** — Command without force\n\n" +
+      "**Strategic Execution & Wealth** — Engineer your autonomy",
   },
   {
     id: 'audio-beginners',

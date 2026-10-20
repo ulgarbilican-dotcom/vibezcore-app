@@ -243,22 +243,22 @@ export default function AboutScreen() {
           <Pillar
             num="01"
             name="Psychological Resilience"
-            desc="Build what cannot break."
+            desc="Build what cannot break"
           />
           <Pillar
             num="02"
             name="Inner Sovereignty"
-            desc="Master what is yours."
+            desc="Master what is yours"
           />
           <Pillar
             num="03"
             name="Social Mastery"
-            desc="Command without force."
+            desc="Command without force"
           />
           <Pillar
             num="04"
             name="Strategic Execution & Wealth"
-            desc="Engineer your autonomy."
+            desc="Engineer your autonomy"
           />
         </View>
 

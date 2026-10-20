@@ -21,8 +21,13 @@ const FORBIDDEN: Array<[string, RegExp]> = [
 ];
 
 describe('verboden claims en woorden in weergavetekst', () => {
-  test.each(FORBIDDEN)('nooit "%s"', (_label, pattern) => {
-    expect(fmt(findInDisplayText(pattern))).toEqual([]);
+  test.each(FORBIDDEN)('nooit "%s"', (label, pattern) => {
+    /* Operator, 20 okt 2026: de beschrijvingen in de Audio Library (o.a.
+       Zen Flow) mogen "meditation" houden — elders in de app niet. */
+    const hits = findInDisplayText(pattern).filter(
+      (h) => !(label.startsWith('meditation') && h.file.endsWith('src/data/audio-library-data.ts')),
+    );
+    expect(fmt(hits)).toEqual([]);
   });
 
   test('de uitzondering "binaural beats" en gewone haptiek-taal geven geen valse treffer', () => {

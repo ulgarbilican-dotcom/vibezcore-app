@@ -1,7 +1,7 @@
 /* Geheugen (no trailing period on headers): koppen, titels, eyebrows en
    labels krijgen GEEN punt aan het einde; lopende tekst wel. FAQ-vragen en
-   subtitels (hele zinnen) vallen erbuiten. Taglines ook: de pijler-taglines
-   staan in CLAUDE.md §4 bindend MET punt ("Build what cannot break."). */
+   subtitels (hele zinnen) vallen erbuiten. Taglines ook GEEN punt (operator,
+   20 okt 2026: "punten enkel als het moet"). */
 import { LEGAL_DOCS } from '@/data/legal-content';
 import { FAQ_CATEGORY_LABELS } from '@/data/faq-content';
 import { BREATH_STATES } from '@/data/breath-states';
@@ -62,5 +62,32 @@ describe('koppen zonder punt', () => {
       (f) => endsWithPeriod(f.text),
     );
     expect(fmt(hits)).toEqual([]);
+  });
+});
+
+/* Operator, 20 okt 2026: "punten enkel als het moet" — ook taglines niet. */
+describe('taglines zonder punt', () => {
+  test('geen enkele tagline in src eindigt op een punt', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs') as typeof import('fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path') as typeof import('path');
+    const root = path.join(__dirname, '..', '..', 'src');
+    const bad: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(e.name)) {
+          fs.readFileSync(full, 'utf8')
+            .split('\n')
+            .forEach((line, i) => {
+              if (/tagline:\s*(['"`])[^'"`]*\.\1/.test(line)) bad.push(`${path.relative(root, full)}:${i + 1}`);
+            });
+        }
+      }
+    };
+    walk(root);
+    expect(bad).toEqual([]);
   });
 });

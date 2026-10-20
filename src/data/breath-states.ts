@@ -305,7 +305,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     key: 'boost',
     eyebrow: 'BOOST',
     title: 'Radiating Sun',
-    tagline: 'Energy moves outward.',
+    tagline: 'Energy moves outward',
     subtitle: 'Energy & Drive',
     description:
       'Activate energy. Increase intensity, motivation and physical drive.',
@@ -438,7 +438,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     key: 'focus',
     eyebrow: 'SHARP FOCUS',
     title: 'Flower of Life',
-    tagline: 'Perfect order.',
+    tagline: 'Perfect order',
     subtitle: 'Clarity Mind',
     description:
       'Sharpen attention. Improve concentration and reduce distractions.',
@@ -537,7 +537,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
     key: 'calm',
     eyebrow: 'CALM CONTROL',
     title: 'Lotus',
-    tagline: 'Stillness in motion.',
+    tagline: 'Stillness in motion',
     subtitle: 'Balance & Composure',
     description:
       'Reduce stress. Restore balance. Regain composure.',
@@ -661,7 +661,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
        draagt dat nu ook uit. */
     eyebrow: 'CLARITY & RELAX',
     title: 'Crystal',
-    tagline: 'Order from complexity.',
+    tagline: 'Order from complexity',
     subtitle: 'Clear & Relax',
     description:
       'Clear the mind and relax the body. Organize thoughts, ease tension, and settle into calm clarity.',
@@ -759,7 +759,7 @@ export const BREATH_STATES: Record<BreathStateKey, BreathState> = {
        gebruiker duidelijker"): was "REST & RESET". */
     eyebrow: 'SLEEP',
     title: 'Tree of Life',
-    tagline: 'Nothing to think about.',
+    tagline: 'Nothing to think about',
     /* Operator, 22 september 2026 (vervolg op de eyebrow-rename): subtitle
        + description noemden nog expliciet "recovery" naast "restful
        sleep" — exact het woord dat ook de Recovery-GOAL draagt ("Recover

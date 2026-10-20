@@ -219,7 +219,7 @@ export const SESSIONS: Session[] = [
   /* ── Pijler 3: Jim Rohn — Daily Discipline ── */
   { title:'The Few Disciplines That Change Everything', series:'Daily Discipline', subseries:'', free:false, desc:'Small choices. Massive consequences.', num:'01', url:'https://vibezcore-audio.b-cdn.net/audio-new/12.%20JIM%20ROHN%2001.%20The%20Few%20Disciplines%20That%20Change%20Everything.mp3', added:'2026-06-13', accessTier:'pro' },
   { title:'You Are The Average Of Your Five', series:'Daily Discipline', subseries:'', free:false, desc:'Change the circle. Change the direction.', num:'02', url:'https://vibezcore-audio.b-cdn.net/audio-new/12.%20JIM%20ROHN%2002.%20You%20Are%20The%20Average%20Of%20Your%20Five.mp3', added:'2026-06-13', accessTier:'pro' },
-  { title:'Easy To Do. Easy Not To Do.', series:'Daily Discipline', subseries:'', free:false, desc:'Pick the harder one. Daily.', num:'03', url:'https://vibezcore-audio.b-cdn.net/audio-new/12.%20JIM%20ROHN%2003.%20Easy%20To%20Do%20Easy%20Not%20To%20Do.mp3', added:'2026-06-13', accessTier:'pro' },
+  { title:'Easy To Do, Easy Not To Do', series:'Daily Discipline', subseries:'', free:false, desc:'Pick the harder one. Daily.', num:'03', url:'https://vibezcore-audio.b-cdn.net/audio-new/12.%20JIM%20ROHN%2003.%20Easy%20To%20Do%20Easy%20Not%20To%20Do.mp3', added:'2026-06-13', accessTier:'pro' },
   { title:'Work Harder On Yourself', series:'Daily Discipline', subseries:'', free:false, desc:'Grow yourself. Grow everything.', num:'04', url:'https://vibezcore-audio.b-cdn.net/audio-new/12.%20JIM%20ROHN%2004.%20Work%20Harder%20On%20Yourself.mp3', added:'2026-06-13', accessTier:'pro' },
   { title:'The Cost Of Standing Still', series:'Daily Discipline', subseries:'', free:false, desc:'Comfort is expensive. Move anyway.', num:'05', url:'https://vibezcore-audio.b-cdn.net/audio-new/12.%20JIM%20ROHN%2005.%20The%20Cost%20Of%20Standing%20Still.mp3', added:'2026-06-13', accessTier:'pro' },
 
@@ -336,15 +336,15 @@ export const PILLAR_META: Record<Pillar, { num: string; name: string; tagline: s
      verhouding aanhouden zodat `resizeMode="cover"` de hele foto toont
      zonder crop of letterbox ("mooi in de kaders passen" i.p.v. de
      eerdere 'contain'-noodgreep). */
-  resilience:  { num: '01', name: 'Psychological Resilience',     tagline: 'Build what cannot break.',  img: 'https://vibezcore-audio.b-cdn.net/images/pic%20psychological%20resillience.png', imgAspect: 1086 / 1448 },
-  sovereignty: { num: '02', name: 'Inner Sovereignty',            tagline: 'Master what is yours.',     img: 'https://vibezcore-audio.b-cdn.net/images/pic%20inner%20sovereignty%202.png', imgAspect: 1024 / 1536 },
-  social:      { num: '03', name: 'Social Mastery',               tagline: 'Command without force.',    img: 'https://vibezcore-audio.b-cdn.net/images/pic%20social%20mastery.png', imgAspect: 1086 / 1448 },
-  drive:       { num: '04', name: 'Strategic Execution & Wealth', tagline: 'Engineer your autonomy.',   img: 'https://vibezcore-audio.b-cdn.net/images/pic%20strategic%20execution.png', imgAspect: 1086 / 1448 },
+  resilience:  { num: '01', name: 'Psychological Resilience',     tagline: 'Build what cannot break',  img: 'https://vibezcore-audio.b-cdn.net/images/pic%20psychological%20resillience.png', imgAspect: 1086 / 1448 },
+  sovereignty: { num: '02', name: 'Inner Sovereignty',            tagline: 'Master what is yours',     img: 'https://vibezcore-audio.b-cdn.net/images/pic%20inner%20sovereignty%202.png', imgAspect: 1024 / 1536 },
+  social:      { num: '03', name: 'Social Mastery',               tagline: 'Command without force',    img: 'https://vibezcore-audio.b-cdn.net/images/pic%20social%20mastery.png', imgAspect: 1086 / 1448 },
+  drive:       { num: '04', name: 'Strategic Execution & Wealth', tagline: 'Engineer your autonomy',   img: 'https://vibezcore-audio.b-cdn.net/images/pic%20strategic%20execution.png', imgAspect: 1086 / 1448 },
   /* Operator, 27 september 2026: "Tools & Practices" → "Soundscapes &
      Affirmations" (zelfde naamswijziging als de grid-kaart in
      (tabs)/index.tsx — deze PILLAR_META is de bron voor het
      pillar-detailscherm). */
-  tools:       { num: '05', name: 'Soundscapes & Affirmations',     tagline: 'Layered over everything.', img: 'https://vibezcore-audio.b-cdn.net/images/pic%20soundscapes.png' },
+  tools:       { num: '05', name: 'Soundscapes & Affirmations',     tagline: 'Layered over everything', img: 'https://vibezcore-audio.b-cdn.net/images/pic%20soundscapes.png' },
 };
 
 /* Welke pijler hoort een serie bij? Bestaande 12 series gemapped per

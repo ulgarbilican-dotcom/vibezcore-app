@@ -334,28 +334,28 @@ const PILLARS = [
     name: 'Psychological Resilience',
     key: 'resilience' as const,
     img: `${CDN}/pic%20psychological%20resillience.png`,
-    desc: 'Build what cannot break.',
+    desc: 'Build what cannot break',
   },
   {
     num: '02',
     name: 'Inner Sovereignty',
     key: 'sovereignty' as const,
     img: `${CDN}/pic%20inner%20sovereignty%202.png`,
-    desc: 'Master what is yours.',
+    desc: 'Master what is yours',
   },
   {
     num: '03',
     name: 'Social Mastery',
     key: 'social' as const,
     img: `${CDN}/pic%20social%20mastery.png`,
-    desc: 'Command without force.',
+    desc: 'Command without force',
   },
   {
     num: '04',
     name: 'Strategic Execution & Wealth',
     key: 'drive' as const,
     img: `${CDN}/pic%20strategic%20execution.png`,
-    desc: 'Engineer your autonomy.',
+    desc: 'Engineer your autonomy',
   },
   /* Iter 9dq v137 (operator 2026-06-15): Tools & Practices als 5e pillar-
      kaart in de UI. Stond al in PILLAR_META + SERIES_PILLAR (data-laag)
