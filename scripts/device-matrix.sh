@@ -62,10 +62,16 @@ for P in $PROFILES; do
   echo "=== profiel $P ==="
   apply_profile "$P" || continue
   mkdir -p "$OUT/$P"
-  ( cd "$OUT/$P" && "$MAESTRO" --device "$EMU" test "$ROOT/.maestro" \
-      --format junit --output "$OUT/$P/report.xml" --test-output-dir "$OUT/$P" -e PROFILE="$P" ) \
-    > "$OUT/$P/maestro.log" 2>&1 || FAIL=1
-  grep -E "Flow|PASSED|FAILED|✅|❌" "$OUT/$P/maestro.log" | tail -20
+  # Elke flow apart, met een tijdslimiet: één vastgelopen flow blokkeert
+  # de rest niet (20 okt 2026: een hele map in één keer hing).
+  for F in "$ROOT"/.maestro/0*.yaml; do
+    N="$(basename "$F" .yaml)"
+    if timeout 420 "$MAESTRO" --device "$EMU" test "$F"         --test-output-dir "$OUT/$P" -e PROFILE="$P" > "$OUT/$P/$N.log" 2>&1; then
+      echo "  ✅ $N"
+    else
+      echo "  ❌ $N  (zie $OUT/$P/$N.log)"; FAIL=1
+    fi
+  done
 done
 reset_device
 echo "Resultaten: $OUT"
