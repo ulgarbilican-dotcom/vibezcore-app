@@ -14,7 +14,9 @@
 # ─────────────────────────────────────────────────────────────────────────
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-G="${GCLOUD:-$(cygpath "$LOCALAPPDATA")/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd}"
+# Kort Windows-pad (8.3): gcloud start intern hulpprocessen en struikelt
+# over de spatie in "Cloud SDK" (20 okt 2026).
+G="${GCLOUD:-$(powershell.exe -NoProfile -Command '(New-Object -ComObject Scripting.FileSystemObject).GetFile("$env:LOCALAPPDATA\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd").ShortPath' | tr -d '\r')}"
 APK="${1:-$ROOT/android/app/build/outputs/apk/release/app-release.apk}"
 
 # Een mix die de gebruikers dekt: duur en goedkoop, nieuw en oud, klein en
