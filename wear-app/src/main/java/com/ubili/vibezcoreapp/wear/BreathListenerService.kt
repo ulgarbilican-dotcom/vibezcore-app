@@ -49,6 +49,7 @@ class BreathListenerService : WearableListenerService() {
         val item = e.dataItem
         if (item.uri.path == CatalogStore.PATH_CATALOG) {
           item.data?.let { CatalogStore.save(this, String(it, Charsets.UTF_8)) }
+          ClockSync.refresh(this)
         }
       }
     } catch (_: Exception) {
@@ -59,6 +60,10 @@ class BreathListenerService : WearableListenerService() {
   override fun onMessageReceived(event: MessageEvent) {
     /* Meting telefoon → horloge (17 okt 2026): ontvangstmoment. */
     android.util.Log.d("VZSync", "recv ${event.path} at=${System.currentTimeMillis()}")
+    /* 20 okt 2026: elk bericht van de telefoon = de telefoon-app draait →
+       klokverschil (opnieuw) meten, voor deze en volgende sessies. Begrensd
+       tot 1× per 20 s; de start zelf wacht er nooit op. */
+    ClockSync.refresh(this)
     try {
       when (event.path) {
         PATH_WAKE -> Unit

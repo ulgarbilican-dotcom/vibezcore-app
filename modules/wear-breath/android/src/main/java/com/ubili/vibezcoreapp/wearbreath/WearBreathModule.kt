@@ -99,6 +99,11 @@ private const val PATH_STATE_ACK = "/vibezcore/state/ack"
 /** Wekt de horloge-app vooraf (17 okt 2026: een slapende app op de Watch4
  *  kreeg de voorproef pas ~20 s later). Het horloge doet er verder niets mee. */
 private const val PATH_WAKE = "/vibezcore/state/wake"
+/** 20 okt 2026 — klokmeting (wear-app ClockSync.kt): het horloge stuurt zijn
+ *  klok, de telefoon antwoordt METEEN met "<horlogeklok>,<telefoonklok>".
+ *  Zo kent elk horloge zijn eigen klokverschil met deze telefoon. */
+private const val PATH_CLOCK_PING = "/vibezcore/clock/ping"
+private const val PATH_CLOCK_PONG = "/vibezcore/clock/pong"
 
 private const val WATCH_CAPABILITY = "vibezcore_watch_app"
 /* 13 okt 2026 — het horloge zelfstandig: de telefoon zet de "catalogus"
@@ -116,6 +121,11 @@ class WearBreathModule : Module() {
   private val messageListener = MessageClient.OnMessageReceivedListener { event: MessageEvent ->
     try {
       when (event.path) {
+        PATH_CLOCK_PING -> {
+          val phoneNow = System.currentTimeMillis()
+          val reply = "${String(event.data, Charsets.UTF_8)},$phoneNow".toByteArray(Charsets.UTF_8)
+          Wearable.getMessageClient(context).sendMessage(event.sourceNodeId, PATH_CLOCK_PONG, reply)
+        }
         PATH_WATCH_ACTION -> {
           val json = JSONObject(String(event.data, Charsets.UTF_8))
           val action = json.optString("action", "")

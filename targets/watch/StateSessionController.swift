@@ -198,7 +198,9 @@ final class StateSessionController: ObservableObject {
     /* Laat afgeleverd (userInfo-wachtrij): de sessie liep op de telefoon
        intussen door. Negatieve vertraging = klokverschil → negeren. */
     if let sentAtMs = sentAtMs {
-      let rawDelaySec = Date().timeIntervalSince1970 - sentAtMs / 1000
+      /* sentAtMs is iPhone-klok → eerst naar de Watch-klok (20 okt 2026) */
+      let rawDelaySec = Date().timeIntervalSince1970
+        - (sentAtMs + PhoneConnector.shared.clockAheadMs()) / 1000
       let delaySec = max(0, rawDelaySec)
       curveOffset += delaySec
       /* 19 okt 2026 (operator, build 38: "telefoon ~1 s voor op het

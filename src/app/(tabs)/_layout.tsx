@@ -310,13 +310,21 @@ export default function TabLayout() {
                   blijven boven een lichte foto. Hier i.p.v. in
                   `tabBarBackground`: die laag zit BINNEN de balk en zou
                   (laatst getekend) over de gedokte pills heen vallen. */}
+              {/* 20 okt 2026 (operator: tekst van de pagina kwam zichtbaar
+                  OVER de tabs): enkel een zachte overgang erboven; de balk
+                  zelf is een bijna dekkend donker vlak (geen matglas: dat
+                  vond de operator op 25 sept niet mooi). Zo leest elk label
+                  op elk toestel, boven foto's én boven lijsten. */}
               {!hidden && (
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.45)', 'rgba(10,10,10,0.75)']}
-                  locations={[0, 0.45, 1]}
-                  style={styles.barScrim}
-                />
+                <>
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0.88)']}
+                    locations={[0, 0.6, 1]}
+                    style={styles.barFade}
+                  />
+                  <View pointerEvents="none" style={styles.barFill} />
+                </>
               )}
               {/* Lopende sessies (State Control, geminimaliseerde ademsessie)
                   net boven de tabbalk, zoals Apple Music (10 okt 2026). */}
@@ -498,12 +506,22 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  /* Scrim: volle blokhoogte + 60pt erboven, tot de onderrand. */
-  barScrim: {
+  /* Zachte overgang: 48pt boven het blok. */
+  barFade: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: -60,
+    top: -48,
+    height: 48,
+  },
+  /* Het vlak achter pills en balk, tot de onderrand (ook achter de
+     Android-navigatieknoppen / iOS-home-indicator). */
+  barFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
     bottom: 0,
+    backgroundColor: 'rgba(10,10,10,0.94)',
   },
 });

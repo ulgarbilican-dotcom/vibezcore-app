@@ -223,15 +223,21 @@ private fun splitIntoUnits(w: Waveform): List<BeatUnit> {
  *  vergelijking is de puls op het scherm (+ beeldvertraging) → 170.
  *  15:36 (operator: "tijd loopt fractie trager op horloge maar puls sneller"):
  *  de tijd terug naar 20 (de klok klopte), enkel de tik apart later — zie
- *  WATCH_HAPTIC_DELAY_MS. */
-private const val WATCH_CLOCK_AHEAD_MS = 20L
+ *  WATCH_HAPTIC_DELAY_MS.
+ *  20 okt 2026 (operator: "het moet voor ELKE gebruiker correct lopen"):
+ *  het klokverschil wordt nu per horloge GEMETEN (ClockSync.aheadMs). Wat
+ *  hierboven op gevoel goed bleek, was op dat toestel (gemeten +93 ms):
+ *  klok 20, beeld +90, trilling +60 → t.o.v. de ECHTE telefoontijd
+ *  beeld +17 ms en trilling −13 ms. Die twee blijven; de klok is nu echt. */
+private const val VISUAL_AFTER_PHONE_MS = 20L + 90L - ClockSync.LEGACY_AHEAD_MS
+private const val HAPTIC_AFTER_PHONE_MS = 20L + 60L - ClockSync.LEGACY_AHEAD_MS
 
 /** Enkel het beeld op het horloge (ring, kloppende schijf, geluid), niet de
  *  tijd en niet de trilling. 14 okt 2026 (operator: "tijd klopt perfect,
  *  ringanimatie niet"): gemeten loopt de klok van het horloge ≈ 93 ms voor
  *  op de telefoon (min-RTT) en de tijd gebruikt maar 20 → het beeld kwam
  *  ~90 ms te vroeg. Enkel als de telefoon de sessie stuurt. */
-private const val WATCH_VISUAL_DELAY_MS = 90L
+/* (was WATCH_VISUAL_DELAY_MS = 90, zie VISUAL_AFTER_PHONE_MS) */
 
 /** Enkel de trilling (niet de tijd): de puls op het telefoonscherm piekt
  *  ~85 ms na het ritmemoment + beeldvertraging, en het oog neemt de piek als
@@ -245,7 +251,7 @@ private const val WATCH_VISUAL_DELAY_MS = 90L
  *  "voor" de volgende. 0 → pols ≈ 80 ms na het ritmemoment; de
  *  schermpuls piekt na ~85 ms + beeldvertraging → 60. Geldt enkel als de
  *  telefoon de sessie stuurt (sentAtMs). */
-private const val WATCH_HAPTIC_DELAY_MS = 60L
+/* (was WATCH_HAPTIC_DELAY_MS = 60, zie HAPTIC_AFTER_PHONE_MS) */
 
 /** Knip de eerste `skipMs` van een patroon weg (stappen die al voorbij zijn
  *  vallen weg, de lopende stap wordt korter). */
@@ -410,17 +416,18 @@ class WearStateSessionService : Service() {
        datzelfde rooster, op het juiste moment op de klok. De klok van het
        horloge loopt ~0,1 s voor op de telefoon (gemeten). */
     val origin = s.curveOffsetSec
+    val clockAhead = ClockSync.aheadMs(this)
     val nowWall = System.currentTimeMillis()
     val nowUp = SystemClock.uptimeMillis()
     val phoneCurve = if (s.sentAtMs > 0L) {
-      origin + ((nowWall - WATCH_CLOCK_AHEAD_MS - s.sentAtMs).coerceIn(0L, 10 * 60_000L)) / 1000.0
+      origin + ((nowWall - clockAhead - s.sentAtMs).coerceIn(0L, 10 * 60_000L)) / 1000.0
     } else {
       origin
     }
     var gridT = origin
     if (s.sentAtMs > 0L) while (gridT < phoneCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
     val targetWall = if (s.sentAtMs > 0L) {
-      s.sentAtMs + WATCH_CLOCK_AHEAD_MS + ((gridT - origin) * 1000).roundToLong()
+      s.sentAtMs + clockAhead + ((gridT - origin) * 1000).roundToLong()
     } else {
       /* horloge-sessie: meteen (na het opbouwen van het scherm) */
       nowWall + 120L
@@ -435,8 +442,8 @@ class WearStateSessionService : Service() {
     nextUnit = 0
     val totalMs = waveform.timings.sum()
     startUptime = nowUp + (targetWall - nowWall)
-    visualUptime = startUptime + if (s.sentAtMs > 0L) WATCH_VISUAL_DELAY_MS else 0L
-    val hapticUptime = startUptime + if (s.sentAtMs > 0L) WATCH_HAPTIC_DELAY_MS else 0L
+    visualUptime = startUptime + if (s.sentAtMs > 0L) VISUAL_AFTER_PHONE_MS else 0L
+    val hapticUptime = startUptime + if (s.sentAtMs > 0L) HAPTIC_AFTER_PHONE_MS else 0L
     hapticStartUptime = hapticUptime
     sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)

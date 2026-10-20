@@ -39,6 +39,60 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     return "act=\(s.activationState.rawValue) iphoneApp=\(s.isCompanionAppInstalled) reach=\(s.isReachable) last=\(lastReceived) err=\(lastError)"
   }
 
+  // MARK: Klokverschil (20 okt 2026)
+
+  /* Operator: "het moet voor ELKE gebruiker correct lopen". De iPhone stuurt
+     zijn klok mee (sentAtMs); een Apple Watch loopt meestal gelijk, maar
+     niet gegarandeerd. Gemeten zoals NTP: een paar pings, de iPhone
+     antwoordt met zijn klok, de kortste rondreis is de nauwkeurigste. */
+  private let clockAheadKey = "vz_clock_ahead_ms"
+  private let clockAtKey = "vz_clock_measured_at"
+  private var measuringClock = false
+  private var lastClockStart: TimeInterval = 0
+
+  /** Klokverschil Watch − iPhone in ms (0 zolang er geen recente meting is). */
+  func clockAheadMs() -> Double {
+    let d = UserDefaults.standard
+    let at = d.double(forKey: clockAtKey)
+    guard at > 0, Date().timeIntervalSince1970 - at < 6 * 3600 else { return 0 }
+    return d.double(forKey: clockAheadKey)
+  }
+
+  func measureClock() {
+    guard WCSession.isSupported() else { return }
+    let session = WCSession.default
+    let now = Date().timeIntervalSince1970
+    guard session.activationState == .activated, session.isReachable,
+      !measuringClock, now - lastClockStart > 20
+    else { return }
+    measuringClock = true
+    lastClockStart = now
+    var bestRtt = Double.greatestFiniteMagnitude
+    var bestAhead: Double?
+    for i in 0..<5 {
+      DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.12) {
+        let t0 = Date().timeIntervalSince1970 * 1000
+        session.sendMessage(["type": "clock_ping"], replyHandler: { reply in
+          let t1 = Date().timeIntervalSince1970 * 1000
+          guard let phone = reply["phoneMs"] as? Double else { return }
+          DispatchQueue.main.async {
+            let rtt = t1 - t0
+            guard rtt >= 0, rtt < 400, rtt < bestRtt else { return }
+            bestRtt = rtt
+            bestAhead = (t0 + t1) / 2 - phone
+          }
+        }, errorHandler: nil)
+      }
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+      if let ahead = bestAhead {
+        UserDefaults.standard.set(ahead, forKey: self.clockAheadKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: self.clockAtKey)
+      }
+      self.measuringClock = false
+    }
+  }
+
   func requestCatalog() {
     if WCSession.default.activationState != .activated { WCSession.default.activate() }
     send(["type": "catalog_request"])
@@ -84,6 +138,7 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     guard activationState == .activated else { return }
     DispatchQueue.main.async {
       self.send(["type": "catalog_request"])
+      self.measureClock()
     }
   }
 
@@ -114,6 +169,9 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
   private func route(_ message: [String: Any]) {
     lastReceived = message["type"] as? String ?? "start"
     DispatchQueue.main.async {
+      /* elk bericht = de iPhone-app draait → klok (opnieuw) meten, voor de
+         volgende start (begrensd tot 1× per 20 s; niets wacht erop) */
+      defer { self.measureClock() }
       let type = message["type"] as? String ?? "start"
       switch type {
       case "state_start", "state_pause", "state_stop":

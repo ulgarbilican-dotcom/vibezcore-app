@@ -344,6 +344,24 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     handleFromWatch(message)
   }
 
+  /* 20 okt 2026 — klokmeting (PhoneConnector.measureClock op de Watch): de
+     Watch stuurt "clock_ping" met een antwoord-handler; de iPhone antwoordt
+     METEEN met zijn eigen klok. Zo kent elke Apple Watch zijn eigen
+     klokverschil met deze iPhone, in plaats van aan te nemen dat ze gelijk
+     lopen. Andere berichten met een handler: gewoon verwerken. */
+  func session(
+    _ session: WCSession,
+    didReceiveMessage message: [String: Any],
+    replyHandler: @escaping ([String: Any]) -> Void
+  ) {
+    if (message["type"] as? String) == "clock_ping" {
+      replyHandler(["phoneMs": Date().timeIntervalSince1970 * 1000])
+      return
+    }
+    replyHandler([:])
+    handleFromWatch(message)
+  }
+
   /* Terugval-pad van de Watch (transferUserInfo) als de telefoon op het
      moment van de tik niet bereikbaar was. */
   func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {

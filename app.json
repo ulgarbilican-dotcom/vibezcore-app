@@ -158,6 +158,13 @@
       "./plugins/withWearApp",
       "./plugins/withPulseCamera",
       [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "barStyle": "light"
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification_icon.png",

@@ -73,6 +73,7 @@ import * as Linking from 'expo-linking';
 import { router, Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { useEffect, useRef, useState } from 'react';
 import {
   onReminderTap,
@@ -84,6 +85,20 @@ import {
   type TappedReminder,
 } from '@/services/reminders';
 import * as Notifications from 'expo-notifications';
+
+/* 20 okt 2026 (operator: "alles moet zich aanpassen aan het toestel van de
+   gebruiker"): de app is altijd donker, dus ook de Android-navigatiebalk —
+   doorzichtig, lichte knoppen, geen witte contrastbalk (die kwam bij drie-
+   knoppennavigatie op een telefoon in lichte modus). Ook gezet via de
+   expo-navigation-bar-plugin in app.json; hier nog eens na de start, omdat
+   React Native de knopkleur volgens de systeemmodus zet. */
+if (Platform.OS === 'android') {
+  try {
+    NavigationBar.setStyle('light');
+  } catch {
+    /* nooit de start blokkeren */
+  }
+}
 import { bootDecided, markBootDecided } from '@/utils/boot';
 import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
 import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';

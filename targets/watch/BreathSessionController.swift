@@ -127,7 +127,9 @@ final class BreathSessionController: NSObject, ObservableObject {
        iPhone overgaat. */
     var lag: TimeInterval = 0
     if let sentAt = message["sentAtMs"] as? Double, sentAt > 0 {
-      lag = min(1.5, max(0, Date().timeIntervalSince1970 - sentAt / 1000))
+      /* iPhone-klok → Watch-klok (20 okt 2026, PhoneConnector.measureClock) */
+      let sentAtWatch = sentAt + PhoneConnector.shared.clockAheadMs()
+      lag = min(1.5, max(0, Date().timeIntervalSince1970 - sentAtWatch / 1000))
     }
     let firstDur = midPhase ? TimeInterval(remainingMs) / 1000 : TimeInterval(phases[startPhase].secs)
     generation += 1
