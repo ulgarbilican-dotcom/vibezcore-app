@@ -541,6 +541,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'rgba(10,10,10,0.985)', /* 20 okt 2026: 0.94 liet 6% van de paginatekst doorschemeren onder de labels (Test Lab, S24/Pixel 8a) */
+    backgroundColor: '#0a0a0a', /* 20 okt 2026: volledig dekkend — 0.94 en 0.985 lieten nog paginatekst ("Settings", "Invite a friend") onder de labels doorschemeren (Test Lab, flowtest 01d) */
   },
 });
