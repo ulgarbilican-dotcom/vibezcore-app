@@ -30,6 +30,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { imageSource } from '@/utils/image-source';
 
 export type GuidanceMode = 'voice' | 'haptic' | 'both' | 'silent';
 
@@ -152,7 +153,7 @@ export function ModeGlyph({
   return (
     <View style={{ width: w, height: h, overflow: 'hidden' }}>
       <Image
-        source={{ uri: MODE_ICON_SPRITE_IMG }}
+        source={imageSource(MODE_ICON_SPRITE_IMG)}
         resizeMode="stretch"
         style={{
           position: 'absolute',

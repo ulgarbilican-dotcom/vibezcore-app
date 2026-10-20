@@ -200,6 +200,7 @@ import {
 } from '@/utils/dev-user-override';
 import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
 import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -830,7 +831,7 @@ function BraceletHeroGlow() {
   return (
     <View style={s.heroGlowWrap}>
       <Image
-        source={{ uri: HERO_BRACELET_IMG }}
+        source={imageSource(HERO_BRACELET_IMG)}
         style={s.heroGlowImg}
         resizeMode="contain"
       />

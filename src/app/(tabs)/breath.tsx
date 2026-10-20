@@ -40,7 +40,6 @@ import { getBreathHost, subscribeBreathHost } from '@/services/breath-session-ho
 import StateGlyph from '@/components/StateGlyph';
 import { usePlayerState } from '@/services/audio-player';
 import { LinearGradient } from 'expo-linear-gradient';
-import { assetUri } from '@/services/asset-cache';
 import { STATE_PHOTOS } from '@/services/offline-assets';
 import { Brand, BrandFonts } from '@/constants/theme';
 import {
@@ -95,6 +94,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type ViewStyle } from 'react-native';
 import { hapticTap } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -925,7 +925,7 @@ export default function BreathScreen() {
              `top`-offset. Ken Burns-zoom blijft op de foto zelf zitten. */}
           <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
             <Image
-              source={{ uri: INTRO_BG_IMG }}
+              source={imageSource(INTRO_BG_IMG)}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
@@ -962,7 +962,7 @@ export default function BreathScreen() {
              `bgZoom` hierboven. */}
           <Image
             key={st.key}
-            source={{ uri: assetUri(stateBgFor(st.key)) }}
+            source={imageSource(stateBgFor(st.key))}
             style={[
               StyleSheet.absoluteFill,
               /* `contain` (zie `calm`) laat boven/onder open — die krijgen

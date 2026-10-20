@@ -43,6 +43,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -438,14 +439,14 @@ function DaypartCard({
           {isIconDaypart ? (
             <View style={s.dayCardImgIconPad}>
               <Image
-                source={{ uri: card.image }}
+                source={imageSource(card.image)}
                 resizeMode="contain"
                 style={s.dayCardImg}
               />
             </View>
           ) : (
             <Image
-              source={{ uri: card.image }}
+              source={imageSource(card.image)}
               resizeMode="cover"
               style={s.dayCardImg}
             />

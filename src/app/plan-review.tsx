@@ -70,6 +70,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -578,7 +579,7 @@ export default function PlanReviewScreen() {
           <View key={g.slot} style={s.groupSection}>
             <Text style={s.groupLabel}>{g.label.toUpperCase()}</Text>
             <View style={s.groupCard}>
-              <Image source={{ uri: DAYPART_PHOTO[g.slot] }} style={s.groupPhoto} />
+              <Image source={imageSource(DAYPART_PHOTO[g.slot])} style={s.groupPhoto} />
               <View style={s.groupRows}>
                 {g.rows.map(({ it, i }, rowIndex) => (
                   <View key={i}>

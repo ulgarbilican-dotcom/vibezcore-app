@@ -99,6 +99,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { imageSource } from '@/utils/image-source';
 
 /* Operator, 18 september 2026 ("we bouwen de onboarding volledig in
    dark ook in light mode"): deze stap (en de rest van de Protocol-flow)
@@ -219,7 +220,7 @@ function PathCard({
           <Text style={s.rowDetail}>{p.detail}</Text>
         )}
       </View>
-      <Image source={{ uri: p.img }} style={s.rowThumb} resizeMode="contain" />
+      <Image source={imageSource(p.img)} style={s.rowThumb} resizeMode="contain" />
     </AnimatedPressable>
   );
 }

@@ -91,6 +91,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { hapticTap } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -574,7 +575,7 @@ export default function PlanScreen() {
                    meeste doelen). */}
                 {g.image ? (
                   <Image
-                    source={{ uri: g.image }}
+                    source={imageSource(g.image)}
                     style={{ width: 44, height: 44, tintColor: '#ffffff' }}
                     resizeMode="contain"
                   />

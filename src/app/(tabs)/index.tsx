@@ -153,6 +153,7 @@ import {
   type Session,
 } from '../../data/audio-library-data';
 import { hapticPress } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 /* Operator, 14 september 2026: "we zijn nu alles light mode aan het maken"
    — zelfde `DARK`/`LIGHT`/`light`-patroon als breath-setup.tsx/breath-
@@ -544,7 +545,7 @@ function SessionRow({
       onPress={onPress}
     >
       <View style={s.libRowArt}>
-        {photo ? <Image source={{ uri: photo }} style={s.libRowArtImg} /> : null}
+        {photo ? <Image source={imageSource(photo)} style={s.libRowArtImg} /> : null}
         <View style={[s.libRowPlay, isActive && s.libRowPlayActive]}>
           {isActive ? (
             <LinearGradient
@@ -1445,9 +1446,7 @@ function AudioScreen({
                één image, één gradient. */}
         <View style={s.bLandingPhoto}>
           <Image
-            source={{
-              uri: 'https://vibezcore-audio.b-cdn.net/images/headphone%20audio%20library%20V%20vierkant.png',
-            }}
+            source={imageSource('https://vibezcore-audio.b-cdn.net/images/headphone%20audio%20library%20V%20vierkant.png')}
             style={s.bLandingPhotoImg}
           />
           <LinearGradient
@@ -1605,7 +1604,7 @@ function AudioScreen({
         <View style={[StyleSheet.absoluteFill, s.introOverlay]}>
           <Animated.View style={[StyleSheet.absoluteFill, introKenBurnsStyle]}>
             <Image
-              source={{ uri: `${CDN}/pic%20welcome%20audio%20library%20app.png` }}
+              source={imageSource(`${CDN}/pic%20welcome%20audio%20library%20app.png`)}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
@@ -2090,7 +2089,7 @@ function AudioScreen({
                         <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFill} />
                       )}
                       <Image
-                        source={{ uri: p.img }}
+                        source={imageSource(p.img)}
                         style={
                           p.key === 'resilience'
                             ? /* Operator ("foto mag zelf beetje zakken zodat
@@ -2271,7 +2270,7 @@ function AudioScreen({
                           <View style={s.acArt}>
                             {photo ? (
                               <Image
-                                source={{ uri: photo }}
+                                source={imageSource(photo)}
                                 style={s.acArtImg}
                               />
                             ) : null}
@@ -2326,7 +2325,7 @@ function AudioScreen({
                           <View style={s.acArt}>
                             {photo ? (
                               <Image
-                                source={{ uri: photo }}
+                                source={imageSource(photo)}
                                 style={s.acArtImg}
                               />
                             ) : null}
@@ -2726,7 +2725,7 @@ function AudioScreen({
                               >
                                 {photo ? (
                                   <Image
-                                    source={{ uri: photo }}
+                                    source={imageSource(photo)}
                                     style={{ width: '100%', height: '100%' }}
                                   />
                                 ) : null}
@@ -2888,7 +2887,7 @@ function AudioScreen({
                        overige series: ongewijzigd standaard cover. */
                     SERIES_FOCAL[ser.name] ? (
                       <Image
-                        source={{ uri: photo }}
+                        source={imageSource(photo)}
                         style={{
                           position: 'absolute',
                           left: 0,
@@ -2905,7 +2904,7 @@ function AudioScreen({
                         resizeMode="cover"
                       />
                     ) : (
-                      <Image source={{ uri: photo }} style={s.libCardBg} />
+                      <Image source={imageSource(photo)} style={s.libCardBg} />
                     )
                   ) : null}
                   {/* FIX 6: foto-tint is bewust verwijderd. Foto blijft
@@ -3199,7 +3198,7 @@ function AudioScreen({
                             androidRipple={{ color: 'rgba(255,255,255,0.06)' }}
                           >
                             <Image
-                              source={{ uri: info.photo }}
+                              source={imageSource(info.photo)}
                               style={s.libSubcatBg}
                             />
                             <View style={s.libSubcatGrad} />
@@ -3352,7 +3351,7 @@ function AudioScreen({
             <Image
               /* Productfoto (bracelet op zwart, zelfde als de bracelet-
                  pagina): staat gecentreerd, dus past in elke uitsnede. */
-              source={{ uri: 'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20home%202.png' }}
+              source={imageSource('https://vibezcore-audio.b-cdn.net/images/pic%20hero%20home%202.png')}
               style={s.braceletCardImg}
               resizeMode="cover"
             />

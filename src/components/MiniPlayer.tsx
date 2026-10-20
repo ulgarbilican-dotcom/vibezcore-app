@@ -41,6 +41,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -236,7 +237,7 @@ export function MiniPlayer({
         style={[s.row, rowPressStyle]}
       >
         <View style={[s.art, { backgroundColor: C.art }]}>
-          {photo ? <Image source={{ uri: photo }} style={s.artImg} /> : null}
+          {photo ? <Image source={imageSource(photo)} style={s.artImg} /> : null}
         </View>
         <View style={s.body}>
           <Text style={[s.title, { color: C.text }]} numberOfLines={1}>

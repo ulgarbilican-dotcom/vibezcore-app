@@ -67,6 +67,7 @@ import { setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import { hapticPress } from '@/utils/haptics';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
+import { imageSource } from '@/utils/image-source';
 
 /* Operator-foto voor het State Control-intro (aangeleverd 5 okt 2026). */
 /* Operator, 5 okt 2026: terug naar de eerste foto. */
@@ -180,7 +181,7 @@ function StateControlIntro({ onDone }: { onDone: () => void }) {
         <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
           {box && (
             <Image
-              source={{ uri: BG_IMG }}
+              source={imageSource(BG_IMG)}
               /* Kadrering op de hoogte BOVEN de tabbalk (19 okt 2026):
                  sinds de balk doorzichtig over dit scherm zweeft is het
                  vak `tabInset` hoger — zonder aftrek zou de foto merkbaar

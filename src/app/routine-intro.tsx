@@ -34,6 +34,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -56,7 +57,7 @@ function GoalIconBadge({ g }: { g: (typeof GOALS)[number] }) {
       <ExpoGradient colors={g.gradient} style={StyleSheet.absoluteFill} />
       {g.image ? (
         <Image
-          source={{ uri: g.image }}
+          source={imageSource(g.image)}
           style={{ width: 56, height: 56, tintColor: '#ffffff' }}
           resizeMode="contain"
         />

@@ -44,6 +44,7 @@ import {
   useBraceletUpsellVisible,
   openBraceletWebsite,
 } from '@/services/bracelet-upsell';
+import { imageSource } from '@/utils/image-source';
 
 /* Color-token-set — bewust witte card-stijl (operator-besluit 2026-05-24
    iteratie 9). Card heeft brand-witte achtergrond zoals de webapp-
@@ -272,7 +273,7 @@ export function BraceletUpsellModal() {
         <View style={s.row}>
           <View style={s.imageWrap}>
             <Image
-              source={{ uri: BRACELET_IMAGE_URL }}
+              source={imageSource(BRACELET_IMAGE_URL)}
               style={s.image}
               resizeMode="contain"
             />

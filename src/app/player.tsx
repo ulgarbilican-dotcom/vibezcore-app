@@ -78,6 +78,7 @@ import Animated, {
   withSequence,
   cancelAnimation,
 } from 'react-native-reanimated';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -567,7 +568,7 @@ export default function PlayerScreen() {
       <View style={s.backdrop} pointerEvents="none">
         {photoUri ? (
           <Image
-            source={{ uri: photoUri }}
+            source={imageSource(photoUri)}
             style={s.backdropImageFull}
             blurRadius={38}
           />
@@ -636,7 +637,7 @@ export default function PlayerScreen() {
                beeldverhouding (photoAspect, zie hierboven) i.p.v. een vast
                vierkant, dus `cover` toont de hele foto zonder crop of
                lege letterbox-rand. */
-            <Image source={{ uri: photoUri }} style={s.artworkImage} resizeMode="cover" />
+            <Image source={imageSource(photoUri)} style={s.artworkImage} resizeMode="cover" />
           ) : (
             <View style={[s.artworkImage, s.backdropFallback]} />
           )}

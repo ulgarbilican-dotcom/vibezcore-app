@@ -61,6 +61,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { hapticPress } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -317,7 +318,7 @@ export default function WelcomeScreen() {
   return (
     <View style={s.root}>
       <Animated.Image
-        source={{ uri: BG_IMG }}
+        source={imageSource(BG_IMG)}
         /* Operator, 7 okt 2026 ("foto stukje omlaag"): het beeldvlak steekt
            80 pt onder het scherm uit (bovenrand blijft op 0, geen zwarte
            strook) — het midden zakt 40 pt, de personen staan lager en het

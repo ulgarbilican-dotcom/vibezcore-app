@@ -29,7 +29,6 @@
    schalen.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { assetUri } from '@/services/asset-cache';
 import {
   Canvas,
   Circle,
@@ -43,6 +42,7 @@ import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
+import { imageSource } from '@/utils/image-source';
 
 /* De vijf illustraties, aangeleverd door de operator (Bunny CDN). */
 export const SESSION_ART = {
@@ -228,7 +228,7 @@ export default function SessionArt({
       )}
 
       <Animated.Image
-        source={{ uri: assetUri(SESSION_ART[art]) }}
+        source={imageSource(SESSION_ART[art])}
         style={[{ width: size, height: size }, imgStyle]}
         resizeMode="contain"
       />

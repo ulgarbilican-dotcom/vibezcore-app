@@ -141,6 +141,7 @@ import VibezGlass from '@/components/VibezGlass';
 import { rootBlurRef } from '@/utils/root-blur';
 import Svg, { Path } from 'react-native-svg';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -1284,7 +1285,7 @@ export default function BreathWelcomeScreen() {
            ademruimte erboven — zelfde `StyleSheet.absoluteFill`+`cover`
            als de andere fotostappen (1/4/6) hieronder. */
         <Image
-          source={{ uri: INTRO_BG_IMG }}
+          source={imageSource(INTRO_BG_IMG)}
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
@@ -2139,7 +2140,7 @@ function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
     >
       {w > 0 && (
         <Image
-          source={{ uri: IMG }}
+          source={imageSource(IMG)}
           resizeMode="stretch"
           style={{
             position: 'absolute',
@@ -2176,7 +2177,7 @@ function BraceletInfoModal({
       <View style={s.braceletModalScrim}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={s.braceletModalCard}>
-          <Image source={{ uri: IMG }} style={s.braceletModalImg} resizeMode="cover" />
+          <Image source={imageSource(IMG)} style={s.braceletModalImg} resizeMode="cover" />
           <View style={s.braceletModalBody}>
             <Text style={s.braceletModalEyebrow}>SMART BEAD BRACELET · EARLY 2027</Text>
             <Text style={s.braceletModalTitle}>Wear the rhythm</Text>
@@ -2485,7 +2486,7 @@ function ChangeTile({
   const iconSize = g.key === 'sleep' ? 76 : g.key === 'recovery' ? 65 : 56;
   const iconNode = g.image ? (
     <Image
-      source={{ uri: g.image }}
+      source={imageSource(g.image)}
       style={{ width: iconSize, height: iconSize, tintColor: '#ffffff' }}
       resizeMode="contain"
     />

@@ -57,6 +57,7 @@ import {
   View,
 } from 'react-native';
 import VibezGlass from '@/components/VibezGlass';
+import { imageSource } from '@/utils/image-source';
 
 /* Logo / brand mark — exact identiek aan welcome.tsx en welke header
    dan ook. Lokaal asset, geen netwerk-roundtrip.
@@ -135,7 +136,7 @@ export function WelcomeBackPopup() {
               PILLAR_META[SERIES_PILLAR[lastPlayed.series]]?.img ??
               SERIES_PHOTO[lastPlayed.series];
             return photo ? (
-              <Image source={{ uri: photo }} style={s.cover} resizeMode="cover" />
+              <Image source={imageSource(photo)} style={s.cover} resizeMode="cover" />
             ) : (
               <View style={[s.cover, s.coverFallback]} />
             );

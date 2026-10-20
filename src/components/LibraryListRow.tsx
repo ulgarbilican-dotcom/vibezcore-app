@@ -24,6 +24,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -123,7 +124,7 @@ export function LibraryListRow({
       android_ripple={{ color: C.ripple }}
     >
       <View style={s.art}>
-        {photo ? <Image source={{ uri: photo }} style={s.artImg} /> : null}
+        {photo ? <Image source={imageSource(photo)} style={s.artImg} /> : null}
       </View>
       <View style={s.body}>
         {!hideTag && !effectivelyPro && badgeLabel && (

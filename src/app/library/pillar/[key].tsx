@@ -56,6 +56,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { imageSource } from '@/utils/image-source';
 
 /* Altijd dark — zie toelichting bovenaan.
    Operator, 26 september 2026 (Huisstijl v4.4): Signal Blue (#3a8fff) is
@@ -274,7 +275,7 @@ export default function PillarFocusScreen() {
                hele foto zonder crop of lege rand. Geen `imgAspect` (bv.
                een ontbrekende foto) → terugval op het oude vierkant. */
             <Image
-              source={{ uri: meta.img }}
+              source={imageSource(meta.img)}
               style={[
                 s.art,
                 meta.imgAspect

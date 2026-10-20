@@ -30,6 +30,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { Check } from 'lucide-react-native';
 import { Dimensions } from 'react-native';
 import { BrandFonts } from '@/constants/theme';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -176,7 +177,7 @@ export default function AddToDayHero({
         {topLabel}
       </Text>
       <View style={addHeroStyles.wrap}>
-        <Image source={{ uri: photo }} style={addHeroStyles.fill} resizeMode="cover" />
+        <Image source={imageSource(photo)} style={addHeroStyles.fill} resizeMode="cover" />
         <View
           style={[
             addHeroStyles.fill,

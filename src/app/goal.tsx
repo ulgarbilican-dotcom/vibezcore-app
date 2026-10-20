@@ -73,6 +73,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { hapticPress } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -194,7 +195,7 @@ const GoalTile = memo(function GoalTile({
 
   const iconNode = g.image ? (
     <Image
-      source={{ uri: g.image }}
+      source={imageSource(g.image)}
       style={{ width: iconSize, height: iconSize, tintColor: '#ffffff' }}
       resizeMode="contain"
     />

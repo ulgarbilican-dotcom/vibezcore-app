@@ -59,6 +59,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
+import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -554,7 +555,7 @@ function EntryRow({
     >
       <View style={s.thumbWrap}>
         {photo ? (
-          <Image source={{ uri: photo }} style={s.thumb} />
+          <Image source={imageSource(photo)} style={s.thumb} />
         ) : (
           <View style={s.thumbFallback}>
             <Text style={s.thumbGlyph}>♪</Text>

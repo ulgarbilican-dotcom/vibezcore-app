@@ -209,6 +209,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { imageSource } from '@/utils/image-source';
 
 /* Gedeelde druk-schaal-animatie voor ELK tikbaar element op dit scherm
    (kaarten, CTA's, icoon-only knoppen) — zelfde recept als `StartCard` in
@@ -4499,7 +4500,7 @@ export function BreathSession() {
                 style={[s.buddhaRing, s.buddhaRingArc, { borderTopColor: accent }, buddhaSpinStyle]}
               />
               <Image
-                source={{ uri: BUDDHA_IMG }}
+                source={imageSource(BUDDHA_IMG)}
                 resizeMode="contain"
                 style={s.doneBuddha}
               />
