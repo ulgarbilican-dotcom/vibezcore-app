@@ -78,11 +78,11 @@
       }
     },
     "android": {
-      "icon": "./assets/vibezcore_icon.png",
+      "icon": "./assets/icon/android_icon_1024.png",
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a",
-        "foregroundImage": "./assets/vibezcore_icon.png",
-        "monochromeImage": "./assets/vibezcore_icon.png"
+        "foregroundImage": "./assets/icon/android_icon_1024.png",
+        "monochromeImage": "./assets/icon/android_mono_1024.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.ubili.vibezcoreapp",
