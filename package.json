@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "test": "jest"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -73,15 +74,39 @@
   },
   "devDependencies": {
     "@bacons/apple-targets": "^5.0.0",
+    "@types/jest": "29.5.14",
     "@types/react": "~19.2.2",
     "@types/three": "^0.185.4",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.1",
+    "jest": "~29.7.0",
+    "jest-expo": "~55.0.22",
     "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
   "overrides": {
     "expo-asset": "~55.0.17"
   },
-  "private": true
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "testMatch": [
+      "<rootDir>/__tests__/**/*.test.ts",
+      "<rootDir>/__tests__/**/*.test.tsx"
+    ],
+    "setupFiles": [
+      "<rootDir>/__tests__/setup.ts"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|lucide-react-native)"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.claude/",
+      "<rootDir>/docs/",
+      "<rootDir>/android/",
+      "<rootDir>/ios/",
+      "<rootDir>/scratch/",
+      "<rootDir>/scratchpad/"
+    ]
+  }
 }
