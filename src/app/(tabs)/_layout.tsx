@@ -518,6 +518,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    /* 20 okt 2026: op Android tekent een kaart met `elevation` BOVEN elke
+       niet-verhoogde sibling, ook al staat die later in de boom — daardoor
+       scheen de tekst van de Profile-pagina door de balk heen (flowtest
+       01d). Eigen hoogte + zIndex houdt het hele blok altijd bovenop. */
+    zIndex: 50,
+    elevation: 50,
   },
   /* Zachte overgang: 48pt boven het blok. */
   barFade: {

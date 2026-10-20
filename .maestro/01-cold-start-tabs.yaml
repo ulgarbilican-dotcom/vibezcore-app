@@ -20,6 +20,7 @@ name: 01 Welkom en alle tabbladen
 - tapOn:
     text: "Activity"
     waitToSettleTimeoutMs: 1500
+    retryTapIfNoChange: true
 - waitForAnimationToEnd:
     timeout: 2500
 - runFlow: _dismiss-cards.yaml
@@ -27,6 +28,7 @@ name: 01 Welkom en alle tabbladen
 - tapOn:
     text: "Profile"
     waitToSettleTimeoutMs: 1500
+    retryTapIfNoChange: true
 - waitForAnimationToEnd:
     timeout: 2500
 - runFlow: _dismiss-cards.yaml

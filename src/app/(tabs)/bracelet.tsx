@@ -66,7 +66,6 @@ import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { deferOnboarding, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticPress } from '@/utils/haptics';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
@@ -282,12 +281,12 @@ function StateControlIntro({
                  Rechtstreeks in de Pressable bleef de knop onzichtbaar
                  (flowtest 20 okt 2026). */
               <View style={s.introCtaGlass}>
-                <BlurView
-                  intensity={40}
-                  tint="dark"
-                  blurMethod="dimezisBlurViewSdk31Plus"
-                  style={StyleSheet.absoluteFill}
-                />
+                {/* 20 okt 2026: GEEN BlurView meer. In dit scherm bleef de knop
+                    (tekst incl.) onzichtbaar op Android terwijl de node wel in
+                    de hiërarchie stond (flowtests, 3 runs) — de blur in een
+                    geschaalde Animated.View tekent niets. Een doorschijnende
+                    witte laag + dunne rand geeft hetzelfde glas-uiterlijk en
+                    kan niet verdwijnen. */}
                 <View style={[StyleSheet.absoluteFill, s.introCtaTint]} />
                 <Text style={s.introCtaGlassTxt}>Explore State Control</Text>
               </View>
@@ -465,7 +464,7 @@ const s = StyleSheet.create({
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
      `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
-  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 14, overflow: 'hidden' },
+  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   introCtaGlass: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -475,7 +474,7 @@ const s = StyleSheet.create({
     paddingVertical: 16,
     overflow: 'hidden',
   },
-  introCtaTint: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  introCtaTint: { backgroundColor: 'rgba(255,255,255,0.20)' },
   introCtaGlassTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
   notNow: {
     position: 'absolute',

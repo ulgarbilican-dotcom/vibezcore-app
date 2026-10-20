@@ -172,3 +172,13 @@ Volgende stap: op "bouwen" van de operator → één build iOS + Android, en de 
 Na de build volledig hertesten (zie de testpunten van 22/23/24/25 en de transparante tabbalk: gezichten op de foto's, minispeler, minimaliseerbalk, Android-knoppen licht).
 
 Gebouwd 19 okt 23u (commit 45997b0): iOS 59 → TestFlight ingediend; Android 103 (Downloads/vibezcore-103.aab, operator uploadt in Interne tests — EAS-serviceaccount mist releaserecht); Galaxy Watch 26101923 → Wear OS-interne test gepubliceerd. Volgende: volledige hertest op toestel.
+
+## Flowtest-ronde 20 okt 2026 (avond) — fixes uit de screenshots
+
+Gevonden in de emulator-flowtests (4 profielen) en in code gezet, nog te bevestigen op echte toestellen (Test Lab):
+- Pijler 01 ("Psychological Resilience") in de Audio Library was zwart op elk profiel: eigen hoge absolute afbeelding → nu de standaard pijlerbeeldstijl (`(tabs)/index.tsx`).
+- Tabbalk: pagina-tekst scheen door de balk (Profile, Activity, Library): `barDock` kreeg `zIndex`/`elevation` 50 (`(tabs)/_layout.tsx`).
+- State Control-intro: knop "Explore State Control" onzichtbaar op Android (node wel aanwezig): BlurView uit de knop, doorschijnende laag + rand (`(tabs)/bracelet.tsx`).
+- "Your Resting Heart Rate": titel raakte de Premium-pil, +28 pt ruimte.
+- Flows: 01/06 tik op tab herhaalt bij geen verandering; 06 doet geen `back` meer na het inlogformulier (dat klapt inline open, `back` verliet de tab).
+Volgende: ARM-release bouwen en `scripts/testlab.sh` (5 echte toestellen) draaien; daarna emulator-matrix opnieuw met x86-build.

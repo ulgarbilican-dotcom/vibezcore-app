@@ -2092,27 +2092,14 @@ function AudioScreen({
                         source={imageSource(p.img)}
                         style={
                           p.key === 'resilience'
-                            ? /* Operator ("foto mag zelf beetje zakken zodat
-                                 de rots volledig in beeld is, onderkant mag
-                                 afgesneden worden"): standaard cover
-                                 centreert verticaal en sneed de rots
-                                 (bovenaan de foto) af. Top-anchored i.p.v.
-                                 gecentreerd — hoogte berekend op de échte
-                                 beeldverhouding (1086/1448), dus het is de
-                                 ONDERkant die nu wegvalt buiten de kaart. */
-                              {
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                /* Hoogte = EXACT de natuurlijke
-                                   beeldverhouding (1086/1448) bij deze
-                                   breedte: box-aspect === beeld-aspect,
-                                   dus 'cover' hoeft nergens te croppen
-                                   behalve waar de kaart zelf (korter,
-                                   overflow:hidden) 'm afkapt. */
-                                height: PILLAR_CARD_WIDTH / (1086 / 1448),
-                              }
+                            ? /* 20 okt 2026: deze kaart kreeg een eigen, 504 pt hoge
+                                 absolute afbeelding (top-anchored, onderkant buiten
+                                 de kaart). Op Android bleef die kaart ZWART (alle
+                                 profielen, elke flowtest) terwijl het bestand goed
+                                 is. Nu dezelfde standaard vulling als de andere
+                                 pijlers; de beeldverhouding (3:4) komt bijna overeen
+                                 met de kaart (4:5), dus de rots blijft in beeld. */
+                              s.pillarImg
                             : p.key === 'tools'
                               ? /* Operator ("icoon soundscapes mag beetje
                                    kleiner zodat ze visueel gelijk zijn aan

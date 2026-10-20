@@ -12,6 +12,10 @@ name: 06 Profiel, FAQ en juridisch
 - tapOn:
     text: "Profile"
     waitToSettleTimeoutMs: 1500
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Sign In or Create Account"
+    timeout: 15000
 - waitForAnimationToEnd:
     timeout: 2500
 - runFlow: _dismiss-cards.yaml
@@ -22,7 +26,8 @@ name: 06 Profiel, FAQ en juridisch
     timeout: 2500
 - runFlow: _dismiss-cards.yaml
 - takeScreenshot: 06a-sign-in
-- back
+# Het inlogformulier klapt open op de Profile-pagina zelf (geen apart scherm): "back"
+# verliet de tab en landde op de State Control-intro. Dus niet terug, gewoon verder scrollen.
 - scrollUntilVisible:
     element: "FAQ"
 - tapOn:

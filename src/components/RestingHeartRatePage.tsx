@@ -120,7 +120,7 @@ export default function RestingHeartRatePage({ onDone, onBack }: { onDone: () =>
     <View style={s.root}>
       {/* Operator, 9 okt 2026: achtergrond helemaal zwart (geen gloed). */}
 
-      <View style={[s.content, { paddingTop: insets.top + 28 }]}>
+      <View style={[s.content, { paddingTop: insets.top + 56 }]}>
 
         {/* Operator, 9 okt 2026: titel bovenaan, hart eronder. */}
         <Text style={s.title}>Your Resting{'\n'}Heart Rate</Text>
