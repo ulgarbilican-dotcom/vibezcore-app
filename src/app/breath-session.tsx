@@ -42,6 +42,7 @@
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
 import { getHapticStrength, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+import { audioOutputExtraMs } from '@/services/audio-latency';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
@@ -1395,6 +1396,9 @@ export function BreathSession() {
      Ruim genoeg om de trage aanzet van de opnames op te vangen, kort genoeg
      om niet vóór de vorige fase uit te lopen. */
   const CUE_LEAD_MS = 400;
+  /* + de extra vertraging van Bluetooth-oortjes (20 okt 2026: per oortje
+     anders, door het toestel zelf opgevraagd; 0 op de luidspreker). */
+  const cueLeadMs = () => CUE_LEAD_MS + audioOutputExtraMs();
 
   const speak = useCallback(
     (p: { key: PhaseKey; via: PhaseDef['via']; secs?: number }) => {
@@ -1635,7 +1639,7 @@ export function BreathSession() {
       if (preRef.current) clearTimeout(preRef.current);
       preRef.current = setTimeout(
         () => speak(upcoming),
-        Math.max(0, endAt - CUE_LEAD_MS - Date.now()),
+        Math.max(0, endAt - cueLeadMs() - Date.now()),
       );
 
       /* Beeld: alleen in- en uitademen bewegen. Tijdens het vasthouden
@@ -1915,7 +1919,7 @@ export function BreathSession() {
           inhaleCueUri: isLibraryPlaying() ? '' : bgUris.inhale,
           holdCueUri: isLibraryPlaying() ? '' : bgUris.hold,
           exhaleCueUri: isLibraryPlaying() ? '' : bgUris.exhale,
-          cueLeadMs: CUE_LEAD_MS,
+          cueLeadMs: cueLeadMs(),
           startPhaseIdx: idx,
           startRound: roundNow,
           startRemainingMs: Math.round(remainingSec * 1000),

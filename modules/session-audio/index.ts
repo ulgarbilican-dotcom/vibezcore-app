@@ -35,6 +35,7 @@ export type BeatPlan = {
 
 type NativeModule = {
   hapticsSupported(): boolean;
+  outputExtraMs?(): number;
   begin(owner: string): void;
   end(owner: string): void;
   releaseSession?(): void;
@@ -203,5 +204,14 @@ export function stopSessionTaps(): void {
     native?.stopTaps();
   } catch {
     /* stil */
+  }
+}
+
+/** Extra geluidsvertraging van de huidige uitgang (Bluetooth/AirPlay), 0 = ingebouwd. */
+export function getAudioOutputExtraMs(): number {
+  try {
+    return native?.outputExtraMs?.() ?? 0;
+  } catch {
+    return 0;
   }
 }

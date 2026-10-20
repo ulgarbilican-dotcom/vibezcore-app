@@ -195,6 +195,12 @@ class StateHapticsModule : Module() {
       StateHapticsService.dismissCompletionNotice(context)
     }
 
+    /** Extra geluidsvertraging van de huidige uitgang t.o.v. de luidspreker
+     *  (Bluetooth: gemeten, anders 0) — zie AudioLatency.kt. */
+    Function("audioOutputExtraMs") {
+      AudioLatency.extraMs(context).toDouble()
+    }
+
     Function("sessionStatus") {
       StateHapticsService.status()
     }

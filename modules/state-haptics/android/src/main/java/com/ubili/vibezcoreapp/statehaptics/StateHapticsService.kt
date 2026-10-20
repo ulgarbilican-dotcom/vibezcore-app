@@ -381,25 +381,46 @@ class StateHapticsService : Service() {
         }
       } catch (_: Exception) {
       }
-      /* Enkel op een hartslag (lub-dub-eenheid), niet op het eindsignaal. */
-      if (soundEnabled && u.t.size == 3) {
-        try {
-          playHeartSound(dub = false)
-        } catch (_: Exception) {
-        }
-        /* De dub op exact hetzelfde moment als de tweede tik (lub + pauze). */
-        beatHandler.postAtTime({
-          if (soundEnabled) {
-            try {
-              playHeartSound(dub = true)
-            } catch (_: Exception) {
-            }
-          }
-        }, dubToken, startUptime + u.offsetMs + u.t[0] + u.t[1])
-      }
     }
     nextUnit++
     scheduleNextUnit()
+  }
+
+  /** Het hartslaggeluid van een slag apart ingepland (20 okt 2026): via
+   *  Bluetooth-oortjes is geluid 150–300 ms later hoorbaar dan op de
+   *  luidspreker — per oortje anders. Dan starten lub en dub zoveel vroeger
+   *  (AudioLatency), zodat je hoort wat je voelt en ziet, op elk toestel.
+   *  Luidspreker/bedraad: voorsprong 0, zoals afgestemd. */
+  private fun scheduleSoundFor(index: Int) {
+    if (!soundEnabled || index >= units.size) return
+    val u = units[index]
+    /* Enkel op een hartslag (lub-dub-eenheid), niet op het eindsignaal. */
+    if (u.t.size != 3) return
+    val lead = AudioLatency.extraMs(this)
+    val now = SystemClock.uptimeMillis()
+    val lubAt = startUptime + u.offsetMs - lead
+    val dubAt = startUptime + u.offsetMs + u.t[0] + u.t[1] - lead
+    if (lubAt >= now - LATE_SKIP_MS) {
+      beatHandler.postAtTime({
+        if (soundEnabled) {
+          try {
+            playHeartSound(dub = false)
+          } catch (_: Exception) {
+          }
+        }
+      }, dubToken, lubAt)
+    }
+    /* De dub op exact hetzelfde moment als de tweede tik (lub + pauze). */
+    if (dubAt >= now - LATE_SKIP_MS) {
+      beatHandler.postAtTime({
+        if (soundEnabled) {
+          try {
+            playHeartSound(dub = true)
+          } catch (_: Exception) {
+          }
+        }
+      }, dubToken, dubAt)
+    }
   }
 
   private fun scheduleNextUnit() {
@@ -410,6 +431,7 @@ class StateHapticsService : Service() {
     }
     if (nextUnit >= units.size) return
     beatHandler.postAtTime(beatRunnable, startUptime + units[nextUnit].offsetMs)
+    scheduleSoundFor(nextUnit)
   }
 
   override fun onBind(intent: Intent?): IBinder? = null

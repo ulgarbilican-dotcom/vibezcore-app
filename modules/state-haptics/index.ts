@@ -24,6 +24,7 @@ type StateHapticsNativeModule = {
   pauseSession(): Promise<void>;
   stopSession(): Promise<void>;
   hasVibrator(): boolean;
+  audioOutputExtraMs?(): number;
   sessionStatus(): NativeSessionStatus;
   dismissCompletionNotice(): void;
   addListener(
@@ -197,5 +198,14 @@ export function setNativeSessionSound(on: boolean): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** Extra geluidsvertraging van de huidige uitgang (Bluetooth), 0 = luidspreker. */
+export function getAudioOutputExtraMs(): number {
+  try {
+    return native?.audioOutputExtraMs?.() ?? 0;
+  } catch {
+    return 0;
   }
 }

@@ -756,6 +756,19 @@ public class SessionAudioModule: Module {
   public func definition() -> ModuleDefinition {
     Name("SessionAudio")
 
+    /* 20 okt 2026 (operator: "voor elke gebruiker correct"): extra
+       geluidsvertraging van de huidige uitgang t.o.v. de ingebouwde
+       luidspreker/bedrade oortjes — Bluetooth/AirPlay (AirPods ~150–250 ms,
+       per toestel anders). 0 op de ingebouwde uitgangen: daarop is alles
+       afgestemd. */
+    Function("outputExtraMs") { () -> Double in
+      let s = AVAudioSession.sharedInstance()
+      let builtIn: Set<AVAudioSession.Port> = [.builtInSpeaker, .builtInReceiver, .headphones, .lineOut, .usbAudio]
+      let outs = s.currentRoute.outputs
+      if outs.isEmpty || outs.allSatisfy({ builtIn.contains($0.portType) }) { return 0 }
+      return max(0, min(450, s.outputLatency * 1000))
+    }
+
     Function("hapticsSupported") { () -> Bool in
       return SessionAudioEngine.shared.hapticsSupported()
     }

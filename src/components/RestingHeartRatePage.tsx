@@ -42,6 +42,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
+import { audioOutputExtraMs } from '@/services/audio-latency';
 
 /* Lucide-hart (24×24), zelfde vorm als de iconen elders in de app. */
 const HEART_D =
@@ -317,18 +318,36 @@ export function HeartbeatHero({ stage, sound = false }: { stage: number; sound?:
      een zachte lub-dub + een fijne tik — enkel zolang de pagina in beeld is
      (andere tab, meetblad open of app op de achtergrond → stil). */
   const live = useRef(false);
+  /* 20 okt 2026 (operator: "voor elke gebruiker correct"): via Bluetooth-
+     oortjes klinkt het geluid 150–300 ms later (per oortje anders, gemeten
+     door het toestel). Dan komt de slag zoveel vroeger door: geluid meteen,
+     de tik pas na die vertraging — zo vallen ze toch samen met het beeld. */
+  const routeLead = useSharedValue(0);
+  const routeLeadMs = useRef(0);
   const onBeat = useCallback(() => {
     if (!live.current) return;
     heartbeatTick();
-    hapticTap();
+    const delay = routeLeadMs.current;
+    if (delay > 0) setTimeout(() => live.current && hapticTap(), delay);
+    else hapticTap();
   }, []);
+  useEffect(() => {
+    const read = () => {
+      const v = audioOutputExtraMs();
+      routeLeadMs.current = v;
+      routeLead.value = v;
+    };
+    read();
+    const id = setInterval(read, 3000);
+    return () => clearInterval(id);
+  }, [routeLead]);
   /* Eerste beeldje: enkel de huidige slag onthouden. Daarna klinkt elke
      nieuwe slag — ook de allereerste "lub" (k gaat van −1 naar 0 na
      ~1 s); die werd eerst overgeslagen (operator: "duurt 3 à 4 s"). */
   const lastBeatK = useSharedValue(0);
   const beatInit = useSharedValue(false);
   useFrameCallback(() => {
-    const k = Math.floor((clock.value - travelMs + SOUND_LEAD_MS) / BEAT_MS);
+    const k = Math.floor((clock.value - travelMs + SOUND_LEAD_MS + routeLead.value) / BEAT_MS);
     if (!beatInit.value) {
       beatInit.value = true;
       lastBeatK.value = k;
