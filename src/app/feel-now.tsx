@@ -508,7 +508,7 @@ const s = StyleSheet.create({
     marginTop: 14,
     fontFamily: BrandFonts.medium,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
   },
   /* Operator ("invoerbalk weg, chips dekken de staten al"): subheading
@@ -708,7 +708,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 10,
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   modalBody: {
     fontFamily: BrandFonts.regular,

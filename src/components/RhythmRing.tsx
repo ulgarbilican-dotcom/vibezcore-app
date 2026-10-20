@@ -806,7 +806,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
     fontFamily: BrandFonts.medium,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
   },
   /* Operator, 19 september 2026, 6e ronde: elk item stond in een
      ongepositioneerde `View` — die viel terug op de normale document-
@@ -850,7 +850,7 @@ const s = StyleSheet.create({
     marginTop: 6,
     fontFamily: BrandFonts.medium,
     fontSize: 11.5,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   dot: {
     position: 'absolute',

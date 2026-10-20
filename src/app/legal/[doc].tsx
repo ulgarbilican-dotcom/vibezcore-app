@@ -686,7 +686,7 @@ const s = StyleSheet.create({
     padding: 18,
   },
   contactLabel: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 10,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,
@@ -730,7 +730,7 @@ const s = StyleSheet.create({
     backgroundColor: `rgba(${ACCENT_TEXT_ON_DARK_RGB},0.10)`,
   },
   legalNavText: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
   },

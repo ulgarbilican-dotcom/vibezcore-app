@@ -1226,7 +1226,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
     fontFamily: BrandFonts.semibold,
     fontSize: 10.5,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     marginBottom: 4,
   },
   monthCell: { width: `${100 / 7}%` as const, alignItems: 'center', marginBottom: 4, gap: 2 },

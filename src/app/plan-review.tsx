@@ -805,7 +805,7 @@ const s = StyleSheet.create({
     marginBottom: 20,
     fontFamily: BrandFonts.medium,
     fontSize: 12.5,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
 
   /* Operator, 21 september 2026 ("why this protocol moet een popup
@@ -871,7 +871,7 @@ const s = StyleSheet.create({
   groupLabel: {
     ...TypeScale.sectionLabel,
     marginBottom: 8,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     letterSpacing: 0.8,
   },
   groupCard: {

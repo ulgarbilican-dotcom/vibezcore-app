@@ -137,7 +137,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
                   ? 'VIBEZCORE AUDIO LIBRARY'
                   : 'VIBEZCORE BREATHWORK'}
             </Text>
-            <Pressable onPress={dismiss} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now">
+            <Pressable onPress={dismiss} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now" style={s.doneTouch}>
               {/* "Not now" i.p.v. "Done": er is niets gedaan om te bevestigen (audit 16 okt 2026). */}
               <Text style={s.done}>Not now</Text>
             </Pressable>
@@ -202,6 +202,8 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   eyebrow: { fontFamily: BrandFonts.semibold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)' },
   done: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  /* 48 dp aanraakdoel (Test Lab toegankelijkheid); marge houdt de tekst op zijn plek. */
+  doneTouch: { minHeight: 48, minWidth: 48, paddingHorizontal: 8, marginRight: -8, justifyContent: 'center', alignItems: 'flex-end' },
   scroll: { flexGrow: 0, flexShrink: 1 },
   title: { fontFamily: BrandFonts.bold, fontSize: 26, letterSpacing: -0.4, color: '#ffffff', marginTop: 6 },
   list: { marginTop: 14, marginBottom: 20, gap: 10 },

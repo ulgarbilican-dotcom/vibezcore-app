@@ -372,7 +372,7 @@ const s = StyleSheet.create({
     marginBottom: 18,
     fontFamily: BrandFonts.regular,
     fontSize: 10.5,
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
   },
 });

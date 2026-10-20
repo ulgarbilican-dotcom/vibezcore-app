@@ -321,7 +321,7 @@ const addHeroStyles = StyleSheet.create({
     fontSize: 15,
     color: '#ffffff',
   },
-  rowValuePending: { color: 'rgba(255,255,255,0.3)' },
+  rowValuePending: { color: 'rgba(255,255,255,0.55)' },
   celebrate: { alignItems: 'center' },
   celebrateTxt: {
     marginTop: 12,

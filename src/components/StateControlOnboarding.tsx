@@ -1179,7 +1179,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,
     lineHeight: 17,
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'justify',
   },
   options: { marginTop: 22, gap: 10 },

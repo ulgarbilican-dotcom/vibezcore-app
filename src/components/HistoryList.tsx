@@ -262,7 +262,7 @@ const s = StyleSheet.create({
   rowFlag: {
     fontFamily: BrandFonts.regular,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     marginTop: 1,
   },
   dayHead: {

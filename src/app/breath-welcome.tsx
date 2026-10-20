@@ -3428,7 +3428,9 @@ const s = StyleSheet.create({
   },
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: {
-    color: Brand.textDim,
+    color: 'rgba(255,255,255,0.85)',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowRadius: 6,
     fontFamily: BrandFonts.medium,
     fontSize: 14,
   },
@@ -4592,7 +4594,7 @@ const s = StyleSheet.create({
   },
   /* Gedempte tekst voor de "nog geen keuze gemaakt"-staat op stap 3. */
   ctaTxtBlocked: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontFamily: BrandFonts.semibold,
     fontSize: 17,
   },

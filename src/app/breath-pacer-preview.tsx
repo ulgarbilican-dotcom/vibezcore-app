@@ -124,7 +124,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 11,
     letterSpacing: 2.4,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     marginBottom: 20,
   },
   swatchRow: {

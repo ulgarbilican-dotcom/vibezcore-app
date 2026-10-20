@@ -854,17 +854,17 @@ const s = StyleSheet.create({
     marginTop: 14,
     marginBottom: 26,
     ...TypeScale.cardDetail,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
 
   sectionLabel: {
     ...TypeScale.cardEyebrow,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     marginBottom: 10,
   },
   emptyTxt: {
     ...TypeScale.cardDetail,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   /* Operator, 30 september 2026 ("kaarten moeten ook apple stijl"): zelfde
      icoon-badge + `compactCardTitle`/`cardDetail`-taal als (tabs)/
@@ -931,7 +931,7 @@ const s = StyleSheet.create({
   },
   saveBtnOff: { backgroundColor: 'rgba(255,255,255,0.15)' },
   saveBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
-  saveBtnTxtOff: { color: 'rgba(255,255,255,0.4)' },
+  saveBtnTxtOff: { color: 'rgba(255,255,255,0.55)' },
 
   ringWrap: { alignItems: 'center', marginTop: 8, marginBottom: 22 },
   wheelOuter: { width: 266, alignSelf: 'center', marginBottom: 8 },

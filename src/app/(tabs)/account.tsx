@@ -850,7 +850,7 @@ const g = StyleSheet.create({
   headerEmail: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
   headerStatus: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.medium, fontSize: 14, marginTop: 3 },
   version: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontFamily: BrandFonts.regular,
     fontSize: 12,
     textAlign: 'center',

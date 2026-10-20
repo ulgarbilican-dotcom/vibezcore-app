@@ -2177,7 +2177,7 @@ const s = StyleSheet.create({
     lineHeight: 20,
   },
   doneFooter: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11.5,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,
@@ -2263,7 +2263,7 @@ const s = StyleSheet.create({
      diagnose (operator/support kunnen exact zien wat Google Play of de
      verify-server teruggaf). Niet primary UI maar zichtbaar. */
   debugInfo: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     marginTop: 12,

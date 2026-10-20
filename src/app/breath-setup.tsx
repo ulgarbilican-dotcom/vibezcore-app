@@ -817,7 +817,7 @@ function TechniqueSegmentButton({
      dezelfde `dist`. */
   const textStyle = useAnimatedStyle(() => {
     if (!techniquePicked || segW <= 0) {
-      return { color: 'rgba(255,255,255,0.4)', fontSize: 13 };
+      return { color: 'rgba(255,255,255,0.55)', fontSize: 13 };
     }
     const dist = Math.min(1, Math.abs(index - indicatorX.value / segW));
     return {
@@ -5091,7 +5091,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 12.5,
     letterSpacing: 0.3,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   /* Secondary Label — de uitlegzinnen. */
   /* Operator, 24 september 2026 (vervolg, pasted Apple-sheets-referentie
@@ -5112,7 +5112,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     lineHeight: 17,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   sheetSectionLabel: {
     marginTop: 14,
@@ -5120,7 +5120,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 11,
     letterSpacing: 0.6,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   sheetInfoBody: {
     marginTop: 4,

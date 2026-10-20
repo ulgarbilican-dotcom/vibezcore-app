@@ -227,7 +227,7 @@ const s = StyleSheet.create({
     marginTop: 6,
   },
   sliderLabel: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 12,
     fontFamily: BrandFonts.medium,
     letterSpacing: 0.3,

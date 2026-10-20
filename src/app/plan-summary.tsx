@@ -262,7 +262,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 11,
     letterSpacing: 1,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   time: { fontFamily: BrandFonts.bold, fontSize: 14, color: '#ffffff' },
   stateRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 8 },
@@ -276,7 +276,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 12,
     lineHeight: 18,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
   },
 

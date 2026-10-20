@@ -452,7 +452,7 @@ const s = StyleSheet.create({
      eronder is het echte label. Data staat al in hoofdletters
      (SERIES_SUBTITLE), dus geen textTransform nodig. */
   groupSubtitle: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontFamily: BrandFonts.bold,
     fontSize: 10,
     letterSpacing: 1.1,

@@ -486,7 +486,7 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 4,
   },
-  notNowTxt: { color: Brand.textDim, fontFamily: BrandFonts.medium, fontSize: 14 },
+  notNowTxt: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.medium, fontSize: 14, textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 6 },
   introWrap: {
     flex: 1,
     alignItems: 'center',

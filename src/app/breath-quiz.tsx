@@ -573,7 +573,7 @@ const s = StyleSheet.create({
   planLbl: {
     fontFamily: BrandFonts.medium,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     marginBottom: 8,
   },
   planDayRow: {

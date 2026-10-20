@@ -180,7 +180,7 @@ const s = StyleSheet.create({
   gridLabel: {
     width: 30,
     textAlign: 'right',
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 10,
     fontFamily: BrandFonts.medium,
     fontVariant: ['tabular-nums'],
@@ -215,7 +215,7 @@ const s = StyleSheet.create({
   dayLabel: {
     flex: 1,
     textAlign: 'center',
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
   },

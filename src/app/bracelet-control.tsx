@@ -3825,7 +3825,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
         </Pressable>
         <View style={s.avHead}>
           <Text style={s.avTitle}>Audio & Haptics</Text>
-          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button">
+          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" style={s.avDoneTouch}>
             <Text style={s.avDone}>Done</Text>
           </Pressable>
         </View>
@@ -4290,14 +4290,18 @@ function IdleScreen({
               }}
               hitSlop={12}
               scaleTo={0.94}
-              style={[s.ringHr, s.ringHrAbove]}
+              /* 20 okt 2026 (Test Lab toegankelijkheid): aanraakdoel 48 dp, de
+                 zichtbare pil blijft 30 hoog (binnenste View). */
+              style={s.ringHrTouch}
               accessibilityRole="button"
               accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
             >
-              <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
-              <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
-              {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
-              <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+              <View style={s.ringHr}>
+                <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
+                <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
+                {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+                <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+              </View>
             </PressScale>
           ) : null}
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
@@ -6673,6 +6677,8 @@ const s = StyleSheet.create({
   avHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 26 },
   avTitle: { fontFamily: BrandFonts.bold, fontSize: 20, color: '#ffffff' },
   avDone: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  /* 48 dp aanraakdoel (Test Lab); negatieve marge houdt de tekst op zijn plek. */
+  avDoneTouch: { minHeight: 48, minWidth: 48, paddingHorizontal: 8, marginRight: -8, justifyContent: 'center', alignItems: 'flex-end' },
   avCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -6737,6 +6743,8 @@ const s = StyleSheet.create({
   durSegTxt: { fontFamily: BrandFonts.semibold, fontSize: 14.5 },
   ringHrTop: { position: 'absolute', top: 26 },
   ringHrAbove: { alignSelf: 'center', marginBottom: 18 },
+  /* Aanraakdoel van de hartslag-pil: 48 hoog; marges nemen de extra 18 op. */
+  ringHrTouch: { alignSelf: 'center', height: 48, justifyContent: 'center', marginTop: -9, marginBottom: 9 },
   zoneList: { gap: 14, marginTop: 4 },
   zoneRow: { gap: 3 },
   zoneHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
@@ -7455,7 +7463,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
   },
   durRangeText: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11,
     fontFamily: BrandFonts.semibold,
     letterSpacing: 0.3,
@@ -8420,7 +8428,7 @@ const s = StyleSheet.create({
      STATS". Klein, dim, geeft context dat deze cijfers alleen voor
      deze mode tellen. */
   statsEyebrow: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 9,
     fontFamily: BrandFonts.bold,
     letterSpacing: 2,

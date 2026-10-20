@@ -755,7 +755,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
   },
   doneFooter: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11.5,
     fontFamily: BrandFonts.regular,
     letterSpacing: 0.1,

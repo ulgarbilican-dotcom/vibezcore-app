@@ -1341,10 +1341,10 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
     letterSpacing: 0.8,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   metaCardTxt: { fontFamily: BrandFonts.semibold, fontSize: 13, color: '#ffffff' },
-  metaCardHint: { fontFamily: BrandFonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.4)' },
+  metaCardHint: { fontFamily: BrandFonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.55)' },
   scroll: { paddingHorizontal: 16 },
   /* Operator, 3 okt 2026 ("four moments... moet lager, meer
      ademruimte"): 6 → 20 — stond te dicht tegen de nieuwe doel-/meta-
@@ -1540,7 +1540,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.regular,
     fontSize: 12,
     lineHeight: 18,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
   },
 });

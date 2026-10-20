@@ -66,6 +66,6 @@ const s = StyleSheet.create({
   chipOn: { backgroundColor: '#ffffff' },
   chipTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   chipTxtOn: { color: '#0a0a0a' },
-  chipTxtDim: { color: 'rgba(255,255,255,0.4)' },
+  chipTxtDim: { color: 'rgba(255,255,255,0.55)' },
   thanks: { fontFamily: BrandFonts.medium, fontSize: 12.5, color: 'rgba(255,255,255,0.5)', marginTop: 10 },
 });

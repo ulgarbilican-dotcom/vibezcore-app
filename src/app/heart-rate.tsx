@@ -220,7 +220,7 @@ const s = StyleSheet.create({
   },
   ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
   empty: { color: 'rgba(255,255,255,0.55)', fontSize: 15, fontFamily: BrandFonts.medium, marginTop: 6 },
-  note: { color: 'rgba(255,255,255,0.4)', fontSize: 12.5, fontFamily: BrandFonts.medium, textAlign: 'center', marginTop: 24 },
+  note: { color: 'rgba(255,255,255,0.55)', fontSize: 12.5, fontFamily: BrandFonts.medium, textAlign: 'center', marginTop: 24 },
   clear: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },
   watchRow: {
     flexDirection: 'row',

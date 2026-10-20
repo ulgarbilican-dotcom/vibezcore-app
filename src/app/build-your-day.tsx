@@ -827,7 +827,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
     fontSize: 11.5,
     lineHeight: 16,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
 
   /* Operator, 18/19 september 2026 ("sticky/floating button panel"):

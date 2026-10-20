@@ -5578,7 +5578,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  avDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 12, paddingHorizontal: 6 },
+  avDoneTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 15, paddingHorizontal: 10 },
   avSheetHint: {
     fontFamily: BrandFonts.regular,
     fontSize: 12.5,

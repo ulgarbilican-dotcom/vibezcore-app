@@ -373,7 +373,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 10.5,
     letterSpacing: 2.4,
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
   },
 

@@ -3985,7 +3985,7 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
   journeyRowChev: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 18,
     fontFamily: 'Inter_500Medium',
   },
@@ -5630,7 +5630,7 @@ const s = StyleSheet.create({
   searchIcon: {
     fontSize: 14,
     marginRight: 10,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
   },
   searchInput: {
     flex: 1,
@@ -5723,13 +5723,13 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   acChev: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 18,
     fontWeight: '700',
     marginLeft: 4,
   },
   acMore: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 8,
@@ -5830,7 +5830,7 @@ const s = StyleSheet.create({
     marginTop: 3,
   },
   journeyChev: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 18,
     fontWeight: '800',
     marginLeft: 4,

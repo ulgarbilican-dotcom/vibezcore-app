@@ -1945,13 +1945,13 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.medium,
     fontSize: 11.5,
     letterSpacing: 0,
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(255,255,255,0.55)',
   },
   footSep: { fontSize: 9, color: 'rgba(255,255,255,0.22)' },
   historyTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11.5,
     letterSpacing: 0,
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(255,255,255,0.55)',
   },
 });
