@@ -78,7 +78,7 @@
       }
     },
     "android": {
-      "icon": "./assets/icon/android_icon_1024.png",
+      "icon": "./assets/icon/app_icon_1024.png",
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a",
         "foregroundImage": "./assets/icon/android_icon_1024.png",
