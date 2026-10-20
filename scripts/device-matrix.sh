@@ -63,7 +63,7 @@ for P in $PROFILES; do
   apply_profile "$P" || continue
   mkdir -p "$OUT/$P"
   ( cd "$OUT/$P" && "$MAESTRO" --device "$EMU" test "$ROOT/.maestro" \
-      --format junit --output "$OUT/$P/report.xml" -e PROFILE="$P" ) \
+      --format junit --output "$OUT/$P/report.xml" --test-output-dir "$OUT/$P" -e PROFILE="$P" ) \
     > "$OUT/$P/maestro.log" 2>&1 || FAIL=1
   grep -E "Flow|PASSED|FAILED|✅|❌" "$OUT/$P/maestro.log" | tail -20
 done

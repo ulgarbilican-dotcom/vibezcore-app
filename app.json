@@ -80,7 +80,8 @@
     "android": {
       "icon": "./assets/icon/app_icon_1024.png",
       "adaptiveIcon": {
-        "backgroundColor": "#0a0a0a",
+        "backgroundColor": "#38383B",
+        "backgroundImage": "./assets/icon/android_bg_1024.png",
         "foregroundImage": "./assets/icon/android_icon_1024.png",
         "monochromeImage": "./assets/icon/android_mono_1024.png"
       },
