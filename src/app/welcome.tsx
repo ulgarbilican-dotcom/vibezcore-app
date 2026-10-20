@@ -33,7 +33,6 @@ import {
   awaitDevUserOverrideLoaded,
   getDevUserOverride,
 } from '@/utils/dev-user-override';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AudioLines, ChevronRight, Radio, Wind, type LucideIcon } from 'lucide-react-native';
 import Svg, { Polygon } from 'react-native-svg';
@@ -187,12 +186,10 @@ function PillarButton({
            blur op Android 12+ (elk toestel dat VIBEZCORE realistisch
            target). Zelfde fix nodig in build-choice.tsx/breath-setup.tsx/
            breath-session.tsx — zie die bestanden. */}
-        <BlurView
-          intensity={40}
-          tint="dark"
-          blurMethod="dimezisBlurViewSdk31Plus"
-          style={s.pillarBlur}
-        >
+        {/* 20 okt 2026: GEEN BlurView meer — in deze geanimeerde, geschaalde Pressable
+           tekende de blur op Android losse vormen buiten de knoppen (flowtest
+           01a, elke run). Dezelfde doorschijnende vulling, zonder blur. */}
+        <View style={s.pillarBlur}>
           {/* Operator, 7 okt 2026 (eigen ontwerp "start welcome zo doen"):
              groter dun icoon, enkel de titel, pijltje rechts. */}
           <View style={s.pillarIconWrap}>
@@ -206,7 +203,7 @@ function PillarButton({
              tab-intro). */}
           <Text style={s.pillarTitle}>{p.title}</Text>
           <ChevronRight size={19} color="rgba(255,255,255,0.85)" strokeWidth={1.6} />
-        </BlurView>
+        </View>
       </AnimatedPressable>
     </Animated.View>
   );
