@@ -30,7 +30,13 @@ export function BreathSessionHost() {
       }),
     [],
   );
-  const { height } = useWindowDimensions();
+  const { height: winHeight } = useWindowDimensions();
+  /* 20 okt 2026: de laag schoof maar `winHeight` omlaag; op Android (3-knops
+     navigatie, edge-to-edge) is het scherm hoger dan het "window" — de bovenkant
+     van de sessie (CALM CONTROL · Box Breathing + chevron/tandwiel) bleef als een
+     strook onderaan zichtbaar over Settings en andere schermen (Test Lab A10).
+     Ruim buiten beeld parkeren. */
+  const height = winHeight + 240;
   const offset = useSharedValue(height);
 
   const minimized = host?.minimized ?? false;

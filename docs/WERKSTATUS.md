@@ -182,3 +182,9 @@ Gevonden in de emulator-flowtests (4 profielen) en in code gezet, nog te bevesti
 - "Your Resting Heart Rate": titel raakte de Premium-pil, +28 pt ruimte.
 - Flows: 01/06 tik op tab herhaalt bij geen verandering; 06 doet geen `back` meer na het inlogformulier (dat klapt inline open, `back` verliet de tab).
 Volgende: ARM-release bouwen en `scripts/testlab.sh` (5 echte toestellen) draaien; daarna emulator-matrix opnieuw met x86-build.
+
+Test Lab (5 echte toestellen, 20 okt 21:05, build b0b39d8+34a8550): alle 5 geslaagd (0 crashes). Gecontroleerd op ~195 screenshots; bevestigd goed: pijler 01-beeld, State Control-knop, Resting Heart Rate-titel. Nieuw gevonden en gefixt (nog te bevestigen):
+- Welkomstfoto op Android ~2x ingezoomd (alleen gezicht van de man): `Animated.Image` → `Image` in `Animated.View` (`welcome.tsx`).
+- Tekst van de pagina scheen nog door de tabbalk (6%): vlak naar 0.985 (`(tabs)/_layout.tsx`).
+- Sessielaag (CALM CONTROL · Box Breathing) bleef als strook onderaan zichtbaar over andere schermen op Android 10/3-knops navigatie: parkeert nu 240 pt buiten beeld (`BreathSessionHost.tsx`).
+Open uit Test Lab-toegankelijkheid (Pixel 8a: 40 meldingen — 18 aanraakdoelen, 13 laag contrast, 1 + 4 + 4 labels): nog niet doorgenomen; o.a. "70 bpm"-pil en "Not now"-link zijn kleiner dan 48 dp, "Not Now" op de foto-intro heeft laag contrast.

@@ -42,7 +42,7 @@ import { useEffect, useState } from 'react';
 import { getBreathHistory } from '@/utils/breath-history';
 import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import * as Haptics from 'expo-haptics';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 /* Operator, 19 september 2026 ("gestaffelde intro... logo, dan tekst,
    dan de knoppen één voor één van onderen omhoog met een zachte
@@ -314,15 +314,21 @@ export default function WelcomeScreen() {
 
   return (
     <View style={s.root}>
-      <Animated.Image
-        source={imageSource(BG_IMG)}
-        /* Operator, 7 okt 2026 ("foto stukje omlaag"): het beeldvlak steekt
-           80 pt onder het scherm uit (bovenrand blijft op 0, geen zwarte
-           strook) — het midden zakt 40 pt, de personen staan lager en het
-           logo meer lucht heeft. */
-        style={[StyleSheet.absoluteFill, { bottom: -80 }, bgStyle]}
-        resizeMode="cover"
-      />
+      {/* Operator, 7 okt 2026 ("foto stukje omlaag"): het beeldvlak steekt
+         80 pt onder het scherm uit (bovenrand blijft op 0, geen zwarte
+         strook) — het midden zakt 40 pt, de personen staan lager en het
+         logo meer lucht heeft.
+         20 okt 2026: op Android toonde `Animated.Image` de foto ~2x ingezoomd
+         (alleen het gezicht van de man, links-boven verankerd) — de
+         `resizeMode` kwam niet aan. Nu de gewone `Image` (zoals de andere
+         volledig-scherm-intro's) in een Animated.View voor de opacity. */}
+      <Animated.View style={[StyleSheet.absoluteFill, { bottom: -80 }, bgStyle]}>
+        <Image
+          source={imageSource(BG_IMG)}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+      </Animated.View>
       {/* Operator, 19 september 2026 ("gradient bovenaan — VIBEZCORE en
          tagline vallen weg tegen de lichte lucht"): symmetrisch met de
          bestaande onderste verloop hieronder — donker vanaf de bovenrand,
