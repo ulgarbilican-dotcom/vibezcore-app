@@ -1284,11 +1284,40 @@ export default function BreathWelcomeScreen() {
            schermbreedte+hoogte i.p.v. de eigen beeldverhouding met
            ademruimte erboven — zelfde `StyleSheet.absoluteFill`+`cover`
            als de andere fotostappen (1/4/6) hieronder. */
-        <Image
-          source={imageSource(INTRO_BG_IMG)}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        />
+        <>
+          {/* Zelfde opbouw als de Breath-tab-intro: gezichten volledig in beeld (volle breedte,
+              4:5, nooit hoger dan scherm min tekstblok), geblurde kopie erachter,
+              onderaan zacht naar zwart. Responsief op elk scherm. */}
+          <Image
+            source={imageSource(INTRO_BG_IMG)}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            blurRadius={45}
+          />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.45)' }]} />
+          <Image
+            source={imageSource(INTRO_BG_IMG)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: SCREEN_W,
+              height: Math.round(Math.min(SCREEN_W * 1.25, SCREEN_H - 340)),
+            }}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.5)', 'rgba(10,10,10,0.9)', Brand.bg]}
+            locations={[
+              (Math.min(SCREEN_W * 1.25, SCREEN_H - 340) * 0.5) / SCREEN_H,
+              (Math.min(SCREEN_W * 1.25, SCREEN_H - 340) * 0.8) / SCREEN_H,
+              (Math.min(SCREEN_W * 1.25, SCREEN_H - 340) * 0.97) / SCREEN_H,
+              Math.min(1, (Math.min(SCREEN_W * 1.25, SCREEN_H - 340) * 1.03) / SCREEN_H),
+            ]}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
       ) : slide === 1 || slide === 2 || slide === 3 ? (
         /* Operator, 22 september 2026 ("waarom is dat zo moeilijk, dat
            staat nog altijd wit?" → "de zwarte achtergronden moeten zonder
