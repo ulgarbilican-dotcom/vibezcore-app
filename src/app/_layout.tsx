@@ -92,12 +92,22 @@ import * as Notifications from 'expo-notifications';
    knoppennavigatie op een telefoon in lichte modus). Ook gezet via de
    expo-navigation-bar-plugin in app.json; hier nog eens na de start, omdat
    React Native de knopkleur volgens de systeemmodus zet. */
+/* 21 okt 2026 (Sentry: "setButtonStyleAsync rejected — the current activity
+   is no longer available"): niet meer tijdens het laden van de module, maar
+   pas als de app echt op de voorgrond staat — dan bestaat de activity zeker. */
 if (Platform.OS === 'android') {
-  try {
-    NavigationBar.setStyle('light');
-  } catch {
-    /* nooit de start blokkeren */
-  }
+  const applyNavStyle = () => {
+    if (AppState.currentState !== 'active') return;
+    try {
+      NavigationBar.setStyle('light');
+    } catch {
+      /* nooit de start blokkeren */
+    }
+  };
+  setTimeout(applyNavStyle, 800);
+  AppState.addEventListener('change', (st) => {
+    if (st === 'active') setTimeout(applyNavStyle, 400);
+  });
 }
 import { bootDecided, markBootDecided } from '@/utils/boot';
 import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
