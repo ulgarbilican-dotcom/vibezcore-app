@@ -1910,14 +1910,15 @@ const s = StyleSheet.create({
     width: THUMB,
     height: THUMB,
     borderRadius: THUMB / 2,
-    borderWidth: 1.6,
+    borderWidth: 1,
+    opacity: 0.85,
   },
   thumbGlow: {
     position: 'absolute',
     width: THUMB + 14,
     height: THUMB + 14,
     borderRadius: (THUMB + 14) / 2,
-    opacity: 0.18,
+    opacity: 0.09,
   },
   thumbsPill: {
     flexDirection: 'row',

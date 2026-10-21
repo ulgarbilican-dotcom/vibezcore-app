@@ -19,7 +19,6 @@ export const BUNDLED_IMAGES: Record<string, number> = {
   'https://vibezcore-audio.b-cdn.net/images/lotusbloem-removebg-preview.png': require('../../assets/images/cdn/lotusbloem-removebg-preview-908e45.webp'),
   'https://vibezcore-audio.b-cdn.net/images/master-mental-clarity.jpg': require('../../assets/images/cdn/master-mental-clarity-cdce5d.webp'),
   'https://vibezcore-audio.b-cdn.net/images/pic%20bracelet%20background.png': require('../../assets/images/cdn/pic-bracelet-background-6b9ecb.webp'),
-  'https://vibezcore-audio.b-cdn.net/images/pic%20calm%20control%20app%204.png': require('../../assets/images/cdn/pic-calm-control-app-4-2060cb.webp'),
   'https://vibezcore-audio.b-cdn.net/images/pic%20calm%20relax%202.png': require('../../assets/images/cdn/pic-calm-relax-2-929608.webp'),
   'https://vibezcore-audio.b-cdn.net/images/pic%20clarity%20app%204.png': require('../../assets/images/cdn/pic-clarity-app-4-2a771c.webp'),
   'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20breathwork%20welcome%203.png': require('../../assets/images/cdn/pic-hero-breathwork-welcome-3-8bdd7b.webp'),
