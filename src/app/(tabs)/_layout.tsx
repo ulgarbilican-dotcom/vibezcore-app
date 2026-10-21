@@ -170,7 +170,7 @@ function TabButton({
    `#8a8a8a` (rgba-wit 0,6) zodat het ook over een lichte foto leesbaar
    blijft. Het actieve ICOON blijft Bio-Teal (`AudioAccent`, 10 okt). */
 const TAB_ACTIVE_COLOR = '#ffffff';
-const TAB_INACTIVE_COLOR = 'rgba(255,255,255,0.6)';
+const TAB_INACTIVE_COLOR = 'rgba(255,255,255,0.45)';
 
 /* Operator, 10 okt 2026 ("gebruik deze iconen voor de tabbladen" —
    website-sectie "Three tools. One system."; vervolg: "iconen zonder
@@ -194,7 +194,7 @@ function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) 
   }, [focused, scale]);
   return (
     <RNAnimated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }] }}>
-      <Icon size={21} color={focused ? AudioAccent : TAB_INACTIVE_COLOR} strokeWidth={2} />
+      <Icon size={focused ? 24 : 21} color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR} strokeWidth={focused ? 2.3 : 1.9} />
     </RNAnimated.View>
   );
 }
@@ -209,8 +209,8 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
            niet met 8px lucht ertussen — samen met de kleinere balk-hoogte
            hierboven maakt dit de hele balk zichtbaar compacter. */
         marginTop: 2,
-        fontSize: 10,
-        fontFamily: focused ? BrandFonts.semibold : BrandFonts.medium,
+        fontSize: focused ? 11 : 10,
+        fontFamily: focused ? BrandFonts.bold : BrandFonts.medium,
         letterSpacing: 0.3,
         color: focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR,
       }}
