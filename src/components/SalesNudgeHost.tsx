@@ -292,7 +292,8 @@ export function SalesNudgeHost() {
         />
       ) : card === 'day-pass' ? (
         <NudgeCard
-          title="Try Everything for 24 Hours"
+          title={"Try Everything
+for 24 Hours"}
           body="Breathwork, State Control and the full Audio Library. One payment, no subscription."
           primary={{ label: `Get Day Pass · ${dayPrice}`, onPress: buyDayPass }}
           onNotNow={close}
@@ -354,9 +355,9 @@ function NudgeCard({
       </Pressable>
       <Animated.View style={reveal(0)}>
         <Text style={s.eyebrow}>VIBEZCORE PREMIUM</Text>
-        <Text style={s.title} accessibilityRole="header">
+        <BalancedText style={s.title} accessibilityRole="header">
           {title}
-        </Text>
+        </BalancedText>
       </Animated.View>
       <Animated.View style={reveal(1)}>
         <BalancedText style={s.body}>{body}</BalancedText>
