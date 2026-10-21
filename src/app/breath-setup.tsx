@@ -4842,7 +4842,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   /* Operator, 19 september 2026 ("iets meer verticale padding, luxueuzer
      gevoel onder de duim"): 50→56. */
   cta: {
-    height: 56,
+    height: 52,
     borderRadius: 999,
     backgroundColor: C.ctaBg,
     borderWidth: 1,
