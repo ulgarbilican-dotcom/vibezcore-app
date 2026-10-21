@@ -569,7 +569,11 @@ export default function AgendaScreen() {
           : router.dismissTo('/activity' as never);
 
   if (!loaded) {
-    return <SafeAreaView style={s.root} edges={['top']} />;
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        <Stack.Screen options={{ headerShown: false }} />
+      </SafeAreaView>
+    );
   }
 
   if (!plan) {

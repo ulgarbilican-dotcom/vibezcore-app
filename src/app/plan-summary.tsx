@@ -128,7 +128,11 @@ export default function PlanSummaryScreen() {
   );
 
   if (!plan || !today) {
-    return <SafeAreaView style={s.root} edges={['top']} />;
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        <Stack.Screen options={{ headerShown: false }} />
+      </SafeAreaView>
+    );
   }
 
   return (
