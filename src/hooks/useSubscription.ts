@@ -326,7 +326,26 @@ async function fetchBackendStatus(): Promise<SubscriptionStatus | null> {
   }
 }
 
+/* TESTBUILD-ONLY (21 okt 2026): forceer een toegangsniveau zonder echte aankoop, om elk niveau
+   (free, dagpas, maand, jaar) te kunnen doorlopen. Alleen actief als de build met
+   EXPO_PUBLIC_VZ_TEST=1 is gemaakt; in een store-build is `process.env.EXPO_PUBLIC_VZ_TEST`
+   undefined en doet dit niets. */
+let testOverride: SubscriptionStatus | null = null;
+export function setTestTier(tier: 'free' | 'day' | 'monthly' | 'yearly' | 'off'): void {
+  if (process.env.EXPO_PUBLIC_VZ_TEST !== '1') return;
+  const dayEnd = new Date(Date.now() + 20 * 3600 * 1000).toISOString();
+  const year = new Date(Date.now() + 200 * 24 * 3600 * 1000).toISOString();
+  testOverride =
+    tier === 'off' ? null
+    : tier === 'free' ? { active: false }
+    : tier === 'day' ? { active: true, tier: 'day', validUntil: dayEnd, willRenew: false }
+    : { active: true, tier, validUntil: year, willRenew: true };
+  fetchGeneration++;
+  if (testOverride) { cachedStatus = testOverride; notifyAll(testOverride); } else void fetchStatus();
+}
+
 async function fetchStatus(): Promise<void> {
+  if (testOverride) { notifyAll(testOverride); return; }
   const myGen = fetchGeneration;
   if (currentFetchGen === myGen) return;
   currentFetchGen = myGen;
