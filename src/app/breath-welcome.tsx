@@ -1295,17 +1295,24 @@ export default function BreathWelcomeScreen() {
             blurRadius={45}
           />
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.45)' }]} />
-          <Image
-            source={imageSource(INTRO_BG_IMG)}
+          <View
+            pointerEvents="none"
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: SCREEN_W,
               height: Math.round(Math.min(SCREEN_W * 1.25, SCREEN_H - 340)),
+              overflow: 'hidden',
             }}
-            resizeMode="cover"
-          />
+          >
+            {/* Bovenaan uitgelijnd: op korte schermen wordt onderaan afgesneden, nooit de gezichten. */}
+            <Image
+              source={imageSource(INTRO_BG_IMG)}
+              style={{ width: SCREEN_W, height: Math.round(SCREEN_W * 1.25) }}
+              resizeMode="cover"
+            />
+          </View>
           <LinearGradient
             pointerEvents="none"
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.5)', 'rgba(10,10,10,0.9)', Brand.bg]}
