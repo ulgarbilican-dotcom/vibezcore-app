@@ -331,7 +331,9 @@ export const CTA = {
     borderWidth: 1,
     borderColor: '#D2D2D7',
   },
-  disabled: { opacity: 0.35 },
+  /* Ondoorzichtig (zelfde grijs als wit op 35%): een doorzichtige uitgeschakelde knop
+     liet de tekst van kaarten eronder erdoorheen schijnen. */
+  disabled: { backgroundColor: '#595959', borderColor: '#595959' },
   label: {
     fontFamily: BrandFonts.semibold,
     fontSize: 14,
