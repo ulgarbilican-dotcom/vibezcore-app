@@ -7,46 +7,46 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | Scherm | S | M | L | Opmerkingen |
 |---|---|---|---|---|
 | about | ✅ | ☐ | ☐ |  |
-| activate-bracelet | ☐ | ☐ | ☐ | |
-| agenda | ✅ | ☐ | ☐ | tegels onderaan scrollen |
-| auth-callback | ☐ | ☐ | ☐ | |
-| bracelet-agenda | ☐ | ☐ | ☐ | |
+| activate-bracelet | ✅ | ☐ | ☐ |  |
+| agenda | ✅ | ✅ | ☐ | tegels onderaan scrollen |
+| auth-callback | ✅ | ☐ | ☐ |  |
+| bracelet-agenda | ✅ | ☐ | ☐ |  |
 | bracelet-control | ☐ | ☐ | ☐ | |
-| bracelet-history | ☐ | ☐ | ☐ | |
-| bracelet-protocol | ☐ | ☐ | ☐ | |
-| bracelet-set-day | ☐ | ☐ | ☐ | |
-| breath-history | ☐ | ☐ | ☐ | |
-| breath-pacer-preview | ☐ | ☐ | ☐ | |
-| breath-quiz | ☐ | ☐ | ☐ | |
-| breath-sample | ☐ | ☐ | ☐ | |
+| bracelet-history | ✅ | ☐ | ☐ |  |
+| bracelet-protocol | ✅ | ☐ | ☐ |  |
+| bracelet-set-day | ✅ | ☐ | ☐ |  |
+| breath-history | ✅ | ☐ | ☐ |  |
+| breath-pacer-preview | n.v.t. | n.v.t. | n.v.t. | prototype: buiten dev niet meer bereikbaar |
+| breath-quiz | ✅ | ☐ | ☐ |  |
+| breath-sample | ✅ | ☐ | ☐ |  |
 | breath-session | ✅ | ✅ | ☐ | beeld schaalt; boog-gloed niet meer afgesneden |
 | breath-setup | ✅ | ☐ | ☐ | scrolt onder 760 dp; tekst niet meer achter knop |
-| breath-splat | ☐ | ☐ | ☐ | |
+| breath-splat | n.v.t. | n.v.t. | n.v.t. | prototype: buiten dev niet meer bereikbaar |
 | breath-welcome | ☐ | ☐ | ☐ | |
-| build-choice | ✅ | ☐ | ☐ | vaste knop onder de scroll |
-| build-your-day | ☐ | ☐ | ☐ | |
-| change-password | ☐ | ☐ | ☐ | |
+| build-choice | ✅ | ✅ | ☐ | vaste knop onder de scroll |
+| build-your-day | ✅ | ☐ | ☐ |  |
+| change-password | ✅ | ☐ | ☐ |  |
 | faq | ✅ | ☐ | ☐ |  |
-| feel-now | ⚠ gefixt (afgekapte techniek-naam), hercontrole | ☐ | ☐ | |
-| forgot-password | ☐ | ☐ | ☐ | |
-| goal | ☐ | ☐ | ☐ | |
+| feel-now | ✅ | ✅ | ☐ |  |
+| forgot-password | ✅ | ☐ | ☐ |  |
+| goal | ✅ | ☐ | ☐ |  |
 | heart-rate | ✅ | ☐ | ☐ |  |
 | history | ✅ (titel wraapt) | ☐ | ☐ |  |
-| intensity | ☐ | ☐ | ☐ | |
-| plan-review | ✅ | ☐ | ☐ | laatste rij boven knop; vinkje zichtbaar op wit (fix) |
+| intensity | ✅ | ☐ | ☐ |  |
+| plan-review | ✅ | ✅ | ✅ | laatste rij boven knop; vinkje zichtbaar op wit (fix) |
 | plan-success | ✅ | ☐ | ☐ | één vinkje |
-| plan-summary | ☐ | ☐ | ☐ | |
-| plan | ☐ | ☐ | ☐ | |
+| plan-summary | ✅ | ☐ | ☐ |  |
+| plan | ✅ | ☐ | ☐ |  |
 | player | ☐ | ☐ | ☐ | |
-| reset-password | ☐ | ☐ | ☐ | |
-| routine-intro | ✅ | ☐ | ☐ | beide badges passen |
-| settings | ✅ | ☐ | ☐ | dubbele titel (nav + groot) bovenaan: ontwerp-vraag |
-| state-onboarding | ☐ | ☐ | ☐ | |
-| subscribe | ✅ (scrolt) | ☐ | ☐ | knop+voorwaarden samen onderaan, bewust zo (store-eisen) |
+| reset-password | ✅ | ☐ | ☐ |  |
+| routine-intro | ✅ | ✅ | ☐ | beide badges passen |
+| settings | ✅ | ✅ | ☐ | dubbele titel (nav + groot) bovenaan: ontwerp-vraag |
+| state-onboarding | ✅ | ✅ | ✅ |  |
+| subscribe | ✅ | ✅ | ✅ | knop+voorwaarden samen onderaan, bewust zo (store-eisen) |
 | support | ☐ | ☐ | ☐ | |
 | welcome | ✅ | ☐ | ☐ |  |
-| (tabs)/account | ✅ | ☐ | ☐ |  |
-| (tabs)/activity | ✅ | ☐ | ☐ |  |
+| (tabs)/account | ✅ | ✅ | ✅ |  |
+| (tabs)/activity | ✅ | ✅ | ✅ |  |
 | (tabs)/bracelet | ✅ | ☐ | ☐ | State Control-intro + dial schaalt; tabnaam past (fix, nog zien) |
 | (tabs)/breath | ✅ | ✅ | ✅ | intro + vijf toestanden; Boost/Clarity links, Calm groter (M gezien) |
 | (tabs)/index | ☐ | ✅ (intro + bracelet-kaart) | ☐ | Library-intro uitgezoomd; bracelet-kaart vaste hoogte |
