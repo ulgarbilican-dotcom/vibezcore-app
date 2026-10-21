@@ -246,7 +246,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={s.root}>
+    <SafeAreaView edges={['bottom']} style={s.root}>
       <Stack.Screen
         options={{
           title: 'Settings',
