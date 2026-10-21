@@ -8754,7 +8754,7 @@ const s = StyleSheet.create({
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52,
     backgroundColor: '#ffffff',
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
@@ -8785,7 +8785,7 @@ const s = StyleSheet.create({
     letterSpacing: -0.1,
   },
   startBtn: {
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',

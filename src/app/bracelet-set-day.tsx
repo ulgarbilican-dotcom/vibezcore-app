@@ -924,7 +924,7 @@ const s = StyleSheet.create({
      50, hoek 14 — geen volle pil (operator, 5 okt 2026). */
   saveBtn: {
     height: 50,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',

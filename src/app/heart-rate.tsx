@@ -212,7 +212,7 @@ const s = StyleSheet.create({
   cta: {
     alignSelf: 'stretch',
     backgroundColor: '#ffffff',
-    borderRadius: 14,
+    borderRadius: 999,
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',

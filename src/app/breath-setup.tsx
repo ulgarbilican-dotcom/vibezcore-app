@@ -4843,7 +4843,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
      gevoel onder de duim"): 50→56. */
   cta: {
     height: 56,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: C.ctaBg,
     borderWidth: 1,
     borderColor: C.ctaBorder,

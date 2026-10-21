@@ -618,7 +618,7 @@ const pc = StyleSheet.create({
   cta: {
     marginTop: 16,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2761,7 +2761,7 @@ const s = StyleSheet.create({
     minHeight: 52,
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',

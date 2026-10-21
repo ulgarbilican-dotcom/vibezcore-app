@@ -320,27 +320,30 @@ export const CardHeights = {
 } as const;
 
 export const CTA = {
+  /* Doorgaan-knop in de flows (Continue / Next / Build…): glazen pil, niet fel
+     (21 okt 2026, operator: "die witte ctas storen"). De ene beslissende actie
+     (Start session, Subscribe, welkomstschermen) blijft effen wit, ook als pil. */
   container: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     gap: 10,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
+    height: 52,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderWidth: 1,
-    borderColor: '#D2D2D7',
+    borderColor: 'rgba(255,255,255,0.26)',
   },
-  /* Ondoorzichtig (zelfde grijs als wit op 35%): een doorzichtige uitgeschakelde knop
-     liet de tekst van kaarten eronder erdoorheen schijnen. */
-  disabled: { backgroundColor: '#595959', borderColor: '#595959' },
+  /* Ondoorzichtig: een doorzichtige uitgeschakelde knop liet de tekst van kaarten
+     eronder erdoorheen schijnen. */
+  disabled: { backgroundColor: '#1d1d20', borderColor: 'rgba(255,255,255,0.10)' },
   label: {
     fontFamily: BrandFonts.semibold,
-    fontSize: 14,
+    fontSize: 15,
     letterSpacing: 0.1,
-    color: '#1D1D1F',
+    color: '#ffffff',
   },
-  iconColor: '#1D1D1F',
+  iconColor: '#ffffff',
 } as const;
 
 /* Eén maat voor de grote keuzecirkel van State Control (toestand/duur) en

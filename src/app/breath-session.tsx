@@ -5250,7 +5250,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     alignSelf: 'center',
     paddingHorizontal: 30,
     height: BTN_H,
-    borderRadius: BTN_H / 2,
+    borderRadius: 999,
     borderWidth: 1,
   },
   startTxt: {

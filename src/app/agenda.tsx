@@ -1165,7 +1165,7 @@ const s = StyleSheet.create({
     gap: 8,
     height: 48,
     paddingHorizontal: 24,
-    borderRadius: 24,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
   },
   ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#0a0a0a' },
