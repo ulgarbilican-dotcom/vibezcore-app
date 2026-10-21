@@ -292,8 +292,7 @@ export function SalesNudgeHost() {
         />
       ) : card === 'day-pass' ? (
         <NudgeCard
-          title={"Try Everything
-for 24 Hours"}
+          title={'Try Everything' + String.fromCharCode(10) + 'for 24 Hours'}
           body="Breathwork, State Control and the full Audio Library. One payment, no subscription."
           primary={{ label: `Get Day Pass · ${dayPrice}`, onPress: buyDayPass }}
           onNotNow={close}
