@@ -182,8 +182,9 @@ export default function PlanSummaryScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lead}>
-          {goalNames.length > 0 ? goalNames.join(' + ') : 'No goal set'} ·{' '}
-          {INTENSITY_LABEL[plan.intensity]} · {HORIZON_LABEL[plan.horizon]}
+          {[goalNames.length > 0 ? goalNames.join(' + ') : 'No goal set', INTENSITY_LABEL[plan.intensity], HORIZON_LABEL[plan.horizon]]
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
 
         {today.items.map((it, i) => {
