@@ -19,7 +19,7 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | breath-pacer-preview | ☐ | ☐ | ☐ | |
 | breath-quiz | ☐ | ☐ | ☐ | |
 | breath-sample | ☐ | ☐ | ☐ | |
-| breath-session | ✅ | ✅ | ☐ | beeld schaalt met hoogte; geen overlap meer op S |
+| breath-session | ✅ | ✅ | ☐ | beeld schaalt; boog-gloed niet meer afgesneden |
 | breath-setup | ✅ | ☐ | ☐ | scrolt onder 760 dp; tekst niet meer achter knop |
 | breath-splat | ☐ | ☐ | ☐ | |
 | breath-welcome | ☐ | ☐ | ☐ | |
@@ -48,8 +48,8 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | (tabs)/account | ☐ | ☐ | ☐ | |
 | (tabs)/activity | ☐ | ☐ | ☐ | |
 | (tabs)/bracelet | ☐ | ☐ | ☐ | |
-| (tabs)/breath | ✅ | ✅ | ✅ | intro + vijf toestanden (S, L gezien); foto-offsets als verhouding |
-| (tabs)/index | ☐ | ☐ | ☐ | |
+| (tabs)/breath | ✅ | ✅ | ✅ | intro + vijf toestanden; Boost/Clarity links, Calm groter (M gezien) |
+| (tabs)/index | ☐ | ✅ (intro + bracelet-kaart) | ☐ | Library-intro uitgezoomd; bracelet-kaart vaste hoogte |
 
 ## Officiële eisen (nog na te lopen)
 - Google Play: edge-to-edge (Android 15), doel-SDK, grote schermen/tablets, 16 KB pagina's
