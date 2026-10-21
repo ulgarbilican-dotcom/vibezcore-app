@@ -898,7 +898,11 @@ export default function BreathScreen() {
           <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
             <Image
               source={imageSource(INTRO_BG_IMG)}
-              style={{ width: '100%', height: '100%' }}
+              /* 21 okt 2026 (operator: "man en vrouw volledig in beeld"):
+                 hele foto op volle breedte (4:5), tegen de bovenrand; het
+                 vignet hieronder laat hem onderaan in de achtergrond
+                 overlopen. */
+              style={{ width: SCREEN_W, height: Math.round(SCREEN_W * 1.25) }}
               resizeMode="cover"
             />
           </Animated.View>
@@ -911,7 +915,7 @@ export default function BreathScreen() {
           <LinearGradient
             pointerEvents="none"
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.55)', Brand.bg]}
-            locations={[0.4, 0.78, 1]}
+            locations={[0.3, 0.62, 0.8]}
             style={StyleSheet.absoluteFill}
           />
         </>
