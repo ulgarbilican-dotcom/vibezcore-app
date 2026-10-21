@@ -454,13 +454,15 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               </Animated.View>
               <View style={{ flex: 1 }} />
               <Animated.View entering={enter(2)} style={s.chartCard}>
-                <RhythmChart mode={chartMode} />
+                <RhythmChart mode={chartMode} maxH={areaH > 0 ? areaH - 330 : undefined} />
               </Animated.View>
               {/* Operator, 16 okt 2026 ("pagina 1 is veel tekst, heel druk,
                   kan afschrikken"): de drie stappen Match/Glide/Hold zijn weg —
                   de grafiek toont ze al (start bij je hartslag, glijdt, blijft).
                   Eén scherm, één boodschap. */}
               <View style={{ flex: 1 }} />
+              {/* Op een kort scherm eerst de bijzaak weglaten, zodat de rest ruimte houdt. */}
+              {areaH === 0 || areaH >= 560 ? (
               <Text style={[s.footnote, s.pad]}>
                 {/* Beide richtingen, kloppend met Science A tot Z §3.1 (operator:
                     "Cornell gaat enkel over calmer under pressure"): trager →
@@ -468,6 +470,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                     (Valente 2024), geleidelijk werkt (Motokawa & Kato 2025). */}
                 Inspired by research on heartbeat-like touch: slower helped people stay calm, faster made them more alert.
               </Text>
+              ) : null}
             </Animated.View>
           ) : step === 1 ? (
             <Animated.View key="s1" entering={pageIn} style={s.slide}>
@@ -992,7 +995,7 @@ function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on:
    eronder. De lijn tekent zich telkens opnieuw bij het wisselen van toestand. */
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-function RhythmChart({ mode }: { mode: BraceletMode }) {
+function RhythmChart({ mode, maxH }: { mode: BraceletMode; maxH?: number }) {
   const pulse = useRestingPulse();
   /* Nog geen eigen waarde: eerlijk "Average" (operator: "die is niet 70
      standaard he") — stap 3 zet de eigen. */
@@ -1001,7 +1004,8 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
   const r = rhythmFor(mode, pulse.bpm);
   const meta = getModeMeta(mode);
   const W = width - 80;
-  const H = 200;
+  const H = 200; /* tekenruimte; getoond met `Hd` (krimpt op korte schermen) */
+  const Hd = Math.round(Math.max(110, Math.min(H, maxH ?? H)));
   /* Hoogte = tempo (sneller = hoger): Boost stijgt, de kalme toestanden
      dalen — met de echte getallen van deze gebruiker.
      Operator, 16 okt 2026 ("zelfde waarde maar visueel diepere curve"): op
@@ -1039,7 +1043,7 @@ function RhythmChart({ mode }: { mode: BraceletMode }) {
   const endLabelY = rising ? yB - 30 : yB + 26;
   return (
     <View style={s.chart}>
-      <Svg width={W} height={H}>
+      <Svg width={W} height={Hd} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
         <Defs>
           <SvgLinearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor="#ffffff" stopOpacity={0.95} />
