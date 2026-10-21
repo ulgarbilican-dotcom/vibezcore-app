@@ -430,7 +430,7 @@ function SituationCard({
               {labelOf(situation)}
             </Text>
             {!!techniqueName && (
-              <Text style={s.cardTechnique} numberOfLines={1}>
+              <Text style={s.cardTechnique} numberOfLines={2}>
                 {techniqueName}
               </Text>
             )}

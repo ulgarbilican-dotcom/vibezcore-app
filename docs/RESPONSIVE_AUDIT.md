@@ -27,7 +27,7 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | build-your-day | ☐ | ☐ | ☐ | |
 | change-password | ☐ | ☐ | ☐ | |
 | faq | ☐ | ☐ | ☐ | |
-| feel-now | ☐ | ☐ | ☐ | |
+| feel-now | ⚠ gefixt (afgekapte techniek-naam), hercontrole | ☐ | ☐ | |
 | forgot-password | ☐ | ☐ | ☐ | |
 | goal | ☐ | ☐ | ☐ | |
 | heart-rate | ☐ | ☐ | ☐ | |
