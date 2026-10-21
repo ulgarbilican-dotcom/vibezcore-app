@@ -330,13 +330,13 @@ export const CTA = {
     gap: 10,
     height: 52,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: '#34343a', /* ondoorzichtig: inhoud die eronder scrolt schijnt niet door */
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.26)',
   },
   /* Ondoorzichtig: een doorzichtige uitgeschakelde knop liet de tekst van kaarten
      eronder erdoorheen schijnen. */
-  disabled: { backgroundColor: '#1d1d20', borderColor: 'rgba(255,255,255,0.10)' },
+  disabled: { backgroundColor: '#1a1a1d', borderColor: 'rgba(255,255,255,0.08)' },
   label: {
     fontFamily: BrandFonts.semibold,
     fontSize: 15,
