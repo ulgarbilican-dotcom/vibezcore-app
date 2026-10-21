@@ -581,7 +581,8 @@ function PhaseArc({
   accent: string;
   gradient: [string, string, string];
 }) {
-  const cx = width / 2;
+  const ARC_PAD = 24; /* ruimte rondom, zodat de gloed van het bolletje niet als vierkant wordt afgesneden */
+  const cx = width / 2 + ARC_PAD;
   /* Ruim genoeg zodat het getal ERIN past en niet erover. Plafond
      meegeschaald met `ARC_H` (18e ronde, "boog 20% kleiner"). */
   const r = Math.min(width * 0.46, 138);
@@ -604,7 +605,10 @@ function PhaseArc({
   const end = useDerivedValue(() => Math.max(0.0001, progress.value));
 
   return (
-    <Canvas style={{ width, height: ARC_H }} pointerEvents="none">
+    <Canvas
+      style={{ width: width + ARC_PAD * 2, height: ARC_H + ARC_PAD, marginHorizontal: -ARC_PAD, marginBottom: -ARC_PAD }}
+      pointerEvents="none"
+    >
       {/* Operator, 12 september 2026: "boog iets dikker, gedeelte al
          volgelopen fel paars, rest zacht egaal grijs" — dunne 2px op 10%-
          zwart-alpha oogde te broos in light; een vlakke, iets stevigere

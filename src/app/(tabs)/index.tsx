@@ -3767,7 +3767,10 @@ const s = StyleSheet.create({
   },
   braceletCardImg: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    /* Vaste hoogte uit de kaartbreedte (schermbreedte min marges en padding),
+       want aspectRatio liet de foto op sommige toestellen schermhoog worden. */
+    height: Math.round((Dimensions.get('window').width - 64) * 0.6),
+    overflow: 'hidden',
     marginTop: 12,
     marginBottom: 14,
     borderRadius: 14,
