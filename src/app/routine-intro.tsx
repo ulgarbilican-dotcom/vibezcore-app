@@ -24,7 +24,7 @@ import { GOALS } from '@/data/goals';
 import { useSetting } from '@/utils/settings';
 import { router, Stack } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -50,19 +50,19 @@ const C = BrandDark;
    keuze "zet terug in kleur achtergrond"): `g.gradient` — dezelfde
    2-kleuren-gradiënt die goal.tsx toont zodra die kaart geselecteerd is,
    ÉÉN bron (`data/goals.ts`), dus blijft overal gelijk. */
-function GoalIconBadge({ g }: { g: (typeof GOALS)[number] }) {
+function GoalIconBadge({ g, size = 112 }: { g: (typeof GOALS)[number]; size?: number }) {
   const Icon = g.Icon;
   return (
-    <View style={s.iconGlow}>
+    <View style={[s.iconGlow, { width: size, height: size, borderRadius: size / 2 }]}>
       <ExpoGradient colors={g.gradient} style={StyleSheet.absoluteFill} />
       {g.image ? (
         <Image
           source={imageSource(g.image)}
-          style={{ width: 56, height: 56, tintColor: '#ffffff' }}
+          style={{ width: size / 2, height: size / 2, tintColor: '#ffffff' }}
           resizeMode="contain"
         />
       ) : (
-        <Icon size={56} color="#ffffff" strokeWidth={1.8} />
+        <Icon size={size / 2} color="#ffffff" strokeWidth={1.8} />
       )}
     </View>
   );
@@ -73,6 +73,13 @@ export default function RoutineIntroScreen() {
   const [goals] = useSetting('goals');
   const chosenGoals = GOALS.filter((g) => goals.includes(g.key));
   const stateLabel = chosenGoals.map((g) => g.name).join(' + ');
+  /* Responsief: de badges krimpen mee met de beschikbare hoogte (kaart + CTA
+     blijven vast), zodat ze nooit over de tekstkaart vallen. */
+  const { height: winH } = useWindowDimensions();
+  const nGoals = Math.max(1, chosenGoals.length);
+  const iconAvail = winH - insets.top - 56 - 48 - 210 - 110;
+  const iconSize = Math.round(Math.max(56, Math.min(112, (iconAvail - 24 * (nGoals - 1)) / nGoals)));
+  const iconPadBottom = Math.max(0, Math.min(130, iconAvail - (nGoals * iconSize + 24 * (nGoals - 1))));
 
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
@@ -139,10 +146,10 @@ export default function RoutineIntroScreen() {
         </View>
 
         {chosenGoals.length > 0 && (
-          <View style={s.iconArea}>
+          <View style={[s.iconArea, { paddingBottom: iconPadBottom }]}>
             <View style={s.iconWrap}>
               {chosenGoals.map((g) => (
-                <GoalIconBadge key={g.key} g={g} />
+                <GoalIconBadge key={g.key} g={g} size={iconSize} />
               ))}
             </View>
           </View>

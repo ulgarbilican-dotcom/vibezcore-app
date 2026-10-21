@@ -458,7 +458,7 @@ const SCREEN_H = Dimensions.get('window').height;
    (ritme, duur) sneller op het scherm komen. Tijdens de sessie zelf
    ongewijzigd (`ART_RUN`) — daar is de illustratie wél het onderwerp. */
 const ART_IDLE = SCREEN_W * 0.56;
-const ART_RUN = SCREEN_W * 0.98;
+const ART_RUN = SCREEN_W * 0.98 * (Math.max(160, Math.min(268, SCREEN_H - 470)) / 268);
 
 /* VASTE hoogte van het beeldvak, gelijk voor alle vijf de toestanden.
    Hing die aan de beeldbreedte, dan verschoof alles eronder zodra een
@@ -470,7 +470,9 @@ const ART_RUN = SCREEN_W * 0.98;
    eronder juist compleet moet zijn; de illustratie heeft die twee-endertig
    punten niet nodig om te dragen. */
 const BOX_IDLE = 118;
-const BOX_RUN = 268;
+/* Responsief: het beeldvak krimpt op korte schermen zodat beeld + boog + voet
+   altijd onder elkaar passen (referentie 268 vanaf ~740 dp hoogte). */
+const BOX_RUN = Math.round(Math.max(160, Math.min(268, SCREEN_H - 470)));
 
 /* Hoogte van de knop onderaan. De scroll houdt precies dit plus de
    toestel-inzet vrij, zodat de laatste kaart nooit onder de knop verdwijnt

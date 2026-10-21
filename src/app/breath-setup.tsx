@@ -2290,7 +2290,11 @@ export default function BreathSetupScreen() {
      duur-slider onderaan achter de vaste footer. Enkel in addToDay wordt
      dit dus een echte ScrollView; de normale flow blijft de kale, vaste
      `View` van voorheen, ongewijzigd. */
-  const ContentWrap: typeof View | typeof ScrollView = isAddToDay ? ScrollView : View;
+  /* Kleine schermen (korte hoogte): de inhoud past niet meer boven de vaste
+     footer, dus ook de normale flow scrolt dan: nooit tekst achter de knop. */
+  const compactH = SCREEN_H < 760;
+  const scrolls = isAddToDay || compactH;
+  const ContentWrap: typeof View | typeof ScrollView = scrolls ? ScrollView : View;
 
   /* Techniek kiezen (veeg over de cirkel). Springt naar de eigen aanbevolen
      duur van die techniek (operator, 17 september 2026), en een custom-
@@ -2515,7 +2519,7 @@ export default function BreathSetupScreen() {
          één leeg gat op het einde. */}
       <ContentWrap
         style={isAddToDay ? s.scrollGrow : [s.scroll, { flex: 1 }]}
-        contentContainerStyle={isAddToDay ? s.scrollContent : undefined}
+        contentContainerStyle={isAddToDay ? s.scrollContent : compactH ? { alignItems: 'center', flexGrow: 1, paddingBottom: 12 } : undefined}
         showsVerticalScrollIndicator={false}
       >
         {/* Operator, 17 september 2026 (addToDay, herzien: "de cirkel moet

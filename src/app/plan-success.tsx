@@ -182,12 +182,15 @@ export default function PlanSuccessScreen() {
           </>
         ) : (
           <>
+            {/* Het bevestigingsmoment (All set!) toonde net al een vinkje: geen tweede. */}
+            {confirmed !== '1' ? (
             <Animated.View style={[s.badge, badgeStyle]}>
               {/* Operator, 20 september 2026 ("your protocol is live vinkje
                  moet wit"): was donker (#0a0a0a) voor contrast op het
                  groene vlak — nu wit, standaard success-checkmark-stijl. */}
               <Check size={64} color="#ffffff" strokeWidth={3} />
             </Animated.View>
+            ) : null}
 
             <Text style={s.title}>Your protocol is live</Text>
             <Text style={s.body}>
