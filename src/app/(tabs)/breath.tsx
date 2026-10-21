@@ -207,7 +207,7 @@ const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
 /* Hoogte van de achtergrondfoto bij volle breedte (zie <Image> hieronder). */
 /* Per foto een beetje zakken, zodat het gezicht niet achter de Premium-knop valt
    (operator, 21 okt 2026). Calm staat tegen de bovenrand (geen zwarte band). */
-const BG_TOP: Partial<Record<BreathStateKey, number>> = { boost: 64, focus: 48, calm: 48, rest: 48 };
+const BG_TOP: Partial<Record<BreathStateKey, number>> = { boost: 64, calm: 48 };
 const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * 1.25);
 
 const bgCropFor = (key: BreathStateKey): BgCrop =>
@@ -910,7 +910,7 @@ export default function BreathScreen() {
                  hele foto op volle breedte (4:5), tegen de bovenrand; het
                  vignet hieronder laat hem onderaan in de achtergrond
                  overlopen. */
-              style={{ width: SCREEN_W, height: Math.round(SCREEN_W * 1.25), marginTop: 64 }}
+              style={{ width: SCREEN_W, height: Math.round(SCREEN_W * 1.25), marginTop: 0 }}
               resizeMode="cover"
             />
           </Animated.View>

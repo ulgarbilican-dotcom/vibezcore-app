@@ -994,7 +994,7 @@ function AudioScreen({
      SHIFT_X` blijven de veilige PLAFONDS (overhang door het opschalen,
      berekend uit zoom + schermformaat) zodat een latere schuif nooit een
      lege rand kan tonen. */
-  const AUDIO_INTRO_ZOOM = 1.15;
+  const AUDIO_INTRO_ZOOM = 1.0;
   const AUDIO_INTRO_MAX_LIFT = Math.max(
     0,
     ((AUDIO_INTRO_ZOOM - 1) * Dimensions.get('window').height) / 2 - 15,
