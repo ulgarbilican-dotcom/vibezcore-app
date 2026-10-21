@@ -25,3 +25,11 @@ Alleen wat met een screenshot gezien is, heet gecontroleerd. De rest: "niet gezi
 - Eén vinkje per bevestiging.
 - Welkom/intro-foto's: beide gezichten in beeld.
 - Free-omgeving: welkomstschermen bij elke binnenkomst op een tab, behalve direct na een sessie.
+
+## 5. Ademruimte (toegevoegd 22 okt 2026)
+Naast "is iets kapot" (overlap, afkapping) toets elk scherm op "ademt het":
+1. Minstens 12 dp lucht tussen onderdelen.
+2. Minstens 24 dp vrije ruimte onder de laatste inhoud vóór een knop of rand.
+3. Verticaal evenwichtig: niet alles bovenaan met een gat eronder, of omgekeerd.
+4. Te veel voor dit formaat? Laat bijzaken weg (voetnoten, extra uitleg) in plaats van alles samen te drukken.
+Een scherm is pas goed als beide controles (kapot én ademruimte) geslaagd zijn.
