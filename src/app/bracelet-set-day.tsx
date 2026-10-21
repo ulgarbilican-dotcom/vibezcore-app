@@ -488,7 +488,7 @@ export default function BraceletSetDayScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 14) + 96 }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 14) + 150 }]}
           showsVerticalScrollIndicator={false}
         >
           <Text style={[s.sectionLabel, { textAlign: 'center' }]}>DURATION</Text>
@@ -561,7 +561,7 @@ export default function BraceletSetDayScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 14) + 96 }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 14) + 150 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Operator, 30 september 2026 ("tekst is te lang, lijkt een info

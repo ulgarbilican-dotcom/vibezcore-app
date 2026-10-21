@@ -105,6 +105,8 @@ export function WeekSummaryCard({
             key={d.key}
             style={[s.dayLabel, (d.today ?? i === days.length - 1) && s.dayLabelToday]}
             numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             {(d.today ?? i === days.length - 1) ? 'Today' : d.letter}
           </Text>

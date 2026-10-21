@@ -383,7 +383,7 @@ export default function BraceletAgendaScreen() {
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/bracelet' as never))} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
         </Pressable>
-        <Text style={s.barTitle} numberOfLines={1}>
+        <Text style={s.barTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
           Your State Control plan
         </Text>
         <View style={s.back} />
