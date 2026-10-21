@@ -488,6 +488,9 @@ function DaypartCard({
                 isIconDaypart && s.dayCardImgTxtCenter,
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.1}
             >
               {sl.label}
             </Text>
@@ -497,6 +500,9 @@ function DaypartCard({
                 isIconDaypart && s.dayCardImgTxtCenter,
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.1}
             >
               {fmtTime(SLOT_WINDOW[sl.slot].from * 60)}
               {' – '}
