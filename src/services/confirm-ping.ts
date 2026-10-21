@@ -3,11 +3,12 @@
    (ConfirmMoment, punt 25 — operator, 19 okt 2026: "een moment dat zegt:
    het is gelukt").
 
-   Geluid: assets/confirm-ping.wav, ZELF GEGENEREERD (geen licentie):
-   0,45 s klokje — sinus 1318,5 Hz (E6) + zachtere boventonen 2637 Hz en
-   3955,5 Hz, inzet 5 ms, exponentieel uitsterven (grondtoon τ 110 ms,
-   boventonen τ 50 ms), 25 ms uitloop tegen een kraakje, piek −6 dBFS,
-   44,1 kHz mono 16-bit. Script stond in de sessie-scratch, niet in de repo.
+   Geluid: assets/confirm-ping.wav, ZELF GEGENEREERD (geen licentie), 21 okt 2026
+   herzien (operator: "heel slecht, kan dat professioneler en aangenamer"): twee
+   zachte stijgende tonen G4 (392 Hz) en D5 (587 Hz) met warme, lage boventonen,
+   inzet 12 ms, uitsterven τ 260-300 ms, lichte echo (190 ms), 1,5 s, piek -9 dBFS,
+   44,1 kHz mono 16-bit. Het vorige klokje (E6 + scherpe boventonen) klonk schel.
+   Script: scripts/gen-confirm-ping.py.
 
    Regels (zelfde lijn als heartbeat-sound.ts):
      - mengt met muziek van de gebruiker (interruptionMode 'mixWithOthers'),
@@ -30,9 +31,9 @@ import { getBreathSession } from './breath-session-state';
 import { isHeartbeatSoundOn } from './heartbeat-sound';
 import { invalidateAudioModeSet, isKeepAliveActive } from './session-keepalive';
 
-const PING_VOLUME = 0.7;
-/** Ruim langer dan het bestand (0,45 s) + het zetten van de modus. */
-const RELEASE_AFTER_MS = 1300;
+const PING_VOLUME = 0.6;
+/** Ruim langer dan het bestand (1,5 s) + het zetten van de modus. */
+const RELEASE_AFTER_MS = 1900;
 
 /** Mag het ping-geluid nu klinken? */
 function pingAllowed(): boolean {
