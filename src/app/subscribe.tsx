@@ -1102,7 +1102,7 @@ export default function SubscribeScreen() {
           ? 'Confirming your purchase…'
           : 'Opening secure checkout…';
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: 'Subscribe',
@@ -1270,7 +1270,7 @@ export default function SubscribeScreen() {
        Nieuwe regel: ELKE IAP-fail toont error-screen met retry als
        primary CTA. Geen 'free environment' troostprijs meer. */
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: 'Subscribe',
@@ -1378,7 +1378,7 @@ export default function SubscribeScreen() {
      card vóór we weten welk pad de user nodig heeft. */
   if (signedIn === null) {
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: 'Subscribe',
@@ -1398,7 +1398,7 @@ export default function SubscribeScreen() {
      User heeft nog geen sessie op dit device → email + password form,
      dan account-create OF sign-in (mode-toggle), dan IAP-popup. */
   return (
-    <SafeAreaView style={s.root}>
+    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           title: 'Subscribe',

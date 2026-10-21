@@ -193,7 +193,7 @@ export default function ForgotPassword() {
 
   if (sent) {
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: 'Forgot password',
@@ -227,7 +227,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <SafeAreaView style={s.root}>
+    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           title: 'Forgot password',

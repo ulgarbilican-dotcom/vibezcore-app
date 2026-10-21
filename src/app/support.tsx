@@ -92,7 +92,7 @@ export default function SupportScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={s.root}>
+    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           title: 'Support',

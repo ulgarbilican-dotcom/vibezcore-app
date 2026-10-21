@@ -374,7 +374,7 @@ export default function ResetPassword() {
 
   if (phase === 'error') {
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: copy.screenTitle,
@@ -432,7 +432,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <SafeAreaView style={s.root}>
+    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           title: copy.screenTitle,

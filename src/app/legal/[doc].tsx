@@ -273,7 +273,7 @@ export default function LegalDoc() {
   /* Onbekende slug → 404-style fallback. Geen crash. */
   if (!doc) {
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: 'Legal',

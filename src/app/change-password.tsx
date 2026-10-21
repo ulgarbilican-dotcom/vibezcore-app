@@ -345,7 +345,7 @@ export default function ChangePassword() {
   }
 
   return (
-    <SafeAreaView style={s.root}>
+    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           title: 'Change password',

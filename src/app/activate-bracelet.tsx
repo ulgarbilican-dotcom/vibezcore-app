@@ -293,7 +293,7 @@ export default function ActivateBraceletScreen() {
   /* ── Auth-guard loading (heel kort: AsyncStorage-token-check) ──── */
   if (!authChecked) {
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
         <Stack.Screen
           options={{
             title: 'Activate bracelet',
@@ -368,7 +368,7 @@ export default function ActivateBraceletScreen() {
 
   /* ── Form / error / submitting ─────────────────────────────────── */
   return (
-    <SafeAreaView style={s.root}>
+    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           title: 'Activate bracelet',
