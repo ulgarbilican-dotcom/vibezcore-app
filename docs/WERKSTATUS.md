@@ -192,3 +192,10 @@ Toegankelijkheid (Test Lab Pixel 8a, 40 meldingen) — aangepast, nog te bevesti
 
 21 okt 2026 (nacht): tabbalk-vlak `barFill` nu volledig dekkend `#0a0a0a` (was 0.985; in de emulator-screenshot van 20 okt scheen "Settings"/"Invite a friend" nog door). Nog NIET op toestel/emulator bevestigd: de emulator liep vast door een te zwaar belaste computer (1,3 GB vrij RAM, "System UI isn't responding"; alle Maestro-flows faalden op de driver, niet op de app), en Test Lab geeft TEST_QUOTA_EXCEEDED tot middernacht Pacific (~09:00 Belgische tijd). ARM-release (arm64-v8a + armeabi-v7a, 01:37) is gebouwd met deze wijziging.
 Volgende: na ~09:00 `bash scripts/testlab.sh` (5 echte toestellen) draaien en de tabbalk op Profile/Activity/Library controleren; daarna emulator-matrix met genoeg vrij RAM (>4 GB).
+
+
+## 21 okt 2026 — responsive audit (zijsessie)
+- Lijst + voortgang per scherm: `docs/RESPONSIVE_AUDIT.md` (vinkje pas na screenshot op 360×640 / 411×914 / 430×932).
+- Gedaan: Breath intro + 5 toestanden, instelscherm scrolt op korte schermen, sessiebeeld schaalt met hoogte, boog-gloed niet afgesneden, State Control-dial hoogte-bewust, protocol-bouwer stappen 1/3/5 (iconen, CTA-ruimte, vaste knop op "Choose your path"), tabnaam past op smalle schermen, Library-bracelet-kaart.
+- Volgende: Account, Activity, Instellingen, Agenda, betaalschermen, player; daarna Firebase Test Lab (meerdere toestellen) en iOS-controle op echt toestel.
+- Emulator = alleen layout; animaties/blur/haptiek enkel op A16/iPhone beoordelen.
