@@ -184,7 +184,7 @@ export default function MembershipPlans({
           accessibilityLabel={`Monthly, ${monthlyPrice} per month`}
         >
           <View style={[s.card, plan === 'monthly' && s.cardOn]}>
-            <Text style={s.planLabel}>Monthly</Text>
+            <Text style={s.planLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.15}>Monthly</Text>
             <Text style={s.badgeNeutral}>Flexible</Text>
             <View style={s.priceRow}>
               <Text style={s.price} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
@@ -206,7 +206,7 @@ export default function MembershipPlans({
           accessibilityLabel={`Yearly, ${yearlyPrice} per year`}
         >
           <View style={[s.card, plan === 'yearly' && s.cardOn]}>
-            <Text style={s.planLabel}>Yearly</Text>
+            <Text style={s.planLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.15}>Yearly</Text>
             {savePercent !== null ? (
               <Text style={s.badgeSave}>{`Save ${savePercent}%`}</Text>
             ) : (
@@ -236,7 +236,7 @@ export default function MembershipPlans({
         >
           <View style={[s.card, s.dayCard, plan === 'day' && s.cardOn]}>
             <View style={{ flex: 1, paddingRight: 36 }}>
-              <Text style={s.planLabel}>Day Pass</Text>
+              <Text style={s.planLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.15}>Day Pass</Text>
               <Text style={s.meta}>24 hours · No subscription</Text>
             </View>
             <Text style={s.dayPrice} numberOfLines={1}>

@@ -158,12 +158,12 @@ function GroupRow({
           onPressOut={onTimePressOut}
           hitSlop={6}
         >
-          <Text style={s.groupTime}>
+          <Text style={s.groupTime} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.1}>
             {fmtTime(it.reminderAt)} · {it.minutes} min
           </Text>
           <Pencil size={11} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
         </AnimatedPressable>
-        <Text style={s.groupStateName} numberOfLines={2}>
+        <Text style={s.groupStateName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.1}>
           {st.eyebrow.toUpperCase()}
         </Text>
       </View>
