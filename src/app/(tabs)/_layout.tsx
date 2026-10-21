@@ -194,7 +194,7 @@ function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) 
   }, [focused, scale]);
   return (
     <RNAnimated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }] }}>
-      <Icon size={focused ? 24 : 21} color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR} strokeWidth={focused ? 2.3 : 1.9} />
+      <Icon size={focused ? 24 : 21} color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR} strokeWidth={focused ? 1.7 : 1.4} />
     </RNAnimated.View>
   );
 }
