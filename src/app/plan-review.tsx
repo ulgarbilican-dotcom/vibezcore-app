@@ -189,7 +189,7 @@ function GroupRow({
         <X size={15} color="rgba(255,255,255,0.4)" strokeWidth={2.4} />
       </AnimatedPressable>
       <View style={[s.checkBadge, { backgroundColor: st.accent }]}>
-        <Check size={12} color="#ffffff" strokeWidth={3} />
+        <Check size={12} color={st.accent.toLowerCase() === '#ffffff' || st.accent.toLowerCase() === '#fff' ? '#0a0a0a' : '#ffffff'} strokeWidth={3} />
       </View>
     </View>
   );
