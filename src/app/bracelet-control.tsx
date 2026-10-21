@@ -4467,6 +4467,8 @@ function IdleScreen({
                     accessibilityRole="button"
                     accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
                   >
+                    {/* 21 okt 2026 (operator: "in glass ronde button"): glazen pil. */}
+                    <VibezGlass radius={26} level="normal" style={StyleSheet.absoluteFill} />
                     <QIcon size={q.key === 'chill' ? 22 : 18} color={getModeMeta(q.mode).color} strokeWidth={2} />
                     {/* Operator: geen "5 min" — dat staat in het infoblad. */}
                     <Text style={s.quickCardTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
@@ -6555,8 +6557,8 @@ const s = StyleSheet.create({
     height: 52,
     paddingHorizontal: 16,
     justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: '#1c1c1e',
+    borderRadius: 26,
+    overflow: 'hidden',
   },
   quickCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
 
