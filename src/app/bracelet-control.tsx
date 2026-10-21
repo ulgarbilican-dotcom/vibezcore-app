@@ -49,6 +49,7 @@ import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
   playModeTrialHaptic,
+  resumeModeTrialHaptic,
   stopModePreviewHaptic,
   subscribeHapticPulse,
   isWatchPlayingRhythm,
@@ -4038,25 +4039,39 @@ function IdleScreen({
      telt af, daarna de paywall — zoals de Breathwork-proef. */
   const [trialLeft, setTrialLeft] = useState<number | null>(null);
   const trialTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  /* Pauze in de voorproef (21 okt 2026): verstreken tijd telt enkel terwijl ze loopt. */
+  const [trialPaused, setTrialPaused] = useState(false);
+  const trialPausedRef = useRef(false);
+  const trialElapsedMsRef = useRef(0);
+  const trialResumedAtRef = useRef(0);
   const stopTrial = useCallback((ended: boolean) => {
     /* Enkel opruimen als er echt een voorproef liep — anders zou een
        moduswissel tijdens een lopende sessie haar haptiek stilleggen. */
     if (!trialTimer.current) return;
     clearInterval(trialTimer.current);
     trialTimer.current = null;
+    trialPausedRef.current = false;
+    setTrialPaused(false);
     setTrialLeft(null);
     if (!ended) stopModePreviewHaptic();
   }, []);
   const startTrial = () => {
     hapticPress();
     playModeTrialHaptic(selectedMode);
-    const started = Date.now();
+    trialPausedRef.current = false;
+    setTrialPaused(false);
+    trialElapsedMsRef.current = 0;
+    trialResumedAtRef.current = Date.now();
     setTrialLeft(PREVIEW_MAX_SECONDS);
     trialTimer.current = setInterval(() => {
+      if (trialPausedRef.current) return;
       /* Naar beneden afronden, zoals een lopende sessie en het horloge
          (operator, 17 okt 2026: "telefoon 18, horloge 17"): was
          30 − floor(verstreken) = naar boven. Stoppen blijft op 30 s. */
-      const leftMs = Math.max(0, PREVIEW_MAX_SECONDS * 1000 - (Date.now() - started));
+      const leftMs = Math.max(
+        0,
+        PREVIEW_MAX_SECONDS * 1000 - (trialElapsedMsRef.current + (Date.now() - trialResumedAtRef.current)),
+      );
       const left = Math.floor(leftMs / 1000);
       setTrialLeft(left);
       if (leftMs <= 0) {
@@ -4064,6 +4079,21 @@ function IdleScreen({
         onTrialEnd();
       }
     }, 250);
+  };
+  const toggleTrialPause = () => {
+    hapticTap();
+    if (!trialTimer.current) return;
+    if (!trialPausedRef.current) {
+      trialElapsedMsRef.current += Date.now() - trialResumedAtRef.current;
+      trialPausedRef.current = true;
+      setTrialPaused(true);
+      stopModePreviewHaptic();
+    } else {
+      trialResumedAtRef.current = Date.now();
+      trialPausedRef.current = false;
+      setTrialPaused(false);
+      resumeModeTrialHaptic(selectedMode, trialElapsedMsRef.current / 1000);
+    }
   };
   /* Andere toestand, ander scherm of weg: voorproef stopt. */
   useEffect(() => () => stopTrial(false), [selectedMode, stopTrial]);
@@ -4528,6 +4558,34 @@ function IdleScreen({
           >
             <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Switch to {meta.name}</Text>
           </PrimaryCtaButton>
+        ) : trialRunning && startLocked ? (
+          /* 21 okt 2026 (operator: "die cta is storend"): geen grote witte knop meer in de
+             lopende preview, maar een ronde play/pauze en eronder END SESSION (zoals Breath). */
+          <View style={s.trialControls}>
+            <PressScale
+              onPress={toggleTrialPause}
+              scaleTo={0.94}
+              style={s.trialPauseBtn}
+              accessibilityRole="button"
+              accessibilityLabel={trialPaused ? 'Resume' : 'Pause'}
+            >
+              <VibezGlass radius={36} level="normal" style={StyleSheet.absoluteFill} />
+              {trialPaused ? (
+                <Play size={26} color="#ffffff" strokeWidth={2.2} />
+              ) : (
+                <Pause size={26} color="#ffffff" strokeWidth={2.2} />
+              )}
+            </PressScale>
+            <Pressable
+              onPress={() => stopTrial(false)}
+              hitSlop={12}
+              style={s.trialEndBtn}
+              accessibilityRole="button"
+              accessibilityLabel="End session"
+            >
+              <Text style={s.trialEndTxt}>END SESSION</Text>
+            </Pressable>
+          </View>
         ) : (
           <PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, (busy || criticalBattery) && s.btnDisabled]}
@@ -6544,6 +6602,17 @@ const s = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 4,
   },
+  trialControls: { alignItems: 'center', marginTop: 18 },
+  trialPauseBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trialEndBtn: { marginTop: 16, paddingVertical: 8, paddingHorizontal: 12 },
+  trialEndTxt: { color: 'rgba(255,255,255,0.72)', fontFamily: BrandFonts.semibold, fontSize: 12, letterSpacing: 2 },
   quickCardRow: { flexDirection: 'row', justifyContent: 'center', gap: 20 },
   quickCard: {
     width: 56,

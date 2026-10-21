@@ -1263,6 +1263,13 @@ export function playModeTrialHaptic(mode: BraceletMode): void {
   sendPreviewToWatch(mode, 0);
 }
 
+/** Voorproef hervatten na pauze, op de plek waar ze stopte (21 okt 2026). */
+export function resumeModeTrialHaptic(mode: BraceletMode, fromSec: number): void {
+  playModePreviewHaptic(mode, fromSec);
+  startIosPreviewSurface(mode);
+  sendPreviewToWatch(mode, fromSec);
+}
+
 /** De voorproef naar een gekoppeld horloge, vanaf `offsetSec` in de curve
  *  (0 = begin; > 0 = herstart na een sterktewissel, 19 okt 2026). */
 function sendPreviewToWatch(mode: BraceletMode, offsetSec: number): void {
