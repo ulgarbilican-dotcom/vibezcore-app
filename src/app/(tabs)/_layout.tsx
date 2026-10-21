@@ -204,6 +204,9 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   return (
     <Text
       numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}
+      allowFontScaling={false}
       style={{
         /* Operator, 2 okt 2026 ("vrij hoog, hoe zou Apple dat doen"):
            Apple's eigen tab bar zet het label vlak onder het icoon (±2pt),

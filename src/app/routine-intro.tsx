@@ -79,7 +79,7 @@ export default function RoutineIntroScreen() {
   const nGoals = Math.max(1, chosenGoals.length);
   const iconAvail = winH - insets.top - 56 - 48 - 210 - 110;
   const iconSize = Math.round(Math.max(56, Math.min(112, (iconAvail - 24 * (nGoals - 1)) / nGoals)));
-  const iconPadBottom = Math.max(0, Math.min(130, iconAvail - (nGoals * iconSize + 24 * (nGoals - 1))));
+  const iconPadBottom = Math.max(110, Math.min(130, iconAvail - (nGoals * iconSize + 24 * (nGoals - 1)) + 110));
 
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
