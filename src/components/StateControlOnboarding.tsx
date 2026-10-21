@@ -433,25 +433,24 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   2026: "pillen buiten kaart, meer naar boven"); de kaart draagt
                   enkel de grafiek. */}
               <Animated.View entering={enter(1)}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.chips}
-                style={s.chipsScroll}
-              >
-                {ALL_MODES.map((m) => (
-                  <GlassChip
-                    key={m}
-                    mode={m}
-                    label={getModeMeta(m).name}
-                    on={chartMode === m}
-                    onPress={() => {
-                      hapticTap();
-                      setChartMode(m);
-                    }}
-                  />
-                ))}
-              </ScrollView>
+              {/* 21 okt 2026 (operator, zoals de website): vijf iconen in één transparante
+                  glazen balk, de gekozen met een ring in de kleur van de toestand. */}
+              <View style={s.modeBarWrap}>
+                <View style={s.modeBar}>
+                  <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
+                  {ALL_MODES.map((m) => (
+                    <ModeBarIcon
+                      key={m}
+                      mode={m}
+                      on={chartMode === m}
+                      onPress={() => {
+                        hapticTap();
+                        setChartMode(m);
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
               </Animated.View>
               <View style={{ flex: 1 }} />
               <Animated.View entering={enter(2)} style={s.chartCard}>
@@ -917,6 +916,23 @@ function Fact({ label, value }: { label: string; value: string }) {
 /* Apple-glas-pil: neutraal glas; aangetikt = fijne lichte rand + korte pop
    (operator: "pills apple stijl glass, bij aantikken heel licht omlijning
    en poppen"). */
+function ModeBarIcon({ mode, on, onPress }: { mode: BraceletMode; on: boolean; onPress: () => void }) {
+  const Icon = MODE_GLYPH_ICONS[mode];
+  const color = getModeMeta(mode).color;
+  return (
+    <PressScale
+      onPress={onPress}
+      scaleTo={0.9}
+      style={[s.modeBarItem, on && { borderColor: color }]}
+      accessibilityRole="button"
+      accessibilityLabel={getModeMeta(mode).name}
+      accessibilityState={{ selected: on }}
+    >
+      <Icon size={22} color={on ? color : 'rgba(255,255,255,0.6)'} strokeWidth={on ? 2 : 1.7} />
+    </PressScale>
+  );
+}
+
 function GlassChip({ mode, label, on, onPress }: { mode: BraceletMode; label: string; on: boolean; onPress: () => void }) {
   const Icon = MODE_GLYPH_ICONS[mode];
   /* Indrukken = PressScale (zelfde als de rest van de app: krimpen + dimmen,
@@ -1127,6 +1143,27 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   chipsScroll: { flexGrow: 0, marginTop: 22 },
+  modeBarWrap: { alignItems: 'center', marginTop: 22, paddingHorizontal: 20 },
+  modeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    maxWidth: 380,
+    height: 64,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  modeBarItem: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   chips: { paddingHorizontal: 26, gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 999, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 16 },
   chipTxt: { fontFamily: BrandFonts.semibold, fontSize: 14, color: 'rgba(255,255,255,0.7)' },
