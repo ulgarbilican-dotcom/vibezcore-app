@@ -929,9 +929,10 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#ffffff',
   },
-  saveBtnOff: { backgroundColor: 'rgba(255,255,255,0.15)' },
+  /* Zelfde ondoorzichtige uitgeschakelde stijl als CTA.disabled (theme.ts). */
+  saveBtnOff: { backgroundColor: '#595959' },
   saveBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
-  saveBtnTxtOff: { color: 'rgba(255,255,255,0.55)' },
+  saveBtnTxtOff: { color: '#1D1D1F' },
 
   ringWrap: { alignItems: 'center', marginTop: 8, marginBottom: 22 },
   wheelOuter: { width: 266, alignSelf: 'center', marginBottom: 8 },
