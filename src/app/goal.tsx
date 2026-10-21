@@ -420,7 +420,7 @@ export default function GoalScreen() {
           /* Operator, 21 september 2026 ("cta moet sticky"): terug een
              vaste, zwevende laag BUITEN de ScrollView — ruimte houden
              zodat de laatste rij tegels er niet half achter wegschuift. */
-          { paddingBottom: Math.max(insets.bottom, 12) + 90 },
+          { paddingBottom: Math.max(insets.bottom, 12) + 112 },
         ]}
         showsVerticalScrollIndicator={false}
       >

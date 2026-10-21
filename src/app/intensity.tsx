@@ -882,7 +882,7 @@ export default function IntensityScreen() {
       <ScrollView
         contentContainerStyle={[
           s.scroll,
-          { paddingBottom: Math.max(insets.bottom, 12) + 90 },
+          { paddingBottom: Math.max(insets.bottom, 12) + 112 },
         ]}
         showsVerticalScrollIndicator={false}
       >

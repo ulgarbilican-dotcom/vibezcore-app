@@ -521,7 +521,7 @@ export default function PlanReviewScreen() {
           s.scroll,
           /* Ruimte houden voor de nu vaste, zwevende CTA-laag hieronder —
              anders schuift de laatste kaart er half achter weg. */
-          { paddingBottom: Math.max(insets.bottom, 12) + 90 },
+          { paddingBottom: Math.max(insets.bottom, 12) + 130 },
         ]}
         showsVerticalScrollIndicator={false}
       >
