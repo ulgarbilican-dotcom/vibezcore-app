@@ -23,7 +23,7 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | breath-setup | ✅ | ☐ | ☐ | scrolt onder 760 dp; tekst niet meer achter knop |
 | breath-splat | ☐ | ☐ | ☐ | |
 | breath-welcome | ☐ | ☐ | ☐ | |
-| build-choice | ☐ | ☐ | ☐ | |
+| build-choice | ⚠ | ☐ | ☐ | scrolt; CTA pas na scrollen zichtbaar op S |
 | build-your-day | ☐ | ☐ | ☐ | |
 | change-password | ☐ | ☐ | ☐ | |
 | faq | ☐ | ☐ | ☐ | |
@@ -33,13 +33,13 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | heart-rate | ☐ | ☐ | ☐ | |
 | history | ☐ | ☐ | ☐ | |
 | intensity | ☐ | ☐ | ☐ | |
-| plan-review | ☐ | ☐ | ☐ | |
-| plan-success | ☐ | ☐ | ☐ | dubbel vinkje verwijderd, nog zien |
+| plan-review | ✅ | ☐ | ☐ | iconen niet meer uitgerekt; naam wraapt |
+| plan-success | ✅ | ☐ | ☐ | één vinkje |
 | plan-summary | ☐ | ☐ | ☐ | |
 | plan | ☐ | ☐ | ☐ | |
 | player | ☐ | ☐ | ☐ | |
 | reset-password | ☐ | ☐ | ☐ | |
-| routine-intro | ☐ | ☐ | ☐ | badges schalen, nog zien |
+| routine-intro | ☐ (fix, hertest) | ☐ | ☐ | ruimte voor CTA gereserveerd |
 | settings | ☐ | ☐ | ☐ | |
 | state-onboarding | ☐ | ☐ | ☐ | |
 | subscribe | ☐ | ☐ | ☐ | |
@@ -47,7 +47,7 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | welcome | ✅ | ☐ | ☐ |  |
 | (tabs)/account | ☐ | ☐ | ☐ | |
 | (tabs)/activity | ☐ | ☐ | ☐ | |
-| (tabs)/bracelet | ☐ | ☐ | ☐ | |
+| (tabs)/bracelet | ✅ | ☐ | ☐ | State Control-intro + dial schaalt; tabnaam past (fix, nog zien) |
 | (tabs)/breath | ✅ | ✅ | ✅ | intro + vijf toestanden; Boost/Clarity links, Calm groter (M gezien) |
 | (tabs)/index | ☐ | ✅ (intro + bracelet-kaart) | ☐ | Library-intro uitgezoomd; bracelet-kaart vaste hoogte |
 
