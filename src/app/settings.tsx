@@ -259,7 +259,8 @@ export default function SettingsScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.title}>Settings</Text>
+        {/* Titel staat al in de navigatiebalk: geen tweede grote titel (dubbel op beeld). */}
+        <View style={{ height: 8 }} />
 
         {/* ── HERINNERINGEN ─────────────────────────────────────────
             Het grootste gat tegenover de concurrentie: die sturen dagelijks
