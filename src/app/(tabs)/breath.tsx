@@ -928,8 +928,13 @@ export default function BreathScreen() {
              ongebroken door tot de randen. */}
           <LinearGradient
             pointerEvents="none"
-            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.55)', Brand.bg]}
-            locations={[0.3, 0.62, 0.8]}
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.5)', 'rgba(10,10,10,0.9)', Brand.bg]}
+            locations={[
+              Math.max(0, (SCREEN_W * 1.25 * 0.55) / SCREEN_H),
+              Math.min(1, (SCREEN_W * 1.25 * 0.82) / SCREEN_H),
+              Math.min(1, (SCREEN_W * 1.25 * 0.97) / SCREEN_H),
+              Math.min(1, (SCREEN_W * 1.25 * 1.03) / SCREEN_H),
+            ]}
             style={StyleSheet.absoluteFill}
           />
         </>
