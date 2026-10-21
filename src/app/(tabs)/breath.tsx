@@ -244,7 +244,7 @@ const THUMB_GAP = 4;
 const THUMB_COL = Math.floor((SCREEN_W - 8 - THUMB_GAP * 4) / 5);
 /* Iets smaller dan de kolom: de lichtkrans steekt buiten het beeld uit en
    moet niet in die van de buren lopen. */
-const THUMB = Math.min(THUMB_COL - 12, 62);
+const THUMB = Math.min(THUMB_COL - 14, 52);
 
 /* Even groot IN BEELD, niet even groot als bestand.
    Elke illustratie heeft een andere lege rand: de zon en de lotus staan
@@ -341,28 +341,29 @@ function StateThumb({
       {/* Operator, 13 okt 2026 ("die i bovenaan de cirkels stoort mij"): geen
          losse i-knop meer — een tik op de cirkel die AL gekozen is opent
          "How it works" (zie onPress hierboven). */}
-      <View style={[s.thumb, on && s.thumbSelected]}>
-        {/* Operator, 5 okt 2026 (voorbeeldpagina VIBEZCORE-glas, Apple's
-           Liquid Glass als referentie, geen rand): elk bolletje is een
-           glazen schijf; bij selectie kleurt het glas licht in de eigen
-           toestandskleur. Vervangt de halo's en de omlijning. */}
-        <VibezGlass
-          radius={THUMB / 2}
-          tint={on ? t.accent : undefined}
-          level={on ? 'raised' : 'subtle'}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Operator, 21 okt 2026 ("choose state buttons in de stijl van de
+         website: glas, pil met iconen"): de vijf zitten samen in één
+         glazen pil; de gekozen heeft een ring + zachte gloed in de kleur
+         van de toestand en een wit icoon, de rest grijze iconen. */}
+      <View
+        style={[
+          s.thumb,
+          on && {
+            borderWidth: 1.6,
+            borderColor: t.accent,
+            shadowColor: t.accent,
+            shadowOpacity: 0.55,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 0,
+          },
+        ]}
+      >
         <Animated.View style={on ? thumbPulseStyle : undefined}>
           <StateGlyph
             stateKey={t.key}
-            size={THUMB * 0.5}
-            /* Operator, 24 september 2026, vervolg ("dimmen nog steeds niet
-               echt merkbaar bij aantikken"): 0.32 → 0.22, nog duidelijker
-               contrast met het actieve icoon.
-               Operator, 2 okt 2026 ("niet heel wit maar grijs"): zelfde
-               `#AEAEB2` als de rand hierboven, icoon en rand nu één
-               consistente grijstint bij selectie. */
-            color={on ? '#ffffff' : 'rgba(255,255,255,0.55)'}
+            size={THUMB * 0.46}
+            color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'}
             strokeWidth={1.8}
           />
         </Animated.View>
@@ -372,35 +373,6 @@ function StateThumb({
          droegen de statekleur (`accentTextFor(t.accent)`) bij selectie —
          nu gewoon wit, zelfde "kleur zit al op de cirkel/ring, niet
          nogmaals herhalen"-principe als elders in de app. */}
-      <Text
-        style={[
-          s.thumbName,
-          on
-            ? { fontFamily: BrandFonts.semibold, color: '#ffffff' }
-            : { fontFamily: BrandFonts.medium, color: 'rgba(255,255,255,0.45)' },
-        ]}
-        numberOfLines={2}
-      >
-        {sentenceCase(t.eyebrow)}
-      </Text>
-      {/* Operator, 13 okt 2026 ("zie geen how it works" → "gewoon de i dan
-         onderaan"): de i staat niet meer boven de cirkel maar klein onder
-         de naam van de gekozen toestand. */}
-      {on ? (
-        <Pressable
-          onPress={onInfoPress}
-          hitSlop={12}
-          style={s.thumbHow}
-          accessibilityRole="button"
-          accessibilityLabel="How it works"
-        >
-          <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-        </Pressable>
-      ) : null}
-      {/* Operator, 24 september 2026 ("streep bij aanklikken moet ander"):
-         het onderstreepje onder de naam van de geselecteerde staat weg —
-         ring + schaalvergroting + wit-vs-gedimde tekst dragen de selectie
-         al, dit was een vierde, overbodig signaal bovenop. */}
     </AnimatedPressable>
   );
 }
@@ -965,18 +937,24 @@ export default function BreathScreen() {
             source={imageSource(stateBgFor(st.key))}
             style={[
               StyleSheet.absoluteFill,
-              /* `contain` (zie `calm`) laat boven/onder open — die krijgen
-                 de pagina-achtergrondkleur i.p.v. zwart/transparant. */
-              bgCropFor(st.key).mode === 'contain' && { backgroundColor: Brand.bg },
+              /* `contain` (zie `calm`): de foto staat tegen de bovenrand,
+                 de lege ruimte (pagina-achtergrondkleur) valt onderaan
+                 (operator, 21 okt 2026: "bovenkant geen zwarte rand,
+                 liever onderaan"). Bronfoto 923×1343, volle breedte. */
+              bgCropFor(st.key).mode === 'contain' && {
+                backgroundColor: Brand.bg,
+                bottom: undefined,
+                height: Math.round((SCREEN_W * 1343) / 923),
+              },
               {
                 transform: [
                   { scale: bgCropFor(st.key).scale },
                   { translateX: bgCropFor(st.key).translateX ?? 0 },
-                  { translateY: bgCropFor(st.key).translateY },
+                  { translateY: bgCropFor(st.key).mode === 'contain' ? 0 : bgCropFor(st.key).translateY },
                 ],
               },
             ]}
-            resizeMode={bgCropFor(st.key).mode ?? 'cover'}
+            resizeMode={bgCropFor(st.key).mode === 'contain' ? 'cover' : bgCropFor(st.key).mode ?? 'cover'}
           />
           <LinearGradient
             pointerEvents="none"
@@ -1297,7 +1275,8 @@ export default function BreathScreen() {
           gepruts, de rand is zichtbaarder geworden"). Volledig
           teruggedraaid — het ene bestaande vignet regelt dit al, geen
           tweede laag meer nodig. */}
-      <View style={s.thumbs}>
+      <View style={s.thumbsPill}>
+        <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
         {ORDER.map((k, i) => (
           <StateThumb
             key={k}
@@ -1310,6 +1289,16 @@ export default function BreathScreen() {
           />
         ))}
       </View>
+      <Pressable
+        onPress={() => setInfoOpen(true)}
+        hitSlop={10}
+        style={s.thumbNameRow}
+        accessibilityRole="button"
+        accessibilityLabel={`${sentenceCase(st.eyebrow)}, how it works`}
+      >
+        <Text style={s.thumbNameSel}>{sentenceCase(st.eyebrow)}</Text>
+        <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+      </Pressable>
 
       {/* ── De knop, nu ÉÉN vaste kleur — 3e ronde, operator 8 september
           2026: "wat is beter om 1 kleur voor alle knoppen?" Terecht — de
@@ -1863,7 +1852,24 @@ const s = StyleSheet.create({
     marginTop: 12,
     alignItems: 'flex-start',
   },
-  thumbCol: { width: THUMB_COL, alignItems: 'center' },
+  thumbsPill: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 12,
+    padding: 6,
+    borderRadius: 999,
+  },
+  thumbNameRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  thumbNameSel: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  thumbCol: { alignItems: 'center' },
   /* Boven de cirkel, gecentreerd binnen de kolom — `thumbCol` is al
      `alignItems:'center'`, dus `width:'100%'` + `alignItems:'center'`
      hier volstaat om de knop te centreren zonder de cirkel se eigen
