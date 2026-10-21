@@ -6,17 +6,17 @@ E="$A -s emulator-5554"
 PKG=com.ubili.vibezcoreapp
 OUT=scratchpad/matrix
 ROUTES="breath bracelet account activity settings agenda subscribe faq about history heart-rate build-choice routine-intro plan-review plan-success?confirmed=1 feel-now goal intensity plan plan-summary state-onboarding build-your-day bracelet-set-day bracelet-agenda bracelet-history bracelet-protocol activate-bracelet forgot-password change-password"
-SIZES="720x1280:320 1080x2400:420 1290x2796:460"
-for NAV in gestural threebutton; do
-  if [ $NAV = threebutton ]; then
-    $E shell cmd overlay enable com.android.internal.systemui.navbar.threebutton; $E shell cmd overlay disable com.android.internal.systemui.navbar.gestural
-  else
-    $E shell cmd overlay enable com.android.internal.systemui.navbar.gestural; $E shell cmd overlay disable com.android.internal.systemui.navbar.threebutton
-  fi
+SIZES="640x1136:320 720x1280:320 1080x2400:420 1290x2796:460 1400x2000:320"
+FONTS="1.0 1.3"
+for NAV in gestural threebutton twobutton; do
+  for O in gestural threebutton twobutton; do $E shell cmd overlay disable com.android.internal.systemui.navbar.$O; done
+  $E shell cmd overlay enable com.android.internal.systemui.navbar.$NAV
+  for F in $FONTS; do
+  $E shell settings put system font_scale $F
   for S in $SIZES; do
     SZ=${S%%:*}; DN=${S##*:}
     $E shell wm size $SZ; $E shell wm density $DN
-    D=$OUT/${SZ}_$NAV; mkdir -p $D
+    D=$OUT/${SZ}_${NAV}_font$F; mkdir -p $D
     $E shell am force-stop $PKG
     for R in $ROUTES; do
       $E shell am start -a android.intent.action.VIEW -d "vibezcoreapp:///$R" >/dev/null 2>&1
@@ -35,6 +35,8 @@ for part in range(0,len(ims),cols):
     sheet.save(f'{d}/sheet_{part//cols+1}.png')
 PY
   done
+  done
 done
+$E shell settings put system font_scale 1.0
 $E shell wm size reset; $E shell wm density reset
 $E shell cmd overlay enable com.android.internal.systemui.navbar.gestural; $E shell cmd overlay disable com.android.internal.systemui.navbar.threebutton
