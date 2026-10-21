@@ -344,4 +344,10 @@ export const CTA = {
 /* Eén maat voor de grote keuzecirkel van State Control (toestand/duur) en
    Breathwork (Choose timing) — operator, 17 okt 2026: "kleiner, meer
    ademruimte op de pagina, zelfde formaat op beide". Was 304. */
-export const DIAL_SIZE = Math.min(Math.round(Dimensions.get('window').width * 0.72), 264);
+/* Ook hoogte-bewust: op korte schermen krimpt de cirkel zodat de CTA eronder
+   altijd in beeld blijft (referentie: hoogte min ~430 dp voor de rest). */
+export const DIAL_SIZE = Math.min(
+  Math.round(Dimensions.get('window').width * 0.72),
+  264,
+  Math.max(180, Math.round(Dimensions.get('window').height - 430)),
+);
