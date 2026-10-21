@@ -152,6 +152,7 @@
         }
       ],
       "./plugins/withoutReleaseLint",
+      "./plugins/withPhoneOnlyWindow",
       "@react-native-community/datetimepicker",
       "./plugins/withQuickShortcuts",
       "./modules/breath-background/plugin.js",
