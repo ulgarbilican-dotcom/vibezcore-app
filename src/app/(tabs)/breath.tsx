@@ -940,7 +940,7 @@ export default function BreathScreen() {
             key={st.key}
             source={imageSource(stateBgFor(st.key))}
             style={[
-              bgCropFor(st.key).mode === 'contain' ? { position: 'absolute', top: 0, left: 0, width: SCREEN_W, height: Math.round((SCREEN_W * 1343) / 923) } : StyleSheet.absoluteFill,
+              bgCropFor(st.key).mode === 'contain' ? { position: 'absolute', top: 56, left: 0, width: SCREEN_W, height: Math.round((SCREEN_W * 1343) / 923) } : StyleSheet.absoluteFill,
               /* `contain` (zie `calm`): de foto staat tegen de bovenrand,
                  de lege ruimte (pagina-achtergrondkleur) valt onderaan
                  (operator, 21 okt 2026: "bovenkant geen zwarte rand,
