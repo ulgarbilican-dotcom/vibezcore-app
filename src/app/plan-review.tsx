@@ -58,7 +58,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Info, Pencil, RefreshCw, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -134,19 +134,22 @@ function GroupRow({
 
   return (
     <View style={s.groupRow}>
-      <View
-        style={[
-          s.groupIconWrap,
-          { backgroundColor: `${st.accent}0A` },
-        ]}
-      >
-        <StateGlyph
-          stateKey={it.state}
-          size={18}
-          color={st.accent}
-          strokeWidth={1.8}
-        />
-      </View>
+      {/* Op een smal scherm krijgt de tekst de ruimte; het kleine staat-icoon is bijzaak. */}
+      {Dimensions.get('window').width >= 360 ? (
+        <View
+          style={[
+            s.groupIconWrap,
+            { backgroundColor: `${st.accent}0A` },
+          ]}
+        >
+          <StateGlyph
+            stateKey={it.state}
+            size={18}
+            color={st.accent}
+            strokeWidth={1.8}
+          />
+        </View>
+      ) : null}
       <View style={s.groupRowText}>
         <AnimatedPressable
           style={[s.groupTimeRow, timeStyle]}
@@ -894,7 +897,7 @@ const s = StyleSheet.create({
      ernaast (RN flexbox: een rij-kind zonder eigen hoogte volgt de
      cross-axis van zijn rij-ouder). Eén foto voor de hele sectie i.p.v.
      herhaald per sessie. */
-  groupPhoto: { width: 64, alignItems: 'center', justifyContent: 'center' },
+  groupPhoto: { width: Dimensions.get('window').width >= 360 ? 64 : 52, alignItems: 'center', justifyContent: 'center' },
   groupRows: { flex: 1 },
   groupDivider: {
     height: StyleSheet.hairlineWidth,
