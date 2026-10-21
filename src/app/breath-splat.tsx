@@ -31,7 +31,7 @@ import {
   type BreathStateKey,
   type PhaseKey,
 } from '@/data/breath-states';
-import { router, Stack } from 'expo-router';
+import { router, Stack, Redirect } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -116,7 +116,7 @@ function ModeButton({
   );
 }
 
-export default function BreathSplatScreen() {
+function BreathSplatScreenInner() {
   const [stateKey, setStateKey] = useState<BreathStateKey>('calm');
   const st = BREATH_STATES[stateKey];
 
@@ -376,3 +376,9 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+/* Prototype: enkel in ontwikkeling. In een echte build niet bereikbaar (ook niet via een link). */
+export default function BreathSplatScreen() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <BreathSplatScreenInner />;
+}

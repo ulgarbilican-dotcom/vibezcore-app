@@ -13,7 +13,7 @@ import BreathPacer from '@/components/BreathPacer';
 import LotusPacer from '@/components/LotusPacer';
 import { BrandFonts } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
+import { router, Stack, Redirect } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -33,7 +33,7 @@ const STATES = [
   { key: 'rest', name: 'Sleep', accent: '#00A3A3' },
 ] as const;
 
-export default function BreathPacerPreview() {
+function BreathPacerPreviewInner() {
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
     backScale.value = withTiming(0.92, { duration: 80 });
@@ -156,3 +156,9 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+/* Prototype: enkel in ontwikkeling. In een echte build niet bereikbaar (ook niet via een link). */
+export default function BreathPacerPreview() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <BreathPacerPreviewInner />;
+}
