@@ -940,15 +940,14 @@ export default function BreathScreen() {
             key={st.key}
             source={imageSource(stateBgFor(st.key))}
             style={[
-              StyleSheet.absoluteFill,
+              bgCropFor(st.key).mode === 'contain' ? { position: 'absolute', top: 0, left: 0, right: 0 } : StyleSheet.absoluteFill,
               /* `contain` (zie `calm`): de foto staat tegen de bovenrand,
                  de lege ruimte (pagina-achtergrondkleur) valt onderaan
                  (operator, 21 okt 2026: "bovenkant geen zwarte rand,
                  liever onderaan"). Bronfoto 923×1343, volle breedte. */
               bgCropFor(st.key).mode === 'contain' && {
                 backgroundColor: Brand.bg,
-                bottom: undefined,
-                height: Math.round((SCREEN_W * 1343) / 923),
+                aspectRatio: 923 / 1343,
               },
               {
                 transform: [
@@ -1899,6 +1898,7 @@ const s = StyleSheet.create({
   thumb: {
     width: THUMB,
     height: THUMB,
+    borderRadius: THUMB / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
