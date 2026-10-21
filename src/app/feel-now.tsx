@@ -533,7 +533,7 @@ const s = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
-  cardSlot: { width: '48%' },
+  cardSlot: { flexBasis: '45%', flexGrow: 1 },
   card: {
     borderRadius: 18,
     borderWidth: 1,
