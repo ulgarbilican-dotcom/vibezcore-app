@@ -1354,7 +1354,7 @@ export default function SubscribeScreen() {
     /* Operator, 7 okt 2026: dezelfde kaart als het Library-kopen-blok,
        met Apple's voorwaarden — zie components/MembershipPlans.tsx. */
     return (
-      <SafeAreaView style={s.root}>
+      <SafeAreaView style={s.root} edges={['left', 'right']}>
         <Stack.Screen
           options={{
             title: 'Subscribe',
