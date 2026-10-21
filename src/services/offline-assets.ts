@@ -33,7 +33,7 @@ export const STATE_PHOTOS: Record<string, string> = {
   /* Operator, 5 okt 2026: nieuwe Boost-foto. */
   boost: 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20boost%20correct.png',
   focus: 'https://vibezcore-audio.b-cdn.net/images/pic%20sharp%20focus%20new.png',
-  calm: 'https://vibezcore-audio.b-cdn.net/images/pic%20calm%20control%20app%205.png',
+  calm: 'https://vibezcore-audio.b-cdn.net/images/pic%20calm%20control%20app%204.png',
   clarity: 'https://vibezcore-audio.b-cdn.net/images/pic%20clarity%20app%204.png',
   rest: 'https://vibezcore-audio.b-cdn.net/images/pic%20rest%20reset%20app%202.png',
 };

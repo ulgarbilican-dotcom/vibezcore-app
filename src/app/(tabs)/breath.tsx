@@ -206,8 +206,8 @@ const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
 /* Hoogte van de achtergrondfoto bij volle breedte (zie <Image> hieronder). */
 /* Per foto een beetje zakken, zodat het gezicht niet achter de Premium-knop valt
    (operator, 21 okt 2026). Calm staat tegen de bovenrand (geen zwarte band). */
-const BG_TOP: Partial<Record<BreathStateKey, number>> = { boost: 64, focus: 44, rest: 44 };
-const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * (key === 'calm' ? 1343 / 923 : 1.25));
+const BG_TOP: Partial<Record<BreathStateKey, number>> = { boost: 64, focus: 48, calm: 48, rest: 48 };
+const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * 1.25);
 
 const bgCropFor = (key: BreathStateKey): BgCrop =>
   STATE_BG_CROP[key] ?? NO_CROP;
@@ -912,6 +912,12 @@ export default function BreathScreen() {
               resizeMode="cover"
             />
           </Animated.View>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[Brand.bg, 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0)']}
+            locations={[0, 0.5, 1]}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 134 }}
+          />
           {/* Operator, 8 september 2026: "ook de zwarte banden weg" — de
              twee opaque vlakken (boven-dekkend, onder-dekkend) zijn weg.
              Wat overblijft is ÉÉN zachte, geleidelijke sluiervervaging
@@ -954,6 +960,16 @@ export default function BreathScreen() {
             style={{ position: 'absolute', top: BG_TOP[st.key] ?? 0, left: 0, width: SCREEN_W, height: bgPhotoH(st.key) }}
             resizeMode="cover"
           />
+          {/* Bovenrand zacht naar de achtergrond: geen harde zwarte band, en
+              de Premium-knop staat op rustig beeld i.p.v. op een gezicht. */}
+          {(BG_TOP[st.key] ?? 0) > 0 ? (
+            <LinearGradient
+              pointerEvents="none"
+              colors={[Brand.bg, 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0)']}
+              locations={[0, 0.5, 1]}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: (BG_TOP[st.key] ?? 0) + 70 }}
+            />
+          ) : null}
           <LinearGradient
             pointerEvents="none"
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.6)', Brand.bg]}
