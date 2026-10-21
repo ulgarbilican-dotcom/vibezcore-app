@@ -203,6 +203,9 @@ const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
   calm: { scale: 1, translateX: 0, translateY: -60, mode: 'contain' },
 };
 
+/* Hoogte van de achtergrondfoto bij volle breedte (zie <Image> hieronder). */
+const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * (key === 'calm' ? 1343 / 923 : 1.25));
+
 const bgCropFor = (key: BreathStateKey): BgCrop =>
   STATE_BG_CROP[key] ?? NO_CROP;
 
@@ -345,20 +348,13 @@ function StateThumb({
          website: glas, pil met iconen"): de vijf zitten samen in één
          glazen pil; de gekozen heeft een ring + zachte gloed in de kleur
          van de toestand en een wit icoon, de rest grijze iconen. */}
-      <View
-        style={[
-          s.thumb,
-          on && {
-            borderWidth: 1.6,
-            borderColor: t.accent,
-            shadowColor: t.accent,
-            shadowOpacity: 0.55,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 0,
-          },
-        ]}
-      >
+      <View style={s.thumb}>
+        {on ? (
+          <>
+            <View pointerEvents="none" style={[s.thumbGlow, { backgroundColor: t.accent }]} />
+            <View pointerEvents="none" style={[s.thumbRing, { borderColor: t.accent }]} />
+          </>
+        ) : null}
         <Animated.View style={on ? thumbPulseStyle : undefined}>
           <StateGlyph
             stateKey={t.key}
@@ -936,32 +932,26 @@ export default function BreathScreen() {
              "de foto's zijn heel statisch") is teruggedraaid — gaf een
              Reanimated-crash op dit scherm. Zie de toelichting bij
              `bgZoom` hierboven. */}
+          {/* 21 okt 2026 (operator: "foto's veel te groot, man en vrouw
+             volledig in beeld"): elke toestandsfoto op VOLLE BREEDTE, in zijn
+             eigen verhouding, tegen de bovenrand — nergens meer ingezoomd of
+             afgesneden. Onderaan loopt hij zacht uit naar de achtergrond,
+             waar de keuzepil en de knop op staan. Bronverhoudingen: 4:5
+             (boost, focus, clarity, rest), calm 923×1343. */}
           <Image
             key={st.key}
             source={imageSource(stateBgFor(st.key))}
-            style={[
-              bgCropFor(st.key).mode === 'contain' ? { position: 'absolute', top: 56, left: 0, width: SCREEN_W, height: Math.round((SCREEN_W * 1343) / 923) } : StyleSheet.absoluteFill,
-              /* `contain` (zie `calm`): de foto staat tegen de bovenrand,
-                 de lege ruimte (pagina-achtergrondkleur) valt onderaan
-                 (operator, 21 okt 2026: "bovenkant geen zwarte rand,
-                 liever onderaan"). Bronfoto 923×1343, volle breedte. */
-              bgCropFor(st.key).mode === 'contain' && {
-                backgroundColor: Brand.bg,
-              },
-              {
-                transform: [
-                  { scale: bgCropFor(st.key).scale },
-                  { translateX: bgCropFor(st.key).translateX ?? 0 },
-                  { translateY: bgCropFor(st.key).mode === 'contain' ? 0 : bgCropFor(st.key).translateY },
-                ],
-              },
-            ]}
-            resizeMode={bgCropFor(st.key).mode === 'contain' ? 'contain' : bgCropFor(st.key).mode ?? 'cover'}
+            style={{ position: 'absolute', top: 0, left: 0, width: SCREEN_W, height: bgPhotoH(st.key) }}
+            resizeMode="cover"
           />
           <LinearGradient
             pointerEvents="none"
-            colors={['rgba(10,10,10,0.15)', 'rgba(10,10,10,0.6)', Brand.bg]}
-            locations={[0.3, 0.72, 1]}
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.6)', Brand.bg]}
+            locations={[
+              Math.min(0.9, (bgPhotoH(st.key) * 0.6) / SCREEN_H),
+              Math.min(0.95, (bgPhotoH(st.key) * 0.88) / SCREEN_H),
+              Math.min(1, (bgPhotoH(st.key) * 1.0) / SCREEN_H),
+            ]}
             style={StyleSheet.absoluteFill}
           />
         </>
@@ -1853,6 +1843,20 @@ const s = StyleSheet.create({
     gap: THUMB_GAP,
     marginTop: 12,
     alignItems: 'flex-start',
+  },
+  thumbRing: {
+    position: 'absolute',
+    width: THUMB,
+    height: THUMB,
+    borderRadius: THUMB / 2,
+    borderWidth: 1.6,
+  },
+  thumbGlow: {
+    position: 'absolute',
+    width: THUMB + 14,
+    height: THUMB + 14,
+    borderRadius: (THUMB + 14) / 2,
+    opacity: 0.18,
   },
   thumbsPill: {
     flexDirection: 'row',
