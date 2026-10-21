@@ -207,6 +207,9 @@ const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
 /* Hoogte van de achtergrondfoto bij volle breedte (zie <Image> hieronder). */
 /* Per foto een beetje zakken, zodat het gezicht niet achter de Premium-knop valt
    (operator, 21 okt 2026). Calm staat tegen de bovenrand (geen zwarte band). */
+/* Intro-foto: volle breedte (4:5), maar nooit hoger dan het scherm min het tekstblok
+   onderaan (~340 dp), zodat de tekst op de zwarte overgang staat en niet over de foto. */
+const INTRO_PHOTO_H = Math.round(Math.min(SCREEN_W * 1.25, SCREEN_H - 340));
 /* Responsief: de afstand tot de bovenrand is een deel van de fotohoogte
    (schermbreedte x 1,25), geen vast aantal dp, zodat het op elk scherm meeschaalt. */
 const BG_TOP_RATIO: Partial<Record<BreathStateKey, number>> = { boost: 0.125, calm: 0.094 };
@@ -908,7 +911,7 @@ export default function BreathScreen() {
              `top`-offset. Ken Burns-zoom blijft op de foto zelf zitten. */}
           <Image source={imageSource(INTRO_BG_IMG)} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={45} />
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.45)' }]} />
-          <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
+          <Animated.View style={[{ position: 'absolute', top: 0, left: 0, width: SCREEN_W, height: INTRO_PHOTO_H, overflow: 'hidden' }, kenBurnsStyle]}>
             <Image
               source={imageSource(INTRO_BG_IMG)}
               /* 21 okt 2026 (operator: "man en vrouw volledig in beeld"):
@@ -935,10 +938,10 @@ export default function BreathScreen() {
             pointerEvents="none"
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.5)', 'rgba(10,10,10,0.9)', Brand.bg]}
             locations={[
-              Math.max(0, (SCREEN_W * 1.25 * 0.55) / SCREEN_H),
-              Math.min(1, (SCREEN_W * 1.25 * 0.82) / SCREEN_H),
-              Math.min(1, (SCREEN_W * 1.25 * 0.97) / SCREEN_H),
-              Math.min(1, (SCREEN_W * 1.25 * 1.03) / SCREEN_H),
+              (INTRO_PHOTO_H * 0.5) / SCREEN_H,
+              (INTRO_PHOTO_H * 0.8) / SCREEN_H,
+              (INTRO_PHOTO_H * 0.97) / SCREEN_H,
+              Math.min(1, (INTRO_PHOTO_H * 1.03) / SCREEN_H),
             ]}
             style={StyleSheet.absoluteFill}
           />
