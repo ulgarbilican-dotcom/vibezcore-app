@@ -207,7 +207,12 @@ const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
 /* Hoogte van de achtergrondfoto bij volle breedte (zie <Image> hieronder). */
 /* Per foto een beetje zakken, zodat het gezicht niet achter de Premium-knop valt
    (operator, 21 okt 2026). Calm staat tegen de bovenrand (geen zwarte band). */
-const BG_TOP: Partial<Record<BreathStateKey, number>> = { boost: 64, calm: 48 };
+/* Responsief: de afstand tot de bovenrand is een deel van de fotohoogte
+   (schermbreedte x 1,25), geen vast aantal dp, zodat het op elk scherm meeschaalt. */
+const BG_TOP_RATIO: Partial<Record<BreathStateKey, number>> = { boost: 0.125, calm: 0.094 };
+const BG_TOP: Partial<Record<BreathStateKey, number>> = Object.fromEntries(
+  Object.entries(BG_TOP_RATIO).map(([k, r]) => [k, Math.round(SCREEN_W * 1.25 * (r as number))]),
+);
 const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * 1.25);
 
 const bgCropFor = (key: BreathStateKey): BgCrop =>
