@@ -63,7 +63,7 @@ import BraceletControl from '../bracelet-control';
 import RestingHeartRatePage from '@/components/RestingHeartRatePage';
 import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import { useRestingPulse } from '@/components/RhythmSheet';
-import { loadRestingPulse } from '@/services/resting-pulse';
+import { loadRestingPulse, getRestingPulse, chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { deferOnboarding, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -426,6 +426,8 @@ export default function BraceletScreen() {
           /* Zelfde als "Not Now" in de Breathwork-onboarding: uitstel (deze
              run niet meer, volgende start nog één keer) → gewone pagina. */
           deferOnboarding('state');
+          /* Overslaan = direct naar State Control, niet naar de hartslagpagina: gemiddelde als start (aanpasbaar in Profile). */
+          if (!getRestingPulse().decided) chooseAverageRestingPulse();
           setShowIntro(false);
         }}
         onDone={() => {

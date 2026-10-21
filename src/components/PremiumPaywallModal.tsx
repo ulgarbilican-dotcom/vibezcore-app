@@ -145,7 +145,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
 
           <ScrollView
             style={s.scroll}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}
             showsVerticalScrollIndicator={false}
             bounces={false}
           >

@@ -167,7 +167,7 @@ export default function SubscribeScreen() {
      de Continue/Create-account knop nooit onder de Samsung 3-button
      nav valt. Floor 72 = consistent met alle andere bottom-CTAs. */
   const safeInsets = useSafeAreaInsets();
-  const scrollBottomPadding = Math.max(safeInsets.bottom + 24, 72);
+  const scrollBottomPadding = Math.max(safeInsets.bottom + 64, 120);
   /* Iter 9dq v69 (2026-06-03): dev-only param om de signed-in review-
      flow te kunnen previewen zonder een echt test-account te hoeven
      aanmaken. Geactiveerd via Settings → Developer · screen previews →

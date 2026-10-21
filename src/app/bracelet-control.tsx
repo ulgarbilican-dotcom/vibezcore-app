@@ -4467,13 +4467,9 @@ function IdleScreen({
                     accessibilityRole="button"
                     accessibilityLabel={`${q.label}, ${QUICK_SESSION_MINUTES} minutes`}
                   >
-                    {/* 21 okt 2026 (operator: "in glass ronde button"): glazen pil. */}
-                    <VibezGlass radius={26} level="normal" style={StyleSheet.absoluteFill} />
-                    <QIcon size={q.key === 'chill' ? 22 : 18} color={getModeMeta(q.mode).color} strokeWidth={2} />
-                    {/* Operator: geen "5 min" — dat staat in het infoblad. */}
-                    <Text style={s.quickCardTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-                      {q.label}
-                    </Text>
+                    {/* 21 okt 2026 (operator: enkel iconen in een glazen cirkel; tik = zelfde popup). */}
+                    <VibezGlass radius={28} level="normal" style={StyleSheet.absoluteFill} />
+                    <QIcon size={q.key === 'chill' ? 26 : 22} color={getModeMeta(q.mode).color} strokeWidth={2} />
                   </PressScale>
                 );
               })}
@@ -6548,16 +6544,13 @@ const s = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 4,
   },
-  quickCardRow: { flexDirection: 'row', gap: 10 },
+  quickCardRow: { flexDirection: 'row', justifyContent: 'center', gap: 20 },
   quickCard: {
-    flex: 1,
-    flexDirection: 'row',
+    width: 56,
+    height: 56,
     alignItems: 'center',
-    gap: 10,
-    height: 52,
-    paddingHorizontal: 16,
     justifyContent: 'center',
-    borderRadius: 26,
+    borderRadius: 28,
     overflow: 'hidden',
   },
   quickCardTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 14 },
