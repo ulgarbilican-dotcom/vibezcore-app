@@ -216,7 +216,10 @@ const BG_TOP_RATIO: Partial<Record<BreathStateKey, number>> = { boost: 0.125 };
 const BG_TOP: Partial<Record<BreathStateKey, number>> = Object.fromEntries(
   Object.entries(BG_TOP_RATIO).map(([k, r]) => [k, Math.round(SCREEN_W * 1.25 * (r as number))]),
 );
-const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * 1.25);
+/* Per toestand een lichte extra inzoom (middelpunt blijft staan), als verhouding. */
+const BG_ZOOM: Partial<Record<BreathStateKey, number>> = { calm: 1.15 };
+const bgZoomOf = (key: BreathStateKey) => BG_ZOOM[key] ?? 1;
+const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * 1.25 * bgZoomOf(key));
 
 const bgCropFor = (key: BreathStateKey): BgCrop =>
   STATE_BG_CROP[key] ?? NO_CROP;
@@ -983,7 +986,7 @@ export default function BreathScreen() {
           <Image
             key={st.key}
             source={imageSource(stateBgFor(st.key))}
-            style={{ position: 'absolute', top: BG_TOP[st.key] ?? 0, left: 0, width: SCREEN_W, height: bgPhotoH(st.key) }}
+            style={{ position: 'absolute', top: BG_TOP[st.key] ?? 0, left: -Math.round((SCREEN_W * (bgZoomOf(st.key) - 1)) / 2), width: Math.round(SCREEN_W * bgZoomOf(st.key)), height: bgPhotoH(st.key) }}
             resizeMode="cover"
           />
           {/* Bovenrand zacht naar de achtergrond: geen harde zwarte band, en
