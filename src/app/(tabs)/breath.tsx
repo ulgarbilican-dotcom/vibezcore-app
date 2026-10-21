@@ -901,6 +901,8 @@ export default function BreathScreen() {
           {/* Operator, 8 september 2026: "laat de foto tot helemaal beneden
              en boven lopen" — volle-scherm i.p.v. een vast blok met een
              `top`-offset. Ken Burns-zoom blijft op de foto zelf zitten. */}
+          <Image source={imageSource(INTRO_BG_IMG)} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={45} />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.45)' }]} />
           <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
             <Image
               source={imageSource(INTRO_BG_IMG)}
@@ -914,9 +916,9 @@ export default function BreathScreen() {
           </Animated.View>
           <LinearGradient
             pointerEvents="none"
-            colors={[Brand.bg, 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0)']}
-            locations={[0, 0.5, 1]}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 134 }}
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0)']}
+            locations={[0, 1]}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1 }}
           />
           {/* Operator, 8 september 2026: "ook de zwarte banden weg" — de
              twee opaque vlakken (boven-dekkend, onder-dekkend) zijn weg.
@@ -954,6 +956,17 @@ export default function BreathScreen() {
              afgesneden. Onderaan loopt hij zacht uit naar de achtergrond,
              waar de keuzepil en de knop op staan. Bronverhoudingen: 4:5
              (boost, focus, clarity, rest), calm 923×1343. */}
+          {/* Achtergrond: dezelfde foto, groot en uitgevlakt, zodat boven en
+              onder de scherpe foto nooit een zwarte band staat (op elk
+              schermformaat). */}
+          <Image
+            key={`${st.key}-bd`}
+            source={imageSource(stateBgFor(st.key))}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            blurRadius={45}
+          />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.45)' }]} />
           <Image
             key={st.key}
             source={imageSource(stateBgFor(st.key))}
@@ -965,9 +978,9 @@ export default function BreathScreen() {
           {(BG_TOP[st.key] ?? 0) > 0 ? (
             <LinearGradient
               pointerEvents="none"
-              colors={[Brand.bg, 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0)']}
-              locations={[0, 0.5, 1]}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: (BG_TOP[st.key] ?? 0) + 70 }}
+              colors={['rgba(10,10,10,0.0)', 'rgba(10,10,10,0)']}
+              locations={[0, 1]}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1 }}
             />
           ) : null}
           <LinearGradient
