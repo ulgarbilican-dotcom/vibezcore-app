@@ -616,7 +616,7 @@ const s = StyleSheet.create({
      gebruikt — zo blijft de bovenkant van elk label op dezelfde hoogte
      beginnen (ongeacht 1 of 2 regels) ÉN het blok als geheel onderaan de
      kaart geankerd via de flex-spacer ervoor. Beide eisen tegelijk. */
-  cardColumnLabel: { height: 36 },
+  cardColumnLabel: { minHeight: 36 },
   /* Operator ("or something more... laten zakken, meer ademruimte tussen
      de blokken", toen "nog zakken 0.5cm" ≈ +19dp): extra marginTop
      bovenop de grid se eigen marginBottom (20) — meer lucht tussen de

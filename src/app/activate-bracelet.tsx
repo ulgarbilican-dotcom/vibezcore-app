@@ -296,7 +296,7 @@ export default function ActivateBraceletScreen() {
       <SafeAreaView style={s.root}>
         <Stack.Screen
           options={{
-            title: 'Activate your bracelet',
+            title: 'Activate bracelet',
             headerTitleAlign: 'center',
             headerBackVisible: false,
             headerLeft: () => <HeaderBackButton />,
@@ -371,7 +371,7 @@ export default function ActivateBraceletScreen() {
     <SafeAreaView style={s.root}>
       <Stack.Screen
         options={{
-          title: 'Activate your bracelet',
+          title: 'Activate bracelet',
           headerTitleAlign: 'center',
           headerBackVisible: false,
           headerLeft: () => <HeaderBackButton />,

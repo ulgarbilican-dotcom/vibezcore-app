@@ -199,7 +199,7 @@ function ModeTile({
         <VibezGlass radius={20} tint={m.color} level="raised" style={StyleSheet.absoluteFill} />
         <Icon size={22} color="#ffffff" strokeWidth={1.9} />
       </View>
-      <Text style={s.tileName} numberOfLines={2}>
+      <Text style={s.tileName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.15}>
         {m.name}
       </Text>
     </AnimatedPressable>
