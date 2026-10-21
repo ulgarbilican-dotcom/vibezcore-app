@@ -22,6 +22,7 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { isBreathPickerOpen, subscribeBreathPickerOpen } from '@/utils/breath-picker-ui';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { saveLastTab } from '@/utils/last-tab';
 import { bootDecided } from '@/utils/boot';
@@ -260,6 +261,8 @@ export default function TabLayout() {
   /* 20 okt 2026: het intro als onboarding-start = volle foto, geen balk. */
   const [introFull, setIntroFull] = useState(isStateControlIntroFullScreen());
   useEffect(() => subscribeStateControlIntroFullScreen(setIntroFull), []);
+  const [breathPicker, setBreathPicker] = useState(isBreathPickerOpen());
+  useEffect(() => subscribeBreathPickerOpen(setBreathPicker), []);
   const hideStateControlBar = sessionVisible || (chooseVisible && !introVisible) || introFull;
   /* Voor openStateControl: tab wisselen als de tabbladen bovenaan liggen,
      anders terugkeren naar de tabbladen (6 okt 2026). */
@@ -433,6 +436,8 @@ export default function TabLayout() {
               <TabLabel label="Breath" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/breath" {...props} />,
+            /* Sleutel enkel meegeven als de balk weg moet (zie State Control). */
+            ...(breathPicker ? { tabBarStyle: { display: 'none' as const } } : {}),
           }}
         />
         {/* De audiobibliotheek is VERBORGEN, niet verwijderd (operator,

@@ -60,7 +60,8 @@ import {
   subscribeTabOpenedByUser,
 } from '@/utils/onboarding-gate';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { setBreathPickerOpen } from '@/utils/breath-picker-ui';
 import { CalendarDays, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useActivePlan } from '@/utils/plan-store';
 import { techniqueIcon } from '@/utils/technique-copy';
@@ -459,11 +460,10 @@ export default function BreathScreen() {
   const [intro, setIntro] = useState(true);
   /* 21 okt 2026 (operator): na "Explore modes" geen tabbalk meer (zoals bij
      State Control) maar een terug-chevron naar het intro-scherm. */
-  const navigation = useNavigation();
   useEffect(() => {
-    navigation.setOptions({ tabBarStyle: intro ? undefined : { display: 'none' } });
-    return () => navigation.setOptions({ tabBarStyle: undefined });
-  }, [intro, navigation]);
+    setBreathPickerOpen(!intro);
+    return () => setBreathPickerOpen(false);
+  }, [intro]);
   /* De teller dwingt een VERSE opbouw van het beeld bij elke terugkeer. Zonder
      dat blijft het onderdeel staan waar het stond — op de mandala — en zie je
      de gezichten nooit meer terug. Nu begint de reeks elke keer opnieuw bij de
