@@ -563,7 +563,7 @@ function EntryRow({
         )}
       </View>
       <View style={s.entryBody}>
-        <Text style={s.entryTitle} numberOfLines={1}>
+        <Text style={s.entryTitle} numberOfLines={2}>
           {entry.title}
         </Text>
         <Text style={s.entrySeries} numberOfLines={1}>
