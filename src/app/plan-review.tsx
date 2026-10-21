@@ -163,7 +163,7 @@ function GroupRow({
           </Text>
           <Pencil size={11} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
         </AnimatedPressable>
-        <Text style={s.groupStateName} numberOfLines={1}>
+        <Text style={s.groupStateName} numberOfLines={2}>
           {st.eyebrow.toUpperCase()}
         </Text>
       </View>
@@ -579,7 +579,13 @@ export default function PlanReviewScreen() {
           <View key={g.slot} style={s.groupSection}>
             <Text style={s.groupLabel}>{g.label.toUpperCase()}</Text>
             <View style={s.groupCard}>
-              <Image source={imageSource(DAYPART_PHOTO[g.slot])} style={s.groupPhoto} />
+              <View style={s.groupPhoto}>
+                <Image
+                  source={imageSource(DAYPART_PHOTO[g.slot])}
+                  style={{ width: 44, height: 44 }}
+                  resizeMode="contain"
+                />
+              </View>
               <View style={s.groupRows}>
                 {g.rows.map(({ it, i }, rowIndex) => (
                   <View key={i}>
@@ -888,7 +894,7 @@ const s = StyleSheet.create({
      ernaast (RN flexbox: een rij-kind zonder eigen hoogte volgt de
      cross-axis van zijn rij-ouder). Eén foto voor de hele sectie i.p.v.
      herhaald per sessie. */
-  groupPhoto: { width: 64 },
+  groupPhoto: { width: 64, alignItems: 'center', justifyContent: 'center' },
   groupRows: { flex: 1 },
   groupDivider: {
     height: StyleSheet.hairlineWidth,
