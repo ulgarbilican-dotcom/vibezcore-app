@@ -290,7 +290,7 @@ export default function BuildChoiceScreen() {
       <ScrollView
         contentContainerStyle={[
           s.scroll,
-          { flexGrow: 1, paddingBottom: Math.max(insets.bottom, 12) + 28 },
+          { flexGrow: 1, paddingBottom: 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -321,17 +321,10 @@ export default function BuildChoiceScreen() {
           ))}
         </View>
 
-        {/* marginTop: 'auto' duwt deze footer (CTA) naar de onderkant van
-           de beschikbare ruimte — zie toelichting bij de ScrollView
-           hierboven. */}
-        <View style={{ marginTop: 'auto' }}>
-          {/* Operator, 20 september 2026 ("de puntjes onderaan moeten ook
-             weg, boven CTA — dat staat al onder STEP bovenaan"): deze
-             paginastipjes waren bedoeld als VERVANGING van de "STEP 1 OF
-             5"-tekst bovenaan (zie de toelichting bovenaan het bestand),
-             maar die tekst + eigen stipjes kwamen daarna terug (18
-             september, `StepIndicator` in de `s.bar`-rij) — sindsdien
-             stond de voortgang dubbel op het scherm. */}
+      </ScrollView>
+      {/* Vaste knop onder de scroll (geen overlay): de scrollruimte eindigt erboven,
+          dus geen kaart kan er ooit onder schuiven. */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) + 16 }}>
           <Pressable
             style={[s.cta, !choice && s.ctaDisabled]}
             disabled={!choice}
@@ -339,8 +332,8 @@ export default function BuildChoiceScreen() {
           >
             <Text style={s.ctaTxt}>Continue</Text>
           </Pressable>
-        </View>
-      </ScrollView>
+      </View>
+
 
       <ProtocolTeaserModal
         visible={teaserOpen}
