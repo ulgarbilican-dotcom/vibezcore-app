@@ -19,8 +19,8 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | breath-pacer-preview | ☐ | ☐ | ☐ | |
 | breath-quiz | ☐ | ☐ | ☐ | |
 | breath-sample | ☐ | ☐ | ☐ | |
-| breath-session | ☐ | ☐ | ☐ | |
-| breath-setup | ☐ | ☐ | ☐ | |
+| breath-session | ✅ | ✅ | ☐ | beeld schaalt met hoogte; geen overlap meer op S |
+| breath-setup | ✅ | ☐ | ☐ | scrolt onder 760 dp; tekst niet meer achter knop |
 | breath-splat | ☐ | ☐ | ☐ | |
 | breath-welcome | ☐ | ☐ | ☐ | |
 | build-choice | ☐ | ☐ | ☐ | |
@@ -34,21 +34,21 @@ geen overlap, geen afgesneden tekst/knoppen, safe-area, tikdoel ≥ 44 dp, grote
 | history | ☐ | ☐ | ☐ | |
 | intensity | ☐ | ☐ | ☐ | |
 | plan-review | ☐ | ☐ | ☐ | |
-| plan-success | ☐ | ☐ | ☐ | |
+| plan-success | ☐ | ☐ | ☐ | dubbel vinkje verwijderd, nog zien |
 | plan-summary | ☐ | ☐ | ☐ | |
 | plan | ☐ | ☐ | ☐ | |
 | player | ☐ | ☐ | ☐ | |
 | reset-password | ☐ | ☐ | ☐ | |
-| routine-intro | ☐ | ☐ | ☐ | |
+| routine-intro | ☐ | ☐ | ☐ | badges schalen, nog zien |
 | settings | ☐ | ☐ | ☐ | |
 | state-onboarding | ☐ | ☐ | ☐ | |
 | subscribe | ☐ | ☐ | ☐ | |
 | support | ☐ | ☐ | ☐ | |
-| welcome | ☐ | ☐ | ☐ | |
+| welcome | ✅ | ☐ | ☐ |  |
 | (tabs)/account | ☐ | ☐ | ☐ | |
 | (tabs)/activity | ☐ | ☐ | ☐ | |
 | (tabs)/bracelet | ☐ | ☐ | ☐ | |
-| (tabs)/breath | ☐ | ☐ | ☐ | |
+| (tabs)/breath | ✅ | ✅ | ✅ | intro + vijf toestanden (S, L gezien); foto-offsets als verhouding |
 | (tabs)/index | ☐ | ☐ | ☐ | |
 
 ## Officiële eisen (nog na te lopen)
