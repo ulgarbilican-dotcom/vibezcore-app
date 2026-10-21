@@ -60,8 +60,8 @@ import {
   subscribeTabOpenedByUser,
 } from '@/utils/onboarding-gate';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronRight, Info } from 'lucide-react-native';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { CalendarDays, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useActivePlan } from '@/utils/plan-store';
 import { techniqueIcon } from '@/utils/technique-copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -204,6 +204,9 @@ const STATE_BG_CROP: Partial<Record<BreathStateKey, BgCrop>> = {
 };
 
 /* Hoogte van de achtergrondfoto bij volle breedte (zie <Image> hieronder). */
+/* Per foto een beetje zakken, zodat het gezicht niet achter de Premium-knop valt
+   (operator, 21 okt 2026). Calm staat tegen de bovenrand (geen zwarte band). */
+const BG_TOP: Partial<Record<BreathStateKey, number>> = { boost: 64, focus: 44, rest: 44 };
 const bgPhotoH = (key: BreathStateKey) => Math.round(SCREEN_W * (key === 'calm' ? 1343 / 923 : 1.25));
 
 const bgCropFor = (key: BreathStateKey): BgCrop =>
@@ -454,6 +457,13 @@ export default function BreathScreen() {
      als je van een sessie terugkomt. Dat is de bedoeling: het is een drempel
      die je even laat landen, geen scherm dat je één keer wegklikt. */
   const [intro, setIntro] = useState(true);
+  /* 21 okt 2026 (operator): na "Explore modes" geen tabbalk meer (zoals bij
+     State Control) maar een terug-chevron naar het intro-scherm. */
+  const navigation = useNavigation();
+  useEffect(() => {
+    navigation.setOptions({ tabBarStyle: intro ? undefined : { display: 'none' } });
+    return () => navigation.setOptions({ tabBarStyle: undefined });
+  }, [intro, navigation]);
   /* De teller dwingt een VERSE opbouw van het beeld bij elke terugkeer. Zonder
      dat blijft het onderdeel staan waar het stond — op de mandala — en zie je
      de gezichten nooit meer terug. Nu begint de reeks elke keer opnieuw bij de
@@ -898,7 +908,7 @@ export default function BreathScreen() {
                  hele foto op volle breedte (4:5), tegen de bovenrand; het
                  vignet hieronder laat hem onderaan in de achtergrond
                  overlopen. */
-              style={{ width: SCREEN_W, height: Math.round(SCREEN_W * 1.25) }}
+              style={{ width: SCREEN_W, height: Math.round(SCREEN_W * 1.25), marginTop: 64 }}
               resizeMode="cover"
             />
           </Animated.View>
@@ -941,16 +951,16 @@ export default function BreathScreen() {
           <Image
             key={st.key}
             source={imageSource(stateBgFor(st.key))}
-            style={{ position: 'absolute', top: 0, left: 0, width: SCREEN_W, height: bgPhotoH(st.key) }}
+            style={{ position: 'absolute', top: BG_TOP[st.key] ?? 0, left: 0, width: SCREEN_W, height: bgPhotoH(st.key) }}
             resizeMode="cover"
           />
           <LinearGradient
             pointerEvents="none"
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.6)', Brand.bg]}
             locations={[
-              Math.min(0.9, (bgPhotoH(st.key) * 0.6) / SCREEN_H),
-              Math.min(0.95, (bgPhotoH(st.key) * 0.88) / SCREEN_H),
-              Math.min(1, (bgPhotoH(st.key) * 1.0) / SCREEN_H),
+              Math.min(0.9, ((BG_TOP[st.key] ?? 0) + bgPhotoH(st.key) * 0.6) / SCREEN_H),
+              Math.min(0.95, ((BG_TOP[st.key] ?? 0) + bgPhotoH(st.key) * 0.88) / SCREEN_H),
+              Math.min(1, ((BG_TOP[st.key] ?? 0) + bgPhotoH(st.key)) / SCREEN_H),
             ]}
             style={StyleSheet.absoluteFill}
           />
@@ -1084,6 +1094,28 @@ export default function BreathScreen() {
       <GoalButton
         onPress={() => router.push((plan ? '/agenda' : '/build-choice') as never)}
       />
+      {!intro ? (
+        <Pressable
+          onPress={() => setIntro(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          style={{
+            position: 'absolute',
+            left: 16,
+            top: insets.top + 8,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(20,20,22,0.55)',
+            zIndex: 20,
+          }}
+        >
+          <ChevronLeft size={24} color="#ffffff" strokeWidth={2.2} />
+        </Pressable>
+      ) : null}
 
       {/* Operator, 8 september 2026 (3e ronde): "waar moet die header dan
          staan? nu is dat gewoon platte tekst ergens" — terecht: de kop zat
