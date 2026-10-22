@@ -908,12 +908,14 @@ function SwitchSessionConfirm({
   visible,
   fromName,
   toName,
+  toColor,
   onCancel,
   onConfirm,
 }: {
   visible: boolean;
   fromName: string;
   toName: string;
+  toColor: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -928,7 +930,7 @@ function SwitchSessionConfirm({
             Your {fromName} session will end and {toName} starts in its place.
           </Text>
           <PressScale
-            style={[s.primaryBtn, s.switchBtn]} haptic scaleTo={0.97}
+            style={[s.primaryBtn, s.switchBtn, stateGlass(toColor)]} haptic scaleTo={0.97}
             onPress={onConfirm}
             accessibilityLabel={`Switch to ${toName}`}
           >
@@ -956,7 +958,7 @@ function RunningSessionBar({ onPress }: { onPress: () => void }) {
   const time = `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, '0')}`;
   return (
     <PrimaryCtaButton
-      style={[s.primaryBtn, s.runningBar]}
+      style={[s.primaryBtn, s.runningBar, stateGlass(snap.modeColor)]}
       onPress={onPress}
       accessibilityLabel={`Return to your ${snap.modeName} session`}
     >
@@ -964,7 +966,7 @@ function RunningSessionBar({ onPress }: { onPress: () => void }) {
       <Text style={s.primaryBtnText} numberOfLines={1}>
         {snap.modeName} · {snap.paused ? 'Paused' : `${time} left`}
       </Text>
-      <ChevronUp size={20} color="#1D1D1F" strokeWidth={2.4} />
+      <ChevronUp size={20} color="#ffffff" strokeWidth={2.4} />
     </PrimaryCtaButton>
   );
 }
@@ -4642,6 +4644,7 @@ function IdleScreen({
           visible={confirmSwitch}
           fromName={runSnap.modeName}
           toName={meta.name}
+          toColor={meta.color}
           onCancel={() => setConfirmSwitch(false)}
           onConfirm={() => {
             setConfirmSwitch(false);
