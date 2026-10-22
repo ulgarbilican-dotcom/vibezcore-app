@@ -1658,7 +1658,7 @@ function AudioScreen({
                 accessibilityLabel="Explore the Audio Library"
               >
                 <Text style={s.introCtaTxt}>Explore Audio Library</Text>
-                <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]} pointerEvents="none">
+                <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
 <Animated.View
                   style={[s.introCtaShimmer, introShimmerStyle]}
                   pointerEvents="none"

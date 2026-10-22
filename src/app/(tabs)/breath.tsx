@@ -1087,7 +1087,7 @@ export default function BreathScreen() {
               <View style={s.introCtaGlass}>
                 <Text style={s.introCtaGlassTxt}>Explore modes</Text>
               </View>
-              <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]} pointerEvents="none">
+              <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
 <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
                 <LinearGradient
                   colors={['#ffffff00', '#ffffff9a', '#ffffff00']}

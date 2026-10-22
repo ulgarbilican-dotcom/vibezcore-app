@@ -326,11 +326,9 @@ export const CardHeights = {
 export const CTA_GLASS = 'rgba(30,30,32,0.34)';
 
 export const CTA_GLOW = {
-  shadowColor: '#ffffff',
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0.62,
-  shadowRadius: 22,
-  elevation: 14,
+  /* Gelijkmatige witte gloed rond de pil (geen omlaag uitsmerende elevation-schaduw): het licht
+     zit achter de knop, buiten de rand, en schijnt door het doorschijnende glas. */
+  boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 22, spreadDistance: 2, color: 'rgba(255,255,255,0.5)' }],
 } as const;
 
 export const CTA = {
@@ -350,7 +348,7 @@ export const CTA = {
   /* Ondoorzichtig: een doorzichtige uitgeschakelde knop liet de tekst van kaarten
      eronder erdoorheen schijnen. */
   /* Niet beschikbaar: vlak, donker, GEEN lichtbron (de glow is het signaal "actief"). */
-  disabled: { backgroundColor: '#161618', shadowOpacity: 0, elevation: 0 },
+  disabled: { backgroundColor: '#161618', boxShadow: [] },
   labelDisabled: { color: 'rgba(255,255,255,0.38)' },
   label: {
     fontFamily: BrandFonts.semibold,
