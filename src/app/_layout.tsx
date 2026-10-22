@@ -19,6 +19,7 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import BottomSystemScrim from '@/components/BottomSystemScrim';
 import { useWatchCatalogSync } from '@/services/watch-catalog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurTargetView } from 'expo-blur';
@@ -844,6 +845,7 @@ export default function RootLayout() {
            simpele versie. Het echte probleem zit specifiek in dat ene
            scherm, zie daar verder. */}
         <StatusBar style="light" />
+        <BottomSystemScrim />
         {/* De hele app in één BlurTargetView (7 okt 2026): het glas van de
             sheets in GlassSheetHost (onderaan, BUITEN deze target) vervaagt
             dit — zo is het ook op Android echt glas. */}
