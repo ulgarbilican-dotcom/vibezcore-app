@@ -28,6 +28,7 @@
 import { friendlyError } from '@/utils/friendly-error';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
+import PurchaseConfirm from '@/components/PurchaseConfirm';
 import { usePreventRemove } from '@react-navigation/native';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import MembershipPlans from '@/components/MembershipPlans';
@@ -1174,89 +1175,67 @@ export default function SubscribeScreen() {
       ...(doneIsDayPass ? [] : ['New sessions added regularly']),
     ];
     return (
-      <SafeAreaView style={s.root}>
+      <>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={s.doneWrap}>
-          <View style={s.checkCircle}>
-            <Text style={s.checkText}>✓</Text>
-          </View>
-          <Text style={s.doneTitle}>
-            {doneIsDayPass
+        <PurchaseConfirm
+          title={
+            doneIsDayPass
               ? 'Your Day Pass is active'
               : alreadyMember
                 ? "You're a VIBEZCORE Premium member"
-                : 'Welcome to VIBEZCORE Premium'}
-          </Text>
-          <Text style={s.doneThanks}>
-            {doneIsDayPass
+                : 'Welcome to VIBEZCORE Premium'
+          }
+          subtitle={
+            doneIsDayPass
               ? passEndLabel
                 ? `Full access until ${passEndLabel}.`
                 : 'Full access for the next 24 hours.'
               : alreadyMember
                 ? 'Your membership is active.'
-                : 'Thank you for subscribing.'}
-          </Text>
-
-          {/* Operator, 17 okt 2026 ("de hele uitleg nakijken, dit klopt niet
-              meer"): drie producten, zelfde volgorde en woorden als de
-              paywall; het product waar je vandaan kwam staat bovenaan. */}
-          <View style={s.donePerks}>
-            <Text style={s.donePerkTitle}>
-              {doneIsDayPass ? 'For the next 24 hours:' : 'Everything is now unlocked:'}
-            </Text>
-            {donePerks.map((line) => (
-              <BalancedText key={line} style={s.donePerkLine}>
-                {`· ${line}`}
-              </BalancedText>
-            ))}
-          </View>
-
-          <AnimatedPressable
-            style={[s.doneCta, doneCtaPress.pressStyle]}
-            onPress={() => {
-              if (doneDestination === '/plan') router.replace('/plan' as never);
-              else if (doneDestination) goToTab(doneDestination);
-              else if (router.canGoBack()) router.back();
-              else goToTab('/bracelet');
-            }}
-            onPressIn={doneCtaPress.onPressIn}
-            onPressOut={doneCtaPress.onPressOut}
-            accessibilityLabel={doneCtaLabel}
-          >
-            <Text style={s.doneCtaText}>{doneCtaLabel}</Text>
-          </AnimatedPressable>
-
-          <Text style={s.doneFooter}>
-            You&apos;ll receive a confirmation email from{' '}
-            {Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}.
-            {'\n'}
-            {doneIsDayPass
+                : 'Thank you for subscribing.'
+          }
+          /* Operator, 17 okt 2026 ("de hele uitleg nakijken, dit klopt niet
+             meer"): drie producten, zelfde volgorde en woorden als de
+             paywall; het product waar je vandaan kwam staat bovenaan. */
+          perksTitle={doneIsDayPass ? 'For the next 24 hours:' : 'Everything is now unlocked:'}
+          perks={donePerks}
+          footer={`You'll receive a confirmation email from ${Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}.
+${
+            doneIsDayPass
               ? 'Your Day Pass ends on its own. Nothing renews.'
-              : 'Manage your subscription anytime in Settings.'}
-          </Text>
-
-          {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele
-              post-purchase account-CTA — alleen zichtbaar als deze aankoop
-              als guest gebeurde. Account is niet vereist (entitlement zit
-              al op de RC anonymous-ID); dit is puur voor cross-device sync. */}
-          {guestPurchase && !signedIn && (
-            <AnimatedPressable
-              style={[s.linkBtn, saveSubPress.pressStyle]}
-              onPress={() => {
-                setLinkingAccount(true);
-                setPhase('form');
-              }}
-              onPressIn={saveSubPress.onPressIn}
-              onPressOut={saveSubPress.onPressOut}
-              accessibilityLabel="Create an account to sync this subscription across your devices"
-            >
-              <BalancedText style={s.linkText}>
-                Create a free account to keep Premium on all your devices
-              </BalancedText>
-            </AnimatedPressable>
-          )}
-        </View>
-      </SafeAreaView>
+              : 'Manage your subscription anytime in Settings.'
+          }`}
+          ctaLabel={doneCtaLabel}
+          onCta={() => {
+            if (doneDestination === '/plan') router.replace('/plan' as never);
+            else if (doneDestination) goToTab(doneDestination);
+            else if (router.canGoBack()) router.back();
+            else goToTab('/bracelet');
+          }}
+          /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele
+             post-purchase account-CTA — alleen zichtbaar als deze aankoop
+             als guest gebeurde. Account is niet vereist (entitlement zit
+             al op de RC anonymous-ID); dit is puur voor cross-device sync. */
+          below={
+            guestPurchase && !signedIn ? (
+              <AnimatedPressable
+                style={[s.linkBtn, saveSubPress.pressStyle]}
+                onPress={() => {
+                  setLinkingAccount(true);
+                  setPhase('form');
+                }}
+                onPressIn={saveSubPress.onPressIn}
+                onPressOut={saveSubPress.onPressOut}
+                accessibilityLabel="Create an account to sync this subscription across your devices"
+              >
+                <BalancedText style={s.linkText}>
+                  Create a free account to keep Premium on all your devices
+                </BalancedText>
+              </AnimatedPressable>
+            ) : null
+          }
+        />
+      </>
     );
   }
 

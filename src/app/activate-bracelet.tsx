@@ -19,6 +19,7 @@
      backer; geen alternatief koop-pad in app (bracelet via webshop, niet IAP)
    ─────────────────────────────────────────────────────────────────────── */
 
+import PurchaseConfirm from '@/components/PurchaseConfirm';
 import BalancedText from '@/components/BalancedText';
 import { SESSIONS } from '@/data/audio-library-data';
 import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
@@ -319,50 +320,30 @@ export default function ActivateBraceletScreen() {
      auto-redirect, wat voelde als bug. Nu neemt user zelf actie. */
   if (phase === 'success') {
     return (
-      <SafeAreaView style={s.root}>
+      <>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={s.doneWrap}>
-          <View style={s.checkCircle}>
-            <Text style={s.checkText}>✓</Text>
-          </View>
-          <Text style={s.doneTitle}>
-            {isBundle ? 'Bundle activated' : 'Bracelet activated'}
-          </Text>
-          <Text style={s.doneThanks}>Welcome to VIBEZCORE.</Text>
-
-          <View style={s.donePerks}>
-            <Text style={s.donePerkTitle}>You now have access to:</Text>
-            <Text style={s.donePerkLine}>· 5 haptic session modes</Text>
-            <Text style={s.donePerkLine}>· Full bracelet controls in the app</Text>
-            <Text style={s.donePerkLine}>· Session history and progress tracking</Text>
-            {isBundle && (
-              <>
-                <Text style={s.donePerkLine}>· {SESSIONS.length} audio sessions across 4 pillars</Text>
-                <Text style={s.donePerkLine}>· 1 year of Audio Library access</Text>
-              </>
-            )}
-          </View>
-
-          <AnimatedPressable
-            style={[s.doneBtn, doneBtnScale.pressStyle]}
-            /* Iter v227 (2026-07-07, audit BLE1): route naar (tabs)/bracelet
-               ipv naar stack-route /bracelet-control. Bracelet-tab rendert
-               BraceletControl inline voor owners MET tab-bar; standalone
-               stack-route had geen tab-bar en back-button popte naar
-               welcome. */
-            onPress={() => router.dismissTo('/bracelet' as never)}
-            onPressIn={doneBtnScale.onPressIn}
-            onPressOut={doneBtnScale.onPressOut}
-            accessibilityLabel="Open State Control"
-          >
-            <Text style={s.doneBtnText}>Open State Control</Text>
-          </AnimatedPressable>
-
-          <BalancedText style={s.doneFooter}>
-            You can manage your bracelet anytime from the Bracelet tab.
-          </BalancedText>
-        </View>
-      </SafeAreaView>
+        <PurchaseConfirm
+          title={isBundle ? 'Bundle activated' : 'Bracelet activated'}
+          subtitle="Welcome to VIBEZCORE."
+          perksTitle="You now have access to:"
+          perks={[
+            '5 haptic session modes',
+            'Full bracelet controls in the app',
+            'Session history and progress tracking',
+            ...(isBundle
+              ? [`${SESSIONS.length} audio sessions across 4 pillars`, '1 year of Audio Library access']
+              : []),
+          ]}
+          footer="You can manage your bracelet anytime from the Bracelet tab."
+          ctaLabel="Open State Control"
+          /* Iter v227 (2026-07-07, audit BLE1): route naar (tabs)/bracelet
+             ipv naar stack-route /bracelet-control. Bracelet-tab rendert
+             BraceletControl inline voor owners MET tab-bar; standalone
+             stack-route had geen tab-bar en back-button popte naar
+             welcome. */
+          onCta={() => router.dismissTo('/bracelet' as never)}
+        />
+      </>
     );
   }
 
