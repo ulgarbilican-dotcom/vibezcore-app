@@ -342,12 +342,11 @@ export function stateGlass(hex: string) {
   const g = parseInt(full.slice(2, 4), 16);
   const b = parseInt(full.slice(4, 6), 16);
   const c = (a: number) => `rgba(${r},${g},${b},${a})`;
-  /* 22 okt 2026 (operator): exact het systeem van de drie welkomst-knoppen — dezelfde doorschijnende
-     donkere glasvulling (rgba(30,30,32,0.28)) — met er heel licht en doorzichtig de kleur van de
-     toestand overheen. Geen verloop, geen gloed. */
+  /* 22 okt 2026 (operator): geen donkere vulling maar een lichte, doorzichtige kleurvulling in de kleur
+     van de toestand (zoals de welkomst-knoppen doorschijnend zijn). Geen verloop, geen gloed. */
   return {
-    backgroundColor: 'rgba(30,30,32,0.28)',
-    experimental_backgroundImage: `linear-gradient(${c(0.16)}, ${c(0.16)})`,
+    backgroundColor: c(0.26),
+    experimental_backgroundImage: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))',
   };
 }
 
