@@ -4476,8 +4476,8 @@ function IdleScreen({
               {QUICK_SESSIONS.map((q) => {
                 const QIcon = MODE_ICONS[q.mode];
                 return (
+                  <View key={q.key} style={s.quickItem}>
                   <PressScale
-                    key={q.key}
                     onPress={() => {
                       hapticTap();
                       /* Operator, 16 okt 2026 ("telkens een popup — stoort dat
@@ -4499,6 +4499,8 @@ function IdleScreen({
                     <VibezGlass radius={28} level="normal" style={StyleSheet.absoluteFill} />
                     <QIcon size={q.key === 'chill' ? 26 : 22} color={getModeMeta(q.mode).color} strokeWidth={2} />
                   </PressScale>
+                  <Text style={s.quickCaption}>{q.label}</Text>
+                  </View>
                 );
               })}
             </View>
@@ -6613,6 +6615,8 @@ const s = StyleSheet.create({
   },
   trialEndBtn: { marginTop: 16, paddingVertical: 8, paddingHorizontal: 12 },
   trialEndTxt: { color: 'rgba(255,255,255,0.72)', fontFamily: BrandFonts.semibold, fontSize: 12, letterSpacing: 2 },
+  quickItem: { alignItems: 'center', gap: 6 },
+  quickCaption: { color: 'rgba(255,255,255,0.62)', fontFamily: BrandFonts.medium, fontSize: 11, letterSpacing: 0.2 },
   quickCardRow: { flexDirection: 'row', justifyContent: 'center', gap: 20 },
   quickCard: {
     width: 56,
