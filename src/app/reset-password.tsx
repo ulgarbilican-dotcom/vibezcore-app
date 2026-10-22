@@ -32,7 +32,7 @@ import { refreshSubscription } from '@/hooks/useSubscription';
 import { clearSession, getToken, persistSession, relinkAfterSessionChange, fetchWithTimeout } from '@/services/auth';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -49,7 +49,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`

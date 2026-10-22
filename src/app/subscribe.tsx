@@ -80,7 +80,7 @@ import {
   View,
 } from 'react-native';
 import { showVibezAlert } from '@/components/VibezAlert';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Animated, {

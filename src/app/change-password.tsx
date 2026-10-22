@@ -46,7 +46,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`

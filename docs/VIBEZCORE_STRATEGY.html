@@ -1,0 +1,618 @@
+<title>Depth Over Breadth</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340;9..144,420;9..144,480;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --bg:#0a0a0a;
+  --surface:#141414;
+  --surface-2:#1a1a1b;
+  --line:rgba(244,244,240,0.10);
+  --line-soft:rgba(244,244,240,0.06);
+  --text:#f4f4f0;
+  --text-dim:rgba(244,244,240,0.6);
+  --text-faint:rgba(244,244,240,0.36);
+  --calm:#B478FF;
+  --boost:#F5A524;
+  --focus:#3E9BFF;
+  --rest:#96CB56;
+  --now:#96CB56;
+  --next:#B478FF;
+  --later:rgba(244,244,240,0.4);
+  --done:#96CB56;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:840px;margin:0 auto;padding:0 30px 140px;}
+
+.hero{padding:64px 0 8px;}
+.eyebrow{font-size:11.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-faint);font-weight:600;}
+h1{
+  font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-weight:460;
+  font-size:clamp(32px,5.4vw,48px);line-height:1.08;letter-spacing:-0.01em;
+  margin:14px 0 16px;text-wrap:balance;max-width:16ch;
+}
+.hero p{font-size:16px;line-height:1.65;color:var(--text-dim);max-width:60ch;margin:0;}
+.thesis{
+  margin-top:26px;padding:22px 24px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(180,120,255,0.09),rgba(180,120,255,0.02));
+  border:1px solid rgba(180,120,255,0.25);
+  font-family:'Fraunces',Georgia,serif;font-weight:420;font-size:19px;line-height:1.4;
+  color:var(--text);
+}
+.thesis b{color:var(--calm);font-weight:600;}
+
+section{margin-top:72px;}
+.kicker{font-size:11.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;color:var(--text-faint);margin-bottom:10px;}
+h2{
+  font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-weight:420;
+  font-size:clamp(21px,3.2vw,26px);line-height:1.22;margin:0 0 14px;text-wrap:balance;max-width:26ch;
+}
+.lede{font-size:15px;line-height:1.65;color:var(--text-dim);max-width:64ch;margin:0 0 8px;}
+
+/* status tracker */
+.tracker{margin-top:28px;border-radius:16px;background:var(--surface);border:1px solid var(--line-soft);overflow:hidden;}
+.tracker-head{padding:16px 20px 12px;border-bottom:1px solid var(--line-soft);display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.tracker-head h3{font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:480;margin:0;color:var(--text);}
+.tracker-updated{font-size:11.5px;color:var(--text-faint);}
+.trow{display:flex;align-items:flex-start;gap:12px;padding:13px 20px;border-bottom:1px solid var(--line-soft);}
+.trow:last-child{border-bottom:none;}
+.tmark{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px;}
+.tmark.done{background:var(--done);color:#08130a;}
+.tmark.active{background:var(--next);color:#1a0d2e;}
+.tmark.queued{background:transparent;border:1.5px solid var(--line);color:var(--text-faint);}
+.tbody b{font-size:13.5px;color:var(--text);font-weight:600;}
+.tbody p{margin:3px 0 0;font-size:12.5px;line-height:1.5;color:var(--text-dim);}
+.tstate{flex:none;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;padding:3px 8px;border-radius:20px;margin-left:auto;white-space:nowrap;}
+.tstate.done{background:rgba(150,203,86,0.15);color:var(--done);}
+.tstate.active{background:rgba(180,120,255,0.18);color:var(--next);}
+.tstate.queued{background:rgba(244,244,240,0.06);color:var(--text-faint);}
+
+/* competitive reality */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px;}
+.cbox{border-radius:16px;padding:20px 22px;background:var(--surface);border:1px solid var(--line-soft);}
+.cbox h3{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:480;margin:0 0 10px;}
+.cbox.them h3{color:var(--text-dim);}
+.cbox.us{border-color:rgba(180,120,255,0.3);background:linear-gradient(180deg,rgba(180,120,255,0.07),rgba(180,120,255,0.01));}
+.cbox.us h3{color:var(--calm);}
+.cbox ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
+.cbox li{font-size:13.5px;line-height:1.5;color:var(--text-dim);padding-left:15px;position:relative;}
+.cbox li::before{content:'';position:absolute;left:0;top:6.5px;width:5px;height:5px;border-radius:50%;background:var(--text-faint);}
+.cbox.us li::before{background:var(--calm);}
+
+/* journey */
+.journey{display:flex;flex-direction:column;margin-top:8px;}
+.stop{display:grid;grid-template-columns:36px 1fr;gap:18px;position:relative;}
+.stop-rail{display:flex;flex-direction:column;align-items:center;}
+.stop-dot{width:12px;height:12px;border-radius:50%;margin-top:6px;flex:none;}
+.stop-line{width:1.5px;flex:1;background:var(--line);margin-top:4px;}
+.stop:last-child .stop-line{display:none;}
+.stop-body{padding-bottom:34px;}
+.stop-num{font-size:11px;letter-spacing:0.1em;color:var(--text-faint);font-weight:600;text-transform:uppercase;}
+.stop-title{font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:480;margin:4px 0 8px;}
+.stop-desc{font-size:14px;line-height:1.6;color:var(--text-dim);margin:0 0 12px;max-width:56ch;}
+.tech-row{display:flex;flex-wrap:wrap;gap:8px;}
+.tech-chip{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;padding:5px 11px;border-radius:20px;
+  background:var(--surface);border:1px solid var(--line-soft);color:var(--text-dim);
+}
+.chip-dot{width:6px;height:6px;border-radius:50%;flex:none;}
+.status-done .chip-dot{background:var(--done);}
+.status-now .chip-dot{background:var(--now);}
+.status-next .chip-dot{background:var(--next);}
+.status-later .chip-dot{background:var(--later);}
+
+/* roadmap */
+.phases{display:flex;flex-direction:column;gap:1px;margin-top:24px;background:var(--line-soft);border-radius:16px;overflow:hidden;}
+.phase{background:var(--surface);padding:18px 20px;display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:start;}
+.phase .plabel{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--text-faint);padding-top:2px;}
+.phase.now .plabel{color:var(--now);}
+.phase.done .plabel{color:var(--done);}
+.phase h4{font-size:14.5px;font-weight:600;margin:0 0 5px;}
+.phase p{font-size:13px;line-height:1.55;color:var(--text-dim);margin:0;}
+
+/* bracelet */
+.moat{
+  margin-top:26px;padding:26px;border-radius:18px;
+  background:linear-gradient(135deg,rgba(150,203,86,0.08),rgba(180,120,255,0.06));
+  border:1px solid rgba(150,203,86,0.25);
+}
+.moat h3{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:480;margin:0 0 10px;color:var(--rest);}
+.moat p{font-size:14.5px;line-height:1.65;color:var(--text-dim);margin:0;max-width:62ch;}
+
+.recommend{
+  margin-top:28px;padding:20px 22px;border-radius:16px;
+  background:rgba(180,120,255,0.08);border:1px solid rgba(180,120,255,0.28);
+  font-size:14.5px;line-height:1.6;color:var(--text-dim);
+}
+.recommend b{color:var(--text);font-weight:600;}
+
+/* conversion psychology */
+.principles{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px;}
+.pcard{border-radius:16px;padding:18px 20px;background:var(--surface);border:1px solid var(--line-soft);}
+.pcard h4{font-family:'Fraunces',Georgia,serif;font-size:15.5px;font-weight:480;margin:0 0 6px;color:var(--calm);}
+.pcard p{margin:0;font-size:13px;line-height:1.55;color:var(--text-dim);}
+.pcard .pstatus{display:inline-block;margin-top:10px;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;padding:3px 8px;border-radius:20px;}
+.pcard .pstatus.done{background:rgba(150,203,86,0.15);color:var(--done);}
+.pcard .pstatus.next{background:rgba(180,120,255,0.18);color:var(--next);}
+
+@media (max-width:640px){
+  .compare{grid-template-columns:1fr;}
+  .principles{grid-template-columns:1fr;}
+  .phase{grid-template-columns:1fr;gap:6px;}
+  .trow{flex-wrap:wrap;}
+  .tstate{margin-left:32px;}
+}
+</style>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">VIBEZCORE · Strategy</div>
+    <h1>Depth over breadth</h1>
+    <p>Othership and Breathwrk win on catalog — breathwork, yoga, soundscapes, real human voices, years of content. But they're single-purpose apps: they regulate your state and stop there. VIBEZCORE's vision is bigger than breathwork — the Audio Library (Psychological Resilience, Inner Sovereignty, Social Mastery, Strategic Execution) is where people actually grow. Breathwork isn't a separate product competing with theirs; it's the doorway into ours.</p>
+    <div class="thesis">Breathwork regulates the body so people can do the harder work of the mind. Users don't come to VIBEZCORE for <b>more</b> sessions — they come to become someone <b>different</b>, and breathwork is where that begins each day.</div>
+  </div>
+
+  <div class="tracker">
+    <div class="tracker-head">
+      <h3>Where we are right now</h3>
+      <span class="tracker-updated">Updated 10 sep 2026 — this box is the one place to check, so nothing needs repeating in chat.</span>
+    </div>
+    <div class="trow">
+      <div class="tmark done">✓</div>
+      <div class="tbody">
+        <b>01 · Welcome screen — dark mode, full rebuild</b>
+        <p>Photo runs edge-to-edge, "Breathe / Build / Become" staggered one-time entrance (no more looping carousel), Ken Burns zoom on the photo, centered CTA with spring-press + shimmer.</p>
+      </div>
+      <div class="tstate done">Done</div>
+    </div>
+    <div class="trow">
+      <div class="tmark done">✓</div>
+      <div class="tbody">
+        <b>BreathPacer / LotusPacer — real 3D breathing orb, wired in</b>
+        <p>expo-gl + expo-three, confirmed smooth on-device. Now live in <code>breath-session.tsx</code>'s pre-session (idle) state for the paths that reach it un-autostarted (plan.tsx / agenda.tsx / onboarding): Calm Control shows <b>LotusPacer</b> (the real lotus photo, textured onto a gently-swaying 3D plane — a from-scratch procedural flower was tried and rejected, "doesn't look like a lotus, a real photo does"), the other four states keep the generic <b>BreathPacer</b> orb. The running session itself still shows the original, fully-tested 2D <code>SessionArt</code> illustration, unchanged — the swap is idle-state only, on purpose.</p>
+      </div>
+      <div class="tstate done">Done</div>
+    </div>
+    <div class="trow">
+      <div class="tmark done">✓</div>
+      <div class="tbody">
+        <b>02 · "Choose your session" (5-state picker) — dark-mode pass</b>
+        <p>Brought fully in line with the welcome screen's premium treatment: full-bleed per-state background photos, centered "CHOOSE YOUR STATE" label, single white CTA app-wide, spring-press + accent-tracking "How it works" link.</p>
+      </div>
+      <div class="tstate done">Done</div>
+    </div>
+    <div class="trow">
+      <div class="tmark done">✓</div>
+      <div class="tbody">
+        <b>03 · Session setup (breath-setup.tsx) — rebuilt, and now feature-complete</b>
+        <p>The flat rhythm-card layout is gone. In its place: a large progress ring whose internal "liquid" waterline rises with the chosen duration — tuned so it reads as genuinely <i>full</i> at the true maximum, not just mostly full — an icon-based technique selector (replacing text pills) with premium per-duration names shown as a tooltip on tap, and a diagonal glass-shine sweep across the ring, tuned for performance (plain View clipping, not SVG masks) and restraint (rare, soft, Apple-style fade rather than a loud flash, now every 7s). Ring strokes went through several rounds of thinning for elegance.</p>
+        <p style="margin-top:6px;">Built out further this session: a <b>Custom duration slider</b> alongside the fixed presets — thin, Apple-style, no boxed chrome, no duplicate number (the ring already shows the value) — bounded per technique by research-grounded ceilings (30 min for the twelve hold-free, green-tier rhythms; unchanged at the existing max for the five where a real caution applies — Box's CO2 load, 4-7-8's Weil build-up schedule, the Stanford-dosed Physiological Sigh, Faster Equal's hyperventilation risk, Ujjayi's amber tier). The technique-info popup now leads with level + a technique-specific "why this one" line instead of repeating what the state-picker already said. The redundant "How it works" link is gone (same info is one tap away already). Android's hardware/gesture back button now goes exactly one screen back everywhere on this path — it previously skipped past this screen straight to the state-picker's intro, a real bug, now fixed and verified live.</p>
+      </div>
+      <div class="tstate done">Done</div>
+    </div>
+    <div class="trow">
+      <div class="tmark done">✓</div>
+      <div class="tbody">
+        <b>04 · Session (breath-session.tsx) — 3D orb wired into the pre-session state</b>
+        <p>Scoped down from the original plan on purpose: the glowing 3D orb (BreathPacer, or LotusPacer for Calm Control) now replaces the flat 2D illustration <i>only</i> before the session starts — the running session keeps the original, fully-tested <code>SessionArt</code> visual (phase transitions, haptics, voice, rings) completely untouched. This file is the most sensitive, heaviest-tested one in the app, so this stayed a scoped, single-piece swap of the idle state, not a rewrite of the session itself.</p>
+      </div>
+      <div class="tstate done">Done</div>
+    </div>
+    <div class="trow">
+      <div class="tmark done">✓</div>
+      <div class="tbody">
+        <b>Subscribe flow — closes a real gap between onboarding and a plan</b>
+        <p>Traced the full goal → plan chain: onboarding (<code>breath-welcome.tsx</code>) saves <code>goals</code>/<code>intensity</code>, but subscribing never used to do anything with them — a user had to manually re-walk goal.tsx → intensity.tsx → plan-review.tsx → plan-duration.tsx to get an actual saved plan, even with that data sitting there unused. Fixed: a successful purchase now checks for already-saved goals/intensity and, if no plan exists yet, builds and saves one automatically (existing <code>buildPlanFromTemplate</code>/<code>saveActivePlan</code> — no new engine, just wiring two existing pieces together). The post-purchase screen's CTA also now returns to <i>context</i> instead of always the Audio Library root — every entry point into the paywall now tags a <code>returnTo</code> (breathwork vs. audio), the one reliable signal for "which product did they actually come to buy," rather than guessing from onboarding completion (unreliable — someone can walk the breathwork onboarding purely out of curiosity and still mean to subscribe for audio).</p>
+      </div>
+      <div class="tstate done">Done — needs a real sandbox purchase to verify end to end</div>
+    </div>
+    <div class="trow">
+      <div class="tmark queued">·</div>
+      <div class="tbody">
+        <b>Bracelet upsell for breathwork subscribers — deliberately later</b>
+        <p>Audio Premium already has this exact pattern: after a session finishes naturally, a quiet, dismissible banner ("Smart Bead Bracelet · Daily State Control") offers the bracelet to Audio PRO users who don't own one yet — 24h cooldown, 10s auto-hide, never a hard popup. Breathwork PRO has no equivalent moment. Proposed fix, when it's picked back up: fire the same banner (same copy, no new component) after a breathwork session completes too, sharing the exact same cooldown key as the audio trigger so a user who finishes both an audio and a breathwork session in one day isn't shown it twice. Operator, 10 sep 2026: parked on purpose — working through the rest of the list first.</p>
+      </div>
+      <div class="tstate queued">Later — parked</div>
+    </div>
+    <div class="trow">
+      <div class="tmark queued">5</div>
+      <div class="tbody">
+        <b>Phase 2 · Recognize You — Layer 1 done, rest deliberately later</b>
+        <p>Behavior-pattern mining (Layer 1, free, already-logged data) is built: <code>utils/behavior-patterns.ts</code> reads existing session history and quietly biases the "recommended" slot-pick toward what each person actually practices at that time of day — the goal a user picked always still wins first, this only changes the silent tiebreak. History now also records <i>which technique</i> was used, not just the state, so a future "which techniques do people actually finish" pass has real data to work from once it's picked up. Layer 2 (check-in) and Layer 3 (camera heart-rate) stay queued, in that order — cheapest/lowest-risk first, same as before.</p>
+      </div>
+      <div class="tstate active">Layer 1 done — Layers 2–3 queued</div>
+    </div>
+  </div>
+
+  <section>
+    <div class="kicker">Content-policy decision</div>
+    <h2>Binaural beats: allowed. The line is narrower than "never mention the brain."</h2>
+    <p class="lede">Operator, 10 sep 2026: binaural beats are approved as an audio technique — CLAUDE.md's ban on "brainwave entrainment" language now carries an explicit, narrow exception for this one term (marketing copy around it still can't say "synchronizes your brainwaves" — that's still banned). Any future AI/biometric feature (rPPG, predictive check-ins) stays under the full rule: wellness language only, modeled on Apple/Google's own "no inaccurate health measurement" standard — "wellbeing score," not "we measure your HRV to diagnose stress." Reading HealthKit/Health Connect data is fine (Apple/Google already validated it); the risk is only ever in how the app's own output is worded. A legal disclaimer for this territory was drafted but isn't adopted — that's operator/legal sign-off territory, same as the breathwork safety copy.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Where we're spending the next stretch</div>
+    <h2>One page at a time, not features first</h2>
+    <p class="lede">Operator, 10 sep 2026: before any new AI/biometric feature, every existing screen gets walked through in order and brought to the same bar as the choose-state and session-setup screens. New pages only get created once a real gap shows up during that walk-through, not speculatively. Order follows the actual user journey — the flow someone lives through first gets checked first.</p>
+    <div class="tracker" style="margin-top:20px;">
+      <div class="tracker-head">
+        <h3>Breathwork — the primary flow</h3>
+      </div>
+      <div class="trow"><div class="tmark done">✓</div><div class="tbody"><b>(tabs)/breath.tsx — Choose your state</b><p>RHYTHMS popup redesigned this session (level badge + technique-specific line, no scroll, no duplicated numbers).</p></div><div class="tstate done">Reviewed</div></div>
+      <div class="trow"><div class="tmark done">✓</div><div class="tbody"><b>breath-setup.tsx — Session duration</b><p>Full rebuild + Custom slider + popup redesign + back-button fix, this session.</p></div><div class="tstate done">Reviewed</div></div>
+      <div class="trow"><div class="tmark done">✓</div><div class="tbody"><b>breath-session.tsx — Session active</b><p>Full pass: cinematic pre-session intro (Buddha, symbolic progress bar), bigger breathing arc, session progress line, male/female voice (Benjamin/Eli), Ujjayi voice explanation, global remember-behavior for voice/haptics.</p></div><div class="tstate done">Reviewed</div></div>
+      <div class="trow"><div class="tmark active">→</div><div class="tbody"><b>breath-history.tsx</b><p>One real bug fixed earlier (duplicate React key) — no design pass yet.</p></div><div class="tstate active">Next</div></div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>breath-welcome.tsx, breath-quiz.tsx, breath-sample.tsx</b><p>Onboarding + free-preview screens.</p></div><div class="tstate queued">Not yet reviewed</div></div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>welcome.tsx</b><p>App entry point.</p></div><div class="tstate queued">Not yet reviewed</div></div>
+    </div>
+    <div class="tracker" style="margin-top:16px;">
+      <div class="tracker-head">
+        <h3>Goal &amp; Plan flow</h3>
+      </div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>goal.tsx, intensity.tsx, plan-review.tsx, plan-duration.tsx, plan-summary.tsx, plan.tsx, plan-success.tsx, agenda.tsx</b><p>Wiring changed this session (Layer 1 personalization, auto-plan-on-subscribe) — no visual/UI pass on any of these.</p></div><div class="tstate queued">Not yet reviewed</div></div>
+    </div>
+    <div class="tracker" style="margin-top:16px;">
+      <div class="tracker-head">
+        <h3>Audio Library</h3>
+      </div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>(tabs)/index.tsx, player.tsx, library/free.tsx, library/new.tsx, library/favorites.tsx, history.tsx</b></div><div class="tstate queued">Not yet reviewed</div></div>
+    </div>
+    <div class="tracker" style="margin-top:16px;">
+      <div class="tracker-head">
+        <h3>Bracelet</h3>
+      </div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>(tabs)/bracelet.tsx, bracelet-control.tsx, bracelet-preview.tsx, bracelet-history.tsx, activate-bracelet.tsx</b></div><div class="tstate queued">Not yet reviewed</div></div>
+    </div>
+    <div class="tracker" style="margin-top:16px;">
+      <div class="tracker-head">
+        <h3>Account, settings &amp; auth</h3>
+      </div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>(tabs)/account.tsx, settings.tsx, (tabs)/activity.tsx, subscribe.tsx</b><p><code>subscribe.tsx</code>'s purchase-success logic changed this session (returnTo routing, auto-plan-build) — no UI pass.</p></div><div class="tstate queued">Not yet reviewed</div></div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>change-password.tsx, forgot-password.tsx, reset-password.tsx, auth-callback.tsx</b></div><div class="tstate queued">Not yet reviewed</div></div>
+    </div>
+    <div class="tracker" style="margin-top:16px;">
+      <div class="tracker-head">
+        <h3>Info, legal &amp; support — lowest priority</h3>
+      </div>
+      <div class="trow"><div class="tmark queued">·</div><div class="tbody"><b>about.tsx, faq.tsx, support.tsx, legal/[doc].tsx, coming.tsx</b></div><div class="tstate queued">Not yet reviewed</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">The honest comparison</div>
+    <h2>We have less. We have to feel like more.</h2>
+    <div class="compare">
+      <div class="cbox them">
+        <h3>Othership / Breathwrk</h3>
+        <ul>
+          <li>Hundreds of sessions across breathwork, yoga, sleep</li>
+          <li>Real human voice talent, studio-recorded</li>
+          <li>Large soundscape libraries</li>
+          <li>Community/live-class features</li>
+          <li>The product ends when the session ends — state regulation, not transformation</li>
+        </ul>
+      </div>
+      <div class="cbox us">
+        <h3>VIBEZCORE</h3>
+        <ul>
+          <li>Five states, fifteen techniques — deliberately small</li>
+          <li>A visual identity that reacts to you in real time</li>
+          <li>A form (the "signature") that grows across breathwork <em>and</em> audio practice</li>
+          <li>Biometric-aware sessions — no competitor has this</li>
+          <li>Breathwork hands off to real personal-development content — the session is a doorway, not the destination</li>
+          <li>A physical bracelet coming Fall 2026 — no competitor has this either</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Positioning</div>
+    <h2>Don't compensate for the small catalog. Claim it.</h2>
+    <p class="lede">The section above still frames fifteen techniques as something to overcome ("we have less, we have to feel like more"). Flip it: big libraries create choice overload — Othership and Breathwrk's hundreds of sessions are the actual weakness, not ours. Curation is the product, not an apology for a smaller one.</p>
+    <div class="principles">
+      <div class="pcard">
+        <h4>Netflix vs. the tuned sports car</h4>
+        <p>Big apps are the Netflix of breathwork — endless scroll, no one sure what to pick. VIBEZCORE is the tuned sports car: five physiological states, three techniques each, nothing left to wander through. The limitation reads as editorial confidence, not missing inventory.</p>
+      </div>
+      <div class="pcard">
+        <h4>The 3-tap claim</h4>
+        <p>State → technique → duration → start. That's the whole flow, and it's real — the session-setup screen (smart defaults pre-filled, one tap to override) delivers exactly this today. A Custom duration slider exists for anyone who wants to go past the presets, but it's opt-in — the default path is still exactly 3 taps. Worth using as a literal marketing claim, not just an internal UX goal.</p>
+        <span class="pstatus done">Already true in the app</span>
+      </div>
+      <div class="pcard">
+        <h4>Two tools, two jobs</h4>
+        <p>The breathwork side stays a fast, physiological reset — no browsing, no decision fatigue. The Audio Library is where depth and variety live, for someone who already knows their rhythm and wants more. Different job, different pace; neither should try to be the other.</p>
+      </div>
+      <div class="pcard">
+        <h4>Who this actually targets</h4>
+        <p>Dark, high-contrast, zero pastel-and-flowers — that look already selects for founders, athletes and tech professionals who want efficiency over vibes. The design isn't neutral; it's already speaking to a specific, high-intent audience.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">The unified vision</div>
+    <h2>Two products, one growth loop</h2>
+    <p class="lede">The Audio Library isn't a second app bolted onto the breathwork app — it's the other half of the same promise. Breathwork is the daily, physical ritual: two to twenty minutes, low friction, done before the mind is ready to do harder work. The Audio Library — built around the four pillars (Psychological Resilience, Inner Sovereignty, Social Mastery, Strategic Execution & Wealth) — is where the actual life-change happens for those who want it. Not everyone will. Breathwork stays the primary door; the Library is an open room down the hall, never a required stop.</p>
+    <p class="lede">Practically, this means the "Inner Signature" (stage 02 below) can't just be a breathwork-streak badge — it has to reflect a whole person's practice, body and mind both, for whoever engages with both. And a finished breathwork session is a natural, optional moment to surface a pillar — never a funnel someone is pushed through.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Where AI actually belongs</div>
+    <h2>Recognize the person first — recommend second</h2>
+    <p class="lede">AI's first job isn't to bridge breathwork into the Library. It's to recognize the person in front of it and suggest the right protocol — which is most often just the right breathwork state and duration, full stop. For someone who never opens the Library, that's the entire value, and it has to stand completely on its own.</p>
+    <p class="lede">"Recognize" turns out to draw on four kinds of signal — each layer is optional and the system has to work fully without the ones below it:</p>
+
+    <div class="phases" style="margin-top:16px;">
+      <div class="phase now">
+        <div class="plabel">1 · Free</div>
+        <div>
+          <h4>Behavior pattern — no permission, no new UI</h4>
+          <p>Already-logged session history, mined for what it's quietly saying: what time you usually practice, which days lean Boost vs. Rest, streaks broken and resumed, which techniques you actually finish vs. abandon early, how long since your last session. Zero new data collection — this is entirely about using what's already there.</p>
+          <p style="margin-top:8px;">Once HealthKit / Health Connect data joins this layer (a later, separate privacy-review track — see the biometric layer below), the same pattern-mining can go proactive: <em>"most Tuesdays around 2pm your resting rate climbs — take 3 minutes now?"</em> A quiet, optional notification, framed as an observed pattern, never a prediction or a diagnosis.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">2 · Explicit</div>
+        <div>
+          <h4>What someone says directly</h4>
+          <p>The "how are you right now" check-in, a quick "did this help?" after a session, the goals picked at onboarding (already exists in <code>goal.tsx</code>). The most reliable signal, because it's not inferred — but the one people are least willing to fill in every time, which is why it can't be the only layer.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">3 · Biometric</div>
+        <div>
+          <h4>The body, with permission</h4>
+          <p>Camera rPPG at the door (heart rate, rough HRV); in-session pace tracking during Phase 4; even gyroscope-sensed restlessness during a session as an indirect stress cue. All opt-in, all gracefully absent if declined.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">4 · Context</div>
+        <div>
+          <h4>The world around the session — use sparingly</h4>
+          <p>Calendar integration (opt-in) could suggest a session before a big meeting. Location could theoretically distinguish "at the gym" from "at home" — deliberately <b>not recommended</b>: the value is marginal and it reads as surveillance faster than any other signal on this list.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="lede" style="margin-top:18px;">Build order follows the cost, not the excitement: <b style="color:var(--text)">layer 1 first</b> — it's free, already-collected, and alone gets surprisingly close to "the app knows me." Layer 2 (check-in) next, layer 3 (biometric) only once 1 and 2 are proven, layer 4 skipped unless a very specific case justifies it later.</p>
+    <div class="thesis" style="font-size:15px;margin-top:16px;">Every layer above the first is a permission request, and permission requests get declined — often. The system has to work fully on layers 1+2 alone: <b>deny the camera, and the app still recognizes you from your patterns and your own words — nothing degrades, nothing nags.</b> Each further layer only ever sharpens a recognition that already works without it.</div>
+
+    <p class="lede" style="margin-top:22px;"><b style="color:var(--text)">Beyond the check-in — where AI adds value inside breathwork itself:</b></p>
+    <div class="phases" style="margin-top:14px;">
+      <div class="phase">
+        <div class="plabel">Real-time</div>
+        <div>
+          <h4>Adaptive pacing, not a fixed track</h4>
+          <p>Every competitor plays a static pre-recorded rhythm. If the mic or camera can sense you're drifting off-pace, the cues can nudge gently in real time — the app coaches you through the session instead of just narrating it. The single most breathwork-specific differentiator on this list.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Over time</div>
+        <div>
+          <h4>Learns what actually works for you</h4>
+          <p>Not "here's what happened" (that's Phase 5's reflection) but "here's what to try next" — if Box Breathing at 10 min consistently settles your pace fastest, the app starts recommending it before you'd think to pick it yourself.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Progressive</div>
+        <div>
+          <h4>Difficulty that grows with you</h4>
+          <p>Like a fitness app's progression logic — if someone handles longer holds comfortably, gently offer techniques with longer holds instead of leaving them to browse the same ten forever.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Hands-free</div>
+        <div>
+          <h4>Voice-started sessions</h4>
+          <p>"Start a ten-minute calm session" — genuinely useful here specifically, since breathwork is the one product where the user's eyes are often closed.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">In your words</div>
+        <div>
+          <h4>Describe how you feel — the AI picks, never invents</h4>
+          <p>"I'm exhausted from a flight but need to be sharp in an hour" → the model matches that against the existing, coach-approved library and returns a real state + technique + duration it already knows works, not a freshly-generated breathing ratio. Same "it gets me" feeling, none of the risk of an AI inventing an unvetted pattern.</p>
+        </div>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:14px;">Of these, <b style="color:var(--text)">adaptive real-time pacing</b> is the one worth prioritizing after the check-in — it's the only one that changes what happens <em>during</em> the breathing itself, which is the actual product, not the UI around it.</p>
+
+    <div class="thesis" style="font-size:15px;">Two guardrails worth stating plainly, because both showed up in outside suggestions this round: <b>never generate a new breathing pattern</b> — every technique stays hand-approved, the AI only selects among them; and <b>never describe anything in brainwave or entrainment language</b> ("14Hz beta waves," "synchronizes your brain") — that's the exact claim CLAUDE.md's science/medical rule exists to block. Any AI compute that needs a server runs through VIBEZCORE's own existing backend, not a new, separate serverless surface.</div>
+  </section>
+
+  <section>
+    <div class="kicker">The journey, stage by stage</div>
+    <h2>Six moments, from cold open to a body on your wrist</h2>
+    <div class="journey">
+
+      <div class="stop">
+        <div class="stop-rail"><div class="stop-dot" style="background:var(--done)"></div><div class="stop-line"></div></div>
+        <div class="stop-body">
+          <div class="stop-num">01 · Welcome — done</div>
+          <div class="stop-title">A dark, living threshold — not a landing page</div>
+          <p class="stop-desc">Full dark mode, full-bleed hero photo, a one-time staggered "Breathe / Build / Become" reveal (replacing an earlier looping version that read as a cheap carousel), Ken Burns zoom, centered spring-press CTA with shimmer. The mesh-gradient shader below is still a later, separate pass — the current photo-based treatment already reads as premium and isn't blocking anything.</p>
+          <div class="tech-row">
+            <span class="tech-chip status-done"><span class="chip-dot"></span>Dark rebuild + staggered reveal — done</span>
+            <span class="tech-chip status-next"><span class="chip-dot"></span>Skia mesh-gradient shader — later</span>
+            <span class="tech-chip status-later"><span class="chip-dot"></span>Gyroscope parallax — later</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-rail"><div class="stop-dot" style="background:var(--next)"></div><div class="stop-line"></div></div>
+        <div class="stop-body">
+          <div class="stop-num">02 · Choose your state — or let it recognize you</div>
+          <div class="stop-title">A skippable "how are you?" + a passive pulse-read, then your own evolving mark</div>
+          <p class="stop-desc">Before the five states, an optional moment: the camera reads a resting heart rate while a few quick mood taps add context, together proposing a protocol directly. Skip it, and the picker works exactly as it does today. Either way, the "Inner Signature" sits here too: an abstract form — not a mascot — colored by which breathwork states you practice AND which pillars you listen to, for whoever engages with both. Not a streak badge — a mark of the whole person.</p>
+          <div class="tech-row">
+            <span class="tech-chip status-next"><span class="chip-dot"></span>Camera rPPG read + mood check-in → suggested protocol (Phase 2)</span>
+            <span class="tech-chip status-next"><span class="chip-dot"></span>Growth-stage formula — needs pinning</span>
+            <span class="tech-chip status-next"><span class="chip-dot"></span>Weighted blend: state colors + pillar engagement</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-rail"><div class="stop-dot" style="background:var(--done)"></div><div class="stop-line"></div></div>
+        <div class="stop-body">
+          <div class="stop-num">03 · Session setup — done</div>
+          <div class="stop-title">A living rehearsal, not a settings form</div>
+          <p class="stop-desc"><code>breath-setup.tsx</code> — reached via Choose your state → Continue — is the real pre-session picker now, not <code>breath-session.tsx</code>'s own (older, still-there-for-other-entry-points) picker. It's a large glass-shine ring whose liquid waterline reads the chosen duration, an icon technique-selector, and a Custom slider for going past the presets. The 3D breathing form (BreathPacer, or the real-photo LotusPacer for Calm Control) didn't end up here — it replaces the flat 2D illustration one screen later, in <code>breath-session.tsx</code>'s own idle state, for the entry points that still show it (plan.tsx / agenda.tsx / onboarding).</p>
+          <div class="tech-row">
+            <span class="tech-chip status-done"><span class="chip-dot"></span>Ring + waterline + technique selector — done</span>
+            <span class="tech-chip status-done"><span class="chip-dot"></span>Custom duration slider — done</span>
+            <span class="tech-chip status-done"><span class="chip-dot"></span>expo-gl + three.js orb, wired into breath-session.tsx idle state — done</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-rail"><div class="stop-dot" style="background:var(--later)"></div><div class="stop-line"></div></div>
+        <div class="stop-body">
+          <div class="stop-num">04 · Active session</div>
+          <div class="stop-title">The form responds to your actual pulse</div>
+          <p class="stop-desc">Camera-based heart-rate signal (rPPG, no wearable needed) drives a second, independent rhythm on the visual — proof the app is reading <em>you</em>, not just running a timer. Soundscape adapts to real pace instead of looping. Framed strictly as state-feedback, never a medical claim.</p>
+          <div class="tech-row">
+            <span class="tech-chip status-later"><span class="chip-dot"></span>Camera rPPG — real engineering, phased</span>
+            <span class="tech-chip status-later"><span class="chip-dot"></span>Adaptive soundscape</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-rail"><div class="stop-dot" style="background:var(--later)"></div><div class="stop-line"></div></div>
+        <div class="stop-body">
+          <div class="stop-num">05 · After the session</div>
+          <div class="stop-title">One honest sentence — and the door to the Library</div>
+          <p class="stop-desc">A small on-device model reads this session's own numbers and writes one specific observation ("your pace settled fastest in the second half"). Never a diagnosis. Feeds straight back into the Signature's growth — and, since the body is now regulated, this is the moment to offer the pillar content the calm was earned for, not a separate ask on a separate day.</p>
+          <div class="tech-row">
+            <span class="tech-chip status-later"><span class="chip-dot"></span>On-device reflection model</span>
+            <span class="tech-chip status-later"><span class="chip-dot"></span>Pillar hand-off after session</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-rail"><div class="stop-dot" style="background:var(--rest)"></div></div>
+        <div class="stop-body">
+          <div class="stop-num">06 · Fall 2026</div>
+          <div class="stop-title">The bracelet — the one thing no competitor can copy</div>
+          <p class="stop-desc">Othership and Breathwrk are screens. VIBEZCORE becomes a screen <em>and</em> a body-worn haptic guide, sharing the exact same states, colors and rhythms already built into the app. That's not a feature — it's a different product category.</p>
+          <div class="tech-row">
+            <span class="tech-chip status-later"><span class="chip-dot"></span>Haptic breathwork guidance on-wrist</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Sequencing</div>
+    <h2>What ships when, and why that order</h2>
+    <p class="lede">Each phase needs the one before it to already be real — the reflection model needs real session data flowing first; the bracelet needs the app's visual/state language to already be settled.</p>
+    <div class="phases">
+      <div class="phase done">
+        <div class="plabel">Phase 0 · Done</div>
+        <div>
+          <h4>Prove the 3D foundation works</h4>
+          <p>BreathPacer's expo-gl + three.js orb, verified smooth on-device. Everything else in this plan assumes this rendering approach holds up — confirmed.</p>
+        </div>
+      </div>
+      <div class="phase now">
+        <div class="plabel">Phase 1 · Now</div>
+        <div>
+          <h4>Dark-mode visual system, end to end</h4>
+          <p>Welcome screen is done. Next: bring the state-picker and session-setup screens to the same premium bar, including wiring BreathPacer into session setup. The mesh-gradient shader / gyroscope parallax stay a later refinement pass within this same phase, not a blocker.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Phase 2</div>
+        <div>
+          <h4>Recognize You — patterns, then check-in, then camera</h4>
+          <p>Three layers, cheapest first: behavior patterns mined from history already logged (free — no permission, no new UI), then the skippable "how are you" check-in, then — once both are proven — a passive camera heart-rate read at the door. Together they propose a protocol. Stands alone for anyone who never touches the Library — the highest-value, lowest-risk AI feature, and it doesn't depend on anything below it. <b style="color:var(--text)">This is sequenced deliberately after Phase 1, not forgotten</b> — the visual foundation has to be premium first, or the AI layer would be recognizing you inside a screen that still looks unfinished.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Phase 3</div>
+        <div>
+          <h4>Inner Signature, for real</h4>
+          <p>The growth-avatar concept, implemented against real breathwork AND (for those who use it) audio-library history — turns "come back tomorrow" into "watch your own world grow," without adding a single new session to the catalog.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Phase 4</div>
+        <div>
+          <h4>In-session coaching + adaptive audio</h4>
+          <p>The harder version of biometrics: not a one-shot read at the door, but continuous real-time pacing feedback during the session itself, plus audio that responds to actual pace. This is the "how did they build this" phase.</p>
+          <p style="margin-top:8px;"><b style="color:var(--text)">Concretely, this is where posture-coaching belongs:</b> a lightweight on-device pose model (MediaPipe / TFLite) watches shoulder position during the session — hard breathing shows up as the shoulders rising sharply. Catch that, and the visual shifts subtly while the voice suggests dropping the breath lower. Real, buildable, and it's the single most tangible "the app is watching out for me" moment in the whole plan. Front camera stays on-device only, nothing uploaded, and it's opt-in like every other camera use here.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Phase 5</div>
+        <div>
+          <h4>On-device reflection</h4>
+          <p>Only makes sense once Phase 4 is producing real biometric session data to reflect on honestly — by now Phase 2's check-in has real history to get smarter from, too.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="plabel">Fall 2026</div>
+        <div>
+          <h4>Bracelet launch</h4>
+          <p>Ships the same states/colors/rhythms the app has already taught users — hardware becomes an extension of a world they already recognize, not a separate product to learn.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="moat">
+      <h3>Why the bracelet is the real moat</h3>
+      <p>Every visual/audio/AI idea in this document is copyable in principle — a competitor with more engineers could rebuild a generative orb or an on-device reflection model. A synced hardware bracelet is not. It's the one differentiator that compounds instead of erodes: the longer someone wears it, the more it knows their rhythm, and the less a screen-only competitor can offer instead.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Conversion psychology</div>
+    <h2>The behavioral principles we build every flow against</h2>
+    <p class="lede">Not a one-off pass — an ongoing lens for onboarding, sign-up and paywall screens. Every new flow gets checked against this list before it ships.</p>
+    <div class="principles">
+      <div class="pcard">
+        <h4>IKEA &amp; endowment effect</h4>
+        <p>Let the user build something themselves, then frame account creation as <i>keeping</i> it, not starting fresh. The session-setup card (technique + duration filling in as you choose) is the first instance — next: carry that same summary into the account step ("You already built Calm Control · Extended · 15 min — save it").</p>
+        <span class="pstatus done">Session-setup card: done</span>
+      </div>
+      <div class="pcard">
+        <h4>Goal-gradient effect</h4>
+        <p>Progress indicators that already look partway filled push completion higher than ones that start empty. Candidate: the breath-welcome.tsx onboarding steps.</p>
+        <span class="pstatus next">Next</span>
+      </div>
+      <div class="pcard">
+        <h4>Smart defaults</h4>
+        <p>Pre-select the most likely choice. Partly live already (★ Recommended badge on session duration) — extend to a time-of-day-aware default technique.</p>
+        <span class="pstatus done">Duration badge: done</span>
+      </div>
+      <div class="pcard">
+        <h4>Loss aversion &amp; status quo bias</h4>
+        <p>Frame the intro-price/trial ending around what the user loses, not just what they'd gain — and make "pause" the easy, prominent default over "cancel."</p>
+        <span class="pstatus next">Next — subscribe.tsx paywall copy</span>
+      </div>
+      <div class="pcard">
+        <h4>Contrast effect</h4>
+        <p>Intro price shown visibly against the regular price, not as a quiet footnote.</p>
+        <span class="pstatus done">Partly live — pricing cards</span>
+      </div>
+      <div class="pcard">
+        <h4>No blank forms / design fatigue</h4>
+        <p>The account screen is still a classic empty sign-up form. First fix already shipped: the submit CTA reads "Continue," not "Sign Up" (Duolingo-style — continuing beats starting something new).</p>
+        <span class="pstatus next">CTA copy done — form itself still open</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="recommend"><b>Immediate next step:</b> the AI roadmap is paused, on purpose — see "Where we're spending the next stretch" above. Working through the existing screens in order, one at a time; <code>breath-history.tsx</code> is next.</div>
+
+</div>

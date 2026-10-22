@@ -1,0 +1,244 @@
+<!--
+  VIBEZCORE — "Get Full Access" (membership-blok met prijs + FAQ)
+  30-09 Apple-stijl: huisstijl (Inter, #0a0a0a, koppen links, 58/48/36 + 24/22/17),
+  één rustige prijskaart (geen doorgestreepte prijs, geen badges), segmented control
+  met schuivende duim, QR + store-knoppen in één kader "Scan to download" (QR verborgen
+  op mobiel), trust-badges → microtekst, features als lijn-icoon + één zin,
+  FAQ met dunne lijnen en + die − wordt. Reveal volgens protocol (IntersectionObserver).
+  Inhoud gecorrigeerd: 25 series / 144 sessions, 42%, geen "right away", geen bracelet-push.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIBEZCORE — Full Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--curve:cubic-bezier(.25,1,.5,1);
+  --bg:#0a0a0a;--card:#161617;--card-2:#1d1d1f;--line:#2a2a2a;--head:#f5f5f7;--body:#a1a1a6;--label:#86868b}
+html,body{background:var(--bg);color:var(--body);font-family:var(--font);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow:hidden}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+#shop{padding:144px 0 128px}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 56px}
+
+/* koppen — zelfde maten als de rest van de site */
+.eyebrow{display:block;margin-bottom:16px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--label)}
+h2{font-size:58px;font-weight:700;line-height:1.07;letter-spacing:-.015em;color:var(--head);text-wrap:balance}
+h2 .l{display:block}
+.sub{margin-top:24px;max-width:30em;font-size:24px;font-weight:500;line-height:1.35;letter-spacing:-.01em;color:var(--body);text-wrap:balance}
+.sub b{color:var(--head);font-weight:600}
+
+/* foto + prijskaart */
+.mb{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:20px;margin-top:64px;align-items:stretch}
+.mb-photo{position:relative;border-radius:24px;overflow:hidden;background:radial-gradient(120% 90% at 50% 62%,#232325 0%,#111112 45%,#000 80%);min-height:460px}
+.mb-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:32px}
+.price{display:flex;flex-direction:column;padding:36px;border-radius:24px;background:var(--card);border:1px solid var(--line)}
+
+/* segmented control met schuivende duim */
+.seg{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:999px;background:var(--card-2);border:1px solid var(--line)}
+.seg::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:#f5f5f7;transition:transform .45s var(--curve)}
+.seg[data-t="yearly"]::before{transform:translateX(100%)}
+.seg button{position:relative;z-index:1;height:36px;border-radius:999px;font-size:14px;font-weight:600;color:var(--body);transition:color .3s var(--curve)}
+.seg button[aria-selected="true"]{color:#1d1d1f}
+.seg button:not([aria-selected="true"]):hover{color:var(--head)}
+.save{margin-top:10px;font-size:13px;color:var(--label)}
+
+.pr{margin-top:32px;transition:opacity .2s ease}
+.pr.fade{opacity:0}
+.pr-row{display:flex;align-items:baseline;gap:6px}
+.pr-num{font-size:56px;font-weight:700;line-height:1;letter-spacing:-.025em;color:var(--head);font-variant-numeric:tabular-nums}
+.pr-per{font-size:19px;font-weight:500;color:var(--body)}
+.pr-sub{margin-top:12px;font-size:15px;line-height:1.5;color:var(--body)}
+.pr-sub b{color:var(--head);font-weight:600}
+
+/* één kader: scan of tik om te downloaden */
+.dl{margin-top:32px;padding:24px;border-radius:18px;background:var(--card-2)}
+.dl-t{font-size:15px;font-weight:600;color:var(--head)}
+.dl-s{margin-top:2px;font-size:13px;color:var(--label)}
+.dl-g{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.dl-c{display:flex;flex-direction:column;align-items:center;gap:12px}
+.qr{width:112px;height:112px;padding:6px;border-radius:12px;background:#fff}
+.store{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:48px;border-radius:12px;background:#fff;color:#1d1d1f;text-decoration:none;transition:background-color .2s ease}
+.store:hover{background:#e8e8ed}
+.store svg{width:20px;height:20px;flex-shrink:0}
+.store span{display:flex;flex-direction:column;line-height:1.1;text-align:left}
+.store small{font-size:10px;font-weight:500}
+.store b{font-size:15px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+
+.fine{margin-top:auto;padding-top:24px;font-size:13px;line-height:1.55;color:var(--label)}
+.fine b{color:var(--body);font-weight:600}
+.cur{display:flex;align-items:center;gap:4px;margin-top:10px;font-size:13px;color:var(--label)}
+.cur button{padding:2px 6px;border-radius:6px;font-size:13px;font-weight:500;color:var(--label);transition:color .2s ease,background-color .2s ease}
+.cur button:hover{color:var(--head)}
+.cur button[aria-pressed="true"]{color:var(--head);background:var(--card-2)}
+
+/* features — lijn-icoon + één zin */
+.feat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:72px;margin-top:72px;padding-top:40px;border-top:1px solid var(--line)}
+.feat svg{width:28px;height:28px;color:var(--head)}
+.feat h3{margin-top:18px;font-size:21px;font-weight:600;line-height:1.3;color:var(--head)}
+.feat p{margin-top:8px;max-width:26em;font-size:17px;line-height:1.55;color:var(--body)}
+
+/* FAQ — dunne lijnen, + wordt − */
+.faq-h{margin-top:160px}
+.faq{margin-top:48px;border-top:1px solid var(--line)}
+.fq{border-bottom:1px solid var(--line)}
+.fq button{display:flex;align-items:center;justify-content:space-between;gap:24px;width:100%;padding:26px 0;text-align:left;font-size:21px;font-weight:600;line-height:1.3;color:var(--head)}
+.fq i{position:relative;flex-shrink:0;width:14px;height:14px}
+.fq i::before,.fq i::after{content:"";position:absolute;left:0;top:6px;width:14px;height:1.5px;border-radius:2px;background:var(--body);transition:transform .35s var(--curve)}
+.fq i::after{transform:rotate(90deg)}
+.fq.open i::after{transform:rotate(0)}
+.fq-a{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--curve)}
+.fq.open .fq-a{grid-template-rows:1fr}
+.fq-a>div{overflow:hidden}
+.fq-a p{max-width:44em;padding:0 0 28px;font-size:17px;line-height:1.6;color:var(--body)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(20px);transition:opacity .9s var(--curve),transform .9s var(--curve)}
+.rv.on{opacity:1;transform:none}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}
+
+@media(max-width:1023px){
+  #shop{padding:120px 0 104px}.wrap{padding:0 40px}
+  h2{font-size:48px}.sub{font-size:22px}
+  .mb{grid-template-columns:minmax(0,1fr)}
+  .mb-photo{min-height:0;aspect-ratio:16/10}
+  .feat{column-gap:40px}
+  .faq-h{margin-top:128px}
+}
+@media(max-width:768px){
+  #shop{padding:88px 0 72px}.wrap{padding:0 24px}
+  .eyebrow{font-size:11px}
+  h2{font-size:min(36px,calc((100vw - 48px) / 8.8));line-height:1.1;letter-spacing:-.01em}
+  .sub{margin-top:16px;font-size:17px;font-weight:400;line-height:1.45}
+  .mb{margin-top:40px;gap:12px}
+  .mb-photo{aspect-ratio:1104/1000;border-radius:18px}
+  .mb-photo img{padding:16px}
+  .price{padding:24px;border-radius:18px}
+  .pr{margin-top:28px}.pr-num{font-size:48px}
+  .dl{margin-top:28px;padding:0;background:none}
+  .dl-t,.dl-s,.qr{display:none}
+  .dl-g{margin-top:0}
+  .feat{grid-template-columns:minmax(0,1fr);row-gap:36px;margin-top:48px;padding-top:32px}
+  .feat h3{font-size:19px}
+  .faq-h{margin-top:104px}
+  .faq{margin-top:32px}
+  .fq button{padding:22px 0;font-size:17px}
+  .fq-a p{padding-bottom:22px}
+}
+@media(max-width:359px){.dl-g{grid-template-columns:minmax(0,1fr)}}
+/* telefoon/tablet met touch: scannen heeft geen zin */
+@media(hover:none) and (pointer:coarse){.dl{padding:0;background:none}.dl-t,.dl-s,.qr{display:none}.dl-g{margin-top:0}}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.seg::before,.pr,.fq-a,.fq i::after{transition:none}}
+</style>
+</head>
+<body>
+<section id="shop">
+  <div class="wrap">
+    <span class="eyebrow rv">Full access</span>
+    <h2 class="rv d1"><span class="l">Train your mind.</span><span class="l">Regulate your body.</span></h2>
+    <p class="sub rv d2"><b>One membership. Two systems.</b> Full access to Breathwork and the Audio Library.</p>
+
+    <div class="mb">
+      <div class="mb-photo rv"><img src="https://vibezcore-audio.b-cdn.net/images/pic%20breathwork%20en%20audio%20library%20for%20sales%20card.png" alt="Breathwork and the Audio Library in the VIBEZCORE app" loading="lazy" referrerpolicy="no-referrer"></div>
+
+      <div class="price rv d1">
+        <div class="seg" id="seg" data-t="yearly" role="tablist" aria-label="Billing period">
+          <button type="button" role="tab" data-tier="monthly" aria-selected="false">Monthly</button>
+          <button type="button" role="tab" data-tier="yearly" aria-selected="true">Yearly</button>
+        </div>
+        <p class="save" id="save">Save 42% with yearly.</p>
+
+        <div class="pr" id="pr" aria-live="polite">
+          <div class="pr-row"><span class="pr-num" id="num">€5,83</span><span class="pr-per">/mo.</span></div>
+          <p class="pr-sub" id="psub">€69,99 billed yearly.<br><b>Includes a 7-day free trial.</b></p>
+        </div>
+
+        <div class="dl">
+          <p class="dl-t">Scan to download.</p>
+          <p class="dl-s">Free on iPhone and Android.</p>
+          <div class="dl-g">
+            <div class="dl-c">
+              <img class="qr" src="https://static.wixstatic.com/media/63ceef_2944ede4a05748b08175dc21c79e1ae9~mv2.png" alt="QR code for VIBEZCORE on iPhone" loading="lazy">
+              <a class="store" id="st-apple" data-base="https://www.vibezcore.com/app" href="https://www.vibezcore.com/app?tier=yearly" target="_blank" rel="noopener" aria-label="Download on the App Store"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg><span><small>Download on the</small><b>App Store</b></span></a>
+            </div>
+            <div class="dl-c">
+              <img class="qr" src="https://static.wixstatic.com/media/63ceef_f69f28708add4e4e91a807cdb7014616~mv2.png" alt="QR code for VIBEZCORE on Google Play" loading="lazy">
+              <a class="store" id="st-google" data-base="https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp" href="https://play.google.com/store/apps/details?id=com.ubili.vibezcoreapp&amp;tier=yearly" target="_blank" rel="noopener" aria-label="Get it on Google Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.61 1.81c-.38.4-.61 1.02-.61 1.83v16.72c0 .81.23 1.43.61 1.83l.05.05L13.06 12v-.04L3.66 1.76z" fill="#2196f3"/><path d="M16.18 15.13L13.06 12v-.04l3.12-3.13.07.04 3.71 2.11c1.06.6 1.06 1.58 0 2.19l-3.71 2.11z" fill="#ffc107"/><path d="M16.25 15.09L13.06 12 3.61 21.45c.35.36.93.41 1.58.05l11.06-6.41" fill="#4caf50"/><path d="M16.25 8.91L5.19 2.5c-.65-.37-1.23-.32-1.58.05L13.06 12z" fill="#f44336"/></svg><span><small>Get it on</small><b>Google Play</b></span></a>
+            </div>
+          </div>
+        </div>
+
+        <p class="fine"><b>Free to download.</b> Subscribe in-app with Apple or Google. Cancel anytime. No account required to try.</p>
+        <div class="cur" role="group" aria-label="Currency">Prices in <button type="button" data-cur="EUR" aria-pressed="false">€ EUR</button><button type="button" data-cur="USD" aria-pressed="false">$ USD</button><button type="button" data-cur="GBP" aria-pressed="false">£ GBP</button></div>
+      </div>
+    </div>
+
+    <div class="feat">
+      <div class="rv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2-8 4 16 2-8h8"/></svg>
+        <h3>Breathwork</h3>
+        <p>Five states, fifteen techniques. Guided in real time by voice, visuals and haptics, with daily protocols and progress tracking.</p>
+      </div>
+      <div class="rv d1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
+        <h3>Audio Library</h3>
+        <p>25 series, 144 sessions. Ancient wisdom, explained through modern science and structured to build on each other.</p>
+      </div>
+    </div>
+
+    <span class="eyebrow faq-h rv">FAQ</span>
+    <h2 class="rv d1">Questions.</h2>
+    <div class="faq">
+      <div class="fq"><button type="button" aria-expanded="false">How do I subscribe?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Download the free VIBEZCORE app from the App Store or Google Play. A free selection of 10 full Audio Library sessions is playable without an account. Breathwork includes one free guided session, then two free cycles per state. When you’re ready for more, choose the yearly plan to start a 7-day free trial. It unlocks Breathwork and a wider Audio Library selection during the trial, and everything once your subscription begins. Billing is handled by Apple or Google.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">Can I cancel anytime?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Yes. Manage or cancel your subscription from your App Store or Google Play account. You keep access until the end of your current billing period.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">What’s the difference between monthly and yearly?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>The same full access to Breathwork and the Audio Library. Yearly costs 42% less per month, is billed once a year, and is the only plan with a 7-day free trial.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">What is your refund policy?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Refunds for in-app subscriptions are handled by Apple (apple.com/refund-request) or Google Play (play.google.com). Cancel anytime from your store account; access continues until the end of the period you already paid for.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">How many devices can I use?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>One account, all your devices. Sign in with the same Apple ID or Google account on your phone and tablet.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">What payment methods do you accept?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Payments are processed by the App Store and Google Play. They support cards such as Visa, Mastercard and Amex, Apple Pay, Google Pay and other regional methods, all managed in your store account.</p></div></div></div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+  var P={
+    EUR:{monthly:{num:'€9,99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'€5,83',sub:'€69,99 billed yearly.<br><b>Includes a 7-day free trial.</b>'},save:42},
+    USD:{monthly:{num:'$9.99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'$5.83',sub:'$69.99 billed yearly.<br><b>Includes a 7-day free trial.</b>'},save:42},
+    GBP:{monthly:{num:'£8.99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'£5.00',sub:'£59.99 billed yearly.<br><b>Includes a 7-day free trial.</b>'},save:44}
+  };
+  function detect(){try{var tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'',lc=(navigator.language||'').toLowerCase();
+    if(tz==='Europe/London'||tz==='Europe/Belfast'||lc.indexOf('en-gb')===0)return'GBP';
+    if(tz.indexOf('Europe/')===0||tz.indexOf('Atlantic/')===0||tz.indexOf('Africa/')===0)return'EUR';}catch(e){}return'USD'}
+  var CUR=detect(),TIER='yearly',seg=document.getElementById('seg'),pr=document.getElementById('pr'),first=true;
+  function paint(){var d=P[CUR][TIER];
+    document.getElementById('num').textContent=d.num;
+    document.getElementById('psub').innerHTML=d.sub;
+    document.getElementById('save').textContent='Save '+P[CUR].save+'% with yearly.';
+    ['st-apple','st-google'].forEach(function(id){var a=document.getElementById(id),b=a.getAttribute('data-base');a.href=b+(b.indexOf('?')<0?'?':'&')+'tier='+TIER});
+    document.querySelectorAll('.cur button').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-cur')===CUR?'true':'false')});
+    seg.setAttribute('data-t',TIER);
+    seg.querySelectorAll('button').forEach(function(b){b.setAttribute('aria-selected',b.getAttribute('data-tier')===TIER?'true':'false')});
+  }
+  function update(){if(first){paint();first=false;return}pr.classList.add('fade');setTimeout(function(){paint();pr.classList.remove('fade')},200)}
+  seg.querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){if(TIER===b.getAttribute('data-tier'))return;TIER=b.getAttribute('data-tier');update()})});
+  document.querySelectorAll('.cur button').forEach(function(b){b.addEventListener('click',function(){if(CUR===b.getAttribute('data-cur'))return;CUR=b.getAttribute('data-cur');update()})});
+  update();
+
+  document.querySelectorAll('.fq button').forEach(function(b){b.addEventListener('click',function(){var q=b.parentNode,o=!q.classList.contains('open');q.classList.toggle('open',o);b.setAttribute('aria-expanded',o?'true':'false');setTimeout(rh,480)})});
+
+  var els=document.querySelectorAll('.rv');
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('on')})}
+  else{var o=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');o.unobserve(e.target)}})},{threshold:.1});els.forEach(function(e){o.observe(e)})}
+  setTimeout(function(){els.forEach(function(e){e.classList.add('on')})},1500);
+
+  function rh(){var h=document.getElementById('shop').offsetHeight;try{window.parent.postMessage({action:'iwh',value:h},'*')}catch(e){}try{window.parent.postMessage({type:'iwanttobeonwix',height:h},'*')}catch(e){}}
+  window.addEventListener('load',function(){setTimeout(rh,200)});window.addEventListener('resize',rh);setInterval(rh,1000);
+})();
+</script>
+</body>
+</html>

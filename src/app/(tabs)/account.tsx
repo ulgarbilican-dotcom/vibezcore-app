@@ -165,7 +165,7 @@ async function shareInvite(): Promise<void> {
   } catch {}
 }
 import { showVibezAlert } from '@/components/VibezAlert';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Svg, { Path as SvgPath } from 'react-native-svg';
@@ -1537,7 +1537,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
         <KeyboardAwareScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: tabInset + Math.max(safeInsets.bottom + 24, 72) + 200 }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: tabInset + Math.max(safeInsets.bottom + 24, 72) }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}
@@ -1592,7 +1592,7 @@ export default function AccountScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <KeyboardAwareScrollView
         ref={signedOutScrollRef}
-        contentContainerStyle={[s.scroll, { paddingBottom: tabInset + 48 + safeInsets.bottom + 200 }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: tabInset + 48 + safeInsets.bottom }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}

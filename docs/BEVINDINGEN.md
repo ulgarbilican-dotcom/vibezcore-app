@@ -25,7 +25,7 @@ Methode: doorloop als nieuwe bezoeker op emulator (411×914, 3-knops navigatie) 
 | feel-now | 1 kolom op 320 dp, afgekapte techniek | flexibele tegels, wrap |
 | Titels | "plan-summary" als kop; dubbele titel Settings; dubbele bovenrand | headerShown/edges |
 | Tabnaam | "State Contr…" | schaalt |
-| Profile | laatste juridische rijen onbereikbaar | extra scrollruimte (te verifiëren) |
+| Profile, Subscribe, wachtwoord-/activatieschermen | ondermarge verdween op Android: `KeyboardAwareScrollView` overschrijft `paddingBottom` met 0 bij een array-stijl; laatste rijen/voorwaarden onder tabbalk of tegen de rand | wrapper `components/KeyboardAwareScroll.tsx` met afgevlakte stijl (te verifiëren) |
 | Systeemnavigatie | inhoud liep onder de knoppen door | effen strook onder systeemnavigatie (te verifiëren) |
 | Tablets/vouwbaar | uitgerekt over het scherm | telefoonvenster (Android-config) |
 | Bevestigingsgeluid | schel | warm tweetonig geluid |
