@@ -8398,8 +8398,6 @@ const s = StyleSheet.create({
   actionBtnOutlined: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.20)',
-    borderWidth: 1,
     borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',

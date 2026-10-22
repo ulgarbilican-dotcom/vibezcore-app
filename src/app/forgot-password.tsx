@@ -360,8 +360,6 @@ const s = StyleSheet.create({
   },
   btnSecondary: {
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 28,

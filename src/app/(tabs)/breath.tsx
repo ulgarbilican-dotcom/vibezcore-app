@@ -1633,8 +1633,6 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },

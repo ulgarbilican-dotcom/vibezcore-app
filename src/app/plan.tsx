@@ -1520,8 +1520,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 26,
     height: 44,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1238,8 +1238,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
     backgroundColor: 'rgba(255,255,255,0.04)',
     paddingVertical: 14,
     paddingHorizontal: 16,

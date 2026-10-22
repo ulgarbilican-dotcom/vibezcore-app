@@ -41,7 +41,7 @@
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
 import { ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -474,7 +474,7 @@ const s = StyleSheet.create({
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
      `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
-  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 999, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 999, backgroundColor: 'rgba(44,44,50,0.55)', ...CTA_GLOW },
   introCtaGlass: {
     flexDirection: 'row',
     alignItems: 'center',
