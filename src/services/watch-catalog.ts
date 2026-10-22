@@ -254,6 +254,15 @@ export function useWatchCatalogSync(): void {
   const history = useBreathHistory();
   const ownsBracelet = useBraceletOwner();
   const [restingBpm, setRestingBpm] = useState(() => getRestingPulse().bpm);
+  /* Elke keer dat de app weer open komt, de catalogus opnieuw sturen: een horloge dat
+     eerder niet bereikbaar was, blijft anders op een oud slot staan. */
+  const [resyncTick, setResyncTick] = useState(0);
+  useEffect(() => {
+    const s = AppState.addEventListener('change', (st) => {
+      if (st === 'active') setResyncTick((n) => n + 1);
+    });
+    return () => s.remove();
+  }, []);
   useEffect(() => subscribeRestingPulse((p) => setRestingBpm(p.bpm)), []);
 
   useEffect(() => {
@@ -269,7 +278,7 @@ export function useWatchCatalogSync(): void {
     const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt);
     if (Platform.OS === 'android') syncWatchCatalog(json);
     else if (Platform.OS === 'ios') syncAppleWatchCatalog(json);
-  }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, strength, experience, history.length, techByState, restingBpm]);
+  }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, strength, experience, history.length, techByState, restingBpm, resyncTick]);
 
   useEffect(() => {
     if (Platform.OS === 'ios') return onAppleWatchLog(importAppleWatchRecord);

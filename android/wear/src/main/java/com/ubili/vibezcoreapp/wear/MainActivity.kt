@@ -606,6 +606,24 @@ class MainActivity : androidx.activity.ComponentActivity() {
  *  CLEAR_TOP (13 okt 2026, operator: "ik kom direct op het techniekenscherm"):
  *  techniek- en tijdscherm worden opgeruimd, anders lagen ze nog achter de
  *  sessie en kwam je daar terug na wegvegen of opnieuw openen. */
+/** 30 s-voorproef van een Breathwork-toestand voor wie nog geen Premium heeft
+ *  (zelfde proef als op de telefoon); telt niet als de gratis sessie en komt
+ *  niet in de geschiedenis. */
+internal fun startPreviewSession(context: android.content.Context, e: org.json.JSONObject) {
+  val json = CatalogStore.sessionJson(context, e, 0, previewSec = 30)
+  context.startForegroundService(
+    Intent(context, WearBreathSessionService::class.java).apply {
+      action = WearBreathSessionService.ACTION_START
+      putExtra(WearBreathSessionService.EXTRA_SESSION_JSON, json)
+    },
+  )
+  context.startActivity(
+    Intent(context, MainActivity::class.java).addFlags(
+      Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP,
+    ),
+  )
+}
+
 internal fun startLocalSession(context: android.content.Context, e: org.json.JSONObject, durIdx: Int) {
   val json = CatalogStore.sessionJson(context, e, durIdx)
   val minutes = e.optJSONArray("durations")?.optJSONObject(durIdx)?.optInt("minutes") ?: 0

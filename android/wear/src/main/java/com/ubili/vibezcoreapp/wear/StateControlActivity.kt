@@ -112,7 +112,25 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
 
     if (e.optBoolean("locked")) {
       col.addView(TextView(this).apply {
-        text = "Unlock with Premium on your phone"
+        text = "Preview 30 s"
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        background = GradientDrawable().apply {
+          cornerRadius = dp(22f).toFloat()
+          setColor(Color.argb(46, 255, 255, 255))
+        }
+        contentDescription = "Preview ${e.optString("name")} for 30 seconds"
+        setOnClickListener {
+          startLocalStateSession(this@StateControlActivity, e, minutes, previewSec = 30)
+          finish()
+        }
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
+        topMargin = dp(6f)
+      })
+      col.addView(TextView(this).apply {
+        text = "Full session with Premium"
         setTextColor(Color.argb(170, 255, 255, 255))
         textSize = 11f
         gravity = Gravity.CENTER
@@ -144,18 +162,23 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
 }
 
 /** Start State Control op het horloge zelf, met het ritme uit de catalogus. */
-internal fun startLocalStateSession(context: Context, e: JSONObject, minutes: Int) {
+internal fun startLocalStateSession(context: Context, e: JSONObject, minutesIn: Int, previewSec: Int = 0) {
   val p = e.optJSONObject("params") ?: return
-  CatalogStore.setStateMinutes(context, e.optString("key"), minutes)
-  CatalogStore.setRecent(context, "state", e.optString("key"), minutes)
+  val preview = previewSec > 0
+  val minutes = if (preview) 1 else minutesIn
+  if (!preview) {
+    CatalogStore.setStateMinutes(context, e.optString("key"), minutes)
+    CatalogStore.setRecent(context, "state", e.optString("key"), minutes)
+  }
   val json = JSONObject(p.toString()).apply {
     put("title", e.optString("name"))
     put("colorHex", e.optString("colorHex"))
     put("curveOffsetSec", 0.0)
-    put("remainingSec", minutes * 60.0)
+    put("remainingSec", if (preview) previewSec.toDouble() else minutes * 60.0)
     put("local", true)
+    put("preview", preview)
     put("mode", e.optInt("key"))
-    put("plannedSec", minutes * 60)
+    put("plannedSec", if (preview) previewSec else minutes * 60)
     put("startedAt", System.currentTimeMillis())
   }
   context.startForegroundService(

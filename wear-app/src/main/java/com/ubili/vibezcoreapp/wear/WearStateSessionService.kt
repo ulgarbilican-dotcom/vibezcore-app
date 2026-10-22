@@ -774,6 +774,7 @@ class WearStateSessionService : Service() {
   private fun logLocal(cur: StateStart, remainingMs: Long) {
     try {
       val j = org.json.JSONObject(cur.raw)
+      if (j.optBoolean("preview")) return // 30 s-voorproef: niet in de geschiedenis
       val planned = j.optInt("plannedSec", 0)
       val active = (planned - remainingMs / 1000.0).coerceAtLeast(0.0)
       if (active < 10.0) return

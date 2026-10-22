@@ -600,7 +600,7 @@ class WearBreathSessionService : Service() {
 
     /** Horloge-sessie in de geschiedenis van de telefoon (CatalogStore). */
     fun logLocal(context: Context, j: JSONObject, activeMs: Long, rounds: Int, completed: Boolean) {
-      if (activeMs < 10_000L) return
+      if (activeMs < 10_000L || j.optBoolean("preview")) return
       CatalogStore.logSession(
         context,
         JSONObject()

@@ -284,17 +284,26 @@ object CatalogStore {
 
   /** Sessie-JSON in hetzelfde formaat als de telefoon stuurt
    *  (WearBreathSessionService), plus "local" voor pauze/geschiedenis. */
-  fun sessionJson(context: Context, entry: JSONObject, durIdx: Int): String {
+  fun sessionJson(context: Context, entry: JSONObject, durIdx: Int, previewSec: Int = 0): String {
     val durs = entry.optJSONArray("durations")
     val d = durs?.optJSONObject(durIdx.coerceIn(0, (durs.length() - 1).coerceAtLeast(0)))
+    /* Voorproef (niet-Premium): zoveel rondes als in ~previewSec passen. */
+    var rounds = d?.optInt("rounds", 1) ?: 1
+    if (previewSec > 0) {
+      val ph = entry.optJSONArray("phases")
+      var cycle = 0.0
+      for (i in 0 until (ph?.length() ?: 0)) cycle += ph!!.optJSONObject(i)?.optDouble("secs", 0.0) ?: 0.0
+      rounds = if (cycle > 0) Math.ceil(previewSec / cycle).toInt().coerceAtLeast(1) else 1
+    }
     return JSONObject()
+      .put("preview", previewSec > 0)
       .put("local", true)
       .put("stateKey", entry.optString("key"))
       .put("techniqueKey", entry.optString("techniqueKey"))
       .put("modeName", entry.optString("name"))
       .put("colorHex", entry.optString("colorHex"))
       .put("amp", amp(context))
-      .put("rounds", d?.optInt("rounds", 1) ?: 1)
+      .put("rounds", rounds)
       .put("phases", entry.optJSONArray("phases"))
       .toString()
   }

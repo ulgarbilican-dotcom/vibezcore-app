@@ -125,7 +125,25 @@ class StateActivity : androidx.activity.ComponentActivity() {
 
     if (locked) {
       col.addView(TextView(this).apply {
-        text = "Unlock with Premium on your phone"
+        text = "Preview 30 s"
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        background = GradientDrawable().apply {
+          cornerRadius = dp(22f).toFloat()
+          setColor(Color.argb(46, 255, 255, 255))
+        }
+        contentDescription = "Preview ${e.optString("name")} for 30 seconds"
+        setOnClickListener {
+          startPreviewSession(this@StateActivity, e)
+          finish()
+        }
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
+        topMargin = dp(6f)
+      })
+      col.addView(TextView(this).apply {
+        text = "Full session with Premium"
         setTextColor(Color.argb(170, 255, 255, 255))
         textSize = 11f
         gravity = Gravity.CENTER
