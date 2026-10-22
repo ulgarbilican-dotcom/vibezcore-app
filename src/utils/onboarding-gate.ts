@@ -25,7 +25,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { getBraceletSessionSnapshot } from '@/services/bracelet-session-state';
-import { getBreathHost } from '@/services/breath-session-host';
+import { getBreathHost, getRunningBreathStatus } from '@/services/breath-session-host';
 import { getSetting, setSetting } from '@/utils/settings';
 
 export type OnboardingKind = 'breath' | 'state';
@@ -48,8 +48,12 @@ const deferredThisRun: Record<OnboardingKind, boolean> = { breath: false, state:
 
 /** Loopt er nu een sessie (ademsessie-laag of State Control)? Dan nooit een
  *  onboarding ertussen (regel 3). */
+/* 22 okt 2026 (operator: bij een geminimaliseerde sessie kon ik de State Control-onboarding niet
+   zien): een GEPAUZEERDE sessie telt niet als "lopend" — er wordt dan niets onderbroken. */
 export function isAnySessionRunning(): boolean {
-  return getBreathHost() !== null || getBraceletSessionSnapshot().active;
+  const breath = getBreathHost() !== null && getRunningBreathStatus()?.paused !== true;
+  const bracelet = getBraceletSessionSnapshot();
+  return breath || (bracelet.active && !bracelet.paused);
 }
 
 /** Mag de onboarding NU vanzelf verschijnen (regels 2 en 3)? Zegt niets over

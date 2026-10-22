@@ -17,6 +17,7 @@
 import StateControlOnboarding from '@/components/StateControlOnboarding';
 import { deferOnboarding } from '@/utils/onboarding-gate';
 import { setSetting } from '@/utils/settings';
+import { setStateIntroSkip } from '@/utils/state-intro-skip';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 
 export default function StateOnboardingScreen() {
@@ -49,6 +50,7 @@ export default function StateOnboardingScreen() {
     if (!isFirst) {
       /* Terug naar de tabs i.p.v. er een tweede bovenop te zetten: zo verdwijnt
        de onboarding (en haar camera/zaklamp) echt (19 okt 2026). */
+    setStateIntroSkip(true);
     router.dismissTo({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
       return;
     }
@@ -62,6 +64,7 @@ export default function StateOnboardingScreen() {
        volledige sessie gratis, zie bracelet-control.tsx). */
     /* Terug naar de tabs i.p.v. er een tweede bovenop te zetten: zo verdwijnt
        de onboarding (en haar camera/zaklamp) echt (19 okt 2026). */
+    setStateIntroSkip(true);
     router.dismissTo({ pathname: '/(tabs)/bracelet', params: { open: String(Date.now()), mode: String(mode) } } as never);
   };
 

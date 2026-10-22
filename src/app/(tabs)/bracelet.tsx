@@ -66,6 +66,7 @@ import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse, getRestingPulse, chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { deferOnboarding, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
+import { setStateIntroSkip, useStateIntroSkip } from '@/utils/state-intro-skip';
 import { useSafeAreaInsets } from '@/utils/safe-area';
 import { hapticPress } from '@/utils/haptics';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
@@ -336,12 +337,16 @@ export default function BraceletScreen() {
      toont. */
   const { open } = useLocalSearchParams<{ open?: string }>();
   const consumedOpen = useRef<string | undefined>(open);
-  const [showIntro, setShowIntro] = useState(!open);
+  const [showIntroRaw, setShowIntro] = useState(!open);
+  /* Na de onboarding meteen geen intro (geen flits van de welkomstfoto). */
+  const introSkip = useStateIntroSkip();
+  const showIntro = showIntroRaw && !introSkip;
 
   useEffect(() => {
     if (open && open !== consumedOpen.current) {
       consumedOpen.current = open;
       setShowIntro(false);
+      setStateIntroSkip(false);
     }
   }, [open]);
 
@@ -355,7 +360,10 @@ export default function BraceletScreen() {
     const unsub = (navigation as any).addListener('state', (e: any) => {
       const st = e?.data?.state;
       const current = st?.routes?.[st.index]?.name;
-      if (current && current !== 'bracelet') setShowIntro(true);
+      if (current && current !== 'bracelet') {
+        setShowIntro(true);
+        setStateIntroSkip(false);
+      }
     });
     return unsub;
   }, [navigation]);
