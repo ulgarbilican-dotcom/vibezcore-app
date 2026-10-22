@@ -2089,7 +2089,9 @@ function AudioScreen({
                         <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFill} />
                       )}
                       <Image
-                        source={imageSource(p.img)}
+                        /* 22 okt 2026 (operator: Soundscapes-icoon ontbrak): wit icoon op doorzichtige achtergrond,
+                           als gebundeld webp verdween het op Android; daarom weer van de server. */
+                        source={p.key === 'tools' ? { uri: p.img } : imageSource(p.img)}
                         style={
                           p.key === 'resilience'
                             ? /* 20 okt 2026: deze kaart kreeg een eigen, 504 pt hoge
