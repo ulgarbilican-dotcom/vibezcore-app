@@ -199,3 +199,11 @@ Volgende: na ~09:00 `bash scripts/testlab.sh` (5 echte toestellen) draaien en de
 - Gedaan: Breath intro + 5 toestanden, instelscherm scrolt op korte schermen, sessiebeeld schaalt met hoogte, boog-gloed niet afgesneden, State Control-dial hoogte-bewust, protocol-bouwer stappen 1/3/5 (iconen, CTA-ruimte, vaste knop op "Choose your path"), tabnaam past op smalle schermen, Library-bracelet-kaart.
 - Volgende: Account, Activity, Instellingen, Agenda, betaalschermen, player; daarna Firebase Test Lab (meerdere toestellen) en iOS-controle op echt toestel.
 - Emulator = alleen layout; animaties/blur/haptiek enkel op A16/iPhone beoordelen.
+
+
+## 22 okt 2026, ochtend — stand na de nachtronde (zijsessie)
+- Alles gepusht op `rollback-vc76-take2`. Op de A16 staat de nieuwste release-build (arm64, met alle fixes; geen testschakelaar).
+- Bevindingen en fixes: `docs/BEVINDINGEN.md`. Procedure: `docs/KWALITEITSPROCEDURE.md`. Jouw testlijst: `docs/CONTROLELIJST_OPERATOR.md`. Per-scherm voortgang: `docs/RESPONSIVE_AUDIT.md`.
+- Testgereedschap: `scripts/screen-matrix.sh`, `flow-matrix.sh`, `walk.sh`, `scrollshots.sh`. Testschakelaar toegangsniveau (`/test-tier?tier=free|day|monthly|yearly`) werkt alleen in een build met EXPO_PUBLIC_VZ_TEST=1.
+- Lokale build met nieuwe foto's: zie KWALITEITSPROCEDURE §6.
+- Nog te doen: A16-test van de protocolbouwer (Level/Routine/Times), animaties, geluid, haptiek; iOS-pass; tabletbeleid is al gezet (telefoonvenster op Android).
