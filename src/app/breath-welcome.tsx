@@ -32,6 +32,7 @@
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
+import PremiumNote from '@/components/PremiumNote';
 import { vibrateCompat } from '@/services/breath-haptics';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import BalancedText from '@/components/BalancedText';
@@ -1587,9 +1588,9 @@ export default function BreathWelcomeScreen() {
         </Pressable>
         </Animated.View>
         {isLast && !isPro ? (
-          <Text style={s.ctaFreeNote}>
+          <PremiumNote style={s.ctaFreeNote} preview={!!freeSessionUsedAt}>
             {freeSessionUsedAt ? FREE_COPY.previewLine : FREE_COPY.freeLine}
-          </Text>
+          </PremiumNote>
         ) : null}
       </View>
       </SafeAreaView>

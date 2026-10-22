@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import PremiumNote from '@/components/PremiumNote';
 import SheetScroll from '@/components/SheetScroll';
 import { FREE_COPY } from '@/constants/free-session-copy';
 import BalancedText from '@/components/BalancedText';
@@ -3201,9 +3202,9 @@ export default function BreathSetupScreen() {
           </Text>
         </AnimatedPressable>
         {!isAddToDay && (locked || freeFullAvailable) ? (
-          <Text style={[s.ctaNote, light && { color: 'rgba(29,29,31,0.6)' }]}>
+          <PremiumNote style={[s.ctaNote, light && { color: 'rgba(29,29,31,0.6)' }]} preview={!!locked}>
             {locked ? FREE_COPY.previewLine : FREE_COPY.freeLine}
-          </Text>
+          </PremiumNote>
         ) : null}
       </View>
 

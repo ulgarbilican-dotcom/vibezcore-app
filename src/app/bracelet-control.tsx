@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow, { useWatchStatus } from '@/components/WatchHapticsRow';
 import AsyncStorageLockNotice from '@react-native-async-storage/async-storage';
@@ -4629,10 +4630,9 @@ function IdleScreen({
             {trialRunning && condensedMinutes !== null ? (
               <Text style={s.trialInfoTxt}>{'Sped up for the preview.\nA full session slows down gradually.'}</Text>
             ) : !trialRunning ? (
-              /* 22 okt 2026 (operator): "Full session with Premium" is tikbaar en opent de plannen. */
-              <Pressable onPress={() => setPaywallOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
-                <Text style={s.trialInfoTxt}>{FREE_COPY.previewLine}</Text>
-              </Pressable>
+              <PremiumNote style={s.trialInfoTxt} context="state-control" preview>
+                {FREE_COPY.previewLine}
+              </PremiumNote>
             ) : null}
           </View>
         ) : null}

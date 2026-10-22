@@ -11,6 +11,7 @@
    toestand-logica als (tabs)/activity.tsx — geen nieuwe kleuren verzonnen.
    ───────────────────────────────────────────────────────────────────────── */
 
+import PremiumNote from '@/components/PremiumNote';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
 import { useBreathFreeStart } from '@/hooks/useBreathFreeStart';
@@ -1076,9 +1077,9 @@ export default function AgendaScreen() {
                     </Text>
                   </AnimatedPressable>
                   {startKind !== 'full' ? (
-                    <Text style={s.actionFreeNote}>
+                    <PremiumNote style={s.actionFreeNote} preview={startKind === 'preview'}>
                       {startKind === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
-                    </Text>
+                    </PremiumNote>
                   ) : null}
                   <Pressable
                     style={s.actionEditBtn}

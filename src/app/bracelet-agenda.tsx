@@ -16,7 +16,8 @@
    (vorige/volgende-pijlen i.p.v. de RhythmRing) is hiermee herroepen —
    `RhythmRing` (components/RhythmRing.tsx) bleek bij nader onderzoek een
    VOLLEDIG generieke component zonder enige breathwork-koppeling (geen
-   import van BREATH_STATES/plan-store), dus 1-op-1 hergebruikbaar i.p.v.
+   import PremiumNote from '@/components/PremiumNote';
+import van BREATH_STATES/plan-store), dus 1-op-1 hergebruikbaar i.p.v.
    nagebouwd. Wat WEL bracelet-eigen blijft (net als voorheen): geen
    gedeelde `selected`/`calendarOpen`-state met agenda.tsx, en de
    ring-middenzone toont hier de DATUM + plan-duur (tikbaar → kalender)
@@ -121,7 +122,8 @@ import Animated, {
 import { hapticTap } from '@/utils/haptics';
 import { useStateFreeStart } from '@/hooks/useStateFreeStart';
 import { FREE_COPY } from '@/constants/free-session-copy';
-
+
+import PremiumNote from '@/components/PremiumNote';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* Eigen label-laag bovenop de ring (zie de toelichting bovenaan dit
@@ -700,9 +702,9 @@ export default function BraceletAgendaScreen() {
                   </Text>
                 </Pressable>
                 {startKindFor(item.mode) !== 'full' ? (
-                  <Text style={s.actionFreeNote}>
+                  <PremiumNote style={s.actionFreeNote} context="state-control" preview={startKindFor(item.mode) === 'preview'}>
                     {startKindFor(item.mode) === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
-                  </Text>
+                  </PremiumNote>
                 ) : null}
                 <Pressable
                   style={s.actionEditBtn}

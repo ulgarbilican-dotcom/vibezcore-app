@@ -36,6 +36,7 @@
    kennismakingssessie.
    ───────────────────────────────────────────────────────────────────────── */
 
+import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
@@ -446,9 +447,9 @@ export default function BreathQuizScreen() {
           </Text>
         </AnimatedPressable>
         {isResult && !isPro && startKind !== 'full' ? (
-          <Text style={s.ctaFreeNote}>
+          <PremiumNote style={s.ctaFreeNote} preview={startKind === 'preview'}>
             {startKind === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
-          </Text>
+          </PremiumNote>
         ) : null}
       </View>
     </SafeAreaView>
