@@ -281,7 +281,7 @@ function SettingTile({
         <View style={s.tileIcon}>{icon}</View>
         <View style={s.tileText}>
           <Text style={s.tileLabel}>{label}</Text>
-          <Text style={s.tileValue} numberOfLines={1}>
+          <Text style={s.tileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.15}>
             {done ? value : '—'}
           </Text>
         </View>
