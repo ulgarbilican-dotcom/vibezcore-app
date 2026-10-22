@@ -342,11 +342,11 @@ export function stateGlass(hex: string) {
   const g = parseInt(full.slice(2, 4), 16);
   const b = parseInt(full.slice(4, 6), 16);
   const c = (a: number) => `rgba(${r},${g},${b},${a})`;
-  /* Zelfde recept als de glazen iconenbalk: grijs, doorschijnend glas (VibezGlass 'normal') met een
-     lichte kleurlaag en glans bovenin; het gekleurde licht komt van onder, achter het glas. */
+  /* 22 okt 2026 (operator): doorzichtig glas in de kleur van de toestand, zonder lichtbron eronder —
+     enkel een zachte glans bovenin, zoals de glazen iconenbalk. */
   return {
-    backgroundColor: 'rgba(58,58,66,0.34)',
-    experimental_backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%), linear-gradient(${c(0.14)}, ${c(0.14)}), radial-gradient(ellipse 85% 140% at 50% 125%, ${c(0.5)} 0%, ${c(0.16)} 50%, ${c(0)} 80%)`,
+    backgroundColor: c(0.3),
+    experimental_backgroundImage: 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%)',
   };
 }
 
