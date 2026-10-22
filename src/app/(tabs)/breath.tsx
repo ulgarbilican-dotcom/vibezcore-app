@@ -41,7 +41,7 @@ import StateGlyph from '@/components/StateGlyph';
 import { usePlayerState } from '@/services/audio-player';
 import { LinearGradient } from 'expo-linear-gradient';
 import { STATE_PHOTOS } from '@/services/offline-assets';
-import { Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import {
   BREATH_STATES,
   cycleSeconds,
@@ -1410,7 +1410,7 @@ export default function BreathScreen() {
           onPressOut={() => {
             ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
           }}
-          style={[s.cta, { backgroundColor: '#34343a', ...CTA_GLOW }]}
+          style={[s.cta, { backgroundColor: CTA_GLASS, ...CTA_GLOW }]}
           android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
         >
           {/* Operator, 25 september 2026 ("groen van de choose cta niet

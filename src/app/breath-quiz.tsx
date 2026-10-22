@@ -38,7 +38,7 @@
 
 import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
-import { AudioAccent, Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import {
   pickForSlot,
@@ -651,7 +651,7 @@ const s = StyleSheet.create({
   cta: {
     height: 52,
     borderRadius: 999,
-    backgroundColor: '#34343a',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
     ...CTA_GLOW,

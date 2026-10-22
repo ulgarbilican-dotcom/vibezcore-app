@@ -321,6 +321,10 @@ export const CardHeights = {
 
 /* Subtiele witte lichtbron achter een glazen knop, zonder omlijsting (operator, 22 okt 2026).
    Een witte schaduw met straal en lage dekking: zacht licht rond de knop. */
+/* Glazen CTA-vulling: doorschijnend zoals de drie welkomst-knoppen (rgba(30,30,32,0.28)),
+   zodat het witte licht erachter (CTA_GLOW) door het glas heen schijnt. */
+export const CTA_GLASS = 'rgba(30,30,32,0.34)';
+
 export const CTA_GLOW = {
   shadowColor: '#ffffff',
   shadowOffset: { width: 0, height: 0 },
@@ -340,7 +344,7 @@ export const CTA = {
     gap: 10,
     height: 52,
     borderRadius: 999,
-    backgroundColor: '#34343a', /* ondoorzichtig: inhoud die eronder scrolt schijnt niet door */
+    backgroundColor: CTA_GLASS,
     ...CTA_GLOW,
   },
   /* Ondoorzichtig: een doorzichtige uitgeschakelde knop liet de tekst van kaarten

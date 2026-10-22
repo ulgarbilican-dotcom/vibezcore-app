@@ -13,7 +13,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import BalancedText from '@/components/BalancedText';
 import PressScale from '@/components/PressScale';
-import { Brand, BrandFonts, CTA, CTA_GLOW } from '@/constants/theme';
+import { Brand, BrandFonts, CTA, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { SafeAreaView } from '@/utils/safe-area';
 
 type Props = {
@@ -138,6 +138,6 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-  ctaWrap: { alignSelf: 'center', maxWidth: 420, width: '100%', marginTop: 28, borderRadius: 999, backgroundColor: '#34343a', ...CTA_GLOW },
+  ctaWrap: { alignSelf: 'center', maxWidth: 420, width: '100%', marginTop: 28, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
 });

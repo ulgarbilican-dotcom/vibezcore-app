@@ -46,7 +46,7 @@ import { confirmRhythmSet } from '@/components/ConfirmMoment';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import PressScale from '@/components/PressScale';
 import ConfirmCard from '@/components/ConfirmCard';
-import { Brand, BrandFonts, CTA_GLOW, TypeScale } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW, TypeScale } from '@/constants/theme';
 import { STATE_USAGE } from '@/data/state-usage';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
 import {
@@ -1255,7 +1255,7 @@ const s = StyleSheet.create({
   footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12, gap: 18 },
   /* 22 okt 2026 (operator): zelfde glazen pil als de rest van de app, met de
      zachte witte lichtbron erachter (CTA_GLOW) — geen hoekige witte knop meer. */
-  ctaWrap: { borderRadius: 999, backgroundColor: '#34343a', ...CTA_GLOW },
+  ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, height: 52, overflow: 'hidden' },
   ctaTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },

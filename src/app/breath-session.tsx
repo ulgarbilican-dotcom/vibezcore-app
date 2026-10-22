@@ -51,7 +51,7 @@ import SessionArt, { prefetchSessionArt } from '@/components/SessionArt';
 import BreathPacer from '@/components/BreathPacer';
 import LotusPacer from '@/components/LotusPacer';
 import Starfield from '@/components/Starfield';
-import { Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import {
   BREATH_STATES,
   cycleSeconds,
@@ -3539,7 +3539,7 @@ export function BreathSession() {
             onPressOut={pressStart.onPressOut}
             style={[
               s.startBtn,
-              { backgroundColor: '#34343a', borderColor: 'transparent', ...CTA_GLOW },
+              { backgroundColor: CTA_GLASS, borderColor: 'transparent', ...CTA_GLOW },
               pressStart.style,
             ]}
             android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
