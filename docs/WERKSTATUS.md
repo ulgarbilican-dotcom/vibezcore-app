@@ -207,3 +207,5 @@ Volgende: na ~09:00 `bash scripts/testlab.sh` (5 echte toestellen) draaien en de
 - Testgereedschap: `scripts/screen-matrix.sh`, `flow-matrix.sh`, `walk.sh`, `scrollshots.sh`. Testschakelaar toegangsniveau (`/test-tier?tier=free|day|monthly|yearly`) werkt alleen in een build met EXPO_PUBLIC_VZ_TEST=1.
 - Lokale build met nieuwe foto's: zie KWALITEITSPROCEDURE §6.
 - Nog te doen: A16-test van de protocolbouwer (Level/Routine/Times), animaties, geluid, haptiek; iOS-pass; tabletbeleid is al gezet (telefoonvenster op Android).
+
+- 22 okt 2026 (avond): glazen CTA's overal (doorschijnend wit/toestandskleur, glans bovenin, lichtbron onderin binnen de knop, via CTA_GLOW/CTA_GLASS/stateGlass in theme.ts); aankoopbevestigingen = PurchaseConfirm-kaart; tab-iconen dun + bounce; horloge: 30 s-voorproef in wear-app/. Open: Breath-balk 35 dp marge (balk = CTA-breedte) nog op toestel te zien; horloge opnieuw koppelen (handtekening debug vs Play); Monthly-weergave na dagpas; logo op glas.
