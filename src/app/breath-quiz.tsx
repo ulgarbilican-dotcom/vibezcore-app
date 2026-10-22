@@ -56,10 +56,7 @@ import { openBreathSession } from '@/services/breath-session-host';
 import { Check, ChevronLeft, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

@@ -48,7 +48,7 @@ import {
   View,
 } from 'react-native';
 import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import ReanimatedAnimated, {
   useSharedValue,
   useAnimatedStyle,

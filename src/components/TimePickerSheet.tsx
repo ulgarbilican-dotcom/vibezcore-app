@@ -12,7 +12,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 
 import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';

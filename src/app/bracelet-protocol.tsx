@@ -28,7 +28,7 @@ import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 
 const HORIZON_LABEL: Record<string, string> = {
   today: 'Today only',

@@ -40,7 +40,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { imageSource } from '@/utils/image-source';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

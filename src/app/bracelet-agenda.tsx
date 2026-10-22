@@ -111,7 +111,7 @@ import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

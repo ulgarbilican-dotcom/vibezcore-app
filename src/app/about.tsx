@@ -46,7 +46,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 
 /* Press-scale recipe (zie breath-welcome.tsx `StartCard`) — de drie
    ProductCards hadden nog geen enkele press-feedback. */

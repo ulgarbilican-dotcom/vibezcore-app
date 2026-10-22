@@ -39,10 +39,7 @@ import { STATE_GLYPH_ICONS, type GlyphIcon } from '@/components/ModeGlyph';
 import { useProtocolLocked, PROTOCOL_LOCKED_SUB } from '@/utils/protocol-gate';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 /* Operator, 19 september 2026 ("apple stijl animaties... pagina te plat
    en dood"): eenmalige, gestaffelde intro-animatie bij het openen van
    het scherm — geen `withRepeat`/oneindige animatie (dat patroon gaf

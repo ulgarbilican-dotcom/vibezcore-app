@@ -62,7 +62,7 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import { useSetting } from '@/utils/settings';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Svg, { Path } from 'react-native-svg';
 import { needsPreview } from '@/utils/access-tier';
 import { MoreHorizontal } from 'lucide-react-native';

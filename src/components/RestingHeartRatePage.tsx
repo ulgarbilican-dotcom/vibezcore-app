@@ -40,7 +40,7 @@ import Animated, {
   useFrameCallback,
   useSharedValue,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import { audioOutputExtraMs } from '@/services/audio-latency';
 

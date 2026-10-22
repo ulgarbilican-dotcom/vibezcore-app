@@ -49,7 +49,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { hapticTap, hapticTick } from '@/utils/haptics';
 
 /* De cameramodule zit pas in de build vanaf fase 2. In een oudere build

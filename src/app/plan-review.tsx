@@ -59,10 +59,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Info, Pencil, RefreshCw, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

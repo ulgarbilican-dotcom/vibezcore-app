@@ -135,7 +135,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
 import { rootBlurRef } from '@/utils/root-blur';

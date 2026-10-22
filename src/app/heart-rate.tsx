@@ -28,7 +28,7 @@ import { Stack } from 'expo-router';
 import { ChevronRight, HeartPulse, PencilLine, Timer, Watch } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 
 function fmtWhen(at: number): string {
   const d = new Date(at);

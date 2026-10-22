@@ -38,7 +38,7 @@ import {
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 import { BraceletMode } from '../services/ble-contract';
 
 /* Force-refresh van de sessielijst telkens de stats wijzigen —

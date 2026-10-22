@@ -47,7 +47,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 
 /* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
    voor de referentie-implementatie) — additief, geen layout/logica-

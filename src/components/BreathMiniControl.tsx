@@ -23,7 +23,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Reanimated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { usePathname } from 'expo-router';
 import StateGlyph from './StateGlyph';
 import VibezGlass from './VibezGlass';

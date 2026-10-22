@@ -137,11 +137,8 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-  type EdgeInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
+import { type EdgeInsets } from 'react-native-safe-area-context';
 import {
   BleCommand,
   BleConnectionState,

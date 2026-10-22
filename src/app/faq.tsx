@@ -48,7 +48,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 
 /* Wordmark als eyebrow (huisstijl, geen platte tekst). */
 const WORDMARK = require('../../assets/vibezcore_wordmark.png');

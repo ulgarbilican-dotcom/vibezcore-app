@@ -31,7 +31,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { imageSource } from '@/utils/image-source';

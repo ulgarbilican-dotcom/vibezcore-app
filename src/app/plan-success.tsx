@@ -27,10 +27,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { hapticPress } from '@/utils/haptics';
 
 /* Huisstijl §5: scale(.97)+opacity(.85) op indrukken + lichte haptic-tik,

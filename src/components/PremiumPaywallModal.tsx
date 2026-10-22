@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
 import MembershipPlans from '@/components/MembershipPlans';
 import VibezGlass from '@/components/VibezGlass';

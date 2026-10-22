@@ -66,7 +66,7 @@ import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse, getRestingPulse, chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { deferOnboarding, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { hapticPress } from '@/utils/haptics';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import { imageSource } from '@/utils/image-source';

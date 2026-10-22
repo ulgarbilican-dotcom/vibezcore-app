@@ -19,7 +19,7 @@
 
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useContext, useEffect, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 
 /** Inhoudshoogte van de balk zonder veilige zone (zie tabBarStyle). */
 export const TAB_BAR_CONTENT_HEIGHT = 51;

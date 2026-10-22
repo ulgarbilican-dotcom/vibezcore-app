@@ -79,7 +79,7 @@ import {
   type NativeSyntheticEvent,
   InteractionManager,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   Easing,

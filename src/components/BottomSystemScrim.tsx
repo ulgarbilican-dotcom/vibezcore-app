@@ -2,7 +2,7 @@
    onder de Android-navigatieknoppen door, zodat de knoppen over tekst stonden. Dit vlak
    (hoogte = onderste veilige zone) maakt die zone overal effen zwart, zoals op de tabs. */
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { Brand } from '@/constants/theme';
 
 export default function BottomSystemScrim() {

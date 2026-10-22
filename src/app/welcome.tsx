@@ -43,7 +43,7 @@ import { getBreathHistory } from '@/utils/breath-history';
 import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import * as Haptics from 'expo-haptics';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 /* Operator, 19 september 2026 ("gestaffelde intro... logo, dan tekst,
    dan de knoppen één voor één van onderen omhoog met een zachte
    vering"): gewone mount-animatie, geen native dialoog/overgang

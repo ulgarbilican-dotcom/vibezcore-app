@@ -54,7 +54,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   useSharedValue,

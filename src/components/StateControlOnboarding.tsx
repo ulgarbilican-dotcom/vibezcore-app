@@ -104,7 +104,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { AppState } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 import Svg, { Circle, Defs, Line, LinearGradient as SvgLinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 
 /* Volgorde van de app: Boost … Sleep. */

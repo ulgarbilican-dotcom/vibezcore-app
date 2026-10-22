@@ -56,7 +56,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
 import { imageSource } from '@/utils/image-source';

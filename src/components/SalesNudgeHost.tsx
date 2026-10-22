@@ -35,7 +35,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import BalancedText from '@/components/BalancedText';
 import PressScale from '@/components/PressScale';
 import VibezGlass from '@/components/VibezGlass';

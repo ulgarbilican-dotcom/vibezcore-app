@@ -27,7 +27,7 @@ import ReanimatedAnimated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import VibezGlass from './VibezGlass';
 
 const AnimatedPressable = ReanimatedAnimated.createAnimatedComponent(Pressable);

@@ -166,7 +166,7 @@ async function shareInvite(): Promise<void> {
 }
 import { showVibezAlert } from '@/components/VibezAlert';
 import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import {

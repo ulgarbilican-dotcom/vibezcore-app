@@ -124,10 +124,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 const SCREEN_W = Dimensions.get('window').width;

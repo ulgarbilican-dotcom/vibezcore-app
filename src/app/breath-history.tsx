@@ -30,7 +30,7 @@ import { showVibezAlert } from '@/components/VibezAlert';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 
 const STATE_ORDER: BreathStateKey[] = [
   'boost',

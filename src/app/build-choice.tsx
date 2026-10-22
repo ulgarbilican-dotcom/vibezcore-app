@@ -95,10 +95,7 @@ const AUTO_BG_IMG =
    "pic build it yourself app 4"). */
 const CUSTOM_BG_IMG =
   'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20build%20it%20yourself%20app%204.png';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { imageSource } from '@/utils/image-source';
 
 /* Operator, 18 september 2026 ("we bouwen de onboarding volledig in

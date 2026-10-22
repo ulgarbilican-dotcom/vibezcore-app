@@ -40,7 +40,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 
 /* Zelfde light/C-token-toggle als elders. */
 /* Operator, 26 september 2026: dark is de nieuwe app-brede default (was

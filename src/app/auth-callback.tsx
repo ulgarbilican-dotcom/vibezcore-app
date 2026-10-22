@@ -46,7 +46,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 
 /* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
    voor de referentie-implementatie) — additief, geen layout/logica-

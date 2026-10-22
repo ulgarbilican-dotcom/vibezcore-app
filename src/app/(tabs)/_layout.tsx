@@ -58,7 +58,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Animated as RNAnimated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { setTabBarOverlayHeight, TAB_BAR_CONTENT_HEIGHT } from '@/utils/tab-bar-inset';
 
 type TabPath = '/' | '/breath' | '/bracelet' | '/activity' | '/account';

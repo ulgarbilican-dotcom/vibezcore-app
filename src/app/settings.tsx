@@ -78,7 +78,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/utils/safe-area';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
 import { hapticTap } from '@/utils/haptics';
 

@@ -80,10 +80,7 @@ import {
   Target,
 } from 'lucide-react-native';
 import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated, {

@@ -86,7 +86,7 @@ import TimePickerSheet from '@/components/TimePickerSheet';
 import { usePreventRemove } from '@react-navigation/native';
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

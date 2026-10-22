@@ -86,7 +86,7 @@ import {
 /* expo-web-browser was nodig voor de oude Gumroad-WebBrowser-flow.
    Iter 9dq v64: Gumroad-checkout vervangen door /subscribe (IAP). Indien
    ooit terug nodig (bv. een externe info-pagina openen): re-import. */
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   Easing,

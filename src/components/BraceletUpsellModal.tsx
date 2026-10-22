@@ -37,7 +37,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/utils/safe-area';
 import { dismissEndedPanel } from '@/services/audio-player';
 import {
   hideBraceletUpsell,
