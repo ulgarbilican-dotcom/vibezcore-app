@@ -2120,11 +2120,17 @@ function SlideGuidance({
          niet"): de teaser vult enkel de ruimte die er ECHT is tussen de
          kaarten en de knop. Te weinig ruimte (kleiner scherm, A16) → geen
          teaser, i.p.v. eronder schuiven. */}
+      {/* 22 okt 2026 (operator: "geen foto en cta van bracelet op stap 2", al vaker gemeld): de kaart is
+          er ALTIJD. Hij krimpt mee met de ruimte (min. 112 dp) en het scherm scrolt als het echt niet
+          past — in plaats van te verdwijnen op een korter scherm zoals de A16. */}
       <View
-        style={{ alignSelf: 'stretch', flex: 1, minHeight: 0 }}
+        style={{ alignSelf: 'stretch', flex: 1, minHeight: TEASER_MIN_H + 46 }}
         onLayout={(e) => setTeaserRoom(e.nativeEvent.layout.height)}
       >
-        {teaserRoom >= TEASER_NEEDS && <BraceletTeaserCard onPress={() => setBraceletInfo(true)} />}
+        <BraceletTeaserCard
+          h={Math.max(TEASER_MIN_H, Math.min(BRACELET_TEASER_CARD_H, teaserRoom - 46))}
+          onPress={() => setBraceletInfo(true)}
+        />
       </View>
       <BraceletInfoModal
         visible={braceletInfo}
@@ -2148,8 +2154,9 @@ const BRACELET_TEASER_SRC_H = 1536;
 const BRACELET_TEASER_CARD_H = 164;
 /** Marge boven (braceletTeaser.marginTop) + kaart + minstens 16 vrij boven de knop. */
 const TEASER_NEEDS = 30 + BRACELET_TEASER_CARD_H + 16;
+const TEASER_MIN_H = 112;
 
-function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
+function BraceletTeaserCard({ onPress, h = BRACELET_TEASER_CARD_H }: { onPress: () => void; h?: number }) {
   const IMG = useAssetUri(BRACELET_TEASER_IMG);
   const [w, setW] = useState(0);
   /* Handmatige crop: kader-brede "cover"-schaal met een extra
@@ -2163,7 +2170,7 @@ function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
   const ZOOM = 0.8;
   const V_OFFSET = 22;
   const coverScale = w > 0
-    ? Math.max(w / BRACELET_TEASER_SRC_W, BRACELET_TEASER_CARD_H / BRACELET_TEASER_SRC_H)
+    ? Math.max(w / BRACELET_TEASER_SRC_W, h / BRACELET_TEASER_SRC_H)
     : 0;
   const scale = coverScale * ZOOM;
   const dispW = BRACELET_TEASER_SRC_W * scale;
@@ -2171,7 +2178,7 @@ function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={s.braceletTeaser}
+      style={[s.braceletTeaser, { height: h }]}
       onLayout={(e) => setW(e.nativeEvent.layout.width)}
     >
       {w > 0 && (
@@ -2181,7 +2188,7 @@ function BraceletTeaserCard({ onPress }: { onPress: () => void }) {
           style={{
             position: 'absolute',
             left: (w - dispW) / 2,
-            top: (BRACELET_TEASER_CARD_H - dispH) / 2 + V_OFFSET,
+            top: (h - dispH) / 2 + V_OFFSET,
             width: dispW,
             height: dispH,
           }}
