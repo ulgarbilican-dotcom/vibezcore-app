@@ -81,7 +81,7 @@ import {
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
-import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
+import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE, CTA_GLASS, CTA_GLOW, stateGlass } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
    light/dark-toggle gehad, in tegenstelling tot de rest van de app sinds
@@ -4588,7 +4588,7 @@ function IdleScreen({
           </View>
         ) : (
           <PrimaryCtaButton
-            style={[s.primaryBtn, s.chooseCta, (busy || criticalBattery) && s.btnDisabled]}
+            style={[s.primaryBtn, s.chooseCta, stateGlass(meta.color), (busy || criticalBattery) && s.btnDisabled]}
             onPress={
               startLocked ? (trialRunning ? () => stopTrial(false) : () => setTrialSheetOpen(true)) : withRhythm(onStart)
             }

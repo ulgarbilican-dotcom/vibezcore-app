@@ -333,6 +333,21 @@ export const CTA_GLOW = {
     'radial-gradient(ellipse 85% 140% at 50% 125%, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.22) 48%, rgba(255,255,255,0) 78%)',
 } as const;
 
+/* Glazen CTA in de kleur van een toestand (selectieschermen State Control en Breathwork): doorschijnende
+   vulling in die kleur met de lichtbron (onderin, achter het glas) in dezelfde kleur. */
+export function stateGlass(hex: string) {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6);
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const c = (a: number) => `rgba(${r},${g},${b},${a})`;
+  return {
+    backgroundColor: c(0.3),
+    experimental_backgroundImage: `radial-gradient(ellipse 85% 140% at 50% 125%, ${c(0.85)} 0%, ${c(0.3)} 50%, ${c(0)} 80%)`,
+  };
+}
+
 export const CTA = {
   /* Doorgaan-knop in de flows (Continue / Next / Build…): glazen pil, niet fel
      (21 okt 2026, operator: "die witte ctas storen"). De ene beslissende actie

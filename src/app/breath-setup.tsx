@@ -38,7 +38,7 @@ import BalancedText from '@/components/BalancedText';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import VibezGlass from '@/components/VibezGlass';
-import { BrandFonts, CTA, CTA_GLASS, CTA_GLOW, DIAL_SIZE } from '@/constants/theme';
+import { BrandFonts, CTA, CTA_GLASS, CTA_GLOW, DIAL_SIZE, stateGlass } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
 /* Operator, 19 september 2026 ("ja doen" — echte glas-blur i.p.v. de
    rgba-truc): `expo-blur` zit al in de huidige native build (welcome.tsx
@@ -3047,6 +3047,7 @@ export default function BreathSetupScreen() {
           onPressOut={ctaPressOut}
           style={[
             s.cta,
+            !light && stateGlass(ringAccent),
             light && { backgroundColor: ctaBg, borderColor: ctaBg },
             isAddToDay && (!addToDayReady || !!overlapError) && s.ctaDisabled,
             ctaPressStyle,
