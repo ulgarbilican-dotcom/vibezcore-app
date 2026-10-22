@@ -65,7 +65,7 @@ import {
   BREATH_ONBOARDING_BRACELET_TEASER_IMG,
   FACES_URL,
 } from '@/services/offline-assets';
-import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
+import { Brand, BrandFonts, CTA, CTA_GLASS, CTA_GLOW, TypeScale } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
@@ -1501,31 +1501,9 @@ export default function BreathWelcomeScreen() {
           onPressIn={ctaBlocked ? undefined : onCtaPressIn}
           onPressOut={ctaBlocked ? undefined : onCtaPressOut}
           android_ripple={ctaBlocked ? undefined : { color: 'rgba(255,255,255,0.12)' }}
-          style={s.ctaWrap}
+          style={[s.ctaWrap, ctaBlocked ? CTA.disabled : { backgroundColor: CTA_GLASS, ...CTA_GLOW }]}
         >
-          {(isLast || slide === 1 || slide === 2 || slide === 3) && !ctaBlocked ? (
-            /* Operator, 7 september 2026 (mockup): witte knop op de foto
-               i.p.v. blauw of het donkere verloop — dit slotscherm is
-               donker met een foto, geen van beide andere stijlen past.
-               Operator, 22 september 2026 ("next cta moet hier pas actief
-               en wit worden bij keuze gemaakt"): stap 3 (`slide === 2`)
-               krijgt dezelfde witte knop, maar pas ZODRA `changeGoals`
-               niet meer leeg is (`!ctaBlocked`) — zie de gedimde tak
-               hieronder voor de toestand ervoor.
-               Operator, 22 september 2026 (vervolg, "cta moet identiek
-               zelfde als in stap 3"): stap 4 (`slide === 3`) volgt exact
-               dezelfde regel, gezelfde `ctaBlocked`.
-               Operator, 22 september 2026 (vervolg, veiligheidsdisclaimer):
-               `isLast` volgt nu dezelfde regel — pas wit zodra
-               `safetyAck` waar is (ook via `ctaBlocked`).
-               Operator, 22 september 2026 (vervolg, "ook bij stap 2 echte
-               keuze laten maken"): was ONVOORWAARDELIJK wit op `slide ===
-               1` ("geen keuze wordt gemaakt") — nu ook via `ctaBlocked`,
-               dus pas wit zodra `demoMode` gezet is. */
-            <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
-              <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
-            </View>
-          ) : ctaBlocked ? (
+          {ctaBlocked ? (
             /* Gedimde, inerte staat — geen keuze gemaakt op stap 2/3/4, of
                veiligheidsdisclaimer nog niet bevestigd op het slotscherm.
                Zelfde blur-basis als de standaardknop, maar zonder de
@@ -1533,12 +1511,6 @@ export default function BreathWelcomeScreen() {
                "klaar om te tikken"-witte knop hierboven meteen duidelijk
                is. */
             <View style={[s.cta, s.ctaBlurWrap]}>
-              <BlurView
-                intensity={40}
-                tint="dark"
-                blurMethod="dimezisBlurViewSdk31Plus"
-                style={StyleSheet.absoluteFill}
-              />
               <Text style={s.ctaTxtBlocked}>{ctaLabel}</Text>
             </View>
           ) : (
@@ -1555,19 +1527,7 @@ export default function BreathWelcomeScreen() {
               style={[s.cta, s.ctaBlurWrap]}
               onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}
             >
-              <BlurView
-                intensity={40}
-                tint="dark"
-                blurMethod="dimezisBlurViewSdk31Plus"
-                style={StyleSheet.absoluteFill}
-              />
-              {/* Operator, 22 september 2026: eerst een blauwe tint, toen
-                 "blur zwart transparant" (geen tint) — maar op de donkere
-                 foto viel de knop zo bijna weg, geen randcontrast. "Geef
-                 dat een witte transparante kleur": een lichte, doorschijnende
-                 witte tint bovenop de blur, zodat de knop weer een eigen
-                 vorm heeft i.p.v. te versmelten met de achtergrond. */}
-              <View style={[StyleSheet.absoluteFill, s.ctaTintWhite]} />
+              {/* 22 okt 2026 (operator): doorschijnend glas met witte lichtbron erachter, zoals de welkomst-knoppen — geen grijze tint meer. */}
               <Text style={s.ctaTxt}>{ctaLabel}</Text>
               {/* Operator, 22 september 2026 ("lichtflits zoals bij welcome
                  in breathwork, ook bij onboarding eerste stap"): enkel op
@@ -4580,7 +4540,7 @@ const s = StyleSheet.create({
      `footerLight` (effen wit achter de CTA op stap 1) hoorde bij het
      oude lichte-achtergrond-thema — nu de foto donker en full-bleed is,
      gaf die band juist een storende witte streep. Weg. */
-  ctaWrap: { borderRadius: 999, overflow: 'hidden' },
+  ctaWrap: { borderRadius: 999 },
   /* Free (19 okt 2026): één kleine regel onder de laatste knop. De footer
      heeft al gap 18 — met -8 staat hij dicht bij de knop. */
   ctaFreeNote: {
