@@ -35,6 +35,16 @@ Methode: doorloop als nieuwe bezoeker op emulator (411×914, 3-knops navigatie) 
 ## Niet op de emulator te beoordelen (jouw A16/iPhone)
 Animaties, glas/blur, haptiek, geluid, golfvulling van de ervaringskaarten, de meting met de camera, iOS.
 
+| Keuzebladen (Times/Routine/…) | laatste kaart halverwege afgesneden (ScrollView te vroeg gemeten) | `components/SheetScroll.tsx`: hoogte volgt gemeten inhoud (nog te verifiëren op toestel) |
+| Tegels in breath-setup/intensity | waarde afgekapt ("Diaphragma…", "Less stress +…") | krimpt (geverifieerd: "Recover & relax" past) |
+
+## Emulator-beperking (belangrijk)
+De Windows-emulator (qemu) crasht herhaaldelijk (access violation) zodra de app zware schermen met glas/blur tekent (Level/Routine/Times in de protocolbouwer). Dat is een fout in de host-emulatie, geen app-crash. Deze schermen en alle animaties moeten op de A16 getest worden.
+
 ## Open / nog te doen
 - Profile- en systeemstrook-fix verifiëren in de nieuwe build.
 - Resterende schermen en niveaus in de flow-ronde (agenda, bracelet-schermen, speler-overgangen, dagpas-verloop).
+
+- Op de A16 testen (zie docs/CONTROLELIJST_OPERATOR.md): protocolbouwer Level/Routine/Times/Plan length en het bevestigingsmoment, pulsen/animaties, geluid, haptiek, glas.
+- Nog niet gezien (emulator viel uit): agenda met een echt protocol, bracelet-schermen, speler-overgangen, dagpas-verloop.
+- Ontwerp-aandachtspunt: uitgeschakelde glazen CTA toont witte tekst op donker vlak; op sommige schermen leest dat bijna als actief.
