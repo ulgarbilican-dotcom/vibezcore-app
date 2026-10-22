@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import SheetScroll from '@/components/SheetScroll';
 import { FREE_COPY } from '@/constants/free-session-copy';
 import BalancedText from '@/components/BalancedText';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
@@ -3595,8 +3596,8 @@ export default function BreathSetupScreen() {
                  elke rij als eigen omrande kaart — één afgeronde
                  `sheetList` met dunne scheidingslijnen, selectie via een
                  vinkje rechts i.p.v. een gekleurde rand/achtergrond. */}
-              <ScrollView
-                style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+              <SheetScroll
+                
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
               >
@@ -3636,7 +3637,7 @@ export default function BreathSetupScreen() {
                     );
                   })}
                 </View>
-              </ScrollView>
+              </SheetScroll>
               </SafeAreaView>
           </GlassSheet>
 
@@ -3671,8 +3672,8 @@ export default function BreathSetupScreen() {
                  (wat het ritme doet) + de bestaande niveau-/detailzin
                  (`techniqueDecisionLine`, dezelfde bron als de oude
                  techniek-infopopup) per rij, i.p.v. enkel de naam. */}
-              <ScrollView
-                style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+              <SheetScroll
+                
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
               >
@@ -3742,7 +3743,7 @@ export default function BreathSetupScreen() {
                     );
                   })}
                 </View>
-              </ScrollView>
+              </SheetScroll>
               </SafeAreaView>
           </GlassSheet>
 
@@ -3777,8 +3778,8 @@ export default function BreathSetupScreen() {
                  `ScrollView` zonder `flex`/`flexShrink` groeit gewoon mee
                  met zijn eigen inhoud i.p.v. de resterende ruimte te
                  vullen. */}
-              <ScrollView
-                style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+              <SheetScroll
+                
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 12) }}
               >
@@ -3847,7 +3848,7 @@ export default function BreathSetupScreen() {
                     />
                   </View>
                 )}
-              </ScrollView>
+              </SheetScroll>
               </SafeAreaView>
           </GlassSheet>
 
@@ -3894,8 +3895,8 @@ export default function BreathSetupScreen() {
                 <BalancedText style={s.horizonHint}>
                   Applies to your whole protocol, not just this session
                 </BalancedText>
-                <ScrollView
-                  style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+                <SheetScroll
+                  
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
                 >
@@ -3943,7 +3944,7 @@ export default function BreathSetupScreen() {
                       );
                     })}
                   </View>
-                </ScrollView>
+                </SheetScroll>
               </SafeAreaView>
           </GlassSheet>
         </>

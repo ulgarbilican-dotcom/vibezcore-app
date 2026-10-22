@@ -47,6 +47,7 @@
    levend overzicht van de 4 keuzes — zelfde cirkel-taal als "Build it
    yourself", nu ook hier. */
 
+import SheetScroll from '@/components/SheetScroll';
 import { useBackTo } from '@/hooks/useBackTo';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import VibezGlass from '@/components/VibezGlass';
@@ -1059,8 +1060,8 @@ export default function IntensityScreen() {
                 <Text style={s.sheetDoneTxt}>Done</Text>
               </AnimatedPressable>
             </View>
-            <ScrollView
-              style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+            <SheetScroll
+              
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
             >
@@ -1074,7 +1075,7 @@ export default function IntensityScreen() {
                   />
                 ))}
               </View>
-            </ScrollView>
+            </SheetScroll>
           </SafeAreaView>
       </GlassSheet>
 
@@ -1107,8 +1108,8 @@ export default function IntensityScreen() {
                 <Text style={s.sheetDoneTxt}>Done</Text>
               </AnimatedPressable>
             </View>
-            <ScrollView
-              style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+            <SheetScroll
+              
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
             >
@@ -1124,7 +1125,7 @@ export default function IntensityScreen() {
                   />
                 ))}
               </View>
-            </ScrollView>
+            </SheetScroll>
           </SafeAreaView>
       </GlassSheet>
 
@@ -1292,8 +1293,8 @@ export default function IntensityScreen() {
             <Text style={s.timesCountHint}>
               Choose {count} time{count === 1 ? '' : 's'} — {picked.length}/{count} selected
             </Text>
-            <ScrollView
-              style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
+            <SheetScroll
+              
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
             >
@@ -1341,7 +1342,7 @@ export default function IntensityScreen() {
                   );
                 })}
               </View>
-            </ScrollView>
+            </SheetScroll>
           </SafeAreaView>
       </GlassSheet>
 
