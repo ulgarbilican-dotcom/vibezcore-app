@@ -1090,7 +1090,7 @@ export default function BreathScreen() {
               <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
 <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
                 <LinearGradient
-                  colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                  colors={['#ffffff00', '#ffffff5c', '#ffffff00']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFill}

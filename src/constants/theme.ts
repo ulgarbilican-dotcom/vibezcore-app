@@ -326,9 +326,11 @@ export const CardHeights = {
 export const CTA_GLASS = 'rgba(30,30,32,0.34)';
 
 export const CTA_GLOW = {
-  /* Gelijkmatige witte gloed rond de pil (geen omlaag uitsmerende elevation-schaduw): het licht
-     zit achter de knop, buiten de rand, en schijnt door het doorschijnende glas. */
-  boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 22, spreadDistance: 2, color: 'rgba(255,255,255,0.5)' }],
+  /* 22 okt 2026 (operator): de lichtbron zit ACHTER het glas en blijft binnen de knop — een zachte
+     witte gloed die onderin opkomt en naar boven uitdooft, zodat de knop zelf oplicht en opvalt.
+     Geen ring of schaduw buiten de rand. Teken op de achtergrond van de knop (onder de tekst). */
+  experimental_backgroundImage:
+    'radial-gradient(ellipse 85% 140% at 50% 125%, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.22) 48%, rgba(255,255,255,0) 78%)',
 } as const;
 
 export const CTA = {
@@ -348,7 +350,7 @@ export const CTA = {
   /* Ondoorzichtig: een doorzichtige uitgeschakelde knop liet de tekst van kaarten
      eronder erdoorheen schijnen. */
   /* Niet beschikbaar: vlak, donker, GEEN lichtbron (de glow is het signaal "actief"). */
-  disabled: { backgroundColor: '#161618', boxShadow: [] },
+  disabled: { backgroundColor: '#161618', experimental_backgroundImage: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))' },
   labelDisabled: { color: 'rgba(255,255,255,0.38)' },
   label: {
     fontFamily: BrandFonts.semibold,

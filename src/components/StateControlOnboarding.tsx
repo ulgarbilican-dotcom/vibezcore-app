@@ -619,7 +619,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 <Text style={s.ctaTxt}>{ctaLabel}</Text>
                 <Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none">
                   <ExpoLinearGradient
-                    colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
+                    colors={['#ffffff00', '#ffffff5c', '#ffffff00']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={StyleSheet.absoluteFill}
