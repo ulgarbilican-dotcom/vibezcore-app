@@ -342,10 +342,11 @@ export function stateGlass(hex: string) {
   const g = parseInt(full.slice(2, 4), 16);
   const b = parseInt(full.slice(4, 6), 16);
   const c = (a: number) => `rgba(${r},${g},${b},${a})`;
-  /* 22 okt 2026 (operator): geen donkere vulling maar een lichte, doorzichtige kleurvulling in de kleur
-     van de toestand (zoals de welkomst-knoppen doorschijnend zijn). Geen verloop, geen gloed. */
+  /* 22 okt 2026 (operator): de knop IS nu het glas van de iconenbalk — <VibezGlass tint> als eerste kind
+     (zie StateGlassFill); de knop zelf heeft geen eigen vulling meer. */
+  void c;
   return {
-    backgroundColor: c(0.26),
+    backgroundColor: 'transparent',
     experimental_backgroundImage: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))',
   };
 }

@@ -1414,6 +1414,7 @@ export default function BreathScreen() {
           style={[s.cta, CTA_GLOW, stateGlass(st.accent)]}
           android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
         >
+          <VibezGlass radius={999} tint={st.accent} level="normal" style={StyleSheet.absoluteFill} />
           {/* Operator, 25 september 2026 ("groen van de choose cta niet
              mooi/modern, kleur per state of 1 vaste kleur?"): was
              blur + `st.accent`-tint — een knop die van kleur wisselt per
