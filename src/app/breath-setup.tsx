@@ -3596,7 +3596,7 @@ export default function BreathSetupScreen() {
                  `sheetList` met dunne scheidingslijnen, selectie via een
                  vinkje rechts i.p.v. een gekleurde rand/achtergrond. */}
               <ScrollView
-                style={{ flexShrink: 1 }}
+                style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
               >
@@ -3672,7 +3672,7 @@ export default function BreathSetupScreen() {
                  (`techniqueDecisionLine`, dezelfde bron als de oude
                  techniek-infopopup) per rij, i.p.v. enkel de naam. */}
               <ScrollView
-                style={{ flexShrink: 1 }}
+                style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
               >
@@ -3778,7 +3778,7 @@ export default function BreathSetupScreen() {
                  met zijn eigen inhoud i.p.v. de resterende ruimte te
                  vullen. */}
               <ScrollView
-                style={{ flexShrink: 1 }}
+                style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 12) }}
               >
@@ -3895,7 +3895,7 @@ export default function BreathSetupScreen() {
                   Applies to your whole protocol, not just this session
                 </BalancedText>
                 <ScrollView
-                  style={{ flexShrink: 1 }}
+                  style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
                 >

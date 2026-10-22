@@ -78,7 +78,7 @@ import {
   CalendarRange,
   Target,
 } from 'lucide-react-native';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -1060,7 +1060,7 @@ export default function IntensityScreen() {
               </AnimatedPressable>
             </View>
             <ScrollView
-              style={{ flexShrink: 1 }}
+              style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
             >
@@ -1108,7 +1108,7 @@ export default function IntensityScreen() {
               </AnimatedPressable>
             </View>
             <ScrollView
-              style={{ flexShrink: 1 }}
+              style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
             >
@@ -1293,7 +1293,7 @@ export default function IntensityScreen() {
               Choose {count} time{count === 1 ? '' : 's'} — {picked.length}/{count} selected
             </Text>
             <ScrollView
-              style={{ flexShrink: 1 }}
+              style={{ flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.58 }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
             >
