@@ -3839,7 +3839,7 @@ const s = StyleSheet.create({
     gap: 10,
     height: 50,
     marginHorizontal: 26,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#D2D2D7',

@@ -431,7 +431,7 @@ const s = StyleSheet.create({
   primary: {
     marginTop: 24,
     height: 52,
-    borderRadius: 12,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -442,7 +442,7 @@ const s = StyleSheet.create({
   secondary: {
     marginTop: 10,
     height: 52,
-    borderRadius: 12,
+    borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',

@@ -157,7 +157,7 @@ function ActiveSessionPill({
 }
 
 const s = StyleSheet.create({
-  dockWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 4 },
+  dockWrap: { alignItems: 'center', paddingTop: 10, paddingBottom: 14 },
   wrap: {
     position: 'absolute',
     left: 0,

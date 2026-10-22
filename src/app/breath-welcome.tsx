@@ -4572,7 +4572,7 @@ const s = StyleSheet.create({
      `footerLight` (effen wit achter de CTA op stap 1) hoorde bij het
      oude lichte-achtergrond-thema — nu de foto donker en full-bleed is,
      gaf die band juist een storende witte streep. Weg. */
-  ctaWrap: { borderRadius: 14, overflow: 'hidden' },
+  ctaWrap: { borderRadius: 999, overflow: 'hidden' },
   /* Free (19 okt 2026): één kleine regel onder de laatste knop. De footer
      heeft al gap 18 — met -8 staat hij dicht bij de knop. */
   ctaFreeNote: {
@@ -4594,7 +4594,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
   },
   /* Operator, 22 september 2026 ("next knop ook transparant"): eigen

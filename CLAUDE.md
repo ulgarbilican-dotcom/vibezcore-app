@@ -312,9 +312,14 @@ veranderen NIET bij omschakeling.
   (player, mini-player, library-schermen) — nog niet app-breed · succes
   `#4ade80`/`#16a34a` · fout `#ef4444`/`#dc2626` · paneel `#1e1e1e`/`#ffffff` ·
   rand `#2a2a2a`/`#e5e5ea` · tekst primair `#f4f4f4`/`#1D1D1F` · tekst gedimd
-  `#8a8a8a`/`#8E8E93`. CTA-knop-chrome (v4.4) is een aparte rol: donkere
-  achtergrond → witte knop + donkere tekst; lichte achtergrond → zwarte/
-  Royal-Indigo knop + witte tekst — CTA-achtergrond is nooit de accentkleur.
+  `#8a8a8a`/`#8E8E93`. CTA-knop-chrome is een aparte rol (GEWIJZIGD 22 oktober 2026, operator:
+  "pillen cta ok" — vervangt de oude regel "altijd wit met donkere tekst"):
+  ALLE knoppen zijn een volledig ronde PIL (borderRadius 999, 50 dp hoog). De ene
+  beslissende actie op een scherm (Start session, Subscribe, welkomst-/intro-CTA's)
+  = effen witte pil met donkere tekst. Doorgaan-knoppen in flows (Continue/Next/
+  Build…) = glazen pil (`CTA.container` in theme.ts: ondoorzichtig donkergrijs,
+  dunne lichte rand, witte tekst). Uitgeschakeld = ondoorzichtig donker vlak.
+  CTA-achtergrond is nooit de accentkleur.
 - **Logo:** `vibezcore_wordmark.png` (schermkoppen, vervangt platte tekst) en
   `vibezcore_icon.png` (app-icoon). Zitten in de projectkennis.
 - **Look & feel:** dark (default), hoog contrast, witte tekst, strak, royale

@@ -466,13 +466,13 @@ const s = StyleSheet.create({
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
      `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
-  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 999, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   introCtaGlass: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     overflow: 'hidden',
   },
@@ -525,7 +525,7 @@ const s = StyleSheet.create({
     gap: 10,
     height: 50,
     marginHorizontal: 26,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#D2D2D7',
