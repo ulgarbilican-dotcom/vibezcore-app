@@ -44,7 +44,9 @@ const listeners = new Set<(v: HapticStrength) => void>();
 
 void AsyncStorage.getItem(KEY)
   .then((v) => {
-    if ((v === 'soft' || v === 'strong') && v !== strength) {
+    /* 22 okt 2026 (operator: "bij Soft voel ik niets"): Soft bestaat niet meer; een oude opgeslagen
+       'soft' wordt Medium. */
+    if (v === 'strong' && v !== strength) {
       strength = v;
       listeners.forEach((l) => l(v));
     }
@@ -55,7 +57,8 @@ export function getHapticStrength(): HapticStrength {
   return strength;
 }
 
-export function setHapticStrength(v: HapticStrength): void {
+export function setHapticStrength(vIn: HapticStrength): void {
+  const v: HapticStrength = vIn === 'soft' ? 'medium' : vIn;
   if (v === strength) return;
   strength = v;
   listeners.forEach((l) => l(v));

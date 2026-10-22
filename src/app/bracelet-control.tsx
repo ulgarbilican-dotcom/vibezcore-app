@@ -3859,7 +3859,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             sessie. */}
         <Text style={s.avSection}>VIBRATION STRENGTH</Text>
         <View style={s.avSeg}>
-          {(['soft', 'medium', 'strong'] as const).map((k) => {
+          {(['medium', 'strong'] as const).map((k) => {
             const on = k === strength;
             return (
               <Pressable
@@ -3869,7 +3869,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
                   setHapticStrength(k);
                   /* Voel meteen het verschil. */
                   void Haptics.impactAsync(
-                    k === 'soft' ? Haptics.ImpactFeedbackStyle.Light : k === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
+                    k === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
                   );
                 }}
                 style={[s.avSegItem, on && s.avSegItemOn]}
@@ -3877,7 +3877,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
                 accessibilityState={{ selected: on }}
               >
                 <Text style={[s.avSegTxt, on && s.avSegTxtOn]}>
-                  {k === 'soft' ? 'Soft' : k === 'medium' ? 'Medium' : 'Strong'}
+                  {k === 'medium' ? 'Medium' : 'Strong'}
                 </Text>
               </Pressable>
             );
@@ -4629,7 +4629,10 @@ function IdleScreen({
             {trialRunning && condensedMinutes !== null ? (
               <Text style={s.trialInfoTxt}>{'Sped up for the preview.\nA full session slows down gradually.'}</Text>
             ) : !trialRunning ? (
-              <Text style={s.trialInfoTxt}>{FREE_COPY.previewLine}</Text>
+              /* 22 okt 2026 (operator): "Full session with Premium" is tikbaar en opent de plannen. */
+              <Pressable onPress={() => setPaywallOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
+                <Text style={s.trialInfoTxt}>{FREE_COPY.previewLine}</Text>
+              </Pressable>
             ) : null}
           </View>
         ) : null}

@@ -4305,7 +4305,7 @@ export function BreathSession() {
                 Zelfde chips als "Soundscape volume" hierboven. */}
             {hapticsOn || watchOn ? (
               <View style={[s.levelRow, { marginBottom: 14 }]}>
-                {(['soft', 'medium', 'strong'] as const).map((l) => {
+                {(['medium', 'strong'] as const).map((l) => {
                   const on = l === hapticStrength;
                   return (
                     <Pressable
@@ -4314,11 +4314,7 @@ export function BreathSession() {
                         if (on) return;
                         setHapticStrength(l);
                         void Haptics.impactAsync(
-                          l === 'soft'
-                            ? Haptics.ImpactFeedbackStyle.Light
-                            : l === 'strong'
-                              ? Haptics.ImpactFeedbackStyle.Heavy
-                              : Haptics.ImpactFeedbackStyle.Medium,
+                          l === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
                         ).catch(() => {});
                       }}
                       style={[s.levelChip, on && s.levelChipOn]}

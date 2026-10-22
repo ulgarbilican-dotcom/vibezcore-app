@@ -874,7 +874,7 @@ const onWatchStateAction = (e: { action: string; kind: string }) => {
   /* Trilsterkte gewijzigd op het horloge (19 okt 2026): geldt ook hier. */
   if (e.kind === 'settings' && e.action.startsWith('strength:')) {
     const v = e.action.slice('strength:'.length);
-    if (v === 'soft' || v === 'medium' || v === 'strong') setHapticStrength(v as HapticStrength);
+    if (v === 'soft' || v === 'medium' || v === 'strong') setHapticStrength(v === 'soft' ? 'medium' : (v as HapticStrength));
     return;
   }
   if (e.kind !== 'bracelet') return;
