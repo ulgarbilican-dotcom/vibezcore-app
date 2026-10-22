@@ -1602,18 +1602,40 @@ function AudioScreen({
          waar in de boom hij zit. */}
       {intro && (
         <View style={[StyleSheet.absoluteFill, s.introOverlay]}>
-          <Animated.View style={[StyleSheet.absoluteFill, introKenBurnsStyle]}>
+          {/* 22 okt 2026 (operator: "zoom uit de foto"): zelfde opbouw als de Breath-intro: de foto op
+              volle breedte in zijn eigen verhouding (9:16) tegen de bovenrand, een geblurde kopie
+              erachter, en onderaan zacht naar zwart waar tekst en knop staan. */}
+          <Image
+            source={imageSource(`${CDN}/pic%20welcome%20audio%20library%20app.png`)}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            blurRadius={45}
+          />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.5)' }]} />
+          <Animated.View
+            style={[
+              { position: 'absolute', top: 0, left: 0, width: Dimensions.get('window').width, height: Math.round(Dimensions.get('window').width * (1672 / 941)), overflow: 'hidden' },
+              introKenBurnsStyle,
+            ]}
+          >
             <Image
               source={imageSource(`${CDN}/pic%20welcome%20audio%20library%20app.png`)}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
           </Animated.View>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0.92)', '#0a0a0a']}
+            locations={[0.38, 0.6, 0.78, 0.9]}
+            style={StyleSheet.absoluteFill}
+          />
           {/* 19 okt 2026 (operator: "kunnen wij onderaan transparant maken
               en de fotos etc full screen?" → "ja"): de foto loopt tot de
               onderrand achter de doorzichtige tabbalk; tekst en knop
               blijven op dezelfde plek — 34 + de balkhoogte. */}
-          <View style={[s.introTextWrap, { paddingBottom: 34 + tabInset }]}>
+          {/* Knop op dezelfde hoogte als bij Breath en State Control (die hebben nog een regel onder de knop). */}
+          <View style={[s.introTextWrap, { paddingBottom: 34 + 46 + tabInset }]}>
             <Animated.Text style={[s.introEyebrow, introEyebrowStyle]}>
               VIBEZCORE AUDIO LIBRARY
             </Animated.Text>

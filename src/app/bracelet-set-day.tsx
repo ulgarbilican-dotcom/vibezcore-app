@@ -524,6 +524,7 @@ export default function BraceletSetDayScreen() {
         <TimePickerSheet
           visible={showTimePicker}
           value={draftTime}
+          accent={addingMeta?.color}
           onChange={setDraftTime}
           onClose={() => setShowTimePicker(false)}
         />
