@@ -100,7 +100,8 @@ if (Platform.OS === 'android') {
   const applyNavStyle = () => {
     if (AppState.currentState !== 'active') return;
     try {
-      NavigationBar.setStyle('light');
+      /* Een afgewezen belofte (activity net weg) wordt door try/catch niet gevangen. */
+      void Promise.resolve(NavigationBar.setStyle('light')).catch(() => {});
     } catch {
       /* nooit de start blokkeren */
     }
