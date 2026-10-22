@@ -650,7 +650,7 @@ const s = StyleSheet.create({
     ...CTA_GLOW,
   },
   modalPrimaryTxt: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontFamily: BrandFonts.bold,
     fontSize: 15,
     letterSpacing: 0.3,

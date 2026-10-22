@@ -328,6 +328,6 @@ const s = StyleSheet.create({
   emptyBtnTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 16,
-    color: '#ffffff',
+    color: '#0a0a0a',
   },
 });

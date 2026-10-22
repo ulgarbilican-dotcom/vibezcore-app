@@ -212,7 +212,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.4, color: '#ffffff' },
+  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.4, color: '#0a0a0a' },
   later: {
     marginTop: 14,
     textAlign: 'center',

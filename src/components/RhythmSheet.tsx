@@ -672,7 +672,7 @@ const s = StyleSheet.create({
     marginTop: 6,
     marginBottom: 2,
   },
-  ctaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.bold },
+  ctaTxt: { color: '#0a0a0a', fontSize: 17, fontFamily: BrandFonts.bold },
   secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   secondaryTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
   pressed: { opacity: 0.7 },

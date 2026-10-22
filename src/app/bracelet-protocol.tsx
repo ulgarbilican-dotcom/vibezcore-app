@@ -318,5 +318,5 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  primaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  primaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#0a0a0a' },
 });

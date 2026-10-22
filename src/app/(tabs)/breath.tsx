@@ -1165,7 +1165,6 @@ export default function BreathScreen() {
             borderRadius: 20,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(20,20,22,0.55)',
             zIndex: 20,
           }}
         >
@@ -1505,7 +1504,7 @@ const s = StyleSheet.create({
      schermtoestand) te raken. */
   introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 26, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   introCtaGlass: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 50, borderRadius: 999 },
-  introCtaGlassTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
+  introCtaGlassTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 17 },
   introCtaMatch: {
     flexDirection: 'row',
     alignItems: 'center',

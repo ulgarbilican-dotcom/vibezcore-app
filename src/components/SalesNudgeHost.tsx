@@ -438,7 +438,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     ...CTA_GLOW,
   },
-  primaryTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.semibold },
+  primaryTxt: { color: '#0a0a0a', fontSize: 17, fontFamily: BrandFonts.semibold },
   /* Tweede knop: zacht glas, rand ≤16% (pillen-regel, 19 okt 2026). */
   secondary: {
     marginTop: 10,

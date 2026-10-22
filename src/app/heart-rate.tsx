@@ -219,7 +219,7 @@ const s = StyleSheet.create({
     marginTop: 22,
     ...CTA_GLOW,
   },
-  ctaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.bold },
+  ctaTxt: { color: '#0a0a0a', fontSize: 17, fontFamily: BrandFonts.bold },
   empty: { color: 'rgba(255,255,255,0.55)', fontSize: 15, fontFamily: BrandFonts.medium, marginTop: 6 },
   note: { color: 'rgba(255,255,255,0.55)', fontSize: 12.5, fontFamily: BrandFonts.medium, textAlign: 'center', marginTop: 24 },
   clear: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },

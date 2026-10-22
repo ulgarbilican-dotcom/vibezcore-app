@@ -622,7 +622,7 @@ const s = StyleSheet.create({
     ...CTA_GLOW,
   },
   btnPrimaryText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

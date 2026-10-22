@@ -933,7 +933,7 @@ const s = StyleSheet.create({
   },
   /* Zelfde ondoorzichtige uitgeschakelde stijl als CTA.disabled (theme.ts). */
   saveBtnOff: { backgroundColor: '#595959' },
-  saveBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#ffffff' },
+  saveBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#0a0a0a' },
   saveBtnTxtOff: { color: '#1D1D1F' },
 
   ringWrap: { alignItems: 'center', marginTop: 8, marginBottom: 22 },

@@ -3391,7 +3391,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 13.5,
     letterSpacing: 1.4,
-    color: '#ffffff',
+    color: '#0a0a0a',
   },
   skipSheetSecondary: { paddingVertical: 12, alignItems: 'center' },
   skipSheetSecondaryTxt: {
@@ -3779,7 +3779,7 @@ const s = StyleSheet.create({
     ...CTA_GLOW,
   },
   braceletModalCloseTxt: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontFamily: BrandFonts.bold,
     fontSize: 15,
   },
@@ -4589,7 +4589,7 @@ const s = StyleSheet.create({
     width: 72,
   },
   ctaTxt: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontFamily: BrandFonts.semibold,
     fontSize: 17,
   },

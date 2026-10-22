@@ -624,7 +624,7 @@ const pc = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  ctaText: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16 },
+  ctaText: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 16 },
   note: {
     color: 'rgba(255,255,255,0.5)',
     fontFamily: BrandFonts.regular,
@@ -2771,7 +2771,7 @@ const s = StyleSheet.create({
     ...CTA_GLOW,
   },
   primaryBtnText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
   },

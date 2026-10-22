@@ -258,7 +258,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#0a0a0a' },
   /* Vervolg ("omlijning niet mooi"): iOS' grijze knop — zachte vulling,
      geen rand. */
   secondaryBtn: {

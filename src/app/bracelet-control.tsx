@@ -6667,7 +6667,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  quickSheetCtaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.bold },
+  quickSheetCtaTxt: { color: '#0a0a0a', fontSize: 17, fontFamily: BrandFonts.bold },
   quickSheetBack: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   quickSheetBackTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
   modeDots: {

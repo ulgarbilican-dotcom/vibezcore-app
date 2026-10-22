@@ -332,7 +332,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  ctaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.semibold },
+  ctaTxt: { color: '#0a0a0a', fontSize: 17, fontFamily: BrandFonts.semibold },
   /* Wit (operator, 7 okt 2026): de voorwaarden moeten duidelijk leesbaar zijn. */
   disclosure: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center', marginTop: 18 },
   links: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 12 },

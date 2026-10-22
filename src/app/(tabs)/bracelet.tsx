@@ -474,7 +474,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   introCtaTint: { backgroundColor: 'rgba(255,255,255,0.20)' },
-  introCtaGlassTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
+  introCtaGlassTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 17 },
   notNow: {
     position: 'absolute',
     left: 18,

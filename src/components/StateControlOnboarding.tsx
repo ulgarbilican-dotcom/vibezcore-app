@@ -1257,6 +1257,6 @@ const s = StyleSheet.create({
      zachte witte lichtbron erachter (CTA_GLOW) — geen hoekige witte knop meer. */
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, height: 52, overflow: 'hidden' },
-  ctaTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
+  ctaTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
 });

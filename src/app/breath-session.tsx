@@ -3544,7 +3544,7 @@ export function BreathSession() {
             ]}
             android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
           >
-            <Text style={[s.startTxt, { color: '#ffffff' }]}>
+            <Text style={[s.startTxt, { color: '#0a0a0a' }]}>
               {/* Operator, 7 september 2026: "2 cycles verwijderen, 30 sec
                  preview" — het rondeaantal verschilt nu per toestand
                  (zie PREVIEW_ROUNDS), de tekst noemt daarom de vaste
@@ -5415,7 +5415,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     fontFamily: BrandFonts.bold,
     fontSize: 13.5,
     letterSpacing: 1.4,
-    color: '#ffffff',
+    color: '#0a0a0a',
   },
   /* ── Het afsluitscherm ── */
   doneCard: {

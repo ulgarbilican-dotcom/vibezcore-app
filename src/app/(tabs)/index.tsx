@@ -3873,7 +3873,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.semibold,
     fontSize: 16,
     letterSpacing: 0.1,
-    color: '#ffffff',
+    color: '#0a0a0a',
   },
   /* Smalle, gedraaide lichtstrook die om de ~3,6s over de knop veegt —
      zelfde `ctaShimmer` als breath.tsx (vaste knop-hoogte, breder dan
@@ -5610,7 +5610,7 @@ const s = StyleSheet.create({
   },
   /* CTA-knoptekst-rol — 17px SemiBold, geen letterSpacing. */
   ctaTxt: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 17,
     fontFamily: BrandFonts.semibold,
   },

@@ -82,7 +82,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...CTA_GLOW,
   },
-  btnTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.bold, letterSpacing: -0.1 },
+  btnTxt: { color: '#0a0a0a', fontSize: 16, fontFamily: BrandFonts.bold, letterSpacing: -0.1 },
   cancel: { alignSelf: 'center', marginTop: 14, paddingVertical: 4 },
   cancelTxt: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontFamily: BrandFonts.semibold },
 });
