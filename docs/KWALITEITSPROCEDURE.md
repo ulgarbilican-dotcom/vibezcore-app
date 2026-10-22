@@ -33,3 +33,8 @@ Naast "is iets kapot" (overlap, afkapping) toets elk scherm op "ademt het":
 3. Verticaal evenwichtig: niet alles bovenaan met een gat eronder, of omgekeerd.
 4. Te veel voor dit formaat? Laat bijzaken weg (voetnoten, extra uitleg) in plaats van alles samen te drukken.
 Een scherm is pas goed als beide controles (kapot én ademruimte) geslaagd zijn.
+
+## 6. Lokale builds met nieuwe afbeeldingen (22 okt 2026)
+Een incrementele Gradle-build neemt NIEUWE afbeeldingsbestanden niet mee (zwart vlak in de app). Bij nieuwe foto's altijd:
+`gradlew -p android :app:createReleaseUpdatesResources --rerun :app:createBundleReleaseJsAndAssets --rerun :app:assembleRelease`
+Een store-/EAS-build bouwt vers en heeft dit niet.

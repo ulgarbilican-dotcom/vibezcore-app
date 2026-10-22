@@ -30,6 +30,8 @@ Methode: doorloop als nieuwe bezoeker op emulator (411×914, 3-knops navigatie) 
 | Tablets/vouwbaar | uitgerekt over het scherm | telefoonvenster (Android-config) |
 | Bevestigingsgeluid | schel | warm tweetonig geluid |
 
+| Boost/Calm (alleen lokale build) | zwart vlak: nieuwe foto's ontbraken in de lokale incrementele build | herbouw met afgedwongen asset-stappen; store-builds niet getroffen |
+
 ## Niet op de emulator te beoordelen (jouw A16/iPhone)
 Animaties, glas/blur, haptiek, geluid, golfvulling van de ervaringskaarten, de meting met de camera, iOS.
 
