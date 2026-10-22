@@ -1537,7 +1537,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
         <KeyboardAwareScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: tabInset + Math.max(safeInsets.bottom + 24, 72) }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: tabInset + Math.max(safeInsets.bottom + 24, 72) + 200 }]}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
           extraScrollHeight={20}
@@ -1592,7 +1592,7 @@ export default function AccountScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={s.root}>
       <KeyboardAwareScrollView
         ref={signedOutScrollRef}
-        contentContainerStyle={[s.scroll, { paddingBottom: tabInset + 48 + safeInsets.bottom }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: tabInset + 48 + safeInsets.bottom + 200 }]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         extraScrollHeight={20}
