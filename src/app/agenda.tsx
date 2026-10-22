@@ -1135,7 +1135,7 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 16,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 999,
     /* VIBEZCORE-glas i.p.v. omlijning (5 okt 2026). */
     overflow: 'hidden',
   },
@@ -1337,7 +1337,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
   },
   actionPlayTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
@@ -1369,7 +1369,7 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 16,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 999,
     /* VIBEZCORE-glas i.p.v. omlijning (5 okt 2026). */
     overflow: 'hidden',
   },

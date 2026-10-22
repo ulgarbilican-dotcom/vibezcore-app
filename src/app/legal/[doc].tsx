@@ -701,7 +701,7 @@ const s = StyleSheet.create({
   },
   contactBtn: {
     backgroundColor: '#ffffff',
-    borderRadius: 10,
+    borderRadius: 999,
     paddingVertical: 12,
     paddingHorizontal: 18,
     alignSelf: 'flex-start',
@@ -740,7 +740,7 @@ const s = StyleSheet.create({
   /* ── Fallback (unknown slug) ── */
   btn: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginTop: 20,

@@ -1571,7 +1571,7 @@ const s = StyleSheet.create({
   playBtn: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: 999,
     backgroundColor: C.accent,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1706,7 +1706,7 @@ const s = StyleSheet.create({
     backgroundColor: C.ctaBg,
     paddingVertical: 14,
     paddingHorizontal: 28,
-    borderRadius: 24,
+    borderRadius: 999,
     alignSelf: 'stretch',
     alignItems: 'center',
   },

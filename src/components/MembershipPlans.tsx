@@ -327,7 +327,7 @@ const s = StyleSheet.create({
   ctaInner: {
     backgroundColor: '#ffffff',
     height: 52,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },

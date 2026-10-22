@@ -2068,7 +2068,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 999,
     paddingHorizontal: 10,
     backgroundColor: '#ffffff',
   },
@@ -2167,7 +2167,7 @@ const s = StyleSheet.create({
     backgroundColor: C.accent,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 999,
     gap: 8,
   },
   /* Tekstlink met pijltje i.p.v. volle knop (operator-mockup). */
@@ -2203,7 +2203,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 13,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 999,
     gap: 8,
     marginBottom: 14,
   },
@@ -2610,7 +2610,7 @@ const s = StyleSheet.create({
     backgroundColor: C.panel,
     borderColor: C.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 8,
@@ -2809,7 +2809,7 @@ const s = StyleSheet.create({
   /* SSO-knop — Apple-style: zwarte achtergrond, witte tekst. */
   ssoBtn: {
     backgroundColor: '#000',
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -3080,7 +3080,7 @@ const s = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: 'rgba(10,10,12,0.18)',
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
   },
   cancelBtnText: {
@@ -3120,7 +3120,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.4)',
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
   },
   dangerBtnText: {

@@ -1952,7 +1952,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 50,
-    borderRadius: 12,
+    borderRadius: 999,
     paddingHorizontal: 16,
     marginBottom: 10,
   },

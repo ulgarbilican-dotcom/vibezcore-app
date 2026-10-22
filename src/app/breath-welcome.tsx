@@ -3422,7 +3422,7 @@ const s = StyleSheet.create({
     minHeight: 52, justifyContent: 'center',
     marginTop: 8,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     backgroundColor: '#ffffff',
   },

@@ -3989,7 +3989,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
   iconBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     /* Operator, 5 okt 2026 ("grijze bol rechtsboven moet weg — moet de
@@ -4221,7 +4221,7 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 999,
   },
   /* Operator, 11 september 2026 (2e correctie): "glas voor inactief,
      gradient voor actief" — glas-LOOK voor de niet-gekozen pillen (geen

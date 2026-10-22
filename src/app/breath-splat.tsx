@@ -360,7 +360,7 @@ const s = StyleSheet.create({
     marginTop: 18,
     paddingHorizontal: 40,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

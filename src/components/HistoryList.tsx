@@ -319,7 +319,7 @@ const s = StyleSheet.create({
   emptyBtn: {
     height: 50,
     paddingHorizontal: 28,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',

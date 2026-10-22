@@ -655,7 +655,7 @@ const s = StyleSheet.create({
   },
   cta: {
     backgroundColor: '#ffffff',
-    borderRadius: 14,
+    borderRadius: 999,
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',

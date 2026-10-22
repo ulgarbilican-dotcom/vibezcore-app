@@ -935,7 +935,7 @@ const s = StyleSheet.create({
   playBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 999,
     backgroundColor: ROYAL_INDIGO,
     alignItems: 'center',
     justifyContent: 'center',
@@ -946,7 +946,7 @@ const s = StyleSheet.create({
   paginationBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 999,
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,

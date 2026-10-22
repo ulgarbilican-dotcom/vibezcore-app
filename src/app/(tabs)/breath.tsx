@@ -1632,7 +1632,7 @@ const s = StyleSheet.create({
   howItWorksBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
@@ -1893,7 +1893,7 @@ const s = StyleSheet.create({
        dat professioneel?" — was een volle pil (25 = height/2), onboarding
        gebruikt overal `borderRadius:14`. Zelfde vorm nu, app-breed één
        herkenbare primaire-knop-chrome i.p.v. twee verschillende. */
-    borderRadius: 14,
+    borderRadius: 999,
   },
   /* Operator, 7 september 2026 (typografie-feedback): "letter-spacing in
      de CTA is wat overdreven" — 2.2 → 0.8. Semibold bleef al staan (matcht

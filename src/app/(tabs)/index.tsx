@@ -3717,7 +3717,7 @@ const s = StyleSheet.create({
   libSearchBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 999,
     marginRight: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4250,7 +4250,7 @@ const s = StyleSheet.create({
   },
   bLandingPrimaryBtn: {
     backgroundColor: C.accent,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
@@ -5008,7 +5008,7 @@ const s = StyleSheet.create({
   freePlayBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 999,
     backgroundColor: `${ROYAL_INDIGO}12`,
     borderWidth: 1,
     borderColor: `${ROYAL_INDIGO}30`,
@@ -5579,7 +5579,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D2D2D7',
     height: 52,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,

@@ -844,7 +844,7 @@ const s = StyleSheet.create({
     right: 8,
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -1069,7 +1069,7 @@ const s = StyleSheet.create({
   infoBtn: {
     marginTop: 22,
     height: 50,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',

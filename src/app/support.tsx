@@ -149,7 +149,7 @@ const s = StyleSheet.create({
     minHeight: 52, justifyContent: 'center',
     paddingVertical: 14,
     paddingHorizontal: 28,
-    borderRadius: 12,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
   },
   btnText: {

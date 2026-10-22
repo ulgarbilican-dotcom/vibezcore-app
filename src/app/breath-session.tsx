@@ -4639,7 +4639,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   iconBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: C.iconBorder,
     alignItems: 'center',
@@ -5406,7 +5406,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     minHeight: 52, justifyContent: 'center',
     marginTop: 8,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderWidth: 1,

@@ -859,7 +859,7 @@ const s = StyleSheet.create({
     alignSelf: 'stretch',
     marginTop: 18,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
@@ -941,7 +941,7 @@ const s = StyleSheet.create({
   checkBadge: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },

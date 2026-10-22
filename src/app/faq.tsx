@@ -601,7 +601,7 @@ const s = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 22,
-    borderRadius: 12,
+    borderRadius: 999,
   },
   emptyBtnText: {
     color: Brand.bg,
@@ -638,7 +638,7 @@ const s = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 999,
   },
   helpBtnText: {
     color: Brand.bg,

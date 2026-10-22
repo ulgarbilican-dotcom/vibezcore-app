@@ -296,7 +296,7 @@ const s = StyleSheet.create({
   playBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -252,7 +252,7 @@ const s = StyleSheet.create({
   actions: { paddingHorizontal: 24, paddingTop: 24 },
   cta: {
     height: 54,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',

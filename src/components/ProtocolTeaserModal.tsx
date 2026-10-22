@@ -206,7 +206,7 @@ const s = StyleSheet.create({
   cta: {
     marginTop: 22,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 999,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
