@@ -25,7 +25,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
-import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
+import { AudioAccent, AudioAccentLight, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
 import * as Haptics from 'expo-haptics';
@@ -325,13 +325,14 @@ const s = StyleSheet.create({
   trialScope: { color: DIM, fontFamily: BrandFonts.medium, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
   cta: { marginTop: 16 },
   ctaInner: {
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     height: 52,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.semibold },
+  ctaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.semibold },
   /* Wit (operator, 7 okt 2026): de voorwaarden moeten duidelijk leesbaar zijn. */
   disclosure: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.regular, fontSize: 11.5, lineHeight: 16, textAlign: 'center', marginTop: 18 },
   links: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 12 },

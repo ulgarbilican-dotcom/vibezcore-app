@@ -14,7 +14,7 @@
 import BalancedText from '@/components/BalancedText';
 import { MODE_GLYPH_ICONS, MODE_STATE_KEY } from '@/components/ModeGlyph';
 import VibezGlass from '@/components/VibezGlass';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -313,9 +313,10 @@ const s = StyleSheet.create({
     height: 48,
     paddingHorizontal: 28,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  primaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#0a0a0a' },
+  primaryTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
 });

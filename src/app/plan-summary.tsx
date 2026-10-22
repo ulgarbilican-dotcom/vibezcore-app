@@ -11,7 +11,7 @@
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BREATH_STATES } from '@/data/breath-states';
 import { goalsByKeys } from '@/data/goals';
 import { dayKey } from '@/utils/bracelet-history';
@@ -285,14 +285,15 @@ const s = StyleSheet.create({
   cta: {
     height: 52,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
   ctaTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 13,
     letterSpacing: 1.2,
-    color: '#0a0a0a',
+    color: '#ffffff',
   },
 });

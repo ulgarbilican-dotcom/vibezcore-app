@@ -15,7 +15,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
@@ -150,10 +150,11 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
+    ...CTA_GLOW,
   },
   btnText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontFamily: BrandFonts.bold,
     fontSize: 15,
     letterSpacing: 0.3,

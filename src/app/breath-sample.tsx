@@ -30,7 +30,7 @@ import GuidanceSelector, {
   type GuidanceMode,
 } from '@/components/GuidanceSelector';
 import { BREATH_STATES } from '@/data/breath-states';
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
   claimVoiceSource,
@@ -643,13 +643,14 @@ const s = StyleSheet.create({
   modalPrimary: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
+    ...CTA_GLOW,
   },
   modalPrimaryTxt: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontFamily: BrandFonts.bold,
     fontSize: 15,
     letterSpacing: 0.3,

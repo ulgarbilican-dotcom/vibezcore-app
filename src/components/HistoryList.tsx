@@ -9,7 +9,7 @@
    gewone rode tekstknop om te wissen. Kleur zit enkel in de icoontjes.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import type { ReactNode } from 'react';
@@ -320,13 +320,14 @@ const s = StyleSheet.create({
     height: 50,
     paddingHorizontal: 28,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
   emptyBtnTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 16,
-    color: '#0a0a0a',
+    color: '#ffffff',
   },
 });

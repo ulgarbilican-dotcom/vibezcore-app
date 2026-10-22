@@ -20,7 +20,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
    actief" — nooit voor spinners of CTA-knoppen. CTA-regel v4.4 op een
@@ -340,11 +340,12 @@ const s = StyleSheet.create({
   btn: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 32,
     marginTop: 24,
+    ...CTA_GLOW,
   },
   btnText: {
     color: Brand.bg,

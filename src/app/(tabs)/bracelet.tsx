@@ -273,28 +273,16 @@ function StateControlIntro({
             onPressOut={() => {
               ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
             }}
-            style={onboarding ? s.introCtaGlassWrap : s.introCtaMatch}
-            android_ripple={{ color: onboarding ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)' }}
+            style={s.introCtaGlassWrap}
+            android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
           >
-            {onboarding ? (
-              /* Zelfde opbouw als breath-welcome stap 1: Pressable (ctaWrap)
-                 → View (cta + ctaBlurWrap) → BlurView + witte tint + tekst.
-                 Rechtstreeks in de Pressable bleef de knop onzichtbaar
-                 (flowtest 20 okt 2026). */
-              <View style={s.introCtaGlass}>
-                {/* 20 okt 2026: GEEN BlurView meer. In dit scherm bleef de knop
-                    (tekst incl.) onzichtbaar op Android terwijl de node wel in
-                    de hiërarchie stond (flowtests, 3 runs) — de blur in een
-                    geschaalde Animated.View tekent niets. Een doorschijnende
-                    witte laag + dunne rand geeft hetzelfde glas-uiterlijk en
-                    kan niet verdwijnen. */}
-                <View style={[StyleSheet.absoluteFill, s.introCtaTint]} />
-                <Text style={s.introCtaGlassTxt}>Explore State Control</Text>
-              </View>
-            ) : (
-              <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>Explore State Control</Text>
-            )}
-            <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
+            {/* 22 okt 2026 (operator): altijd het doorschijnende glas met witte lichtbron — ook voor wie de
+                onboarding al kent (was een effen witte knop). Geen blur/tint: die tekende grijs of verdween. */}
+            <View style={s.introCtaGlass}>
+              <Text style={s.introCtaGlassTxt}>Explore State Control</Text>
+            </View>
+            <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]} pointerEvents="none">
+<Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
               <LinearGradient
                 colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
                 start={{ x: 0, y: 0 }}
@@ -302,6 +290,7 @@ function StateControlIntro({
                 style={StyleSheet.absoluteFill}
               />
             </Animated.View>
+</View>
           </Pressable>
         </Animated.View>
         {/* Operator, 7 okt 2026 ("weinig ingangen naar de bracelet"): de
@@ -474,7 +463,7 @@ const s = StyleSheet.create({
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
      `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
-  introCtaGlassWrap: { alignSelf: 'stretch', borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
+  introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 26, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   introCtaGlass: {
     flexDirection: 'row',
     alignItems: 'center',

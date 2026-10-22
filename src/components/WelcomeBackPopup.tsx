@@ -26,7 +26,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { goToTab } from '@/utils/state-control-ui';
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import {
   PILLAR_META,
   SERIES_PHOTO,
@@ -328,14 +328,15 @@ const s = StyleSheet.create({
   primary: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 4,
+    ...CTA_GLOW,
   },
   primaryText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,

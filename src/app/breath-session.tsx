@@ -5408,15 +5408,14 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#D2D2D7',
+    backgroundColor: CTA_GLASS,
+    ...CTA_GLOW,
   },
   modalBtnTxt: {
     fontFamily: BrandFonts.bold,
     fontSize: 13.5,
     letterSpacing: 1.4,
-    color: '#1D1D1F',
+    color: '#ffffff',
   },
   /* ── Het afsluitscherm ── */
   doneCard: {

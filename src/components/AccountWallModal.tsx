@@ -12,7 +12,7 @@
    Iter 9dq v59 (2026-06-03, operator-besluit access-tier model).
    ─────────────────────────────────────────────────────────────────────── */
 
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getEffectiveTier } from '@/utils/access-tier';
 import { useIAP } from '@/hooks/useIAP';
@@ -347,14 +347,15 @@ const s = StyleSheet.create({
   btnPrimary: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 10,
+    ...CTA_GLOW,
   },
   btnPrimaryText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,

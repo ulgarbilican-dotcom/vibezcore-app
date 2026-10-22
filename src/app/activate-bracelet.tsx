@@ -22,7 +22,7 @@
 import PurchaseConfirm from '@/components/PurchaseConfirm';
 import BalancedText from '@/components/BalancedText';
 import { SESSIONS } from '@/data/audio-library-data';
-import { Brand, BrandFonts, AudioAccent } from '@/constants/theme';
+import { Brand, BrandFonts, AudioAccent, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { clearSession, getToken, login, signup } from '@/services/auth';
 import { clearLastPlayed } from '@/utils/last-played';
@@ -613,15 +613,16 @@ const s = StyleSheet.create({
   btnPrimary: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 50, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 13,
     paddingHorizontal: 24,
     alignItems: 'center',
     marginTop: 22,
+    ...CTA_GLOW,
   },
   btnPrimaryText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -722,15 +723,16 @@ const s = StyleSheet.create({
   doneBtn: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 999,
     alignItems: 'center',
     minWidth: 240,
+    ...CTA_GLOW,
   },
   doneBtnText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.2,

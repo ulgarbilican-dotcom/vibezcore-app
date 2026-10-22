@@ -12,7 +12,7 @@ import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import PressScale from '@/components/PressScale';
 import VibezGlass from '@/components/VibezGlass';
-import { Brand, BrandFonts } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 
 export default function ConfirmCard({
   visible,
@@ -75,13 +75,14 @@ const s = StyleSheet.create({
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52,
     width: '100%',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  btnTxt: { color: '#1D1D1F', fontSize: 16, fontFamily: BrandFonts.bold, letterSpacing: -0.1 },
+  btnTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.bold, letterSpacing: -0.1 },
   cancel: { alignSelf: 'center', marginTop: 14, paddingVertical: 4 },
   cancelTxt: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontFamily: BrandFonts.semibold },
 });

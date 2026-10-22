@@ -43,7 +43,7 @@ import { GlassSheet, afterGlassSheetClosed, isGlassSheetOpen } from '@/component
 import { isAccountWallOpen } from '@/components/AccountWallModal';
 import { isConfirmMomentOpen } from '@/components/ConfirmMoment';
 import { isVibezAlertOpen } from '@/components/VibezAlert';
-import { BrandFonts } from '@/constants/theme';
+import { BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
@@ -432,12 +432,13 @@ const s = StyleSheet.create({
     marginTop: 24,
     height: 52,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
+    ...CTA_GLOW,
   },
-  primaryTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.semibold },
+  primaryTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.semibold },
   /* Tweede knop: zacht glas, rand ≤16% (pillen-regel, 19 okt 2026). */
   secondary: {
     marginTop: 10,

@@ -6657,13 +6657,14 @@ const s = StyleSheet.create({
     marginBottom: 22,
   },
   quickSheetCta: {
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  quickSheetCtaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
+  quickSheetCtaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.bold },
   quickSheetBack: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   quickSheetBackTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
   modeDots: {

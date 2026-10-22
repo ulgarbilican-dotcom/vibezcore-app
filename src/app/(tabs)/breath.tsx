@@ -1081,13 +1081,14 @@ export default function BreathScreen() {
               onPressOut={() => {
                 ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
               }}
-              style={s.introCtaMatch}
-              android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+              style={s.introCtaGlassWrap}
+              android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
             >
-              <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>
-                Explore modes
-              </Text>
-              <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
+              <View style={s.introCtaGlass}>
+                <Text style={s.introCtaGlassTxt}>Explore modes</Text>
+              </View>
+              <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]} pointerEvents="none">
+<Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
                 <LinearGradient
                   colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
                   start={{ x: 0, y: 0 }}
@@ -1095,6 +1096,7 @@ export default function BreathScreen() {
                   style={StyleSheet.absoluteFill}
                 />
               </Animated.View>
+</View>
             </Pressable>
           </Animated.View>
 
@@ -1501,6 +1503,9 @@ const s = StyleSheet.create({
      bestanden. Eigen naam (niet hernoemd naar `introCta`) om niet per
      ongeluk de bestaande `s.cta`-gebruikers in dit bestand (elders, andere
      schermtoestand) te raken. */
+  introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 26, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
+  introCtaGlass: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 50, borderRadius: 999 },
+  introCtaGlassTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 17 },
   introCtaMatch: {
     flexDirection: 'row',
     alignItems: 'center',

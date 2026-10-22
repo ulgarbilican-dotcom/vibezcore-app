@@ -13,7 +13,7 @@ import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Crown, RefreshCw, Sparkles, X } from 'lucide-react-native';
-import { AudioAccent, BrandFonts } from '@/constants/theme';
+import { AudioAccent, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -207,11 +207,12 @@ const s = StyleSheet.create({
     marginTop: 22,
     height: 50,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.4, color: '#0a0a0a' },
+  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.4, color: '#ffffff' },
   later: {
     marginTop: 14,
     textAlign: 'center',

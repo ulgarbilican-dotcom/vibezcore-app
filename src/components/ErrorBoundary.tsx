@@ -17,7 +17,7 @@
 
 import BalancedText from '@/components/BalancedText';
 import { reportError } from '@/services/crash-reporting';
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -213,15 +213,16 @@ const s = StyleSheet.create({
   btn: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 28,
     minWidth: 160,
     alignItems: 'center',
+    ...CTA_GLOW,
   },
   btnText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.3,

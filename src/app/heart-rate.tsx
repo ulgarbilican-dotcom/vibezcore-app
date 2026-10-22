@@ -20,7 +20,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HistoryGroup, HistoryRow, HistorySectionLabel } from '@/components/HistoryList';
 import PressScale from '@/components/PressScale';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
-import { AudioAccentLight, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccentLight, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import ConfirmCard from '@/components/ConfirmCard';
 import { chooseAverageRestingPulse, getPulseHistory, type PulseHistoryEntry } from '@/services/resting-pulse';
@@ -211,14 +211,15 @@ const s = StyleSheet.create({
   live: { color: '#ffffff', fontSize: 15, fontFamily: BrandFonts.semibold, marginTop: 8 },
   cta: {
     alignSelf: 'stretch',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 22,
+    ...CTA_GLOW,
   },
-  ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
+  ctaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.bold },
   empty: { color: 'rgba(255,255,255,0.55)', fontSize: 15, fontFamily: BrandFonts.medium, marginTop: 6 },
   note: { color: 'rgba(255,255,255,0.55)', fontSize: 12.5, fontFamily: BrandFonts.medium, textAlign: 'center', marginTop: 24 },
   clear: { alignSelf: 'center', marginTop: 28, paddingVertical: 6 },

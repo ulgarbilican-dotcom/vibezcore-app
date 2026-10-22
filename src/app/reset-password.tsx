@@ -22,7 +22,7 @@
 
 import BalancedText from '@/components/BalancedText';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
    Brand.accent (#3a8fff, Signal Blue) is enkel voor haptic-pulse/"nu
@@ -618,15 +618,16 @@ const s = StyleSheet.create({
   btnPrimary: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 50, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 13,
     paddingHorizontal: 24,
     alignItems: 'center',
     marginTop: 22,
+    ...CTA_GLOW,
   },
   btnPrimaryText: {
-    color: Brand.bg,
+    color: '#ffffff',
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

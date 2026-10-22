@@ -16,7 +16,7 @@ import { pulseSourceLabel, resetRestingPulse } from '@/services/resting-pulse';
 import { setSetting } from '@/utils/settings';
 import { wipeLocalData } from '@/services/local-data';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
-import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
+import { AudioAccent, AudioAccentLight, BrandDark, BrandLight, BrandFonts, TypeScale, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import Constants from 'expo-constants';
 import BraceletIcon from '@/components/BraceletIcon';
 import BalancedText from '@/components/BalancedText';
@@ -619,11 +619,12 @@ const pc = StyleSheet.create({
     marginTop: 16,
     height: 50,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  ctaText: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 16 },
+  ctaText: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16 },
   note: {
     color: 'rgba(255,255,255,0.5)',
     fontFamily: BrandFonts.regular,
@@ -2760,16 +2761,17 @@ const s = StyleSheet.create({
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52,
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginTop: 22,
+    ...CTA_GLOW,
   },
   primaryBtnText: {
-    color: '#1D1D1F',
+    color: '#ffffff',
     fontSize: 15,
     fontFamily: BrandFonts.bold,
   },

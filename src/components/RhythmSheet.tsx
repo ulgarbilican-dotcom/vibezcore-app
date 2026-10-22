@@ -18,7 +18,7 @@ import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import VibezGlass from '@/components/VibezGlass';
-import { BrandFonts } from '@/constants/theme';
+import { BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BraceletMode, getModeMeta } from '@/services/ble-contract';
 import { rhythmFor } from '@/services/bracelet-haptics';
 import {
@@ -654,12 +654,13 @@ const s = StyleSheet.create({
     marginBottom: 40,
   },
   cta: {
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
+    ...CTA_GLOW,
   },
   iconWrapLg: { width: 76, height: 76, borderRadius: 38, alignSelf: 'center' },
   valueLbl: {
@@ -671,7 +672,7 @@ const s = StyleSheet.create({
     marginTop: 6,
     marginBottom: 2,
   },
-  ctaTxt: { color: '#1D1D1F', fontSize: 17, fontFamily: BrandFonts.bold },
+  ctaTxt: { color: '#ffffff', fontSize: 17, fontFamily: BrandFonts.bold },
   secondary: { height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   secondaryTxt: { color: '#ffffff', fontSize: 16, fontFamily: BrandFonts.semibold },
   pressed: { opacity: 0.7 },

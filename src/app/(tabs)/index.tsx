@@ -4,7 +4,7 @@ import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import { AUDIO_ENABLED } from '@/constants/features';
-import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale } from '@/constants/theme';
+import { AudioAccent, AudioAccentLight, BrandFonts, TypeScale, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import { bootDecided, useBootDecided } from '@/utils/boot';
 import { BlurView } from 'expo-blur';
@@ -1653,12 +1653,13 @@ function AudioScreen({
                 onPressOut={() => {
                   introCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
                 }}
-                style={[s.introCta, { overflow: 'hidden' }]}
-                android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+                style={s.introCta}
+                android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
                 accessibilityLabel="Explore the Audio Library"
               >
                 <Text style={s.introCtaTxt}>Explore Audio Library</Text>
-                <Animated.View
+                <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]} pointerEvents="none">
+<Animated.View
                   style={[s.introCtaShimmer, introShimmerStyle]}
                   pointerEvents="none"
                 >
@@ -1669,6 +1670,7 @@ function AudioScreen({
                     style={StyleSheet.absoluteFill}
                   />
                 </Animated.View>
+</View>
               </Pressable>
             </Animated.View>
           </View>
@@ -3864,15 +3866,14 @@ const s = StyleSheet.create({
     height: 50,
     marginHorizontal: 26,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#D2D2D7',
+    backgroundColor: CTA_GLASS,
+    ...CTA_GLOW,
   },
   introCtaTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 16,
     letterSpacing: 0.1,
-    color: '#1D1D1F',
+    color: '#ffffff',
   },
   /* Smalle, gedraaide lichtstrook die om de ~3,6s over de knop veegt —
      zelfde `ctaShimmer` als breath.tsx (vaste knop-hoogte, breder dan
@@ -5599,18 +5600,17 @@ const s = StyleSheet.create({
      geactiveerd-bij-tik-experiment gaf een press-flash die niet duidelijk
      zichtbaar was. Border #D2D2D7, tekst #1D1D1F, exact zoals de bron. */
   ctaBtn: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#D2D2D7',
+    backgroundColor: CTA_GLASS,
     height: 52,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+    ...CTA_GLOW,
   },
   /* CTA-knoptekst-rol — 17px SemiBold, geen letterSpacing. */
   ctaTxt: {
-    color: '#1D1D1F',
+    color: '#ffffff',
     fontSize: 17,
     fontFamily: BrandFonts.semibold,
   },

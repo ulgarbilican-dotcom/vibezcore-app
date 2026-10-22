@@ -50,7 +50,7 @@
 
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import BalancedText from '@/components/BalancedText';
-import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
+import { Brand, BrandFonts, TypeScale, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { MODES, getModeMeta, BraceletMode } from '@/services/ble-contract';
 import { syncBraceletPlanReminder, MAX_BRACELET_SESSIONS } from '@/services/reminders';
 import { DurationDial } from '@/app/bracelet-control';
@@ -928,11 +928,12 @@ const s = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
+    ...CTA_GLOW,
   },
   /* Zelfde ondoorzichtige uitgeschakelde stijl als CTA.disabled (theme.ts). */
   saveBtnOff: { backgroundColor: '#595959' },
-  saveBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#1D1D1F' },
+  saveBtnTxt: { fontFamily: BrandFonts.bold, fontSize: 15, color: '#ffffff' },
   saveBtnTxtOff: { color: '#1D1D1F' },
 
   ringWrap: { alignItems: 'center', marginTop: 8, marginBottom: 22 },

@@ -32,7 +32,7 @@ import PurchaseConfirm from '@/components/PurchaseConfirm';
 import { usePreventRemove } from '@react-navigation/native';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import MembershipPlans from '@/components/MembershipPlans';
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getSetting } from '@/utils/settings';
@@ -1991,15 +1991,16 @@ const s = StyleSheet.create({
   btnPrimary: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 50, justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 13,
     paddingHorizontal: 24,
     alignItems: 'center',
     marginTop: 22,
+    ...CTA_GLOW,
   },
   btnPrimaryText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 16.5,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,
@@ -2172,7 +2173,7 @@ const s = StyleSheet.create({
   doneCta: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     borderRadius: 999,
     paddingVertical: 18,
     paddingHorizontal: 32,
@@ -2182,9 +2183,10 @@ const s = StyleSheet.create({
     width: '100%',
     maxWidth: 380,
     marginTop: 6,
+    ...CTA_GLOW,
   },
   doneCtaText: {
-    color: '#0a0a0a',
+    color: '#ffffff',
     fontSize: 17,
     fontFamily: BrandFonts.bold,
     letterSpacing: 0.4,

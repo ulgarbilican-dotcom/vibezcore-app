@@ -20,7 +20,7 @@ import { confirmRhythmSet } from '@/components/ConfirmMoment';
 import { isGlassSheetOpen } from '@/components/GlassSheetHost';
 import PressScale from '@/components/PressScale';
 import RhythmSheet from '@/components/RhythmSheet';
-import { AudioAccent, AudioAccentLight, BrandFonts } from '@/constants/theme';
+import { AudioAccent, AudioAccentLight, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BraceletMode } from '@/services/ble-contract';
 import { chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { heartbeatTick, preloadHeartbeatSound, startHeartbeatSound, stopHeartbeatSound } from '@/services/heartbeat-sound';
@@ -253,11 +253,12 @@ const s = StyleSheet.create({
   cta: {
     height: 54,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: CTA_GLASS,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
-  ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#1D1D1F' },
+  ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
   /* Vervolg ("omlijning niet mooi"): iOS' grijze knop — zachte vulling,
      geen rand. */
   secondaryBtn: {
