@@ -2894,7 +2894,7 @@ export default function BreathSetupScreen() {
                        — intern blijft `selState` wel al op iets logisch
                        staan (nodig zodra de picker opent), maar de tegel
                        zelf toont pas een waarde na een echte tik. */}
-                    <Text style={s.gridTileValue} numberOfLines={1}>
+                    <Text style={s.gridTileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.15}>
                       {stateTouched ? displayName(st.eyebrow) : '—'}
                     </Text>
                   </View>
@@ -2927,7 +2927,7 @@ export default function BreathSetupScreen() {
                   </View>
                   <View style={s.gridTileText}>
                     <Text style={s.gridTileLabel}>Time</Text>
-                    <Text style={s.gridTileValue} numberOfLines={1}>
+                    <Text style={s.gridTileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.15}>
                       {timeTouched ? fmtTimeOfDay(time) : '—'}
                     </Text>
                   </View>
@@ -2974,7 +2974,7 @@ export default function BreathSetupScreen() {
                        instructie-tekst, zelfde "—"-patroon als de rijen in
                        de cirkel; de gedimde tegel + de "Next: ..."-tekst
                        bovenaan de grid leggen al uit waarom. */}
-                    <Text style={s.gridTileValue} numberOfLines={1}>
+                    <Text style={s.gridTileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.15}>
                       {!techniqueLocked && techniquePicked ? tech.name : '—'}
                     </Text>
                   </View>
@@ -3007,7 +3007,7 @@ export default function BreathSetupScreen() {
                   </View>
                   <View style={s.gridTileText}>
                     <Text style={s.gridTileLabel}>Duration</Text>
-                    <Text style={s.gridTileValue} numberOfLines={1}>
+                    <Text style={s.gridTileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.15}>
                       {!durationLocked && durationTouched ? fmtClock(chosen.minutes) : '—'}
                     </Text>
                   </View>
