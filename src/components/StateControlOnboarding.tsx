@@ -35,7 +35,6 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
-import { BlurView } from 'expo-blur';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
@@ -47,7 +46,7 @@ import { confirmRhythmSet } from '@/components/ConfirmMoment';
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import PressScale from '@/components/PressScale';
 import ConfirmCard from '@/components/ConfirmCard';
-import { Brand, BrandFonts, TypeScale } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLOW, TypeScale } from '@/constants/theme';
 import { STATE_USAGE } from '@/data/state-usage';
 import { BraceletMode, MODES, getModeMeta } from '@/services/ble-contract';
 import {
@@ -586,8 +585,8 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                   style={s.ctaWrap}
                   accessibilityRole="button"
                 >
-                  <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
-                    <Text style={s.ctaTxtDark}>{elevated ? 'Continue' : 'Save and Continue'}</Text>
+                  <View style={s.cta}>
+                    <Text style={s.ctaTxt}>{elevated ? 'Continue' : 'Save and Continue'}</Text>
                   </View>
                 </PressScale>
                 <PressScale
@@ -617,9 +616,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 lichtflits, de volgende stappen wit. */}
             {step === 0 ? (
               <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
-                <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.22)' }]} />
-                <Text style={[s.ctaTxtDark, { color: '#ffffff' }]}>{ctaLabel}</Text>
+                <Text style={s.ctaTxt}>{ctaLabel}</Text>
                 <Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none">
                   <ExpoLinearGradient
                     colors={['#ffffff00', '#ffffff9a', '#ffffff00']}
@@ -630,8 +627,8 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 </Animated.View>
               </View>
             ) : (
-              <View style={[s.cta, { backgroundColor: '#ffffff' }]}>
-                <Text style={s.ctaTxtDark}>{ctaLabel}</Text>
+              <View style={s.cta}>
+                <Text style={s.ctaTxt}>{ctaLabel}</Text>
               </View>
             )}
           </PressScale>
@@ -1256,8 +1253,10 @@ const s = StyleSheet.create({
   },
   radioOn: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
   footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12, gap: 18 },
-  ctaWrap: { borderRadius: 14, overflow: 'hidden' },
-  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, paddingVertical: 16 },
-  ctaTxtDark: { color: '#0a0a0c', fontFamily: BrandFonts.semibold, fontSize: 17 },
+  /* 22 okt 2026 (operator): zelfde glazen pil als de rest van de app, met de
+     zachte witte lichtbron erachter (CTA_GLOW) — geen hoekige witte knop meer. */
+  ctaWrap: { borderRadius: 999, backgroundColor: '#34343a', ...CTA_GLOW },
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, height: 52, overflow: 'hidden' },
+  ctaTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
 });
