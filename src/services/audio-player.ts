@@ -343,9 +343,11 @@ function saveCurrentPositionIfWorthwhile() {
      via auto-play next zolang user niet expliciet heeft gepauzeerd /
      speeld / geseekt. Voorkomt Continue-prompt voor sessies die user
      nooit explicit geopend heeft. */
-  if (loadedWithAutoStart) return;
   const url = state.session.url;
   const pos = state.positionSec;
+  /* 22 okt 2026 (operator: "Last Listened moet telkens de laatste zijn"): een automatisch gestarte
+     sessie telt mee zodra hij 30 s echt heeft gespeeld (de gebruiker luistert dan werkelijk). */
+  if (loadedWithAutoStart && pos < 30) return;
   if (pos < SAVE_MIN_SEC) return;
   const dur = state.durationSec;
   /* Niet opslaan als we effectief aan het einde zitten (anders krijg je
@@ -486,7 +488,7 @@ function onStatus(st: AudioStatus): void {
     !state.preview &&
     /* Iter 9dq v119 (2026-06-04): skip periodic-save voor auto-played
        sessies tot user interacteert. */
-    !loadedWithAutoStart &&
+    (!loadedWithAutoStart || posSec >= 30) &&
     posSec >= SAVE_MIN_SEC &&
     (durSec === 0 || posSec < durSec - SAVE_END_MARGIN_SEC) &&
     Math.abs(posSec - lastPeriodicWritePosSec) >= PERIODIC_WRITE_INTERVAL_SEC
