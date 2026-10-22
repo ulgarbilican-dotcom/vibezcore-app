@@ -1410,8 +1410,8 @@ export default function BreathScreen() {
           onPressOut={() => {
             ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
           }}
-          style={[s.cta, { overflow: 'hidden', backgroundColor: '#ffffff' }]}
-          android_ripple={{ color: 'rgba(10,10,12,0.08)' }}
+          style={[s.cta, { overflow: 'hidden', backgroundColor: '#34343a', borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)' }]}
+          android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
         >
           {/* Operator, 25 september 2026 ("groen van de choose cta niet
              mooi/modern, kleur per state of 1 vaste kleur?"): was
@@ -1426,7 +1426,7 @@ export default function BreathScreen() {
              de gebruiker gissen wat er verandert; tekst die meebeweegt met
              de gekozen staat kost geen actie-onzekerheid meer): dynamisch
              i.p.v. vast "Continue". */}
-          <Text style={[s.ctaTxt, { color: '#1D1D1F' }]}>
+          <Text style={[s.ctaTxt, { color: '#ffffff' }]}>
             Set {sentenceCase(st.eyebrow)} Session
           </Text>
         </Pressable>

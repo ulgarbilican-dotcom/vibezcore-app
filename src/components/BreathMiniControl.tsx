@@ -67,10 +67,13 @@ export function BreathMiniControl({ docked = false }: { docked?: boolean } = {})
   const st = BREATH_STATES[key] ?? BREATH_STATES.calm;
   return (
     <View
+      /* 22 okt 2026 (operator-foto: blokje lag over "Start 30-Second Preview"): de knopzone is hoger
+         geworden (knop 52 + de regel 'Full session with Premium' eronder), dus 144 boven de veilige
+         rand i.p.v. 96. Eerdere toelichting:
       /* Zonder tabbalk: net BOVEN de vaste hoofdknop-zone onderaan (knop
          56 hoog, 26 boven de veilige rand, overal in de app dezelfde) —
          nooit over "Start session" of een andere CTA. */
-      style={docked ? s.dockWrap : [s.wrap, { bottom: insets.bottom + 26 + 56 + 14 }]}
+      style={docked ? s.dockWrap : [s.wrap, { bottom: insets.bottom + 144 }]}
       pointerEvents="box-none"
     >
       <AnimatedPressable
