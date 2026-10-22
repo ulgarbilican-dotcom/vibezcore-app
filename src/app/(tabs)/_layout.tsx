@@ -182,20 +182,32 @@ function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) 
      animatie zoals Apple"): zoals de SF Symbols-"bounce" van iOS 17 — bij
      het kiezen veert het icoon kort op en zakt naar een iets grotere stand
      (1,15); niet-gekozen terug naar 1. Op de native driver. */
-  const scale = useRef(new RNAnimated.Value(focused ? 1.15 : 1)).current;
+  /* 22 okt 2026 (operator: "te grof, te statisch"): dunnere lijn, vaste icoongrootte (de
+     schaal doet de rest, geen maatsprong meer) en een echte veer-bounce: kort indrukken,
+     dan omhoog springen en zacht terugveren, met een kleine lift. */
+  const scale = useRef(new RNAnimated.Value(focused ? 1.1 : 1)).current;
+  const lift = useRef(new RNAnimated.Value(0)).current;
   useEffect(() => {
     if (focused) {
-      RNAnimated.sequence([
-        RNAnimated.timing(scale, { toValue: 1.32, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        RNAnimated.spring(scale, { toValue: 1.15, friction: 4, tension: 160, useNativeDriver: true }),
+      scale.setValue(0.8);
+      lift.setValue(0);
+      RNAnimated.parallel([
+        RNAnimated.spring(scale, { toValue: 1.1, friction: 3.2, tension: 210, useNativeDriver: true }),
+        RNAnimated.sequence([
+          RNAnimated.timing(lift, { toValue: -4, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          RNAnimated.spring(lift, { toValue: 0, friction: 4.5, tension: 170, useNativeDriver: true }),
+        ]),
       ]).start();
     } else {
-      RNAnimated.timing(scale, { toValue: 1, duration: 160, useNativeDriver: true }).start();
+      RNAnimated.parallel([
+        RNAnimated.timing(scale, { toValue: 1, duration: 180, useNativeDriver: true }),
+        RNAnimated.timing(lift, { toValue: 0, duration: 120, useNativeDriver: true }),
+      ]).start();
     }
-  }, [focused, scale]);
+  }, [focused, scale, lift]);
   return (
-    <RNAnimated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ scale }] }}>
-      <Icon size={focused ? 24 : 21} color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR} strokeWidth={focused ? 1.7 : 1.4} />
+    <RNAnimated.View style={{ alignItems: 'center', justifyContent: 'center', transform: [{ translateY: lift }, { scale }] }}>
+      <Icon size={22} color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR} strokeWidth={focused ? 1.3 : 1.1} />
     </RNAnimated.View>
   );
 }
