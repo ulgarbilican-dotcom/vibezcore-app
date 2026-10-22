@@ -319,6 +319,16 @@ export const CardHeights = {
   photoCard: 160,
 } as const;
 
+/* Subtiele witte lichtbron achter een glazen knop, zonder omlijsting (operator, 22 okt 2026).
+   Een witte schaduw met straal en lage dekking: zacht licht rond de knop. */
+export const CTA_GLOW = {
+  shadowColor: '#ffffff',
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.62,
+  shadowRadius: 22,
+  elevation: 14,
+} as const;
+
 export const CTA = {
   /* Doorgaan-knop in de flows (Continue / Next / Build…): glazen pil, niet fel
      (21 okt 2026, operator: "die witte ctas storen"). De ene beslissende actie
@@ -331,12 +341,13 @@ export const CTA = {
     height: 52,
     borderRadius: 999,
     backgroundColor: '#34343a', /* ondoorzichtig: inhoud die eronder scrolt schijnt niet door */
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.26)',
+    ...CTA_GLOW,
   },
   /* Ondoorzichtig: een doorzichtige uitgeschakelde knop liet de tekst van kaarten
      eronder erdoorheen schijnen. */
-  disabled: { backgroundColor: '#1a1a1d', borderColor: 'rgba(255,255,255,0.08)' },
+  /* Niet beschikbaar: vlak, donker, GEEN lichtbron (de glow is het signaal "actief"). */
+  disabled: { backgroundColor: '#161618', shadowOpacity: 0, elevation: 0 },
+  labelDisabled: { color: 'rgba(255,255,255,0.38)' },
   label: {
     fontFamily: BrandFonts.semibold,
     fontSize: 15,

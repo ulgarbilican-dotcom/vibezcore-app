@@ -1500,7 +1500,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     height: 50,
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
     marginTop: 4,

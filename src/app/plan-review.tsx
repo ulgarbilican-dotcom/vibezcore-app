@@ -638,7 +638,7 @@ export default function PlanReviewScreen() {
           onPressIn={onCtaPressIn}
           onPressOut={onCtaPressOut}
         >
-          <Text style={s.ctaTxt}>{saving ? 'Building…' : 'Continue'}</Text>
+          <Text style={[s.ctaTxt, (items.length === 0 || saving) && CTA.labelDisabled]}>{saving ? 'Building…' : 'Continue'}</Text>
         </AnimatedPressable>
       </View>
 

@@ -263,7 +263,7 @@ const s = StyleSheet.create({
   secondaryBtn: {
     marginTop: 10,
     height: 54,
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',

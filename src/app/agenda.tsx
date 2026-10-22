@@ -12,7 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import PremiumNote from '@/components/PremiumNote';
-import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
 import { useBreathFreeStart } from '@/hooks/useBreathFreeStart';
 import { FREE_COPY } from '@/constants/free-session-copy';
@@ -1168,9 +1168,8 @@ const s = StyleSheet.create({
     height: 48,
     paddingHorizontal: 24,
     borderRadius: 999,
-    backgroundColor: '#34343a',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.26)',
+    backgroundColor: '#34343a',
+    ...CTA_GLOW,
   },
   ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#ffffff' },
 

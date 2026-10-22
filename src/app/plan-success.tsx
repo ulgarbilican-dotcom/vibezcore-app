@@ -7,13 +7,15 @@
    protocol staat al vast; dit scherm bedankt en stuurt door.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { Brand, BrandFonts, CTA } from '@/constants/theme';
+import { AudioAccent, Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
 import { calculateStreak, useBreathHistory } from '@/utils/breath-history';
 import { syncPlanReminders } from '@/services/reminders';
 import { useActivePlan } from '@/utils/plan-store';
 import { useSetting } from '@/utils/settings';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Check } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import ActivationHero from '@/components/ActivationHero';
+import VibezGlass from '@/components/VibezGlass';
 import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -50,6 +52,7 @@ function PlanSuccessCta({ onPress }: { onPress: () => void }) {
       }}
     >
       <Animated.View style={[s.cta, pressStyle]}>
+        <VibezGlass radius={999} level="raised" tint={AudioAccent} style={StyleSheet.absoluteFill} />
         <Text style={s.ctaTxt}>Open your agenda</Text>
       </Animated.View>
     </Pressable>
@@ -126,43 +129,6 @@ export default function PlanSuccessScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [building, settled, plan]);
 
-  const scale = useSharedValue(0.6);
-  const opacity = useSharedValue(0);
-  useEffect(() => {
-    /* Pas starten zodra het vinkje ECHT gemount wordt (na `building`) —
-       anders lopen deze shared values al tijdens de spinner-fase af, en
-       toont het vinkje meteen zijn EIND-stand i.p.v. nog in te zoomen. */
-    if (building) return;
-    scale.value = withSequence(
-      withTiming(1.08, { duration: 360, easing: Easing.out(Easing.back(1.6)) }),
-      /* Operator, 19 september 2026 ("bol laten pulseren"): de continue
-         puls start pas via deze callback, ná de intro-animatie helemaal
-         is afgerond — bewust NIET een los, onmiddellijk `withRepeat` bij
-         mount, want exact dat patroon (een oneindige worklet-animatie die
-         start op hetzelfde moment als dit scherm zelf nog aan het
-         invliegen is) veroorzaakte eerder de zwart-scherm-crash op dit
-         zelfde scherm (zie toelichting hierboven bij `syncPlanReminders`).
-         Door de puls pas te starten NADAT de intro al is uitgespeeld —
-         dus ruim ná de mount-overgang — blijft diezelfde valkuil vermeden. */
-      withTiming(1, { duration: 140, easing: Easing.inOut(Easing.sin) }, (finished) => {
-        if (!finished) return;
-        scale.value = withRepeat(
-          withSequence(
-            withTiming(1.06, { duration: 900, easing: Easing.inOut(Easing.sin) }),
-            withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }),
-          ),
-          -1,
-          true,
-        );
-      }),
-    );
-    opacity.value = withDelay(60, withTiming(1, { duration: 260 }));
-  }, [building, scale, opacity]);
-  const badgeStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
   const streak = calculateStreak(history);
 
   return (
@@ -171,31 +137,33 @@ export default function PlanSuccessScreen() {
           bracht je terug in de schermen van die flow. */}
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
 
-      <View style={s.center}>
-        {building ? (
-          <>
-            <ActivityIndicator size="large" color={Brand.success} style={s.spinner} />
-            <Text style={s.buildingTxt}>Building your agenda…</Text>
-          </>
-        ) : (
-          <>
-            {/* Het bevestigingsmoment (All set!) toonde net al een vinkje: geen tweede. */}
-            {confirmed !== '1' ? (
-            <Animated.View style={[s.badge, badgeStyle]}>
-              {/* Operator, 20 september 2026 ("your protocol is live vinkje
-                 moet wit"): was donker (#0a0a0a) voor contrast op het
-                 groene vlak — nu wit, standaard success-checkmark-stijl. */}
-              <Check size={64} color="#ffffff" strokeWidth={3} />
-            </Animated.View>
-            ) : null}
+      {/* Bio-Teal sfeer: zachte gloed die het scherm "aan" laat voelen (operator, 22 okt 2026). */}
+      {!building ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <LinearGradient
+            colors={['rgba(0,163,163,0.30)', 'rgba(0,163,163,0.10)', 'rgba(10,10,10,0)']}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={s.glowBig} />
+          <View style={s.glowSmall} />
+        </View>
+      ) : null}
 
+      {building ? (
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={Brand.success} style={s.spinner} />
+          <Text style={s.buildingTxt}>Building your agenda…</Text>
+        </View>
+      ) : (
+        <>
+          <View style={[s.top, { paddingTop: 36 }]}>
             <Text style={s.title}>Your protocol is live</Text>
             <Text style={s.body}>
               {sessionsToday > 0
                 ? `${sessionsToday} session${sessionsToday > 1 ? 's' : ''} a day, right on schedule. Show up once and you're already moving.`
                 : "It's set. Show up once and you're already moving."}
             </Text>
-
             {streak > 0 && (
               <View style={s.streakPill}>
                 <Text style={s.streakTxt}>
@@ -203,9 +171,12 @@ export default function PlanSuccessScreen() {
                 </Text>
               </View>
             )}
-          </>
-        )}
-      </View>
+          </View>
+          <View style={s.middle}>
+            <ActivationHero />
+          </View>
+        </>
+      )}
 
       {!building && (
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 12) + 40 }]}>
@@ -238,6 +209,10 @@ export default function PlanSuccessScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  top: { alignItems: 'center', paddingHorizontal: 34 },
+  middle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  glowBig: { position: 'absolute', alignSelf: 'center', top: '30%', width: 520, height: 520, borderRadius: 260, backgroundColor: 'rgba(0,163,163,0.07)' },
+  glowSmall: { position: 'absolute', alignSelf: 'center', top: '38%', width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(74,240,212,0.07)' },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -302,6 +277,13 @@ const s = StyleSheet.create({
      door de gedeelde `CTA`-token (constants/theme.ts) — dezelfde chrome
      (borderRadius 14, dunne rand, ArrowRight-pijl, sentence-case tekst)
      als build-choice.tsx/build-your-day.tsx/plan-review.tsx. */
-  cta: { ...CTA.container },
-  ctaTxt: CTA.label,
+  /* Echt glas, zonder omlijsting (operator, 22 okt 2026). */
+  cta: {
+    height: 52,
+    borderRadius: 999,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1, color: '#ffffff' },
 });

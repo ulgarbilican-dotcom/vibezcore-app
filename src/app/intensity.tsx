@@ -1024,7 +1024,7 @@ export default function IntensityScreen() {
             ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
           }}
         >
-          <Text style={s.ctaTxt}>Continue</Text>
+          <Text style={[s.ctaTxt, !canContinue && CTA.labelDisabled]}>Continue</Text>
         </AnimatedPressable>
       </View>
 

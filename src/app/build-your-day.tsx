@@ -325,7 +325,7 @@ export default function BuildYourDayScreen() {
           onPressIn={onCtaPressIn}
           onPressOut={onCtaPressOut}
         >
-          <Text style={s.ctaTxt}>Continue</Text>
+          <Text style={[s.ctaTxt, sessions.length < 1 && CTA.labelDisabled]}>Continue</Text>
         </AnimatedPressable>
       </View>
     </SafeAreaView>

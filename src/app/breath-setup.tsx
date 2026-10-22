@@ -37,7 +37,7 @@ import BalancedText from '@/components/BalancedText';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
 import VibezGlass from '@/components/VibezGlass';
-import { BrandFonts, CTA, DIAL_SIZE } from '@/constants/theme';
+import { BrandFonts, CTA, CTA_GLOW, DIAL_SIZE } from '@/constants/theme';
 import AddToDayHero from '@/components/AddToDayHero';
 /* Operator, 19 september 2026 ("ja doen" — echte glas-blur i.p.v. de
    rgba-truc): `expo-blur` zit al in de huidige native build (welcome.tsx
@@ -3192,7 +3192,7 @@ export default function BreathSetupScreen() {
           ]}
           android_ripple={{ color: C.ctaRipple }}
         >
-          <Text style={[s.ctaTxt, light && { color: ctaTextColor }]}>
+          <Text style={[s.ctaTxt, light && { color: ctaTextColor }, isAddToDay && (!addToDayReady || !!overlapError) && CTA.labelDisabled]}>
             {isAddToDay
               ? `Add to ${SLOT_LABEL[slotForTime]}`
               : locked
@@ -4845,10 +4845,9 @@ const makeStyles = (C: typeof DARK, light: boolean) => StyleSheet.create({
     height: 52,
     borderRadius: 999,
     backgroundColor: C.ctaBg,
-    borderWidth: 1,
-    borderColor: C.ctaBorder,
     alignItems: 'center',
     justifyContent: 'center',
+    ...CTA_GLOW,
   },
   ctaDisabled: CTA.disabled,
   /* Free (19 okt 2026): één kleine regel onder de knop. */

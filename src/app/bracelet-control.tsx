@@ -81,7 +81,7 @@ import {
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
-import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE } from '@/constants/theme';
+import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE, CTA_GLOW } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
    light/dark-toggle gehad, in tegenstelling tot de rest van de app sinds
@@ -8754,14 +8754,13 @@ const s = StyleSheet.create({
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52,
     backgroundColor: '#34343a',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.26)',
     borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
+    ...CTA_GLOW,
   },
   primaryBtnText: {
     color: '#ffffff',

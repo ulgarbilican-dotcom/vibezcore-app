@@ -327,7 +327,7 @@ export default function BuildChoiceScreen() {
             disabled={!choice}
             onPress={next}
           >
-            <Text style={s.ctaTxt}>Continue</Text>
+            <Text style={[s.ctaTxt, !choice && CTA.labelDisabled]}>Continue</Text>
           </Pressable>
       </View>
 
