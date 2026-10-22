@@ -9,9 +9,8 @@
        3-knopsbalk.
    Elders (iOS, Android 11+) verandert er niets. `SafeAreaView` tikt de ontbrekende marge er
    bovenop bij, en alleen als het systeem zelf te weinig meldde. */
-import { Platform, StatusBar, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StatusBar, StyleSheet, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 import {
-  SafeAreaView as NativeSafeAreaView,
   useSafeAreaInsets as useNativeInsets,
   type SafeAreaViewProps,
   type EdgeInsets,
@@ -27,18 +26,37 @@ function floors(raw: EdgeInsets): EdgeInsets {
 }
 
 export function useSafeAreaInsets(): EdgeInsets {
-  return floors(useNativeInsets());
-}
-
-export function SafeAreaView({ edges, style, ...rest }: SafeAreaViewProps) {
   const raw = useNativeInsets();
   const f = floors(raw);
-  const edgeList = (edges ?? ['top', 'right', 'bottom', 'left']) as readonly string[];
-  const extraTop = edgeList.includes('top') ? Math.max(0, f.top - raw.top) : 0;
-  const extraBottom = edgeList.includes('bottom') ? Math.max(0, f.bottom - raw.bottom) : 0;
-  const patch: StyleProp<ViewStyle> =
-    extraTop || extraBottom ? { paddingTop: extraTop || undefined, paddingBottom: extraBottom || undefined } : undefined;
-  return <NativeSafeAreaView edges={edges} style={patch ? [style, patch] : style} {...rest} />;
+  if (__DEV__ === false && process.env.EXPO_PUBLIC_VZ_TEST === '1') {
+    // eslint-disable-next-line no-console
+    console.log('[VZINSETS]', JSON.stringify({ raw, f, sb: StatusBar.currentHeight, v: Platform.Version }));
+  }
+  return f;
+}
+
+export function SafeAreaView({ edges, style, children, ...rest }: SafeAreaViewProps) {
+  /* Geen native SafeAreaView meer: op een echt Android 10-toestel paste die zijn marge niet toe
+     (Test Lab, Galaxy A10). De marges komen nu uit dezelfde hook die elders wel werkt, als gewone
+     padding, met de ondergrens van `floors`. */
+  const f = useSafeAreaInsets();
+  const e = (edges ?? ['top', 'right', 'bottom', 'left']) as readonly string[];
+  const own = StyleSheet.flatten(style as StyleProp<ViewStyle>) ?? {};
+  const num = (v: unknown, fallback?: unknown): number =>
+    typeof v === 'number' ? v : typeof fallback === 'number' ? fallback : 0;
+  const base = (k: 'Top' | 'Bottom' | 'Left' | 'Right') =>
+    num((own as Record<string, unknown>)['padding' + k], num(own.paddingVertical && (k === 'Top' || k === 'Bottom') ? own.paddingVertical : own.paddingHorizontal && (k === 'Left' || k === 'Right') ? own.paddingHorizontal : own.padding));
+  const pad: ViewStyle = {
+    paddingTop: base('Top') + (e.includes('top') ? f.top : 0),
+    paddingBottom: base('Bottom') + (e.includes('bottom') ? f.bottom : 0),
+    paddingLeft: base('Left') + (e.includes('left') ? f.left : 0),
+    paddingRight: base('Right') + (e.includes('right') ? f.right : 0),
+  };
+  return (
+    <View {...(rest as ViewProps)} style={[style as StyleProp<ViewStyle>, pad]}>
+      {children}
+    </View>
+  );
 }
 
 export type { EdgeInsets };
