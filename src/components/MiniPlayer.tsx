@@ -103,7 +103,7 @@ export function MiniPlayer({
   /* Operator, 26 september 2026: teruggedraaid — de witte balk was juist
      goed ("witte player was goed draai dat terug"). Hardcoded LIGHT,
      zelfde patroon als de rest (geen live theme-hook). */
-  const C = LIGHT;
+  const C = DARK; /* app is dark-only sinds 27 sept 2026 */
 
   /* Operator, 26 september 2026 ("zwart scherm bij Identity/Machiavelli-
      sessies, na eerdere fixes nog steeds"): de ECHTE oorzaak zat hier de
