@@ -1168,9 +1168,11 @@ const s = StyleSheet.create({
     height: 48,
     paddingHorizontal: 24,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#34343a',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.26)',
   },
-  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#0a0a0a' },
+  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#ffffff' },
 
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 16 },
   badge: {

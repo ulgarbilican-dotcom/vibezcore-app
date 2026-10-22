@@ -3132,7 +3132,7 @@ function SearchingScreen({
                   accessibilityLabel="Retry searching for bracelet"
                 >
                   {isWorking ? (
-                    <ActivityIndicator color="#1D1D1F" />
+                    <ActivityIndicator color="#ffffff" />
                   ) : (
                     <Text style={s.primaryBtnText}>
                       {conn === 'disconnected' ? 'Connect' : 'Retry'}
@@ -4602,7 +4602,7 @@ function IdleScreen({
             }
           >
             {busy ? (
-              <ActivityIndicator color="#1D1D1F" />
+              <ActivityIndicator color="#ffffff" />
             ) : startLocked ? (
               <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>
                 {trialRunning ? 'End Preview' : FREE_COPY.previewCta}
@@ -8753,7 +8753,9 @@ const s = StyleSheet.create({
   primaryBtn: {
     /* Vaste hoogte (16 okt 2026): iOS tekent tekst zonder Android's extra regelruimte; enkel padding gaf daar lagere knoppen. */
     minHeight: 52,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#34343a',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.26)',
     borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
@@ -8762,7 +8764,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   primaryBtnText: {
-    color: '#1D1D1F',
+    color: '#ffffff',
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.1,

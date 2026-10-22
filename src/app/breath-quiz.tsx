@@ -651,7 +651,9 @@ const s = StyleSheet.create({
   cta: {
     height: 52,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#34343a',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.26)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -659,7 +661,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 13,
     letterSpacing: 1.2,
-    color: '#0a0a0a',
+    color: '#ffffff',
   },
   /* Free (19 okt 2026): één kleine regel onder de knop. */
   ctaFreeNote: {

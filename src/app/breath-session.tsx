@@ -3539,12 +3539,12 @@ export function BreathSession() {
             onPressOut={pressStart.onPressOut}
             style={[
               s.startBtn,
-              { backgroundColor: accent, borderColor: accent },
+              { backgroundColor: '#34343a', borderColor: 'rgba(255,255,255,0.26)' },
               pressStart.style,
             ]}
             android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
           >
-            <Text style={[s.startTxt, { color: '#0a0a0a' }]}>
+            <Text style={[s.startTxt, { color: '#ffffff' }]}>
               {/* Operator, 7 september 2026: "2 cycles verwijderen, 30 sec
                  preview" — het rondeaantal verschilt nu per toestand
                  (zie PREVIEW_ROUNDS), de tekst noemt daarom de vaste
