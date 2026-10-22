@@ -25,6 +25,7 @@
 
 import { Directory, File, Paths } from 'expo-file-system';
 import { useEffect, useState } from 'react';
+import { BUNDLED_IMAGES } from '@/constants/bundled-images';
 
 const DIR_NAME = 'vz-assets';
 
@@ -78,6 +79,9 @@ function fileName(url: string): string {
  *  belofte zou betekenen dat elk beeld eerst leeg verschijnt en daarna
  *  verspringt. `exists` is een gewone eigenschap, geen netwerkvraag. */
 export function assetUri(remote: string): string {
+  /* Zit de foto in de app zelf, dan is dat altijd de bron (meteen zichtbaar, geen kans op een
+     leeg of half gedownload cachebestand). Zie utils/image-source.ts. */
+  if (BUNDLED_IMAGES[remote] !== undefined) return remote;
   try {
     const f = new File(dir(), fileName(remote));
     return f.exists ? f.uri : remote;
