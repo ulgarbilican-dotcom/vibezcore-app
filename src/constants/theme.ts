@@ -323,14 +323,14 @@ export const CardHeights = {
    Een witte schaduw met straal en lage dekking: zacht licht rond de knop. */
 /* Glazen CTA-vulling: doorschijnend zoals de drie welkomst-knoppen (rgba(30,30,32,0.28)),
    zodat het witte licht erachter (CTA_GLOW) door het glas heen schijnt. */
-export const CTA_GLASS = 'rgba(255,255,255,0.2)'; /* wit glas: doorschijnend wit, met glans bovenin en gloed eronder */
+export const CTA_GLASS = 'rgba(255,255,255,0.3)'; /* wit glas: doorschijnend wit, met glans bovenin en gloed eronder */
 
 export const CTA_GLOW = {
   /* 22 okt 2026 (operator): de lichtbron zit ACHTER het glas en blijft binnen de knop — een zachte
      witte gloed die onderin opkomt en naar boven uitdooft, zodat de knop zelf oplicht en opvalt.
      Geen ring of schaduw buiten de rand. Teken op de achtergrond van de knop (onder de tekst). */
   experimental_backgroundImage:
-    'linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.05) 45%, rgba(255,255,255,0) 100%), radial-gradient(ellipse 85% 140% at 50% 125%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.16) 50%, rgba(255,255,255,0) 80%)',
+    'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%), radial-gradient(ellipse 85% 140% at 50% 125%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.24) 50%, rgba(255,255,255,0) 80%)',
 } as const;
 
 /* Glazen CTA in de kleur van een toestand (selectieschermen State Control en Breathwork): doorschijnende
@@ -343,8 +343,8 @@ export function stateGlass(hex: string) {
   const b = parseInt(full.slice(4, 6), 16);
   const c = (a: number) => `rgba(${r},${g},${b},${a})`;
   return {
-    backgroundColor: c(0.24),
-    experimental_backgroundImage: `linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.05) 45%, rgba(255,255,255,0) 100%), radial-gradient(ellipse 85% 140% at 50% 125%, ${c(0.6)} 0%, ${c(0.2)} 50%, ${c(0)} 80%)`,
+    backgroundColor: c(0.3),
+    experimental_backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%), radial-gradient(ellipse 85% 140% at 50% 125%, ${c(0.6)} 0%, ${c(0.2)} 50%, ${c(0)} 80%)`,
   };
 }
 

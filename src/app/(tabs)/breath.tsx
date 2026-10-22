@@ -1948,13 +1948,16 @@ const s = StyleSheet.create({
     borderRadius: (THUMB + 14) / 2,
     opacity: 0.09,
   },
+  /* 22 okt 2026: even breed als de CTA eronder (zelfde marge 26), iconen gelijk verdeeld. */
   thumbsPill: {
     flexDirection: 'row',
-    alignSelf: 'center',
+    alignSelf: 'stretch',
+    marginHorizontal: 26,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'space-between',
     marginTop: 12,
-    padding: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     borderRadius: 999,
   },
   thumbNameRow: {
