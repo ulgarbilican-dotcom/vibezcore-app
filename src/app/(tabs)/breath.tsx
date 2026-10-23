@@ -948,7 +948,7 @@ export default function BreathScreen() {
              `top`-offset. Ken Burns-zoom blijft op de foto zelf zitten. */}
           <Image source={imageSource(INTRO_BG_IMG)} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={45} />
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.45)' }]} />
-          <Animated.View style={[{ position: 'absolute', top: 0, left: 0, width: SCREEN_W, height: INTRO_PHOTO_H, overflow: 'hidden' }, kenBurnsStyle]}>
+          <Animated.View renderToHardwareTextureAndroid style={[{ position: 'absolute', top: 0, left: 0, width: SCREEN_W, height: INTRO_PHOTO_H, overflow: 'hidden' }, kenBurnsStyle]}>
             <Image
               source={imageSource(INTRO_BG_IMG)}
               /* 21 okt 2026 (operator: "man en vrouw volledig in beeld"):

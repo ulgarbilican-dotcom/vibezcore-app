@@ -1638,6 +1638,8 @@ function AudioScreen({
           />
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.5)' }]} />
           <Animated.View
+            /* Foto als hardware-textuur: de langzame zoom hoeft de GPU niet elk frame opnieuw op te bouwen. */
+            renderToHardwareTextureAndroid
             style={[
               { position: 'absolute', top: 0, left: 0, width: Dimensions.get('window').width, height: Math.round(Dimensions.get('window').width * (1672 / 941)), overflow: 'hidden' },
               introKenBurnsStyle,
@@ -2028,6 +2030,7 @@ function AudioScreen({
                      gevoel dat gevraagd werd. */
                   <Animated.View
                     key={p.num}
+                    renderToHardwareTextureAndroid
                     entering={FadeInUp.delay(150 + pillarIdx * 40)
                       .springify()
                       .damping(16)}

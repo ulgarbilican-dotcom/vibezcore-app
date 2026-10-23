@@ -210,7 +210,7 @@ function StateControlIntro({
         style={StyleSheet.absoluteFill}
         onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
       >
-        <Animated.View style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
+        <Animated.View renderToHardwareTextureAndroid style={[StyleSheet.absoluteFill, kenBurnsStyle]}>
           {box && (
             <Image
               source={imageSource(BG_IMG)}
