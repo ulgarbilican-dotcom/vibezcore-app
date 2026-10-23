@@ -461,7 +461,7 @@ export default function BraceletScreen() {
 }
 
 const s = StyleSheet.create({
-  braceletLink: { alignSelf: 'center', minHeight: 40, justifyContent: 'center', marginTop: 12 },
+  braceletLink: { alignSelf: 'center', minHeight: 42, justifyContent: 'center', marginTop: 12 },
   braceletLinkTxt: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontFamily: BrandFonts.medium },
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +

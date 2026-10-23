@@ -398,12 +398,13 @@ function StateThumb({
   );
 }
 
-function GoalButton({ onPress }: { onPress: () => void }) {
+function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boolean }) {
   /* Zelfde middellijn als de Premium-knop (PremiumPill: insets.top + 8,
      ~32 hoog) — op elk toestel, ongeacht de hoogte van de statusbalk
      (7 okt 2026: op de Samsung stond hij 13dp lager). 52 = eigen hoogte. */
   const insets = useSafeAreaInsets();
-  const alignTop = insets.top + 8 + 16 - 26;
+  /* Op de keuzepagina staat de knop op de kop-rij, onder de Premium-knop (zelfde rij als de titel). */
+  const alignTop = insets.top + 8 + 16 - 26 + (lowered ? 38 : 0);
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -1156,8 +1157,31 @@ export default function BreathScreen() {
          "statistieken" uitstraalt). Tekstlabel eronder erbij, zelfde
          patroon als een tabblad-icoon met caption. */}
       <GoalButton
+        lowered={!intro}
         onPress={() => router.push((plan ? '/agenda' : '/build-choice') as never)}
       />
+      {/* 23 okt 2026 (operator): zelfde kop als State Control — titel in kleine, gespatieerde hoofdletters,
+          onder de Premium-knop, op één rij met terug en kalender. */}
+      {!intro ? (
+        <Text
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: insets.top + 54,
+            textAlign: 'center',
+            color: '#ffffff',
+            fontSize: 13,
+            fontFamily: BrandFonts.bold,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+            zIndex: 20,
+          }}
+        >
+          Breathwork
+        </Text>
+      ) : null}
       {!intro ? (
         <Pressable
           onPress={() => setIntro(true)}
@@ -1167,7 +1191,7 @@ export default function BreathScreen() {
           style={{
             position: 'absolute',
             left: 16,
-            top: insets.top + 8,
+            top: insets.top + 42,
             width: 40,
             height: 40,
             borderRadius: 20,

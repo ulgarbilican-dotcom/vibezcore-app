@@ -1641,7 +1641,7 @@ function AudioScreen({
               onderrand achter de doorzichtige tabbalk; tekst en knop
               blijven op dezelfde plek — 34 + de balkhoogte. */}
           {/* Knop op dezelfde hoogte als bij Breath en State Control (die hebben nog een regel onder de knop). */}
-          <View style={[s.introTextWrap, { paddingBottom: 34 + 46 + tabInset }]}>
+          <View style={[s.introTextWrap, { paddingBottom: 34 + 54 + tabInset }]}>
             <Animated.Text style={[s.introEyebrow, introEyebrowStyle]}>
               VIBEZCORE AUDIO LIBRARY
             </Animated.Text>
@@ -1805,7 +1805,9 @@ function AudioScreen({
         {/* Ruimte voor de Premium-knop bovenaan (PremiumPill, 7 okt 2026):
            zonder deze extra marge zat de knop tegen de titel. */}
         <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingTop: 54 }]}>
-          <Text style={[s.libPageTitle, { paddingTop: 0, flex: 1 }]}>Audio Library</Text>
+          {/* 23 okt 2026 (operator): zelfde kop als State Control — kleine, gespatieerde hoofdletters, gecentreerd. */}
+          <View style={{ width: 60 }} />
+          <Text style={s.libHeaderTitle}>Audio Library</Text>
           <CardBounce
             style={s.libSearchBtn}
             onPress={() => setSearchOpen((v) => !v)}
@@ -1843,34 +1845,16 @@ function AudioScreen({
             <Text style={s.libQuickLinkText}>Your Journey</Text>
           </CardBounce>
           <View style={s.libQuickLinkDivider} />
-          {lastPlayed ? (
-            <CardBounce
-              style={s.libQuickLinkSegment}
-              onPress={showWelcomePopup}
-              hitSlop={8}
-              accessibilityLabel="Resume your last listened session"
-            >
-              <Text style={s.libQuickLinkText}>Last Listened</Text>
-            </CardBounce>
-          ) : !hasSub ? (
-            <CardBounce
-              style={s.libQuickLinkSegment}
-              onPress={() => navigateAway(() => router.push('/library/free'))}
-              hitSlop={8}
-              accessibilityLabel="Browse all free sessions"
-            >
-              <Text style={s.libQuickLinkText}>Free Sessions</Text>
-            </CardBounce>
-          ) : (
-            <CardBounce
-              style={s.libQuickLinkSegment}
-              onPress={() => navigateAway(() => router.push('/library/new'))}
-              hitSlop={8}
-              accessibilityLabel="Browse new sessions"
-            >
-              <Text style={s.libQuickLinkText}>New</Text>
-            </CardBounce>
-          )}
+          {/* 23 okt 2026 (operator): dit segment is ALTIJD "Last Listened" (Free Sessions staat al als kaart
+              eronder). Zonder geldige laatste sessie: gedimd, en tikken opent je luistergeschiedenis. */}
+          <CardBounce
+            style={[s.libQuickLinkSegment, !lastPlayed && { opacity: 0.55 }]}
+            onPress={lastPlayed ? showWelcomePopup : () => navigateAway(() => router.push('/history'))}
+            hitSlop={8}
+            accessibilityLabel={lastPlayed ? 'Resume your last listened session' : 'Your listening history'}
+          >
+            <Text style={s.libQuickLinkText}>Last Listened</Text>
+          </CardBounce>
           <View style={s.libQuickLinkDivider} />
           {/* Operator, 26 september 2026 ("waar is favorites?"): stond
              alleen bij PRO — favoriteren werkt net zo goed op de gratis
@@ -3746,6 +3730,15 @@ function AudioScreen({
 const s = StyleSheet.create({
   /* Bibliotheek in rustige secties (16 okt 2026). */
   libTitleRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 22 },
+  libHeaderTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: BrandFonts.bold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
   libSearchBtn: {
     width: 44,
     height: 44,
