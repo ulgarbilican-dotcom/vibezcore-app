@@ -404,7 +404,7 @@ function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boole
      (7 okt 2026: op de Samsung stond hij 13dp lager). 52 = eigen hoogte. */
   const insets = useSafeAreaInsets();
   /* Op de keuzepagina staat de knop op de kop-rij, onder de Premium-knop (zelfde rij als de titel). */
-  const alignTop = insets.top + 8 + 16 - 26 + (lowered ? 38 : 0);
+  const alignTop = lowered ? insets.top + 44 - 26 : insets.top + 58 + 16 - 26;
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -1178,7 +1178,7 @@ export default function BreathScreen() {
             position: 'absolute',
             left: 0,
             right: 0,
-            top: insets.top + 54,
+            top: insets.top + 36,
             textAlign: 'center',
             color: '#ffffff',
             fontSize: 13,
@@ -1200,7 +1200,7 @@ export default function BreathScreen() {
           style={{
             position: 'absolute',
             left: 16,
-            top: insets.top + 42,
+            top: insets.top + 24,
             width: 40,
             height: 40,
             borderRadius: 20,
