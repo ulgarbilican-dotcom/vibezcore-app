@@ -394,18 +394,22 @@ function StateThumb({
       <View style={s.thumb}>
         {on ? (
           <>
-            <Animated.View
-              pointerEvents="none"
-              entering={ZoomIn.springify().damping(12).stiffness(200)}
-              exiting={FadeOut.duration(120)}
-              style={[s.thumbGlow, { backgroundColor: t.accent }]}
-            />
-            <Animated.View
-              pointerEvents="none"
-              entering={ZoomIn.springify().damping(12).stiffness(200)}
-              exiting={FadeOut.duration(120)}
-              style={[s.thumbRing, { borderColor: t.accent }]}
-            />
+            {/* De doorzichtigheid staat op een gewone wrapper: een layout-animatie (entering/exiting) overschrijft
+                `opacity` van de view zelf en liet de gloed kort volledig dekkend flitsen. */}
+            <View pointerEvents="none" style={s.thumbGlow}>
+              <Animated.View
+                entering={ZoomIn.springify().damping(12).stiffness(200)}
+                exiting={FadeOut.duration(120)}
+                style={[s.thumbFill, { backgroundColor: t.accent }]}
+              />
+            </View>
+            <View pointerEvents="none" style={s.thumbRing}>
+              <Animated.View
+                entering={ZoomIn.springify().damping(12).stiffness(200)}
+                exiting={FadeOut.duration(120)}
+                style={[s.thumbFill, { borderWidth: 1, borderColor: t.accent }]}
+              />
+            </View>
           </>
         ) : null}
         <Animated.View style={[on ? thumbPulseStyle : undefined, popStyle]}>
@@ -2026,17 +2030,15 @@ const s = StyleSheet.create({
     position: 'absolute',
     width: THUMB,
     height: THUMB,
-    borderRadius: THUMB / 2,
-    borderWidth: 1,
     opacity: 0.85,
   },
   thumbGlow: {
     position: 'absolute',
     width: THUMB + 14,
     height: THUMB + 14,
-    borderRadius: (THUMB + 14) / 2,
     opacity: 0.09,
   },
+  thumbFill: { flex: 1, borderRadius: 999 },
   /* 22 okt 2026: even breed als de CTA eronder (zelfde marge 26), iconen gelijk verdeeld. */
   thumbsPill: {
     flexDirection: 'row',
