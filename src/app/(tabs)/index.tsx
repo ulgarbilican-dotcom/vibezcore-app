@@ -1,4 +1,5 @@
 import { openStateControl } from '@/utils/state-control-ui';
+import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -930,6 +931,16 @@ function AudioScreen({
      de vlag terug op `true` bij ELKE focus van deze tab, niet enkel de
      eerste montage. */
   const [intro, setIntro] = useState(true);
+  const [tabFocused, setTabFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setTabFocused(true);
+      return () => setTabFocused(false);
+    }, []),
+  );
+  useEffect(() => {
+    if (tabFocused) setPremiumPillLow(!intro);
+  }, [tabFocused, intro]);
   /* 23 okt 2026 (operator): Premium ziet de welkomstkaart van deze tab niet meer. */
   const isProRef = useRef(false);
   isProRef.current = sub.isPro;

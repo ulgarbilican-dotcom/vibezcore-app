@@ -40,6 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -365,6 +366,7 @@ export default function BraceletScreen() {
   useFocusEffect(
     useCallback(() => {
       setFocused(true);
+      setPremiumPillLow(false);
       return () => setFocused(false);
     }, []),
   );

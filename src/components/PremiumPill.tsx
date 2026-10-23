@@ -20,6 +20,7 @@ import { getBreathHost, subscribeBreathHost } from '@/services/breath-session-ho
 import { router, usePathname } from 'expo-router';
 import { Crown } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
+import { getPremiumPillLow, subscribePremiumPillLow } from '@/utils/premium-pill-slot';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedAnimated, {
   useAnimatedStyle,
@@ -41,6 +42,8 @@ export function PremiumPill({ hidden }: { hidden: boolean }) {
   const insets = useSafeAreaInsets();
   const [bracelet, setBracelet] = useState(getBraceletSessionSnapshot());
   useEffect(() => subscribeBraceletSession(setBracelet), []);
+  const [low, setLow] = useState(getPremiumPillLow());
+  useEffect(() => subscribePremiumPillLow(setLow), []);
   const [breathHost, setBreathHost] = useState(getBreathHost());
   useEffect(() => subscribeBreathHost(() => setBreathHost(getBreathHost())), []);
 
@@ -53,7 +56,7 @@ export function PremiumPill({ hidden }: { hidden: boolean }) {
   if (bracelet.active || breathHost?.minimized) return null;
 
   return (
-    <View style={[s.wrap, { top: insets.top + 58 }]} pointerEvents="box-none">
+    <View style={[s.wrap, { top: low ? insets.top + 58 : insets.top + 8 }]} pointerEvents="box-none">
       <AnimatedPressable
         style={pressStyle}
         onPress={() => router.push('/subscribe' as never)}

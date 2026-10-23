@@ -27,6 +27,7 @@
    precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { iosFont } from '@/utils/ios-text-scale';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -404,7 +405,7 @@ function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boole
      (7 okt 2026: op de Samsung stond hij 13dp lager). 52 = eigen hoogte. */
   const insets = useSafeAreaInsets();
   /* Op de keuzepagina staat de knop op de kop-rij, onder de Premium-knop (zelfde rij als de titel). */
-  const alignTop = lowered ? insets.top + 44 - 26 : insets.top + 58 + 16 - 26;
+  const alignTop = lowered ? insets.top + 44 - 26 : insets.top + 8 + 16 - 26;
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withTiming(0.95, { duration: 80 });
@@ -480,6 +481,16 @@ export default function BreathScreen() {
      als je van een sessie terugkomt. Dat is de bedoeling: het is een drempel
      die je even laat landen, geen scherm dat je één keer wegklikt. */
   const [intro, setIntro] = useState(true);
+  const [tabFocused, setTabFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setTabFocused(true);
+      return () => setTabFocused(false);
+    }, []),
+  );
+  useEffect(() => {
+    if (tabFocused) setPremiumPillLow(!intro);
+  }, [tabFocused, intro]);
   /* 23 okt 2026 (operator): wie Premium heeft ziet de welkomstkaart van deze tab niet meer — meteen de keuze. */
   const proSub = useSubscription();
   const isProRef = useRef(false);
