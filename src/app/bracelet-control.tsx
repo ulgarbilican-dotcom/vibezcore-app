@@ -6484,7 +6484,9 @@ const s = StyleSheet.create({
        waardoor de titel bovenaan tegen/buiten de header-rand kwam.
        48→88 geeft de hele gestapelde titel+badge-kolom genoeg ruimte om
        volledig binnen de header (en dus binnen de safe area) te blijven. */
-    height: 88,
+    /* 23 okt 2026 (operator): titel op dezelfde hoogte als Breath en Library (onder de Premium-knop): +21. */
+    height: 109,
+    paddingTop: 21,
     paddingHorizontal: 8,
     backgroundColor: C.bg,
   },
