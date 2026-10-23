@@ -934,7 +934,7 @@ function SwitchSessionConfirm({
             onPress={onConfirm}
             accessibilityLabel={`Switch to ${toName}`}
           >
-            <VibezGlass radius={999} tint={toColor} level="normal" style={StyleSheet.absoluteFill} />
+            <VibezGlass radius={999} tint={toColor} level="normal" flat style={StyleSheet.absoluteFill} />
             <Text style={s.primaryBtnText}>Switch</Text>
           </PressScale>
           <Pressable onPress={onCancel} hitSlop={10} style={s.switchCancel} accessibilityLabel="Cancel">
@@ -963,7 +963,7 @@ function RunningSessionBar({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       accessibilityLabel={`Return to your ${snap.modeName} session`}
     >
-      <VibezGlass radius={999} tint={snap.modeColor} level="normal" style={StyleSheet.absoluteFill} />
+      <VibezGlass radius={999} tint={snap.modeColor} level="normal" flat style={StyleSheet.absoluteFill} />
       <View style={[s.runningDot, { backgroundColor: snap.modeColor }]} />
       <Text style={s.primaryBtnText} numberOfLines={1}>
         {snap.modeName} · {snap.paused ? 'Paused' : `${time} left`}
@@ -4607,7 +4607,7 @@ function IdleScreen({
                   : `Start ${meta.name} session`
             }
           >
-            <VibezGlass radius={999} tint={meta.color} level="normal" style={StyleSheet.absoluteFill} />
+            <VibezGlass radius={999} tint={meta.color} level="normal" flat style={StyleSheet.absoluteFill} />
             {busy ? (
               <ActivityIndicator color="#ffffff" />
             ) : startLocked ? (
@@ -6970,7 +6970,7 @@ const s = StyleSheet.create({
   /* De CTA zoals "Start session" in de breathwork-setup: 56 hoog, zelfde
      zijmarge (16 + 10 = 26), semibold. */
   chooseCta: {
-    height: 56,
+    height: 52,
     paddingVertical: 0,
     marginHorizontal: 10,
   },

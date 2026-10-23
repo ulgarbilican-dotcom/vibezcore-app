@@ -34,6 +34,8 @@ type Props = {
    *  Zonder deze valt expo-blur op Android terug op géén vervaging; mét
    *  deze is het echte vervaagd glas (5 okt 2026). iOS heeft hem niet nodig. */
   blurTarget?: RefObject<View | null>;
+  /** Geen glanslaag (verloop) — egaal doorschijnend; voor knoppen. */
+  flat?: boolean;
 };
 
 const LEVEL = {
@@ -55,7 +57,7 @@ const LEVEL = {
    Weg te halen zodra de echte vervaging op Android werkt. */
 const ANDROID_SHEET_BASE = 'rgb(24,24,28)';
 
-export default function VibezGlass({ radius, tint, level = 'normal', style, children, blurTarget }: Props) {
+export default function VibezGlass({ radius, tint, level = 'normal', style, children, blurTarget, flat }: Props) {
   const L =
     level === 'sheet' && Platform.OS === 'android' && !blurTarget
       ? { ...LEVEL.sheet, base: ANDROID_SHEET_BASE }
@@ -127,12 +129,14 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
           style={StyleSheet.absoluteFill}
         />
       ) : null}
+      {flat ? null : (
       <LinearGradient
         pointerEvents="none"
         colors={[`rgba(255,255,255,${L.sheen})`, `rgba(255,255,255,${L.sheen * 0.3})`, 'rgba(255,255,255,0)']}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
+      )}
       {children}
     </View>
   );

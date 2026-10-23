@@ -326,11 +326,8 @@ export const CardHeights = {
 export const CTA_GLASS = 'rgba(255,255,255,0.4)'; /* wit glas: doorschijnend wit, met glans bovenin en gloed eronder */
 
 export const CTA_GLOW = {
-  /* 22 okt 2026 (operator): de lichtbron zit ACHTER het glas en blijft binnen de knop — een zachte
-     witte gloed die onderin opkomt en naar boven uitdooft, zodat de knop zelf oplicht en opvalt.
-     Geen ring of schaduw buiten de rand. Teken op de achtergrond van de knop (onder de tekst). */
-  experimental_backgroundImage:
-    'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%), radial-gradient(ellipse 85% 140% at 50% 125%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.24) 50%, rgba(255,255,255,0) 80%)',
+  /* 23 okt 2026 (operator: "nog niet 100% glass, lijkt een beetje gradient"): geen gloed of verloop meer —
+     enkel de egale, doorschijnende vulling (CTA_GLASS) zoals de welkomst-knoppen. */
 } as const;
 
 /* Glazen CTA in de kleur van een toestand (selectieschermen State Control en Breathwork): doorschijnende

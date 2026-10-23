@@ -3055,7 +3055,7 @@ export default function BreathSetupScreen() {
           android_ripple={{ color: C.ctaRipple }}
         >
           {!light && !(isAddToDay && (!addToDayReady || !!overlapError)) && (
-            <VibezGlass radius={999} tint={ringAccent} level="normal" style={StyleSheet.absoluteFill} />
+            <VibezGlass radius={999} tint={ringAccent} level="normal" flat style={StyleSheet.absoluteFill} />
           )}
           <Text style={[s.ctaTxt, light && { color: ctaTextColor }, isAddToDay && (!addToDayReady || !!overlapError) && CTA.labelDisabled]}>
             {isAddToDay

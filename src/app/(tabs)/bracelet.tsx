@@ -466,7 +466,7 @@ const s = StyleSheet.create({
   braceletLinkStrong: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   /* Onboarding-start (20 okt 2026): kopie van breath-welcome `cta` +
      `ctaBlurWrap` + `ctaTintWhite` + `ctaTxt`. */
-  introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 26, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
+  introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 0, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   introCtaGlass: {
     flexDirection: 'row',
     alignItems: 'center',

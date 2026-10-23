@@ -1362,6 +1362,16 @@ export default function BreathScreen() {
           gepruts, de rand is zichtbaarder geworden"). Volledig
           teruggedraaid — het ene bestaande vignet regelt dit al, geen
           tweede laag meer nodig. */}
+      <Pressable
+        onPress={() => setInfoOpen(true)}
+        hitSlop={10}
+        style={s.thumbNameRow}
+        accessibilityRole="button"
+        accessibilityLabel={`${sentenceCase(st.eyebrow)}, how it works`}
+      >
+        <Text style={s.thumbNameSel}>{sentenceCase(st.eyebrow)}</Text>
+        <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
+      </Pressable>
       <View style={s.thumbsPill}>
         <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
         {ORDER.map((k, i) => (
@@ -1376,16 +1386,6 @@ export default function BreathScreen() {
           />
         ))}
       </View>
-      <Pressable
-        onPress={() => setInfoOpen(true)}
-        hitSlop={10}
-        style={s.thumbNameRow}
-        accessibilityRole="button"
-        accessibilityLabel={`${sentenceCase(st.eyebrow)}, how it works`}
-      >
-        <Text style={s.thumbNameSel}>{sentenceCase(st.eyebrow)}</Text>
-        <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-      </Pressable>
 
       {/* ── De knop, nu ÉÉN vaste kleur — 3e ronde, operator 8 september
           2026: "wat is beter om 1 kleur voor alle knoppen?" Terecht — de
@@ -1422,7 +1422,7 @@ export default function BreathScreen() {
           style={[s.cta, CTA_GLOW, stateGlass(st.accent)]}
           android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
         >
-          <VibezGlass radius={999} tint={st.accent} level="normal" style={StyleSheet.absoluteFill} />
+          <VibezGlass radius={999} tint={st.accent} level="normal" flat style={StyleSheet.absoluteFill} />
           {/* Operator, 25 september 2026 ("groen van de choose cta niet
              mooi/modern, kleur per state of 1 vaste kleur?"): was
              blur + `st.accent`-tint — een knop die van kleur wisselt per
@@ -1511,8 +1511,8 @@ const s = StyleSheet.create({
      bestanden. Eigen naam (niet hernoemd naar `introCta`) om niet per
      ongeluk de bestaande `s.cta`-gebruikers in dit bestand (elders, andere
      schermtoestand) te raken. */
-  introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 26, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
-  introCtaGlass: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 50, borderRadius: 999 },
+  introCtaGlassWrap: { alignSelf: 'stretch', marginHorizontal: 0, borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
+  introCtaGlass: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 52, borderRadius: 999 },
   introCtaGlassTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 17 },
   introCtaMatch: {
     flexDirection: 'row',
@@ -1898,8 +1898,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     marginHorizontal: 26,
-    marginTop: 34,
-    height: 50,
+    marginTop: 56,
+    height: 52,
     /* Operator, zelfde dag: "vorm van de cta is anders dan onboarding, is
        dat professioneel?" — was een volle pil (25 = height/2), onboarding
        gebruikt overal `borderRadius:14`. Zelfde vorm nu, app-breed één
@@ -1960,10 +1960,10 @@ const s = StyleSheet.create({
   thumbsPill: {
     flexDirection: 'row',
     alignSelf: 'stretch',
-    marginHorizontal: 35,
+    marginHorizontal: 26,
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 0,
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 999,
@@ -1973,9 +1973,10 @@ const s = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     gap: 8,
-    marginTop: 14,
+    marginTop: 0,
+    marginBottom: 12,
   },
-  thumbNameSel: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  thumbNameSel: { fontFamily: BrandFonts.semibold, fontSize: 13, color: '#ffffff' },
   thumbCol: { alignItems: 'center' },
   /* Boven de cirkel, gecentreerd binnen de kolom — `thumbCol` is al
      `alignItems:'center'`, dus `width:'100%'` + `alignItems:'center'`
