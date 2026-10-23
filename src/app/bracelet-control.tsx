@@ -3724,6 +3724,12 @@ function ActiveSessionScreen({
             <View
               style={[StyleSheet.absoluteFill, s.pauseMainTint, { backgroundColor: activeMeta.color }]}
             />
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255,255,255,0.38)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
+              locations={[0, 0.5, 1]}
+              style={StyleSheet.absoluteFill}
+            />
             {busy ? (
               <ActivityIndicator color="#ffffff" />
             ) : isPaused ? (
@@ -4057,11 +4063,13 @@ function IdleScreen({
     setTrialLeft(null);
     if (!ended) stopModePreviewHaptic();
   }, []);
+  /* 23 okt 2026 (operator): de voorproef begint NIET vanzelf — eerst de play-knop (zoals Breathwork). */
+  const trialPlayedRef = useRef(false);
   const startTrial = () => {
     hapticPress();
-    playModeTrialHaptic(selectedMode);
-    trialPausedRef.current = false;
-    setTrialPaused(false);
+    trialPlayedRef.current = false;
+    trialPausedRef.current = true;
+    setTrialPaused(true);
     trialElapsedMsRef.current = 0;
     trialResumedAtRef.current = Date.now();
     setTrialLeft(PREVIEW_MAX_SECONDS);
@@ -4094,7 +4102,12 @@ function IdleScreen({
       trialResumedAtRef.current = Date.now();
       trialPausedRef.current = false;
       setTrialPaused(false);
-      resumeModeTrialHaptic(selectedMode, trialElapsedMsRef.current / 1000);
+      if (!trialPlayedRef.current) {
+        trialPlayedRef.current = true;
+        playModeTrialHaptic(selectedMode);
+      } else {
+        resumeModeTrialHaptic(selectedMode, trialElapsedMsRef.current / 1000);
+      }
     }
   };
   /* Andere toestand, ander scherm of weg: voorproef stopt. */
@@ -4569,15 +4582,23 @@ function IdleScreen({
             <PressScale
               onPress={toggleTrialPause}
               scaleTo={0.94}
-              style={s.trialPauseBtn}
+              style={s.pauseMain}
               accessibilityRole="button"
-              accessibilityLabel={trialPaused ? 'Resume' : 'Pause'}
+              accessibilityLabel={trialPaused ? 'Play' : 'Pause'}
             >
-              <VibezGlass radius={36} level="normal" style={StyleSheet.absoluteFill} />
+              {/* Zelfde play-knop als de lopende sessie en Breathwork: tint in de kleur van de toestand. */}
+              <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
+              <View style={[StyleSheet.absoluteFill, s.pauseMainTint, { backgroundColor: meta.color }]} />
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(255,255,255,0.38)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
+                locations={[0, 0.5, 1]}
+                style={StyleSheet.absoluteFill}
+              />
               {trialPaused ? (
-                <Play size={26} color="#ffffff" strokeWidth={2.2} />
+                <Play size={24} color="#ffffff" strokeWidth={2.2} />
               ) : (
-                <Pause size={26} color="#ffffff" strokeWidth={2.2} />
+                <Pause size={24} color="#ffffff" strokeWidth={2.2} />
               )}
             </PressScale>
             <Pressable
@@ -8221,11 +8242,12 @@ const s = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
+    /* Zelfde play-knop als Breathwork: kleur van de toestand, lichtreflectie bovenaan, dunne lichte rand. */
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.30)',
     overflow: 'hidden',
   },
-  pauseMainTint: { opacity: 0.2 },
+  pauseMainTint: { opacity: 0.55 },
   endTxtWrap: { marginTop: 22 },
   iosKeepOpen: {
     marginTop: 14,
