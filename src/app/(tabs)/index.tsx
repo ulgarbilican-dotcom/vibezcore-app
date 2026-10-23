@@ -3892,8 +3892,7 @@ const s = StyleSheet.create({
   },
   introCtaTxt: {
     fontFamily: BrandFonts.semibold,
-    fontSize: 16,
-    letterSpacing: 0.1,
+    fontSize: 17,
     color: '#0a0a0a',
   },
   /* Smalle, gedraaide lichtstrook die om de ~3,6s over de knop veegt —
