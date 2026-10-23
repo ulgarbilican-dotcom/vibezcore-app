@@ -47,6 +47,7 @@
    levend overzicht van de 4 keuzes — zelfde cirkel-taal als "Build it
    yourself", nu ook hier. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import SheetScroll from '@/components/SheetScroll';
 import { useBackTo } from '@/hooks/useBackTo';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -263,10 +264,10 @@ function SettingTile({
         disabled={locked}
         onPressIn={() => {
           if (locked) return;
-          pressScale.value = withTiming(0.97, { duration: 80 });
+          pressScale.value = withSpring(0.97, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          pressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
         style={[s.tile, pressStyle, done && s.tileDone, locked && s.tileLocked]}
       >
@@ -319,10 +320,10 @@ function GoalRow({
         style={[s.sheetRow, on && s.sheetRowOn, pressStyle]}
         onPress={onPress}
         onPressIn={() => {
-          pressScale.value = withTiming(0.95, { duration: 80 });
+          pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          pressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
       >
         <BlurView
@@ -369,10 +370,10 @@ function RoutineOptionRow({
         onPress={onPress}
         onPressIn={() => {
           if (disabled) return;
-          pressScale.value = withTiming(0.95, { duration: 80 });
+          pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          pressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
       >
         <BlurView
@@ -413,10 +414,10 @@ function LevelRow({
         style={[s.sheetRow, on && s.sheetRowOn, pressStyle]}
         onPress={onPress}
         onPressIn={() => {
-          pressScale.value = withTiming(0.95, { duration: 80 });
+          pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          pressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
       >
         <BlurView
@@ -454,10 +455,10 @@ function HorizonRow({
         style={[s.sheetRow, on && s.sheetRowOn, pressStyle]}
         onPress={onPress}
         onPressIn={() => {
-          pressScale.value = withTiming(0.95, { duration: 80 });
+          pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          pressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
       >
         <BlurView
@@ -509,10 +510,10 @@ function SlotRow({
         onPress={onToggle}
         onPressIn={() => {
           if (disabled) return;
-          pressScale.value = withTiming(0.95, { duration: 80 });
+          pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          pressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
       >
         <BlurView
@@ -531,10 +532,10 @@ function SlotRow({
             <AnimatedPressable
               onPress={onPickTime}
               onPressIn={() => {
-                timePressScale.value = withTiming(0.92, { duration: 80 });
+                timePressScale.value = withSpring(0.92, SPRING_PRESS_IN);
               }}
               onPressOut={() => {
-                timePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                timePressScale.value = withSpring(1, SPRING_PRESS_OUT);
               }}
               hitSlop={6}
               style={[s.timePickRow, timePressStyle]}
@@ -567,10 +568,10 @@ function TimeChip({
     <AnimatedPressable
       onPress={onPress}
       onPressIn={() => {
-        pressScale.value = withTiming(0.93, { duration: 80 });
+        pressScale.value = withSpring(0.93, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        pressScale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       style={[s.pickChip, on && s.pickChipOn, pressStyle]}
     >
@@ -856,10 +857,10 @@ export default function IntensityScreen() {
               : router.back()
           }
           onPressIn={() => {
-            backPressScale.value = withTiming(0.92, { duration: 80 });
+            backPressScale.value = withSpring(0.92, SPRING_PRESS_IN);
           }}
           onPressOut={() => {
-            backPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+            backPressScale.value = withSpring(1, SPRING_PRESS_OUT);
           }}
           hitSlop={12}
           style={[s.back, backPressStyle]}
@@ -1017,11 +1018,11 @@ export default function IntensityScreen() {
           onPress={next}
           onPressIn={() => {
             if (!canContinue) return;
-            ctaPressScale.value = withTiming(0.96, { duration: 80 });
+            ctaPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
             hapticPress();
           }}
           onPressOut={() => {
-            ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+            ctaPressScale.value = withSpring(1, SPRING_PRESS_OUT);
           }}
         >
           <Text style={[s.ctaTxt, !canContinue && CTA.labelDisabled]}>Continue</Text>
@@ -1046,10 +1047,10 @@ export default function IntensityScreen() {
               <AnimatedPressable
                 onPress={() => setActivePicker(null)}
                 onPressIn={() => {
-                  stateDonePressScale.value = withTiming(0.94, { duration: 80 });
+                  stateDonePressScale.value = withSpring(0.94, SPRING_PRESS_IN);
                 }}
                 onPressOut={() => {
-                  stateDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  stateDonePressScale.value = withSpring(1, SPRING_PRESS_OUT);
                 }}
                 hitSlop={10}
                 style={stateDonePressStyle}
@@ -1094,10 +1095,10 @@ export default function IntensityScreen() {
               <AnimatedPressable
                 onPress={() => setActivePicker(null)}
                 onPressIn={() => {
-                  routineDonePressScale.value = withTiming(0.94, { duration: 80 });
+                  routineDonePressScale.value = withSpring(0.94, SPRING_PRESS_IN);
                 }}
                 onPressOut={() => {
-                  routineDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  routineDonePressScale.value = withSpring(1, SPRING_PRESS_OUT);
                 }}
                 hitSlop={10}
                 style={routineDonePressStyle}
@@ -1144,10 +1145,10 @@ export default function IntensityScreen() {
               <AnimatedPressable
                 onPress={() => setActivePicker(null)}
                 onPressIn={() => {
-                  levelDonePressScale.value = withTiming(0.94, { duration: 80 });
+                  levelDonePressScale.value = withSpring(0.94, SPRING_PRESS_IN);
                 }}
                 onPressOut={() => {
-                  levelDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  levelDonePressScale.value = withSpring(1, SPRING_PRESS_OUT);
                 }}
                 hitSlop={10}
                 style={levelDonePressStyle}
@@ -1205,10 +1206,10 @@ export default function IntensityScreen() {
               <AnimatedPressable
                 onPress={() => setActivePicker(null)}
                 onPressIn={() => {
-                  horizonDonePressScale.value = withTiming(0.94, { duration: 80 });
+                  horizonDonePressScale.value = withSpring(0.94, SPRING_PRESS_IN);
                 }}
                 onPressOut={() => {
-                  horizonDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  horizonDonePressScale.value = withSpring(1, SPRING_PRESS_OUT);
                 }}
                 hitSlop={10}
                 style={horizonDonePressStyle}
@@ -1272,10 +1273,10 @@ export default function IntensityScreen() {
               <AnimatedPressable
                 onPress={closeTimes}
                 onPressIn={() => {
-                  timesDonePressScale.value = withTiming(0.94, { duration: 80 });
+                  timesDonePressScale.value = withSpring(0.94, SPRING_PRESS_IN);
                 }}
                 onPressOut={() => {
-                  timesDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  timesDonePressScale.value = withSpring(1, SPRING_PRESS_OUT);
                 }}
                 hitSlop={10}
                 style={timesDonePressStyle}

@@ -20,6 +20,7 @@
      - Account-tab → "Change password" row
    ─────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -96,10 +97,10 @@ export default function ChangePassword() {
      (zie breath-welcome.tsx `StartCard`). */
   const currentTogglePressScale = useSharedValue(1);
   const onCurrentTogglePressIn = () => {
-    currentTogglePressScale.value = withTiming(0.93, { duration: 80 });
+    currentTogglePressScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onCurrentTogglePressOut = () => {
-    currentTogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    currentTogglePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const currentTogglePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: currentTogglePressScale.value }],
@@ -107,10 +108,10 @@ export default function ChangePassword() {
 
   const pw1TogglePressScale = useSharedValue(1);
   const onPw1TogglePressIn = () => {
-    pw1TogglePressScale.value = withTiming(0.93, { duration: 80 });
+    pw1TogglePressScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onPw1TogglePressOut = () => {
-    pw1TogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pw1TogglePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pw1TogglePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pw1TogglePressScale.value }],
@@ -118,10 +119,10 @@ export default function ChangePassword() {
 
   const pw2TogglePressScale = useSharedValue(1);
   const onPw2TogglePressIn = () => {
-    pw2TogglePressScale.value = withTiming(0.93, { duration: 80 });
+    pw2TogglePressScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onPw2TogglePressOut = () => {
-    pw2TogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pw2TogglePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pw2TogglePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pw2TogglePressScale.value }],
@@ -129,10 +130,10 @@ export default function ChangePassword() {
 
   const submitPressScale = useSharedValue(1);
   const onSubmitPressIn = () => {
-    submitPressScale.value = withTiming(0.96, { duration: 80 });
+    submitPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onSubmitPressOut = () => {
-    submitPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    submitPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const submitPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: submitPressScale.value }],

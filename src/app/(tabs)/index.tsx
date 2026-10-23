@@ -1,4 +1,5 @@
 import { openStateControl } from '@/utils/state-control-ui';
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
@@ -101,8 +102,7 @@ import Animated, {
   withRepeat,
   withSequence,
   withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming, cancelAnimation } from 'react-native-reanimated';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -449,7 +449,7 @@ function CardBounce({
       onLongPress={onLongPress}
       hitSlop={hitSlop}
       onPressIn={() => {
-        scale.value = withTiming(0.96, { duration: 90 });
+        scale.value = withSpring(0.96, SPRING_PRESS_IN);
         /* Operator ("kaarten hebben geen haptische trilling, pas het
            protocol overal toe"): §5 "CTA-tik → haptiek" — zelfde lichte
            tik als de primaire CTA's, nu ook op kaart-selectie. */
@@ -462,7 +462,7 @@ function CardBounce({
            0.78 (dichter bij de al goedgekeurde CTA-veer, 0.73) geeft een
            kortere, strakkere terugkeer — nauwelijks meer dan een
            snelle "settle", geen jelly-effect. */
-        scale.value = withSpring(1, { duration: 220, dampingRatio: 0.78 });
+        scale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       android_ripple={androidRipple}
       accessibilityLabel={accessibilityLabel}
@@ -1024,14 +1024,16 @@ function AudioScreen({
   /* Positief = naar rechts. */
   const AUDIO_INTRO_SHIFT_X = 0;
   const introKenBurns = useSharedValue(1);
+  /* Alle eindeloze animaties lopen enkel zolang dit tabblad zichtbaar is (batterij, vloeiendheid elders). */
   useEffect(() => {
-    if (!intro) return;
+    if (!intro || !tabFocused) return;
     introKenBurns.value = withRepeat(
       withTiming(1.06, { duration: 18000, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
-  }, [intro, introKenBurns]);
+    return () => cancelAnimation(introKenBurns);
+  }, [intro, tabFocused, introKenBurns]);
   const introKenBurnsStyle = useAnimatedStyle(() => ({
     transform: [
       { scale: introKenBurns.value * AUDIO_INTRO_ZOOM },
@@ -1076,7 +1078,7 @@ function AudioScreen({
   }));
   const introShimmer = useSharedValue(-1);
   useEffect(() => {
-    if (!intro) return;
+    if (!intro || !tabFocused) return;
     introShimmer.value = withRepeat(
       withSequence(
         withTiming(-1, { duration: 0 }),
@@ -1086,7 +1088,8 @@ function AudioScreen({
       -1,
       false,
     );
-  }, [intro, introShimmer]);
+    return () => cancelAnimation(introShimmer);
+  }, [intro, tabFocused, introShimmer]);
   const introShimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: introShimmer.value * 170 }, { rotate: '18deg' }],
   }));
@@ -1139,6 +1142,7 @@ function AudioScreen({
     [breath0, breath1, breath2, breath3, breath4, breath5],
   );
   useEffect(() => {
+    if (!tabFocused) return;
     breathValues.forEach((v, i) => {
       v.value = withDelay(
         i * 260,
@@ -1152,8 +1156,9 @@ function AudioScreen({
         ),
       );
     });
+    return () => breathValues.forEach((v) => cancelAnimation(v));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tabFocused]);
   const breathStyle0 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + breath0.value * 0.015 }] }));
   const breathStyle1 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + breath1.value * 0.015 }] }));
   const breathStyle2 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + breath2.value * 0.015 }] }));
@@ -1665,10 +1670,10 @@ function AudioScreen({
               <Pressable
                 onPress={finishAudioIntro}
                 onPressIn={() => {
-                  introCtaScale.value = withTiming(0.96, { duration: 80 });
+                  introCtaScale.value = withSpring(0.96, SPRING_PRESS_IN);
                 }}
                 onPressOut={() => {
-                  introCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                  introCtaScale.value = withSpring(1, SPRING_PRESS_OUT);
                 }}
                 style={s.introCta}
                 android_ripple={{ color: 'rgba(255,255,255,0.12)' }}

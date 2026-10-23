@@ -20,6 +20,7 @@
    Provider-uitzondering: direct Supabase (zie auth-callback.tsx).
    ─────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -100,10 +101,10 @@ export default function ResetPassword() {
      (zie breath-welcome.tsx `StartCard`). */
   const errorBtnPressScale = useSharedValue(1);
   const onErrorBtnPressIn = () => {
-    errorBtnPressScale.value = withTiming(0.96, { duration: 80 });
+    errorBtnPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onErrorBtnPressOut = () => {
-    errorBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    errorBtnPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const errorBtnPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: errorBtnPressScale.value }],
@@ -111,10 +112,10 @@ export default function ResetPassword() {
 
   const pwTogglePressScale = useSharedValue(1);
   const onPwTogglePressIn = () => {
-    pwTogglePressScale.value = withTiming(0.93, { duration: 80 });
+    pwTogglePressScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onPwTogglePressOut = () => {
-    pwTogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pwTogglePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pwTogglePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pwTogglePressScale.value }],
@@ -122,10 +123,10 @@ export default function ResetPassword() {
 
   const pw2TogglePressScale = useSharedValue(1);
   const onPw2TogglePressIn = () => {
-    pw2TogglePressScale.value = withTiming(0.93, { duration: 80 });
+    pw2TogglePressScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onPw2TogglePressOut = () => {
-    pw2TogglePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pw2TogglePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pw2TogglePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pw2TogglePressScale.value }],
@@ -133,10 +134,10 @@ export default function ResetPassword() {
 
   const submitPressScale = useSharedValue(1);
   const onSubmitPressIn = () => {
-    submitPressScale.value = withTiming(0.96, { duration: 80 });
+    submitPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onSubmitPressOut = () => {
-    submitPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    submitPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const submitPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: submitPressScale.value }],

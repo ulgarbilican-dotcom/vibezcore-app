@@ -119,6 +119,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { hapticTap } from '@/utils/haptics';
 import { useStateFreeStart } from '@/hooks/useStateFreeStart';
 import { FREE_COPY } from '@/constants/free-session-copy';
@@ -182,10 +183,10 @@ function MonthCell({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressScale.value }] }));
 
@@ -228,7 +229,7 @@ function StateCard({
     <Pressable
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withTiming(0.96, { duration: 80 });
+        scale.value = withSpring(0.96, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 120 });

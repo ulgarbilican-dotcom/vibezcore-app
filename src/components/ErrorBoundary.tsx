@@ -15,6 +15,7 @@
    Catch) om het te initiëren.
    ─────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { reportError } from '@/services/crash-reporting';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -51,7 +52,7 @@ function PressScaleButton({
     pressScale.value = withTiming(scaleTo, { duration: 80 });
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

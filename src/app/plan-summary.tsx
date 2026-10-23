@@ -8,6 +8,7 @@
    dit scherm wijzigt niets, het rondt af.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
@@ -68,10 +69,10 @@ export default function PlanSummaryScreen() {
 
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backScale.value = withTiming(0.92, { duration: 80 });
+    backScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
@@ -79,10 +80,10 @@ export default function PlanSummaryScreen() {
 
   const ctaScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaScale.value = withTiming(0.96, { duration: 80 });
+    ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCtaPressOut = () => {
-    ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],

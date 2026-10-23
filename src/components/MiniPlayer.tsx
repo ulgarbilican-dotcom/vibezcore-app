@@ -27,6 +27,7 @@
    stoppen — Apple Music/Spotify-conventie).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
 import { PILLAR_META, SERIES_PHOTO, SERIES_PILLAR } from '@/data/audio-library-data';
 import { AudioAccent } from '@/constants/theme';
@@ -188,17 +189,17 @@ export function MiniPlayer({
      (De useSharedValue/useAnimatedStyle-hooks zelf staan nu bovenaan,
      vóór de early returns — zie toelichting daar.) */
   const onRowPressIn = () => {
-    rowPressScale.value = withTiming(0.98, { duration: 80 });
+    rowPressScale.value = withSpring(0.98, SPRING_PRESS_IN);
   };
   const onRowPressOut = () => {
-    rowPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    rowPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
 
   const onPlayPressIn = () => {
-    playPressScale.value = withTiming(0.95, { duration: 80 });
+    playPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPlayPressOut = () => {
-    playPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    playPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
 
   return (

@@ -48,6 +48,7 @@
    als breathwork's dagplan, leest VANDAAG's items uit het plan.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, TypeScale, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -164,10 +165,10 @@ function ModeTile({
       style={[s.tile, tileStyle]}
       onPress={onPress}
       onPressIn={() => {
-        pressScale.value = withTiming(0.97, { duration: 80 });
+        pressScale.value = withSpring(0.97, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        pressScale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
     >
       <BlurView
@@ -180,10 +181,10 @@ function ModeTile({
         hitSlop={10}
         onPress={onInfo}
         onPressIn={() => {
-          infoPressScale.value = withTiming(0.92, { duration: 80 });
+          infoPressScale.value = withSpring(0.92, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
-          infoPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+          infoPressScale.value = withSpring(1, SPRING_PRESS_OUT);
         }}
         style={s.tileInfoBtn}
       >
@@ -228,7 +229,7 @@ function HorizonChip({
       style={s.horizonSlot}
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withTiming(0.97, { duration: 80 });
+        scale.value = withSpring(0.97, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 120 });
@@ -265,11 +266,11 @@ function PrimaryCta({
       style={[s.saveBtn, disabled && s.saveBtnOff, style]}
       onPress={onPress}
       onPressIn={() => {
-        pressScale.value = withTiming(0.96, { duration: 80 });
+        pressScale.value = withSpring(0.96, SPRING_PRESS_IN);
         hapticPress();
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        pressScale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
     >
       <Text style={[s.saveBtnTxt, disabled && s.saveBtnTxtOff]}>{label}</Text>

@@ -24,6 +24,7 @@
    lage drempel om te proberen, het jaar blijft de aanbevolen keuze.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { AudioAccent, AudioAccentLight, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
@@ -79,11 +80,11 @@ function Bounce({
       style={style}
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withTiming(0.96, { duration: 90 });
+        scale.value = withSpring(0.96, SPRING_PRESS_IN);
         hapticPress();
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { duration: 260, dampingRatio: 0.78 });
+        scale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       accessibilityRole="button"
       accessibilityState={selected === undefined ? undefined : { selected }}

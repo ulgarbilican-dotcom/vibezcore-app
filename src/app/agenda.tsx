@@ -11,6 +11,7 @@
    toestand-logica als (tabs)/activity.tsx — geen nieuwe kleuren verzonnen.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import PremiumNote from '@/components/PremiumNote';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
@@ -148,7 +149,7 @@ function StateCard({
     <Pressable
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withTiming(0.96, { duration: 80 });
+        scale.value = withSpring(0.96, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 120 });
@@ -218,10 +219,10 @@ function MonthCell({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressScale.value }] }));
 
@@ -302,64 +303,64 @@ export default function AgendaScreen() {
      eigen gedeelde waarde. */
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backScale.value = withTiming(0.92, { duration: 80 });
+    backScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backStyle = useAnimatedStyle(() => ({ transform: [{ scale: backScale.value }] }));
 
   const ctaScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaScale.value = withTiming(0.96, { duration: 80 });
+    ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCtaPressOut = () => {
-    ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   const dateRowScale = useSharedValue(1);
   const onDateRowPressIn = () => {
-    dateRowScale.value = withTiming(0.95, { duration: 80 });
+    dateRowScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onDateRowPressOut = () => {
-    dateRowScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    dateRowScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const dateRowPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: dateRowScale.value }] }));
 
   const monthPrevScale = useSharedValue(1);
   const onMonthPrevPressIn = () => {
-    monthPrevScale.value = withTiming(0.92, { duration: 80 });
+    monthPrevScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onMonthPrevPressOut = () => {
-    monthPrevScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    monthPrevScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const monthPrevStyle = useAnimatedStyle(() => ({ transform: [{ scale: monthPrevScale.value }] }));
 
   const monthNextScale = useSharedValue(1);
   const onMonthNextPressIn = () => {
-    monthNextScale.value = withTiming(0.92, { duration: 80 });
+    monthNextScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onMonthNextPressOut = () => {
-    monthNextScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    monthNextScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const monthNextStyle = useAnimatedStyle(() => ({ transform: [{ scale: monthNextScale.value }] }));
 
   const editBtnScale = useSharedValue(1);
   const onEditBtnPressIn = () => {
-    editBtnScale.value = withTiming(0.95, { duration: 80 });
+    editBtnScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onEditBtnPressOut = () => {
-    editBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    editBtnScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const editBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: editBtnScale.value }] }));
 
   const changeProtocolScale = useSharedValue(1);
   const onChangeProtocolPressIn = () => {
-    changeProtocolScale.value = withTiming(0.95, { duration: 80 });
+    changeProtocolScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onChangeProtocolPressOut = () => {
-    changeProtocolScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    changeProtocolScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const changeProtocolStyle = useAnimatedStyle(() => ({ transform: [{ scale: changeProtocolScale.value }] }));
 

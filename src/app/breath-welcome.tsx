@@ -32,6 +32,7 @@
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import PremiumNote from '@/components/PremiumNote';
 import { vibrateCompat } from '@/services/breath-haptics';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
@@ -596,11 +597,11 @@ export default function BreathWelcomeScreen() {
      plan-KEUZE (een ander element), niet bij deze knop. Huisstijl §5
      wil hier de standaard lichte tik op onPressIn + opacity(.85). */
   const onCtaPressIn = () => {
-    ctaPressScale.value = withTiming(0.96, { duration: 80 });
+    ctaPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
     hapticPress();
   };
   const onCtaPressOut = () => {
-    ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaShakeStyle = useAnimatedStyle(() => ({
     transform: [
@@ -2303,10 +2304,10 @@ function ModeCard({
      zodra er een andere kaart "speelt". */
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
   useEffect(() => {
@@ -2465,10 +2466,10 @@ function ChangeTile({
      er minstens 1 doel getikt is. */
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
   useEffect(() => {
@@ -2691,10 +2692,10 @@ function ExperienceCard({
      dimmen naar 0.45 zodra er een niveau gekozen is. */
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const cardOpacity = useSharedValue(dimmed ? 0.45 : 1);
   useEffect(() => {
@@ -3241,10 +3242,10 @@ function StartCard({
      tegen de bodem"): `withTiming` (geen spring) op de indruk-fase, de
      `withSpring`-bounce is enkel voor de release hieronder. */
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   /* Operator ("focus verlagen op de niet-actieve kaarten, faden naar
      0.4-0.5 opacity, lineair/ease — mag niet mee-stuiteren met de

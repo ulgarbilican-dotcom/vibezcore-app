@@ -27,6 +27,7 @@
      kale witte/lichtgrijze tekstlinks, onderaan boven de home-indicator.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { BrandFonts } from '@/constants/theme';
 import { getToken } from '@/services/auth';
 import {
@@ -172,7 +173,7 @@ function PillarButton({
         accessibilityRole="button"
         onPress={p.onPress}
         onPressIn={() => {
-          pressScale.value = withTiming(0.96, { duration: 90 });
+          pressScale.value = withSpring(0.96, SPRING_PRESS_IN);
         }}
         onPressOut={() => {
           pressScale.value = withSpring(1, { damping: 12, stiffness: 220 });
@@ -297,11 +298,11 @@ export default function WelcomeScreen() {
      (huisstijl §5) — nu op allebei toegevoegd. */
   const signInScale = useSharedValue(1);
   const onSignInPressIn = () => {
-    signInScale.value = withTiming(0.94, { duration: 80 });
+    signInScale.value = withSpring(0.94, SPRING_PRESS_IN);
     hapticPress();
   };
   const onSignInPressOut = () => {
-    signInScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    signInScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const signInStyle = useAnimatedStyle(() => ({
     transform: [{ scale: signInScale.value }],

@@ -27,6 +27,7 @@
    precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { iosFont } from '@/utils/ios-text-scale';
@@ -349,10 +350,10 @@ function StateThumb({
     <AnimatedPressable
       onPress={on ? onInfoPress : onPress}
       onPressIn={() => {
-        pressScale.value = withTiming(0.95, { duration: 80 });
+        pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        pressScale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       style={[s.thumbCol, pressStyle]}
       accessibilityLabel={t.eyebrow}
@@ -408,10 +409,10 @@ function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boole
   const alignTop = lowered ? insets.top + 34 - 26 : insets.top + 8 + 16 - 26;
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -523,12 +524,14 @@ export default function BreathScreen() {
      zoom, in het bereik dat al goed stond vóór de pan erbij kwam. */
   const kenBurns = useSharedValue(1);
   useEffect(() => {
+    if (!tabFocused) return;
     kenBurns.value = withRepeat(
       withTiming(1.06, { duration: 18000, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
-  }, [kenBurns]);
+    return () => cancelAnimation(kenBurns);
+  }, [tabFocused, kenBurns]);
   const kenBurnsStyle = useAnimatedStyle(() => ({
     transform: [{ scale: kenBurns.value }],
   }));
@@ -604,6 +607,7 @@ export default function BreathScreen() {
   const ctaPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
   const shimmer = useSharedValue(-1);
   useEffect(() => {
+    if (!tabFocused) return;
     shimmer.value = withRepeat(
       withSequence(
         withTiming(-1, { duration: 0 }),
@@ -613,7 +617,8 @@ export default function BreathScreen() {
       -1,
       false,
     );
-  }, [shimmer]);
+    return () => cancelAnimation(shimmer);
+  }, [tabFocused, shimmer]);
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shimmer.value * CTA_SHIMMER_RANGE }, { rotate: '18deg' }],
   }));
@@ -1096,10 +1101,10 @@ export default function BreathScreen() {
             <Pressable
               onPress={() => setIntro(false)}
               onPressIn={() => {
-                ctaScale.value = withTiming(0.96, { duration: 80 });
+                ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
               }}
               onPressOut={() => {
-                ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+                ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
               }}
               style={s.introCtaGlassWrap}
               android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
@@ -1458,10 +1463,10 @@ export default function BreathScreen() {
         <Pressable
           onPress={open}
           onPressIn={() => {
-            ctaScale.value = withTiming(0.96, { duration: 80 });
+            ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
           }}
           onPressOut={() => {
-            ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+            ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
           }}
           style={[s.cta, CTA_GLOW, stateGlass(st.accent)]}
           android_ripple={{ color: 'rgba(255,255,255,0.12)' }}

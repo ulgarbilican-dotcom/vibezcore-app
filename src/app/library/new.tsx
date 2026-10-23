@@ -6,6 +6,7 @@
    gesorteerd nieuwste-eerst. Bij geen matches: empty state.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { AudioAccent } from '@/constants/theme';
@@ -50,10 +51,10 @@ export default function LibraryNewScreen() {
 
   const backPressScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backPressScale.value = withTiming(0.95, { duration: 80 });
+    backPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backPressScale.value }],

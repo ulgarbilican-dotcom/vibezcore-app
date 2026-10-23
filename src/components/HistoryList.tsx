@@ -9,6 +9,7 @@
    gewone rode tekstknop om te wissen. Kleur zit enkel in de icoontjes.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_OUT } from '@/constants/motion';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
@@ -34,7 +35,7 @@ function usePress(scaleTo: number) {
       scale.value = withTiming(scaleTo, { duration: 80 });
     },
     onPressOut: () => {
-      scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      scale.value = withSpring(1, SPRING_PRESS_OUT);
     },
   };
 }

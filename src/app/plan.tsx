@@ -20,6 +20,7 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
 import { planItemStatuses } from '@/utils/plan-status';
@@ -232,10 +233,10 @@ export default function PlanScreen() {
   const allModesScale = useSharedValue(1);
   const onAllModesPressIn = () => {
     hapticTap();
-    allModesScale.value = withTiming(0.95, { duration: 80 });
+    allModesScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onAllModesPressOut = () => {
-    allModesScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    allModesScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const allModesStyle = useAnimatedStyle(() => ({
     transform: [{ scale: allModesScale.value }],
@@ -244,10 +245,10 @@ export default function PlanScreen() {
   const primaryCtaScale = useSharedValue(1);
   const onPrimaryCtaPressIn = () => {
     hapticTap();
-    primaryCtaScale.value = withTiming(0.95, { duration: 80 });
+    primaryCtaScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPrimaryCtaPressOut = () => {
-    primaryCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    primaryCtaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const primaryCtaStyle = useAnimatedStyle(() => ({
     transform: [{ scale: primaryCtaScale.value }],
@@ -256,10 +257,10 @@ export default function PlanScreen() {
   const remindScale = useSharedValue(1);
   const onRemindPressIn = () => {
     hapticTap();
-    remindScale.value = withTiming(0.95, { duration: 80 });
+    remindScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onRemindPressOut = () => {
-    remindScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    remindScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const remindStyle = useAnimatedStyle(() => ({
     transform: [{ scale: remindScale.value }],
@@ -268,10 +269,10 @@ export default function PlanScreen() {
   const goalCtaScale = useSharedValue(1);
   const onGoalCtaPressIn = () => {
     hapticTap();
-    goalCtaScale.value = withTiming(0.95, { duration: 80 });
+    goalCtaScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onGoalCtaPressOut = () => {
-    goalCtaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    goalCtaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const goalCtaStyle = useAnimatedStyle(() => ({
     transform: [{ scale: goalCtaScale.value }],
@@ -282,10 +283,10 @@ export default function PlanScreen() {
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
     hapticTap();
-    backScale.value = withTiming(0.93, { duration: 80 });
+    backScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
@@ -296,10 +297,10 @@ export default function PlanScreen() {
      omdat de modal meteen dichtgaat. */
   const pickBackdropScale = useSharedValue(1);
   const onPickBackdropPressIn = () => {
-    pickBackdropScale.value = withTiming(0.95, { duration: 80 });
+    pickBackdropScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPickBackdropPressOut = () => {
-    pickBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pickBackdropScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pickBackdropStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pickBackdropScale.value }],
@@ -307,10 +308,10 @@ export default function PlanScreen() {
 
   const durationBackdropScale = useSharedValue(1);
   const onDurationBackdropPressIn = () => {
-    durationBackdropScale.value = withTiming(0.95, { duration: 80 });
+    durationBackdropScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onDurationBackdropPressOut = () => {
-    durationBackdropScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    durationBackdropScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const durationBackdropStyle = useAnimatedStyle(() => ({
     transform: [{ scale: durationBackdropScale.value }],
@@ -1067,10 +1068,10 @@ function PlanItemCard({
      settings.tsx se `PressFeedback`-fix. */
   const onPressIn = () => {
     hapticTap();
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

@@ -19,6 +19,7 @@
    blijft tot we de proxy uitbreiden met een verify-route.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -73,10 +74,10 @@ export default function AuthCallback() {
      (zie breath-welcome.tsx `StartCard`). */
   const signInBtnPressScale = useSharedValue(1);
   const onSignInBtnPressIn = () => {
-    signInBtnPressScale.value = withTiming(0.95, { duration: 80 });
+    signInBtnPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onSignInBtnPressOut = () => {
-    signInBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    signInBtnPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const signInBtnPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: signInBtnPressScale.value }],

@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import TimeWheel from '@/components/TimeWheel';
 import PremiumNote from '@/components/PremiumNote';
 import SheetScroll from '@/components/SheetScroll';
@@ -489,10 +490,10 @@ function DurationDial({
 
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -591,10 +592,10 @@ function AmPmButton({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.93, { duration: 80 });
+    pressScale.value = withSpring(0.93, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -656,10 +657,10 @@ function TechniqueSegmentButton({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -913,10 +914,10 @@ function StateSheetRow({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -962,10 +963,10 @@ function TechniqueSheetRow({
   const { primary } = techniqueDecisionLine(t);
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -1012,10 +1013,10 @@ function DurationSheetRow({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -1052,10 +1053,10 @@ function HorizonSheetRow({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -2210,43 +2211,43 @@ export default function BreathSetupScreen() {
      een iets subtielere 0.92, kaarten/rijen 0.95, de enkele volle-breedte CTA
      0.96 — zelfde receptuur als `StartCard` in breath-welcome.tsx. */
   const backPressScale = useSharedValue(1);
-  const backPressIn = () => { backPressScale.value = withTiming(0.92, { duration: 80 }); };
-  const backPressOut = () => { backPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const backPressIn = () => { backPressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const backPressOut = () => { backPressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const backPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: backPressScale.value }] }));
 
   const resetPressScale = useSharedValue(1);
-  const resetPressIn = () => { resetPressScale.value = withTiming(0.92, { duration: 80 }); };
-  const resetPressOut = () => { resetPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const resetPressIn = () => { resetPressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const resetPressOut = () => { resetPressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const resetPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: resetPressScale.value }] }));
 
   const stateTilePressScale = useSharedValue(1);
-  const stateTilePressIn = () => { stateTilePressScale.value = withTiming(0.95, { duration: 80 }); };
-  const stateTilePressOut = () => { stateTilePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const stateTilePressIn = () => { stateTilePressScale.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const stateTilePressOut = () => { stateTilePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const stateTilePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: stateTilePressScale.value }] }));
 
   const timeTilePressScale = useSharedValue(1);
-  const timeTilePressIn = () => { timeTilePressScale.value = withTiming(0.95, { duration: 80 }); };
-  const timeTilePressOut = () => { timeTilePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const timeTilePressIn = () => { timeTilePressScale.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const timeTilePressOut = () => { timeTilePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const timeTilePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: timeTilePressScale.value }] }));
 
   const techTilePressScale = useSharedValue(1);
-  const techTilePressIn = () => { techTilePressScale.value = withTiming(0.95, { duration: 80 }); };
-  const techTilePressOut = () => { techTilePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const techTilePressIn = () => { techTilePressScale.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const techTilePressOut = () => { techTilePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const techTilePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: techTilePressScale.value }] }));
 
   const durationTilePressScale = useSharedValue(1);
-  const durationTilePressIn = () => { durationTilePressScale.value = withTiming(0.95, { duration: 80 }); };
-  const durationTilePressOut = () => { durationTilePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const durationTilePressIn = () => { durationTilePressScale.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const durationTilePressOut = () => { durationTilePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const durationTilePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: durationTilePressScale.value }] }));
 
   const horizonTilePressScale = useSharedValue(1);
-  const horizonTilePressIn = () => { horizonTilePressScale.value = withTiming(0.95, { duration: 80 }); };
-  const horizonTilePressOut = () => { horizonTilePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const horizonTilePressIn = () => { horizonTilePressScale.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const horizonTilePressOut = () => { horizonTilePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const horizonTilePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: horizonTilePressScale.value }] }));
 
   const changeTimeBtnPressScale = useSharedValue(1);
-  const changeTimeBtnPressIn = () => { changeTimeBtnPressScale.value = withTiming(0.94, { duration: 80 }); };
-  const changeTimeBtnPressOut = () => { changeTimeBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const changeTimeBtnPressIn = () => { changeTimeBtnPressScale.value = withSpring(0.94, SPRING_PRESS_IN); };
+  const changeTimeBtnPressOut = () => { changeTimeBtnPressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const changeTimeBtnPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: changeTimeBtnPressScale.value }] }));
 
   const ctaPressScale = useSharedValue(1);
@@ -2255,43 +2256,43 @@ export default function BreathSetupScreen() {
      gestart"-signaal, maar de standaard lichte tik-feedback (huisstijl
      §5, op onPressIn) ontbrak hier volledig. */
   const ctaPressIn = () => {
-    ctaPressScale.value = withTiming(0.96, { duration: 80 });
+    ctaPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
     hapticPress();
   };
-  const ctaPressOut = () => { ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const ctaPressOut = () => { ctaPressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaPressScale.value }],
     opacity: 1 - (1 - ctaPressScale.value) * 3.75,
   }));
 
   const modalGotItPressScale = useSharedValue(1);
-  const modalGotItPressIn = () => { modalGotItPressScale.value = withTiming(0.95, { duration: 80 }); };
-  const modalGotItPressOut = () => { modalGotItPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const modalGotItPressIn = () => { modalGotItPressScale.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const modalGotItPressOut = () => { modalGotItPressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const modalGotItPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: modalGotItPressScale.value }] }));
 
   const timeDonePressScale = useSharedValue(1);
-  const timeDonePressIn = () => { timeDonePressScale.value = withTiming(0.92, { duration: 80 }); };
-  const timeDonePressOut = () => { timeDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const timeDonePressIn = () => { timeDonePressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const timeDonePressOut = () => { timeDonePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const timeDonePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: timeDonePressScale.value }] }));
 
   const stateDonePressScale = useSharedValue(1);
-  const stateDonePressIn = () => { stateDonePressScale.value = withTiming(0.92, { duration: 80 }); };
-  const stateDonePressOut = () => { stateDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const stateDonePressIn = () => { stateDonePressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const stateDonePressOut = () => { stateDonePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const stateDonePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: stateDonePressScale.value }] }));
 
   const techDonePressScale = useSharedValue(1);
-  const techDonePressIn = () => { techDonePressScale.value = withTiming(0.92, { duration: 80 }); };
-  const techDonePressOut = () => { techDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const techDonePressIn = () => { techDonePressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const techDonePressOut = () => { techDonePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const techDonePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: techDonePressScale.value }] }));
 
   const durationDonePressScale = useSharedValue(1);
-  const durationDonePressIn = () => { durationDonePressScale.value = withTiming(0.92, { duration: 80 }); };
-  const durationDonePressOut = () => { durationDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const durationDonePressIn = () => { durationDonePressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const durationDonePressOut = () => { durationDonePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const durationDonePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: durationDonePressScale.value }] }));
 
   const horizonDonePressScale = useSharedValue(1);
-  const horizonDonePressIn = () => { horizonDonePressScale.value = withTiming(0.92, { duration: 80 }); };
-  const horizonDonePressOut = () => { horizonDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const horizonDonePressIn = () => { horizonDonePressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const horizonDonePressOut = () => { horizonDonePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const horizonDonePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: horizonDonePressScale.value }] }));
 
   /* Operator, 24 september 2026 ("Apple-sheet i.p.v. gecentreerde popup
@@ -2300,8 +2301,8 @@ export default function BreathSetupScreen() {
      losse INFO-sheet (i-icoon). Zelfde druk-animatie-recept, eigen
      SharedValue zodat de twee onafhankelijk blijven. */
   const durationInfoDonePressScale = useSharedValue(1);
-  const durationInfoDonePressIn = () => { durationInfoDonePressScale.value = withTiming(0.92, { duration: 80 }); };
-  const durationInfoDonePressOut = () => { durationInfoDonePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const durationInfoDonePressIn = () => { durationInfoDonePressScale.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const durationInfoDonePressOut = () => { durationInfoDonePressScale.value = withSpring(1, SPRING_PRESS_OUT); };
   const durationInfoDonePressStyle = useAnimatedStyle(() => ({ transform: [{ scale: durationInfoDonePressScale.value }] }));
 
   return (

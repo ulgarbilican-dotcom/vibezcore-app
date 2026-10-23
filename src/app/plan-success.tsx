@@ -7,6 +7,7 @@
    protocol staat al vast; dit scherm bedankt en stuurt door.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { AudioAccent, Brand, BrandFonts, CTA_GLOW } from '@/constants/theme';
 import { calculateStreak, useBreathHistory } from '@/utils/breath-history';
 import { syncPlanReminders } from '@/services/reminders';
@@ -44,11 +45,11 @@ function PlanSuccessCta({ onPress }: { onPress: () => void }) {
     <Pressable
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withTiming(0.97, { duration: 80 });
+        scale.value = withSpring(0.97, SPRING_PRESS_IN);
         hapticPress();
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        scale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
     >
       <Animated.View style={[s.cta, pressStyle]}>

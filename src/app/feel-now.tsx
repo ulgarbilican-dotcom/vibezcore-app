@@ -26,6 +26,7 @@
    plaats van een harde cut, Premium/bracelet-eigenaars de volledige sessie
    zonder enige limiet. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -188,8 +189,8 @@ export default function FeelNowScreen() {
       <View style={s.bar}>
         <AnimatedPressable
           onPress={() => router.back()}
-          onPressIn={() => { closeScale.value = withTiming(0.9, { duration: 80 }); }}
-          onPressOut={() => { closeScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); }}
+          onPressIn={() => { closeScale.value = withSpring(0.9, SPRING_PRESS_IN); }}
+          onPressOut={() => { closeScale.value = withSpring(1, SPRING_PRESS_OUT); }}
           hitSlop={12}
           style={[s.back, closeStyle]}
           accessibilityLabel="Back"
@@ -394,8 +395,8 @@ function SituationCard({
         onInfoPress();
       }}
       accessibilityHint="Starts a session. Long press for why it helps."
-      onPressIn={() => { scale.value = withTiming(0.97, { duration: 80 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); }}
+      onPressIn={() => { scale.value = withSpring(0.97, SPRING_PRESS_IN); }}
+      onPressOut={() => { scale.value = withSpring(1, SPRING_PRESS_OUT); }}
       style={[s.cardSlot, pressStyle]}
     >
       {/* Operator ("de 4 hoofdkaarten lichter dan de achtergrond, de 8

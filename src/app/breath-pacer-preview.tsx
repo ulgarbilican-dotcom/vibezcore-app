@@ -9,6 +9,7 @@
    plek in de app heeft (of definitief verworpen wordt).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BreathPacer from '@/components/BreathPacer';
 import LotusPacer from '@/components/LotusPacer';
 import { BrandFonts } from '@/constants/theme';
@@ -36,10 +37,10 @@ const STATES = [
 function BreathPacerPreviewInner() {
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backScale.value = withTiming(0.92, { duration: 80 });
+    backScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],

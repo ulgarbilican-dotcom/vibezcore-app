@@ -20,6 +20,7 @@
    webapp behouden, achterwaarts uitbreidbaar).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { SERIES_PHOTO } from '@/data/audio-library-data';
 import {
@@ -231,10 +232,10 @@ export default function HistoryScreen() {
      loslaten. */
   const clearPressScale = useSharedValue(1);
   const onClearPressIn = () => {
-    clearPressScale.value = withTiming(0.96, { duration: 80 });
+    clearPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onClearPressOut = () => {
-    clearPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    clearPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const clearPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: clearPressScale.value }],
@@ -534,10 +535,10 @@ function EntryRow({
      (breath-welcome.tsx): geen bounce bij indrukken, wel bij loslaten. */
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.9, { duration: 80 });
+    pressScale.value = withSpring(0.9, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -623,10 +624,10 @@ function PaginationFooter({
      gerenderd staan. */
   const expandPressScale = useSharedValue(1);
   const onExpandPressIn = () => {
-    expandPressScale.value = withTiming(0.96, { duration: 80 });
+    expandPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onExpandPressOut = () => {
-    expandPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    expandPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const expandPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: expandPressScale.value }],
@@ -634,10 +635,10 @@ function PaginationFooter({
 
   const collapsePressScale = useSharedValue(1);
   const onCollapsePressIn = () => {
-    collapsePressScale.value = withTiming(0.96, { duration: 80 });
+    collapsePressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCollapsePressOut = () => {
-    collapsePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    collapsePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const collapsePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: collapsePressScale.value }],

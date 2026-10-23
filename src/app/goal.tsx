@@ -38,6 +38,7 @@
      is een hoogglanzende capsule, transparant/gedimd zonder keuze en
      licht fel op in de merk-indigo zodra er iets gekozen is. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, CTA } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
@@ -96,11 +97,11 @@ function CtaButton({ active, onPress }: { active: boolean; onPress: () => void }
      Enkele full-width primaire CTA, dus 0.96. */
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.96, { duration: 80 });
+    pressScale.value = withSpring(0.96, SPRING_PRESS_IN);
     hapticPress();
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   /* Operator ("kijk alle CTA's na"): opacity-kanaal was al bezet door de
      active/inactive-fade — press-dim (huisstijl §5, .85 bij indrukken)
@@ -216,10 +217,10 @@ const GoalTile = memo(function GoalTile({
      bedient de hele kaart, dit knopje heeft zijn eigen tik-doel). */
   const infoPressScale = useSharedValue(1);
   const onInfoPressIn = () => {
-    infoPressScale.value = withTiming(0.92, { duration: 80 });
+    infoPressScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onInfoPressOut = () => {
-    infoPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    infoPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const infoPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: infoPressScale.value }],
@@ -228,10 +229,10 @@ const GoalTile = memo(function GoalTile({
   return (
     <AnimatedPressable
       onPressIn={() => {
-        pressScale.value = withTiming(0.97, { duration: 80 });
+        pressScale.value = withSpring(0.97, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        pressScale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       onPress={() => onTap(g.key)}
       style={[

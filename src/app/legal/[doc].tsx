@@ -21,6 +21,7 @@
                          iOS Safari View Controller, fallback Linking)
    ─────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -250,10 +251,10 @@ export default function LegalDoc() {
      render-tak straks gekozen wordt. */
   const backToAccountPressScale = useSharedValue(1);
   const onBackToAccountPressIn = () => {
-    backToAccountPressScale.value = withTiming(0.95, { duration: 80 });
+    backToAccountPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onBackToAccountPressOut = () => {
-    backToAccountPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backToAccountPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backToAccountPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backToAccountPressScale.value }],
@@ -261,10 +262,10 @@ export default function LegalDoc() {
 
   const contactBtnPressScale = useSharedValue(1);
   const onContactBtnPressIn = () => {
-    contactBtnPressScale.value = withTiming(0.95, { duration: 80 });
+    contactBtnPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onContactBtnPressOut = () => {
-    contactBtnPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    contactBtnPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const contactBtnPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: contactBtnPressScale.value }],
@@ -401,10 +402,10 @@ function LegalNavChip({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

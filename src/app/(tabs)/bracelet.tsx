@@ -40,6 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
@@ -48,7 +49,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -59,8 +60,7 @@ import Animated, {
   withRepeat,
   withSequence,
   withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming, cancelAnimation } from 'react-native-reanimated';
 import BraceletControl from '../bracelet-control';
 import RestingHeartRatePage from '@/components/RestingHeartRatePage';
 import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
@@ -161,9 +161,12 @@ function StateControlIntro({
   }));
   const shimmer = useSharedValue(-1);
   const kenBurns = useSharedValue(1);
+  const introFocused = useIsFocused();
   const eyebrowReveal = useSharedValue(0);
   const titleReveal = useSharedValue(0);
+  /* Eindeloze animaties enkel zolang dit tabblad zichtbaar is. */
   useEffect(() => {
+    if (!introFocused) return;
     shimmer.value = withRepeat(
       withSequence(
         withTiming(-1, { duration: 0 }),
@@ -180,8 +183,12 @@ function StateControlIntro({
     );
     eyebrowReveal.value = withDelay(300, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
     titleReveal.value = withDelay(520, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
+    return () => {
+      cancelAnimation(shimmer);
+      cancelAnimation(kenBurns);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [introFocused]);
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shimmer.value * 220 }, { rotate: '18deg' }],
   }));
@@ -270,10 +277,10 @@ function StateControlIntro({
               onDone();
             }}
             onPressIn={() => {
-              ctaScale.value = withTiming(0.96, { duration: 80 });
+              ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
             }}
             onPressOut={() => {
-              ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+              ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
             }}
             style={s.introCtaGlassWrap}
             android_ripple={{ color: 'rgba(255,255,255,0.12)' }}

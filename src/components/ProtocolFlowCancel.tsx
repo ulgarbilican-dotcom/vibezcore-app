@@ -21,6 +21,7 @@
    dagdeel/tijden-scherm) bestaat niet meer als apart scherm — samengevoegd
    in intensity.tsx ("Set your routine" doet nu ook Times). */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { confirmVibezAlert } from '@/components/VibezAlert';
 import { BrandFonts } from '@/constants/theme';
 import { router } from 'expo-router';
@@ -61,10 +62,10 @@ export async function confirmExitProtocolFlow(): Promise<void> {
 export function ProtocolFlowCancel() {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.92, { duration: 80 });
+    pressScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

@@ -16,6 +16,7 @@
    nu specifiek als bevestiging dat de net-gekozen doelen zijn
    meegenomen, niet als losse styling-tekst. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import BalancedText from '@/components/BalancedText';
 import { BrandDark, CTA, TypeScale } from '@/constants/theme';
@@ -83,10 +84,10 @@ export default function RoutineIntroScreen() {
 
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backScale.value = withTiming(0.92, { duration: 80 });
+    backScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
@@ -94,10 +95,10 @@ export default function RoutineIntroScreen() {
 
   const ctaScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaScale.value = withTiming(0.96, { duration: 80 });
+    ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCtaPressOut = () => {
-    ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],

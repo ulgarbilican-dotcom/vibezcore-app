@@ -860,6 +860,11 @@ export default function RootLayout() {
         <BlurTargetView ref={rootBlurRef} style={{ flex: 1 }} collapsable={false}>
         <Stack
         screenOptions={{
+          /* 23 okt 2026 (animatie-optimalisatie): iOS-achtige schuif op Android, en op iOS terugvegen vanaf
+             overal (onderbreekbaar, volgt je vinger). */
+          animation: Platform.OS === 'android' ? 'ios_from_right' : 'default',
+          fullScreenGestureEnabled: true,
+          gestureEnabled: true,
           headerStyle: { backgroundColor: Brand.bg },
           headerTintColor: Brand.text,
           headerTitleStyle: { fontFamily: 'Inter_700Bold' },

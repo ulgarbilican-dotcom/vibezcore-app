@@ -48,6 +48,7 @@
      ontwerp-referentie waren daar zelf al met "bijvoorbeeld" gemarkeerd,
      geen vaste operator-tekstkeuze). */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { BrandDark, BrandLight, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -177,10 +178,10 @@ function PathCard({
   return (
     <AnimatedPressable
       onPressIn={() => {
-        pressScale.value = withTiming(0.97, { duration: 80 });
+        pressScale.value = withSpring(0.97, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        pressScale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       onPress={onPress}
       style={[

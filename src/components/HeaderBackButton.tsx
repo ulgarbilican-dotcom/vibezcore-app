@@ -25,6 +25,7 @@
    — zelfde gedrag als React Navigation's eigen default voor de systeem-
    pijl. `onPress`/`color` zijn overrides voor de uitzonderingsgevallen. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { Brand } from '@/constants/theme';
 import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
@@ -59,10 +60,10 @@ export function HeaderBackButton({
     <AnimatedPressable
       onPress={onPress ?? (() => (router.canGoBack() ? router.back() : fallback()))}
       onPressIn={() => {
-        scale.value = withTiming(0.92, { duration: 80 });
+        scale.value = withSpring(0.92, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+        scale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       hitSlop={12}
       accessibilityLabel="Back"

@@ -9,6 +9,7 @@
    (PremiumPaywallModal) open. Twee stappen, geen verrassing.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -43,10 +44,10 @@ export default function ProtocolTeaserModal({
 }: Props) {
   const closePressScale = useSharedValue(1);
   const onClosePressIn = () => {
-    closePressScale.value = withTiming(0.92, { duration: 80 });
+    closePressScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onClosePressOut = () => {
-    closePressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    closePressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const closePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: closePressScale.value }],
@@ -54,10 +55,10 @@ export default function ProtocolTeaserModal({
 
   const ctaPressScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaPressScale.value = withTiming(0.96, { duration: 80 });
+    ctaPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCtaPressOut = () => {
-    ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaPressScale.value }],
@@ -65,10 +66,10 @@ export default function ProtocolTeaserModal({
 
   const laterPressScale = useSharedValue(1);
   const onLaterPressIn = () => {
-    laterPressScale.value = withTiming(0.94, { duration: 80 });
+    laterPressScale.value = withSpring(0.94, SPRING_PRESS_IN);
   };
   const onLaterPressOut = () => {
-    laterPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    laterPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const laterPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: laterPressScale.value }],

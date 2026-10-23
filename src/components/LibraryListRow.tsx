@@ -7,6 +7,7 @@
    (NEW-pill / gevuld hartje / FREE-pill).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { PILLAR_META, SERIES_PHOTO, SERIES_PILLAR, type Session } from '@/data/audio-library-data';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -106,10 +107,10 @@ export function LibraryListRow({
      bounce bij indrukken, wel bij loslaten. */
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

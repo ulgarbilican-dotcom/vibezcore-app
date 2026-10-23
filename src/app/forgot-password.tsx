@@ -15,6 +15,7 @@
    2026-05-27.
    ─────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { fetchWithTimeout } from '@/services/auth';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -83,10 +84,10 @@ export default function ForgotPassword() {
      (zie breath-welcome.tsx `StartCard`). */
   const backToSignInPressScale = useSharedValue(1);
   const onBackToSignInPressIn = () => {
-    backToSignInPressScale.value = withTiming(0.95, { duration: 80 });
+    backToSignInPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onBackToSignInPressOut = () => {
-    backToSignInPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backToSignInPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backToSignInPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backToSignInPressScale.value }],
@@ -94,10 +95,10 @@ export default function ForgotPassword() {
 
   const submitPressScale = useSharedValue(1);
   const onSubmitPressIn = () => {
-    submitPressScale.value = withTiming(0.96, { duration: 80 });
+    submitPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onSubmitPressOut = () => {
-    submitPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    submitPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const submitPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: submitPressScale.value }],

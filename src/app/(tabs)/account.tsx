@@ -10,6 +10,7 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_OUT } from '@/constants/motion';
 import { friendlyError } from '@/utils/friendly-error';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel, resetRestingPulse } from '@/services/resting-pulse';
@@ -222,7 +223,7 @@ function PressScale({
     rest.onPressIn?.(e);
   };
   const onPressOut: NonNullable<ComponentProps<typeof Pressable>['onPressOut']> = (e) => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
     rest.onPressOut?.(e);
   };
   const pressStyle = useAnimatedStyle(() => ({

@@ -36,6 +36,7 @@
    kennismakingssessie.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -201,10 +202,10 @@ export default function BreathQuizScreen() {
 
   const backPressScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backPressScale.value = withTiming(0.92, { duration: 80 });
+    backPressScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backPressScale.value }],
@@ -212,10 +213,10 @@ export default function BreathQuizScreen() {
 
   const planTimesPressScale = useSharedValue(1);
   const onPlanTimesPressIn = () => {
-    planTimesPressScale.value = withTiming(0.95, { duration: 80 });
+    planTimesPressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPlanTimesPressOut = () => {
-    planTimesPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    planTimesPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const planTimesPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: planTimesPressScale.value }],
@@ -223,10 +224,10 @@ export default function BreathQuizScreen() {
 
   const ctaPressScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaPressScale.value = withTiming(0.96, { duration: 80 });
+    ctaPressScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCtaPressOut = () => {
-    ctaPressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaPressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaPressScale.value }],
@@ -247,10 +248,10 @@ export default function BreathQuizScreen() {
   }) => {
     const pressScale = useSharedValue(1);
     const onPressIn = () => {
-      pressScale.value = withTiming(0.95, { duration: 80 });
+      pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
     };
     const onPressOut = () => {
-      pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+      pressScale.value = withSpring(1, SPRING_PRESS_OUT);
     };
     const pressStyle = useAnimatedStyle(() => ({
       transform: [{ scale: pressScale.value }],

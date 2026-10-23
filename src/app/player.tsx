@@ -19,6 +19,7 @@
    GUMROAD_URL leeft in src/constants/links.ts.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import {
   PILLAR_META,
@@ -452,13 +453,13 @@ export default function PlayerScreen() {
 
   /* ── Press-scale animaties (per knop, additief — geen logica-wijziging) ── */
   const pressScaleMinimize = useSharedValue(1);
-  const onPressInMinimize = () => { pressScaleMinimize.value = withTiming(0.92, { duration: 80 }); };
-  const onPressOutMinimize = () => { pressScaleMinimize.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInMinimize = () => { pressScaleMinimize.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const onPressOutMinimize = () => { pressScaleMinimize.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleMinimize = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleMinimize.value }] }));
 
   const pressScaleClose = useSharedValue(1);
-  const onPressInClose = () => { pressScaleClose.value = withTiming(0.92, { duration: 80 }); };
-  const onPressOutClose = () => { pressScaleClose.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInClose = () => { pressScaleClose.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const onPressOutClose = () => { pressScaleClose.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleClose = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleClose.value }] }));
 
   const pressScaleProgress = useSharedValue(1);
@@ -468,11 +469,11 @@ export default function PlayerScreen() {
      zichtbaarheid aan, niet een schaal-transform. */
   const scrubActive = useSharedValue(0);
   const onPressInProgress = () => {
-    pressScaleProgress.value = withTiming(0.97, { duration: 80 });
+    pressScaleProgress.value = withSpring(0.97, SPRING_PRESS_IN);
     scrubActive.value = withTiming(1, { duration: 120 });
   };
   const onPressOutProgress = () => {
-    pressScaleProgress.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScaleProgress.value = withSpring(1, SPRING_PRESS_OUT);
     scrubActive.value = withTiming(0, { duration: 180 });
   };
   const pressStyleProgress = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleProgress.value }] }));
@@ -484,63 +485,63 @@ export default function PlayerScreen() {
   }));
 
   const pressScaleSkipBack = useSharedValue(1);
-  const onPressInSkipBack = () => { pressScaleSkipBack.value = withTiming(0.92, { duration: 80 }); };
-  const onPressOutSkipBack = () => { pressScaleSkipBack.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInSkipBack = () => { pressScaleSkipBack.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const onPressOutSkipBack = () => { pressScaleSkipBack.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleSkipBack = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleSkipBack.value }] }));
 
   const pressScalePlay = useSharedValue(1);
-  const onPressInPlay = () => { pressScalePlay.value = withTiming(0.94, { duration: 80 }); };
-  const onPressOutPlay = () => { pressScalePlay.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInPlay = () => { pressScalePlay.value = withSpring(0.94, SPRING_PRESS_IN); };
+  const onPressOutPlay = () => { pressScalePlay.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStylePlay = useAnimatedStyle(() => ({ transform: [{ scale: pressScalePlay.value }] }));
 
   const pressScaleSkipFwd = useSharedValue(1);
-  const onPressInSkipFwd = () => { pressScaleSkipFwd.value = withTiming(0.92, { duration: 80 }); };
-  const onPressOutSkipFwd = () => { pressScaleSkipFwd.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInSkipFwd = () => { pressScaleSkipFwd.value = withSpring(0.92, SPRING_PRESS_IN); };
+  const onPressOutSkipFwd = () => { pressScaleSkipFwd.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleSkipFwd = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleSkipFwd.value }] }));
 
   const pressScaleCta = useSharedValue(1);
-  const onPressInCta = () => { pressScaleCta.value = withTiming(0.96, { duration: 80 }); };
-  const onPressOutCta = () => { pressScaleCta.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInCta = () => { pressScaleCta.value = withSpring(0.96, SPRING_PRESS_IN); };
+  const onPressOutCta = () => { pressScaleCta.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleCta = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleCta.value }] }));
 
   const pressScaleLoginPrimary = useSharedValue(1);
-  const onPressInLoginPrimary = () => { pressScaleLoginPrimary.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutLoginPrimary = () => { pressScaleLoginPrimary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInLoginPrimary = () => { pressScaleLoginPrimary.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutLoginPrimary = () => { pressScaleLoginPrimary.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleLoginPrimary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleLoginPrimary.value }] }));
 
   const pressScaleLoginSecondary = useSharedValue(1);
-  const onPressInLoginSecondary = () => { pressScaleLoginSecondary.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutLoginSecondary = () => { pressScaleLoginSecondary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInLoginSecondary = () => { pressScaleLoginSecondary.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutLoginSecondary = () => { pressScaleLoginSecondary.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleLoginSecondary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleLoginSecondary.value }] }));
 
   const pressScaleErrorClose = useSharedValue(1);
-  const onPressInErrorClose = () => { pressScaleErrorClose.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutErrorClose = () => { pressScaleErrorClose.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInErrorClose = () => { pressScaleErrorClose.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutErrorClose = () => { pressScaleErrorClose.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleErrorClose = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleErrorClose.value }] }));
 
   const pressScaleUpsellPrimary = useSharedValue(1);
-  const onPressInUpsellPrimary = () => { pressScaleUpsellPrimary.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutUpsellPrimary = () => { pressScaleUpsellPrimary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInUpsellPrimary = () => { pressScaleUpsellPrimary.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutUpsellPrimary = () => { pressScaleUpsellPrimary.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleUpsellPrimary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleUpsellPrimary.value }] }));
 
   const pressScaleUpsellSecondary = useSharedValue(1);
-  const onPressInUpsellSecondary = () => { pressScaleUpsellSecondary.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutUpsellSecondary = () => { pressScaleUpsellSecondary.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInUpsellSecondary = () => { pressScaleUpsellSecondary.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutUpsellSecondary = () => { pressScaleUpsellSecondary.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleUpsellSecondary = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleUpsellSecondary.value }] }));
 
   const pressScaleEndedDone1 = useSharedValue(1);
-  const onPressInEndedDone1 = () => { pressScaleEndedDone1.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutEndedDone1 = () => { pressScaleEndedDone1.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInEndedDone1 = () => { pressScaleEndedDone1.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutEndedDone1 = () => { pressScaleEndedDone1.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleEndedDone1 = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleEndedDone1.value }] }));
 
   const pressScaleEndedPlayNext = useSharedValue(1);
-  const onPressInEndedPlayNext = () => { pressScaleEndedPlayNext.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutEndedPlayNext = () => { pressScaleEndedPlayNext.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInEndedPlayNext = () => { pressScaleEndedPlayNext.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutEndedPlayNext = () => { pressScaleEndedPlayNext.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleEndedPlayNext = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleEndedPlayNext.value }] }));
 
   const pressScaleEndedDone2 = useSharedValue(1);
-  const onPressInEndedDone2 = () => { pressScaleEndedDone2.value = withTiming(0.95, { duration: 80 }); };
-  const onPressOutEndedDone2 = () => { pressScaleEndedDone2.value = withSpring(1, { duration: 220, dampingRatio: 0.73 }); };
+  const onPressInEndedDone2 = () => { pressScaleEndedDone2.value = withSpring(0.95, SPRING_PRESS_IN); };
+  const onPressOutEndedDone2 = () => { pressScaleEndedDone2.value = withSpring(1, SPRING_PRESS_OUT); };
   const pressStyleEndedDone2 = useAnimatedStyle(() => ({ transform: [{ scale: pressScaleEndedDone2.value }] }));
 
   /* ── Render ───────────────────────────────────────────────────────────── */

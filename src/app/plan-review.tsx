@@ -26,6 +26,7 @@
    stap). Pad A is daardoor 4 stappen i.p.v. 5 (zie `totalSteps`
    hieronder). */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -104,28 +105,28 @@ function GroupRow({
 
   const timeScale = useSharedValue(1);
   const onTimePressIn = () => {
-    timeScale.value = withTiming(0.95, { duration: 80 });
+    timeScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onTimePressOut = () => {
-    timeScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    timeScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const timeStyle = useAnimatedStyle(() => ({ transform: [{ scale: timeScale.value }] }));
 
   const refreshScale = useSharedValue(1);
   const onRefreshPressIn = () => {
-    refreshScale.value = withTiming(0.92, { duration: 80 });
+    refreshScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onRefreshPressOut = () => {
-    refreshScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    refreshScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const refreshStyle = useAnimatedStyle(() => ({ transform: [{ scale: refreshScale.value }] }));
 
   const removeScale = useSharedValue(1);
   const onRemovePressIn = () => {
-    removeScale.value = withTiming(0.92, { duration: 80 });
+    removeScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onRemovePressOut = () => {
-    removeScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    removeScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const removeStyle = useAnimatedStyle(() => ({ transform: [{ scale: removeScale.value }] }));
 
@@ -209,10 +210,10 @@ function StateChip({
   const st = BREATH_STATES[stateKey];
   const scale = useSharedValue(1);
   const onPressIn = () => {
-    scale.value = withTiming(0.95, { duration: 80 });
+    scale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    scale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    scale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -384,25 +385,25 @@ export default function PlanReviewScreen() {
      hierboven (`GroupRow`/`StateChip`) met eigen state. */
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backScale.value = withTiming(0.92, { duration: 80 });
+    backScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backStyle = useAnimatedStyle(() => ({ transform: [{ scale: backScale.value }] }));
 
   const whyTriggerScale = useSharedValue(1);
   const onWhyTriggerPressIn = () => {
-    whyTriggerScale.value = withTiming(0.95, { duration: 80 });
+    whyTriggerScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onWhyTriggerPressOut = () => {
-    whyTriggerScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    whyTriggerScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const whyTriggerStyle = useAnimatedStyle(() => ({ transform: [{ scale: whyTriggerScale.value }] }));
 
   const ctaScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaScale.value = withTiming(0.96, { duration: 80 });
+    ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
     /* Operator ("kijk alle CTA's na"): haptiek stond in confirm() zelf
        (op onPress) i.p.v. hier op onPressIn — huisstijl §5 wil de tik
        op het moment van INdrukken, los van de save-logica. Verwijderd
@@ -410,7 +411,7 @@ export default function PlanReviewScreen() {
     hapticPress();
   };
   const onCtaPressOut = () => {
-    ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],

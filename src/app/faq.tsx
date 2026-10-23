@@ -13,6 +13,7 @@
    wordt via een mini renderer (renderRichText) als bold weergegeven.
    ─────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import {
   FAQ_CATEGORY_LABELS,
@@ -123,10 +124,10 @@ export default function FaqScreen() {
      top-level en in dezelfde volgorde. */
   const emptyBtnScale = useSharedValue(1);
   const onEmptyBtnPressIn = () => {
-    emptyBtnScale.value = withTiming(0.95, { duration: 80 });
+    emptyBtnScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onEmptyBtnPressOut = () => {
-    emptyBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    emptyBtnScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const emptyBtnPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: emptyBtnScale.value }],
@@ -134,10 +135,10 @@ export default function FaqScreen() {
 
   const helpBtnScale = useSharedValue(1);
   const onHelpBtnPressIn = () => {
-    helpBtnScale.value = withTiming(0.95, { duration: 80 });
+    helpBtnScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onHelpBtnPressOut = () => {
-    helpBtnScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    helpBtnScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const helpBtnPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: helpBtnScale.value }],
@@ -298,10 +299,10 @@ function CatTab({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -332,10 +333,10 @@ function FaqRow({
 }) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
-    pressScale.value = withTiming(0.95, { duration: 80 });
+    pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

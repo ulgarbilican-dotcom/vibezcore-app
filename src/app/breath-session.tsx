@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
 import { getHapticStrength, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
@@ -220,7 +221,7 @@ function usePressScale(scale = 0.95) {
     pressScale.value = withTiming(scale, { duration: 80 });
   };
   const onPressOut = () => {
-    pressScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    pressScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],

@@ -18,6 +18,7 @@
    kaart met de al bestaande ademende cirkel). Dit scherm is dus enkel nog
    het OVERZICHT per dagdeel + de terugkoppeling via day-builder-draft.ts. */
 
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { BrandDark, BrandLight, BrandFonts, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -106,10 +107,10 @@ export default function BuildYourDayScreen() {
 
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {
-    backScale.value = withTiming(0.92, { duration: 80 });
+    backScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onBackPressOut = () => {
-    backScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    backScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const backPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: backScale.value }],
@@ -117,10 +118,10 @@ export default function BuildYourDayScreen() {
 
   const ctaScale = useSharedValue(1);
   const onCtaPressIn = () => {
-    ctaScale.value = withTiming(0.96, { duration: 80 });
+    ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
   };
   const onCtaPressOut = () => {
-    ctaScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    ctaScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const ctaPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],
@@ -358,10 +359,10 @@ function DaypartCard({
 }) {
   const rowScale = useSharedValue(1);
   const onRowPressIn = () => {
-    rowScale.value = withTiming(0.95, { duration: 80 });
+    rowScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onRowPressOut = () => {
-    rowScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    rowScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const rowPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: rowScale.value }],
@@ -574,10 +575,10 @@ function SessionRow({
 
   const rowScale = useSharedValue(1);
   const onRowPressIn = () => {
-    rowScale.value = withTiming(0.95, { duration: 80 });
+    rowScale.value = withSpring(0.95, SPRING_PRESS_IN);
   };
   const onRowPressOut = () => {
-    rowScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    rowScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const rowPressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: rowScale.value }],
@@ -585,10 +586,10 @@ function SessionRow({
 
   const removeScale = useSharedValue(1);
   const onRemovePressIn = () => {
-    removeScale.value = withTiming(0.92, { duration: 80 });
+    removeScale.value = withSpring(0.92, SPRING_PRESS_IN);
   };
   const onRemovePressOut = () => {
-    removeScale.value = withSpring(1, { duration: 220, dampingRatio: 0.73 });
+    removeScale.value = withSpring(1, SPRING_PRESS_OUT);
   };
   const removePressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: removeScale.value }],
