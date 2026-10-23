@@ -53,7 +53,10 @@ import {
   ChevronRight,
   CircleDashed,
   Lock,
+  Heart,
+  History,
   Play,
+  Route,
   Search,
   Shield,
 } from 'lucide-react-native';
@@ -1860,6 +1863,7 @@ function AudioScreen({
             hitSlop={8}
             accessibilityLabel="View your listening journey"
           >
+            <Route size={15} color={C.text} strokeWidth={1.8} />
             <Text style={s.libQuickLinkText}>Your Journey</Text>
           </CardBounce>
           <View style={s.libQuickLinkDivider} />
@@ -1871,6 +1875,7 @@ function AudioScreen({
             hitSlop={8}
             accessibilityLabel={lastPlayed ? 'Resume or replay your last listened session' : 'Last listened (nothing yet)'}
           >
+            <History size={15} color={C.text} strokeWidth={1.8} />
             <Text style={s.libQuickLinkText}>Last Listened</Text>
           </CardBounce>
           <View style={s.libQuickLinkDivider} />
@@ -1884,6 +1889,7 @@ function AudioScreen({
             hitSlop={8}
             accessibilityLabel="Browse favorites"
           >
+            <Heart size={15} color={C.text} strokeWidth={1.8} />
             <Text style={s.libQuickLinkText}>Favorites</Text>
           </CardBounce>
         </View>
