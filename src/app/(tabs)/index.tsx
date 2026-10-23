@@ -1966,28 +1966,26 @@ function AudioScreen({
             {/* Eén uitgelichte kaart bovenaan (16 okt 2026): de eerste stap
                 voor wie binnenkomt — gast: de 10 gratis sessies; wie al
                 luisterde: verder waar je was. */}
-            {(!hasSub || lastPlayed) && (
+            {/* 23 okt 2026 (operator): deze kaart blijft ALTIJD de Free Sessions-kaart; "Last Listened" opent enkel de
+                popup via het segment in de balk erboven. */}
+            {!hasSub && (
               <Animated.View entering={FadeInUp.delay(80).springify().damping(16)} style={s.featureWrap}>
                 <CardBounce
                   style={s.featureCard}
-                  onPress={() =>
-                    lastPlayed
-                      ? showWelcomePopup()
-                      : navigateAway(() => router.push('/library/free'))
-                  }
-                  accessibilityLabel={lastPlayed ? 'Continue listening' : 'Start with 10 free sessions'}
+                  onPress={() => navigateAway(() => router.push('/library/free'))}
+                  accessibilityLabel="Start with 10 free sessions"
                 >
                   <View style={s.featureInner}>
                   <View style={s.featureIcon}>
                     <Play size={18} color="#0a0a0a" fill="#0a0a0a" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.featureEyebrow}>{lastPlayed ? 'CONTINUE LISTENING' : 'START HERE'}</Text>
+                    <Text style={s.featureEyebrow}>START HERE</Text>
                     <Text style={s.featureTitle} numberOfLines={1}>
-                      {lastPlayed ? lastPlayed.title : '10 free sessions'}
+                      10 free sessions
                     </Text>
                     <Text style={s.featureSub} numberOfLines={1}>
-                      {lastPlayed ? lastPlayed.series : 'Listen any time, no subscription'}
+                      Listen any time, no subscription
                     </Text>
                   </View>
                   <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
