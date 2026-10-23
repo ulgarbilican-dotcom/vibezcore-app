@@ -78,7 +78,7 @@ import {
 import { logPlayEvent } from '@/utils/play-events';
 import { getNextSession } from '@/utils/next-session';
 import { getSetting } from '@/utils/settings';
-import { clearLastPlayed, setLastPlayed } from '@/utils/last-played';
+import { markLastPlayedCompleted, setLastPlayed } from '@/utils/last-played';
 import { urlEq } from '@/utils/url-eq';
 import {
   clearSavedPosition,
@@ -620,8 +620,8 @@ function onStatus(st: AudioStatus): void {
     lastTickPosSec = null;
     const finishedSession = state.session;
     if (finishedSession) clearSavedPosition(finishedSession.url);
-    /* Sessie voltooid → Continue-card moet 'm niet meer aanbieden. */
-    clearLastPlayed();
+    /* Sessie voltooid → blijft "Last Listened" (met "Listen again"). */
+    markLastPlayedCompleted();
     trackingActive = false;
     playingRef = false;
 

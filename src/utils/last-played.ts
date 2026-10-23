@@ -35,11 +35,9 @@ export const LAST_PLAYED_KEY = 'vz_last_played_v1';
 /** Hoe lang na laatste-play tonen we de Continue-card nog? Daarna voelt
  *  het meer als "stale" dan als "where you left off". 7 dagen is industry-
  *  standard (Audible / Spotify recently-played-window). */
-const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** > dit % afgeluisterd = effectief klaar, geen Continue tonen (anders
  *  zou de card 'm na de laatste minuut blijven aanbieden tot vervaldatum). */
-const COMPLETION_THRESHOLD = 0.95;
 
 /** < dit aantal sec positie = te kort om "where you left off" te claimen. */
 const MIN_POSITION_SEC = 4;
@@ -52,6 +50,8 @@ export type LastPlayed = {
   positionSec: number;
   durationSec: number;
   savedAt: number; // ms epoch
+  /** 23 okt 2026 (operator): een helemaal beluisterde sessie blijft "Last Listened" — met "Listen again". */
+  completed?: boolean;
 };
 
 let state: LastPlayed | null = null;
@@ -123,6 +123,15 @@ export async function setLastPlayed(
   persist();
 }
 
+/** Sessie is uitgespeeld: de entry blijft staan (Last Listened → "Listen again"), positie = einde. */
+export async function markLastPlayedCompleted(): Promise<void> {
+  await loadOnce();
+  if (!state) return;
+  state = { ...state, positionSec: state.durationSec > 0 ? state.durationSec : state.positionSec, completed: true, savedAt: Date.now() };
+  notify();
+  persist();
+}
+
 export async function clearLastPlayed(): Promise<void> {
   await loadOnce();
   if (!state) return;
@@ -141,13 +150,10 @@ export function getLastPlayedSync(): LastPlayed | null {
 /** Filter: alleen entries die LICHTLIJK genoeg + niet voltooid + lang
  *  genoeg gespeeld zijn om als "Continue" aan te bieden. */
 function filterShowable(lp: LastPlayed | null): LastPlayed | null {
+  /* "Last Listened" = de laatst beluisterde audio, ook als ze helemaal is uitgespeeld, en zonder
+     houdbaarheidsdatum (de popup opent enkel op een bewuste tik, nooit automatisch). */
   if (!lp) return null;
-  if (Date.now() - lp.savedAt > STALE_AFTER_MS) return null;
-  if (lp.positionSec < MIN_POSITION_SEC) return null;
-  if (lp.durationSec > 0) {
-    const pct = lp.positionSec / lp.durationSec;
-    if (pct >= COMPLETION_THRESHOLD) return null;
-  }
+  if (!lp.completed && lp.positionSec < MIN_POSITION_SEC) return null;
   return lp;
 }
 

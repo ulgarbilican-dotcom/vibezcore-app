@@ -149,7 +149,7 @@ export function WelcomeBackPopup() {
               {lastPlayed.title}
             </Text>
             <Text style={s.stopLine}>
-              You stopped at {fmtTime(lastPlayed.positionSec)}
+              {lastPlayed.completed ? 'You finished this session' : `You stopped at ${fmtTime(lastPlayed.positionSec)}`}
             </Text>
           </View>
         </View>
@@ -158,9 +158,9 @@ export function WelcomeBackPopup() {
           style={s.primary}
           onPress={() => onContinue(lastPlayed)}
           android_ripple={{ color: 'rgba(10,10,10,0.12)' }}
-          accessibilityLabel="Continue listening where you stopped"
+          accessibilityLabel={lastPlayed.completed ? 'Listen to this session again' : 'Continue listening where you stopped'}
         >
-          <Text style={s.primaryText}>Continue listening</Text>
+          <Text style={s.primaryText}>{lastPlayed.completed ? 'Listen again' : 'Continue listening'}</Text>
         </Pressable>
 
         <Pressable
@@ -198,7 +198,7 @@ async function onContinue(lp: LastPlayed): Promise<void> {
        audio. Door eerst naar '/' te navigeren, landt user na de player
        weer op Audio Library — natuurlijker voor wie "Continue listening"
        koos. */
-    await setSavedPosition(lp.url, lp.positionSec);
+    await setSavedPosition(lp.url, lp.completed ? 0 : lp.positionSec);
     /* Operator, 26 september 2026 (crash-jacht vervolg): `router.navigate`
        hier was ZELF nog een synchrone navigatie-call, vóór openSession()'s
        eigen setTimeout-defer ooit aan de beurt kwam — precies dezelfde
