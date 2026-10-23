@@ -1897,7 +1897,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    marginHorizontal: 17,
+    marginHorizontal: 19,
     marginTop: 56,
     height: 52,
     /* Operator, zelfde dag: "vorm van de cta is anders dan onboarding, is
