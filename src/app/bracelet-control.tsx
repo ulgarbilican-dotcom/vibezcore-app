@@ -938,7 +938,7 @@ function SwitchSessionConfirm({
             accessibilityLabel={`Switch to ${toName}`}
           >
             <VibezGlass radius={999} tint={toColor} level="normal" flat style={StyleSheet.absoluteFill} />
-            <Text style={s.primaryBtnText}>Switch</Text>
+            <Text style={[s.primaryBtnText, { color: '#ffffff' }]}>Switch</Text>
           </PressScale>
           <Tap onPress={onCancel} hitSlop={10} style={s.switchCancel} accessibilityLabel="Cancel">
             <Text style={s.switchCancelTxt}>Cancel</Text>
@@ -968,7 +968,7 @@ function RunningSessionBar({ onPress }: { onPress: () => void }) {
     >
       <VibezGlass radius={999} tint={snap.modeColor} level="normal" flat style={StyleSheet.absoluteFill} />
       <View style={[s.runningDot, { backgroundColor: snap.modeColor }]} />
-      <Text style={s.primaryBtnText} numberOfLines={1}>
+      <Text style={[s.primaryBtnText, { color: '#ffffff' }]} numberOfLines={1}>
         {snap.modeName} · {snap.paused ? 'Paused' : `${time} left`}
       </Text>
       <ChevronUp size={20} color="#ffffff" strokeWidth={2.4} />
@@ -4576,11 +4576,12 @@ function IdleScreen({
              sessie mag; wisselen vraagt één bevestiging (een sessie stoppen
              is onomkeerbaar). */
           <PrimaryCtaButton
-            style={[s.primaryBtn, s.chooseCta, busy && s.btnDisabled]}
+            style={[s.primaryBtn, s.chooseCta, stateGlass(meta.color), busy && s.btnDisabled]}
             onPress={() => setConfirmSwitch(true)}
             disabled={busy}
             accessibilityLabel={`Switch to ${meta.name}`}
           >
+            <VibezGlass radius={999} tint={meta.color} level="normal" flat style={StyleSheet.absoluteFill} />
             <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Switch to {meta.name}</Text>
           </PrimaryCtaButton>
         ) : trialRunning && startLocked ? (
@@ -7006,7 +7007,7 @@ const s = StyleSheet.create({
     paddingVertical: 0,
     marginHorizontal: 10,
   },
-  chooseCtaTxt: { fontFamily: BrandFonts.semibold, letterSpacing: 0.1 },
+  chooseCtaTxt: { fontFamily: BrandFonts.semibold, letterSpacing: 0.1, color: '#ffffff' },
   durationRingCenter: {
     position: 'absolute',
     alignItems: 'center',
@@ -8805,7 +8806,7 @@ const s = StyleSheet.create({
     ...CTA_GLOW,
   },
   primaryBtnText: {
-    color: '#ffffff',
+    color: '#0a0a0a',
     fontSize: 16,
     fontFamily: BrandFonts.bold,
     letterSpacing: -0.1,

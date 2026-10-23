@@ -1173,7 +1173,7 @@ const s = StyleSheet.create({
     backgroundColor: CTA_GLASS,
     ...CTA_GLOW,
   },
-  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#ffffff' },
+  ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#0a0a0a' },
 
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 16 },
   badge: {

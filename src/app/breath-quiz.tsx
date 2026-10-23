@@ -661,7 +661,7 @@ const s = StyleSheet.create({
     fontFamily: BrandFonts.bold,
     fontSize: 13,
     letterSpacing: 1.2,
-    color: '#ffffff',
+    color: '#0a0a0a',
   },
   /* Free (19 okt 2026): één kleine regel onder de knop. */
   ctaFreeNote: {
