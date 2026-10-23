@@ -27,7 +27,7 @@
    precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
-import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { SPRING_POP, SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { iosFont } from '@/utils/ios-text-scale';
@@ -86,6 +86,9 @@ import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
 import Animated, {
   Easing,
+  FadeInDown,
+  FadeOut,
+  ZoomIn,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -345,12 +348,24 @@ function StateThumb({
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
   }));
+  /* 23 okt 2026 (operator: "alles ziet er statisch uit"): de gekozen toestand POPT — het pictogram springt kort
+     groter en veert terug, de ring en gloed zoomen met een veer in beeld. */
+  const pop = useSharedValue(1);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const wasOn = useRef(on);
+  useEffect(() => {
+    if (on && !wasOn.current) {
+      pop.value = 0.7;
+      pop.value = withSpring(1, SPRING_POP);
+    }
+    wasOn.current = on;
+  }, [on, pop]);
 
   return (
     <AnimatedPressable
       onPress={on ? onInfoPress : onPress}
       onPressIn={() => {
-        pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
+        pressScale.value = withSpring(0.88, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
         pressScale.value = withSpring(1, SPRING_PRESS_OUT);
@@ -378,11 +393,21 @@ function StateThumb({
       <View style={s.thumb}>
         {on ? (
           <>
-            <View pointerEvents="none" style={[s.thumbGlow, { backgroundColor: t.accent }]} />
-            <View pointerEvents="none" style={[s.thumbRing, { borderColor: t.accent }]} />
+            <Animated.View
+              pointerEvents="none"
+              entering={ZoomIn.springify().damping(12).stiffness(200)}
+              exiting={FadeOut.duration(120)}
+              style={[s.thumbGlow, { backgroundColor: t.accent }]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              entering={ZoomIn.springify().damping(12).stiffness(200)}
+              exiting={FadeOut.duration(120)}
+              style={[s.thumbRing, { borderColor: t.accent }]}
+            />
           </>
         ) : null}
-        <Animated.View style={on ? thumbPulseStyle : undefined}>
+        <Animated.View style={[on ? thumbPulseStyle : undefined, popStyle]}>
           <StateGlyph
             stateKey={t.key}
             size={THUMB * 0.46}
@@ -1411,6 +1436,7 @@ export default function BreathScreen() {
           gepruts, de rand is zichtbaarder geworden"). Volledig
           teruggedraaid — het ene bestaande vignet regelt dit al, geen
           tweede laag meer nodig. */}
+      <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(40)}>
       <Pressable
         onPress={() => setInfoOpen(true)}
         hitSlop={10}
@@ -1421,7 +1447,8 @@ export default function BreathScreen() {
         <Text style={s.thumbNameSel}>{sentenceCase(st.eyebrow)}</Text>
         <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
       </Pressable>
-      <View style={s.thumbsPill}>
+      </Animated.View>
+      <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(110)} style={s.thumbsPill}>
         <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
         {ORDER.map((k, i) => (
           <StateThumb
@@ -1434,7 +1461,7 @@ export default function BreathScreen() {
             thumbPulseStyle={thumbPulseStyle}
           />
         ))}
-      </View>
+      </Animated.View>
 
       {/* ── De knop, nu ÉÉN vaste kleur — 3e ronde, operator 8 september
           2026: "wat is beter om 1 kleur voor alle knoppen?" Terecht — de
@@ -1459,6 +1486,7 @@ export default function BreathScreen() {
          met `st.accent` als zachte tint — zelfde `dimezisBlurViewSdk31Plus`-
          recept als de rest van de app, tekst wit voor contrast op de
          donkere blur i.p.v. het vorige zwart-op-wit. */}
+      <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(180)}>
       <Animated.View style={[fadeStyle, ctaPressStyle]}>
         <Pressable
           onPress={open}
@@ -1490,6 +1518,7 @@ export default function BreathScreen() {
           </Text>
         </Pressable>
       </Animated.View>
+      </Animated.View>
 
       {/* Operator, 2 okt 2026, vervolg ("terug uit een sessie land je hier
          zonder pad naar het intro-scherm, verwarrend"): i.p.v. een pad
@@ -1498,6 +1527,7 @@ export default function BreathScreen() {
          staat de instant-ingang nu OOK hier, zelfde plek/stijl als op de
          intro-overlay. Overal beschikbaar i.p.v. navigatie-acrobatiek om
          er te raken — zo zou Apple dit oplossen. */}
+      <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(250)}>
       <Pressable
         onPress={() => router.push('/feel-now' as never)}
         hitSlop={8}
@@ -1508,6 +1538,7 @@ export default function BreathScreen() {
         <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
         <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
       </Pressable>
+      </Animated.View>
 
       {/* Operator, 8 september 2026 (2e ronde): "verwijder more than
          breathwork" — sluitregel weer weg. */}

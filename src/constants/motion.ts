@@ -11,7 +11,10 @@
 export const SPRING_PRESS_IN = { stiffness: 560, damping: 36, mass: 0.6 } as const;
 
 /** Loslaten: een minieme overshoot en dan rust — de typische iOS-veer. */
-export const SPRING_PRESS_OUT = { duration: 240, dampingRatio: 0.7 } as const;
+export const SPRING_PRESS_OUT = { duration: 340, dampingRatio: 0.52 } as const;
+
+/** Een gekozen element "popt": kort groter en dan terug, met een voelbare nasprong. */
+export const SPRING_POP = { stiffness: 380, damping: 11, mass: 0.7 } as const;
 
 /** Elementen die op hun plek veren (kaarten, balken, blaadjes): zacht met een kleine nasprong. */
 export const SPRING_SETTLE = { stiffness: 220, damping: 22, mass: 0.9 } as const;
