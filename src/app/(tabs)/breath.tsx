@@ -1163,6 +1163,15 @@ export default function BreathScreen() {
       {/* 23 okt 2026 (operator): zelfde kop als State Control — titel in kleine, gespatieerde hoofdletters,
           onder de Premium-knop, op één rij met terug en kalender. */}
       {!intro ? (
+        /* Zachte donkere vervaging bovenaan: titel, Premium-knop en iconen blijven leesbaar over de foto. */
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0.62)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']}
+          locations={[0, 0.55, 1]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top + 130, zIndex: 15 }}
+        />
+      ) : null}
+      {!intro ? (
         <Text
           pointerEvents="none"
           style={{
