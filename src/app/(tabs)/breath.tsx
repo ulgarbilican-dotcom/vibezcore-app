@@ -1960,7 +1960,7 @@ const s = StyleSheet.create({
   thumbsPill: {
     flexDirection: 'row',
     alignSelf: 'stretch',
-    marginHorizontal: 26,
+    marginHorizontal: 35,
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 0,
