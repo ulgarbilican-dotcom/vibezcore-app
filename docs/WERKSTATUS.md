@@ -209,3 +209,5 @@ Volgende: na ~09:00 `bash scripts/testlab.sh` (5 echte toestellen) draaien en de
 - Nog te doen: A16-test van de protocolbouwer (Level/Routine/Times), animaties, geluid, haptiek; iOS-pass; tabletbeleid is al gezet (telefoonvenster op Android).
 
 - 22 okt 2026 (avond): glazen CTA's overal (doorschijnend wit/toestandskleur, glans bovenin, lichtbron onderin binnen de knop, via CTA_GLOW/CTA_GLASS/stateGlass in theme.ts); aankoopbevestigingen = PurchaseConfirm-kaart; tab-iconen dun + bounce; horloge: 30 s-voorproef in wear-app/. Open: Breath-balk 35 dp marge (balk = CTA-breedte) nog op toestel te zien; horloge opnieuw koppelen (handtekening debug vs Play); Monthly-weergave na dagpas; logo op glas.
+
+- 23 okt 2026: `docs/UI_EN_BEWEGINGSREGELS.md` aangemaakt (bindend; verwezen vanuit CLAUDE.md §0 en de Blueprint). Bewegingstaal live: `constants/motion.ts`, `components/Tap.tsx` (~190 knoppen), `PopupCard.tsx`, springs voor sheets/onboarding, stoppen van lussen buiten beeld, hardware-textures. Open: shared element transitions (experimenteel, niet aan), horloge-verbinding (handtekening), logo-tegel.

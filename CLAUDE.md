@@ -24,8 +24,9 @@ Bij start van werk aan dit project, lees in deze volgorde:
 2. `docs/VIBEZCORE_APP_VOLLEDIGE_SPEC.md` — volledige app-specificatie (architectuur, elk scherm, huidige staat).
 3. `docs/MERK_ANKER.md` — font, kleuren, logo, look-and-feel (bindend voor alles wat uiterlijk is).
 4. `docs/STRUCTUUR_en_BLE_contract_v2.md` — structuur + BLE-contract (spec v2.3).
-5. `docs/ONTWERP_toegangsmodel.md` — toegangsmodel, entitlements, provider-abstractie.
-6. `docs/VIBEZCORE_SCIENCE_A_TOT_Z.md` — ALLE wetenschap & logica van de app (breathwork, State Control-tempo's, rusthartslag, camerameting, woordkeuze, bronnen) met per punt onderzoek vs eigen keuze. Wijzigt een tempo/duur/regel in de code → dit document mee aanpassen.
+5. **`docs/UI_EN_BEWEGINGSREGELS.md` — knoppen, koppen, intro's, sessies en bewegingstaal (BINDEND, 23 okt 2026).** Lees dit vóór je UI aanraakt; wijzigt een regel, pas dit document mee aan.
+6. `docs/ONTWERP_toegangsmodel.md` — toegangsmodel, entitlements, provider-abstractie.
+7. `docs/VIBEZCORE_SCIENCE_A_TOT_Z.md` — ALLE wetenschap & logica van de app (breathwork, State Control-tempo's, rusthartslag, camerameting, woordkeuze, bronnen) met per punt onderzoek vs eigen keuze. Wijzigt een tempo/duur/regel in de code → dit document mee aanpassen.
 
 `Haptic_Bracelet_Spec_v2_3.docx` is het BINDENDE hardware/BLE-contract (zit in de
 projectkennis, niet in deze repo). Verzin nooit een eigen BLE-contract — een eerder
@@ -320,6 +321,7 @@ veranderen NIET bij omschakeling.
   Build…) = glazen pil (`CTA.container` in theme.ts: ondoorzichtig donkergrijs,
   dunne lichte rand, witte tekst). Uitgeschakeld = ondoorzichtig donker vlak.
   CTA-achtergrond is nooit de accentkleur.
+  GEWIJZIGD 23 oktober 2026 (operator): knoppen zijn 52 dp hoog met 26 dp marge, neutraal = WIT glas met donkere tekst, toestandsknoppen = glas in de toestandskleur; volledige regels in `docs/UI_EN_BEWEGINGSREGELS.md`.
 - **Logo:** `vibezcore_wordmark.png` (schermkoppen, vervangt platte tekst) en
   `vibezcore_icon.png` (app-icoon). Zitten in de projectkennis.
 - **Look & feel:** dark (default), hoog contrast, witte tekst, strak, royale

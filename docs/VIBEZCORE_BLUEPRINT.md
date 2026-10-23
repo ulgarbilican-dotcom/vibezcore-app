@@ -6,6 +6,9 @@
 >
 > **Lancering iPhone + Android (okt 2026): zie `docs/LAUNCH_BLUEPRINT.md`** — alle stappen A tot Z met status.
 
+> **UI- en bewegingsregels (23 okt 2026, bindend): zie `docs/UI_EN_BEWEGINGSREGELS.md`** — knoppen (52 dp, wit glas), koppen, intro's, sessies, Audio Library, bewegingstaal (veren, `Tap`, popups) en meetmethode.
+
+
 > **Recente iteraties (2026-05, samengevat — details onderaan in Bijlage C):**
 > - Audio Library-tab consolidatie: search-bar met Spotify-stijl autocomplete (Series / Sessions / Inspirators), New/Favorites/Free-nav-knoppen, Your Journey-card.
 > - Sub-pagina's onder `/library/` (`new`, `favorites`, `free`) — platte sessie-lijsten.
