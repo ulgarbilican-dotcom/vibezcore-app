@@ -43,7 +43,9 @@ export default function PremiumNote({
     <>
       <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
         <View style={[s.row, rowStyle]}>
-          <Text style={textStyle as TextStyle}>{m[1]}</Text>
+          <Text style={[textStyle as TextStyle, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {m[1]}
+          </Text>
           <VibezGlass radius={999} style={s.pill}>
             <Crown size={12} color={Brand.text} strokeWidth={2.2} />
             <Text style={s.pillTxt}>Premium</Text>
@@ -56,7 +58,8 @@ export default function PremiumNote({
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' },
+  /* Eén lijn: tekst en pil naast elkaar, nooit afgebroken (de tekst krimpt eventueel mee). */
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'nowrap', alignSelf: 'stretch', paddingHorizontal: 12 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4 },
   pillTxt: { color: Brand.text, fontFamily: BrandFonts.semibold, fontSize: 12, letterSpacing: 0.3 },
 });
