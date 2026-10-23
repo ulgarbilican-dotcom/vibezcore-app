@@ -1000,6 +1000,11 @@ export function BreathSession() {
   }, []);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  /* 23 okt 2026 (operator): een sessie is pas ACTIEF na de eerste Play. Zolang het scherm nog op Play wacht (startPaused),
+     is het geen lopende sessie: geen minimaliseer-chevron, geen pil, en terug = gewoon de vorige pagina. */
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const hasPlayedRef = useRef(false);
+  const active = running && hasPlayed;
   /* Mengmodus al bij het openen zetten, ruim vóór de eerste klank op Play
      (19 okt 2026: nooit andermans muziek stoppen). */
   useEffect(() => {
@@ -1802,6 +1807,10 @@ export function BreathSession() {
       pausedAtWallRef.current = 0;
     }
     setPaused(false);
+    if (!hasPlayedRef.current) {
+      hasPlayedRef.current = true;
+      setHasPlayed(true);
+    }
     if (Platform.OS === 'ios') startSessionKeepAlive(undefined, false);
     resumeScape();
     resumeLiveSession();
@@ -2347,6 +2356,8 @@ export function BreathSession() {
     void playScape(scapeKey);
     setRunning(true);
     hasStartedOnceRef.current = true;
+    hasPlayedRef.current = !startPaused;
+    setHasPlayed(!startPaused);
     setRound(1);
     roundRef.current = 1;
     elapsedRef.current = 0;
@@ -2680,13 +2691,13 @@ export function BreathSession() {
     /* Operator, 5 okt 2026: tijdens een sessie minimaliseert terug (chevron
        of de terugknop van de telefoon) — de sessie loopt door, de pill
        brengt je terug. Stoppen enkel via "End session". */
-    if (running) {
+    if (active) {
       minimizeBreathSession();
       return;
     }
     skipBreathIntroOnce();
     leaveSession();
-  }, [running, requestStop, leaveSession]);
+  }, [active, requestStop, leaveSession]);
 
   useEffect(() => {
     /* Geminimaliseerd: de terugknop hoort bij het scherm eronder, niet bij
@@ -2712,7 +2723,7 @@ export function BreathSession() {
   useEffect(
     () =>
       registerRunningBreathSession({
-        isActive: () => runningRef.current,
+        isActive: () => runningRef.current && hasPlayedRef.current,
         label: () => labelRef.current,
         end: () => finishRef.current(false),
         status: () => ({
@@ -2935,7 +2946,7 @@ export function BreathSession() {
            i.p.v. onzichtbare opvulling. `spacerBtn` behoudt alleen de
            breedte/hoogte voor het centreren van de titel eronder, zonder
            rand of achtergrond. */}
-        {running ? (
+        {active ? (
           /* Minimaliseren (operator, 5 okt 2026) — zelfde Apple-chevron als
              de State Control-sessie; de sessie loopt door. */
           <AnimatedPressable
@@ -2986,7 +2997,7 @@ export function BreathSession() {
             /* Naar een ander scherm: de sessie-laag eerst opzij (lopend →
                minimaliseren, anders sluiten), anders opent het scherm
                onzichtbaar ónder de laag. */
-            if (running) minimizeBreathSession();
+            if (active) minimizeBreathSession();
             else closeBreathSession();
             router.push('/settings');
           }}
