@@ -1989,7 +1989,11 @@ function AudioScreen({
               decelerationRate="fast"
               snapToInterval={PILLAR_CARD_WIDTH + PILLAR_CARD_GAP}
               snapToAlignment="start"
-              contentContainerStyle={{ paddingHorizontal: PILLAR_SIDE_INSET, gap: PILLAR_CARD_GAP }}
+              /* 23 okt 2026 (operator: kaarten worden bij de uitadem-animatie boven afgesneden): een horizontale
+                 ScrollView knipt zijn inhoud af; de kaarten zetten tijdens het "ademen" iets uit. Ruimte erbij
+                 (paddingVertical) en weer weggehaald (marginVertical), zodat de lay-out niet verschuift. */
+              style={{ marginVertical: -10, flexGrow: 0 }}
+              contentContainerStyle={{ paddingHorizontal: PILLAR_SIDE_INSET, paddingVertical: 10, gap: PILLAR_CARD_GAP }}
             >
               {PILLARS.map((p, pillarIdx) => {
                 const isActiveFilter = activePillarFilter === p.key;
