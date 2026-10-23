@@ -6971,6 +6971,8 @@ const s = StyleSheet.create({
      zijmarge (16 + 10 = 26), semibold. */
   chooseCta: {
     height: 52,
+    minHeight: 52,
+    maxHeight: 52,
     paddingVertical: 0,
     marginHorizontal: 10,
   },

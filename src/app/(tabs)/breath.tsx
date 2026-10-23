@@ -1897,7 +1897,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    marginHorizontal: 26,
+    marginHorizontal: 17,
     marginTop: 56,
     height: 52,
     /* Operator, zelfde dag: "vorm van de cta is anders dan onboarding, is
@@ -1960,7 +1960,7 @@ const s = StyleSheet.create({
   thumbsPill: {
     flexDirection: 'row',
     alignSelf: 'stretch',
-    marginHorizontal: 35,
+    marginHorizontal: 26,
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 0,
