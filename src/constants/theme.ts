@@ -323,7 +323,7 @@ export const CardHeights = {
    Een witte schaduw met straal en lage dekking: zacht licht rond de knop. */
 /* Glazen CTA-vulling: doorschijnend zoals de drie welkomst-knoppen (rgba(30,30,32,0.28)),
    zodat het witte licht erachter (CTA_GLOW) door het glas heen schijnt. */
-export const CTA_GLASS = 'rgba(255,255,255,0.4)'; /* wit glas: doorschijnend wit, met glans bovenin en gloed eronder */
+export const CTA_GLASS = 'rgba(255,255,255,0.94)'; /* wit glas: grijs las als een inactieve knop (operator, 23 okt) */
 
 export const CTA_GLOW = {
   /* 23 okt 2026 (operator: "nog niet 100% glass, lijkt een beetje gradient"): geen gloed of verloop meer —
