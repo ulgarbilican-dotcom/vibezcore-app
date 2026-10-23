@@ -1845,13 +1845,13 @@ function AudioScreen({
             <Text style={s.libQuickLinkText}>Your Journey</Text>
           </CardBounce>
           <View style={s.libQuickLinkDivider} />
-          {/* 23 okt 2026 (operator): dit segment is ALTIJD "Last Listened" (Free Sessions staat al als kaart
-              eronder). Zonder geldige laatste sessie: gedimd, en tikken opent je luistergeschiedenis. */}
+          {/* 23 okt 2026 (operator): dit segment is ALTIJD "Last Listened": enkel voor de laatst beluisterde audio, om verder
+              of opnieuw te luisteren. Zonder zo'n sessie: gedimd en zonder actie. */}
           <CardBounce
-            style={[s.libQuickLinkSegment, !lastPlayed && { opacity: 0.55 }]}
-            onPress={lastPlayed ? showWelcomePopup : () => navigateAway(() => router.push('/history'))}
+            style={[s.libQuickLinkSegment, !lastPlayed && { opacity: 0.45 }]}
+            onPress={lastPlayed ? showWelcomePopup : () => {}}
             hitSlop={8}
-            accessibilityLabel={lastPlayed ? 'Resume your last listened session' : 'Your listening history'}
+            accessibilityLabel={lastPlayed ? 'Resume or replay your last listened session' : 'Last listened (nothing yet)'}
           >
             <Text style={s.libQuickLinkText}>Last Listened</Text>
           </CardBounce>

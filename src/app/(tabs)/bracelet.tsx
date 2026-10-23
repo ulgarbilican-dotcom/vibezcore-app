@@ -473,7 +473,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     borderRadius: 999,
-    paddingVertical: 16,
+    height: 52,
     overflow: 'hidden',
   },
   introCtaTint: { backgroundColor: 'rgba(255,255,255,0.20)' },

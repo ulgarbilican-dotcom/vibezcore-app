@@ -1,9 +1,13 @@
 /* De regel onder een start-knop ("30 seconds of this rhythm. Full session with Premium"):
    tikbaar als het om de proef gaat, en opent dan het plannen-blad (22 okt 2026, operator).
-   Is het de regel van de gratis volledige sessie, dan blijft het gewone tekst. */
+   Is het de regel van de gratis volledige sessie, dan blijft het gewone tekst.
+   23 okt 2026 (operator): het woord "Premium" staat als de Premium-knop bovenaan — glazen pil met kroon. */
+import { Crown } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, type StyleProp, type TextStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import VibezGlass from '@/components/VibezGlass';
+import { Brand, BrandFonts } from '@/constants/theme';
 
 export default function PremiumNote({
   style,
@@ -19,12 +23,40 @@ export default function PremiumNote({
 }) {
   const [open, setOpen] = useState(false);
   if (!preview) return <Text style={style}>{children}</Text>;
+  const text = typeof children === 'string' ? children : null;
+  const m = text ? /^(.*?)\s*Premium$/.exec(text) : null;
+  if (!m) {
+    return (
+      <>
+        <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
+          <Text style={style}>{children}</Text>
+        </Pressable>
+        <PremiumPaywallModal visible={open} onClose={() => setOpen(false)} context={context} />
+      </>
+    );
+  }
+  /* Marges/uitlijning van de oude tekststijl naar de rij; de rest blijft op de tekst. */
+  const flat = StyleSheet.flatten(style) ?? {};
+  const { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf, ...textStyle } = flat as Record<string, unknown>;
+  const rowStyle = { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf } as object;
   return (
     <>
       <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
-        <Text style={style}>{children}</Text>
+        <View style={[s.row, rowStyle]}>
+          <Text style={textStyle as TextStyle}>{m[1]}</Text>
+          <VibezGlass radius={999} style={s.pill}>
+            <Crown size={12} color={Brand.text} strokeWidth={2.2} />
+            <Text style={s.pillTxt}>Premium</Text>
+          </VibezGlass>
+        </View>
       </Pressable>
       <PremiumPaywallModal visible={open} onClose={() => setOpen(false)} context={context} />
     </>
   );
 }
+
+const s = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4 },
+  pillTxt: { color: Brand.text, fontFamily: BrandFonts.semibold, fontSize: 12, letterSpacing: 0.3 },
+});
