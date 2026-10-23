@@ -1815,7 +1815,7 @@ function AudioScreen({
            helemaal geen titel op dit scherm — alleen de zoekbalk). */}
         {/* Ruimte voor de Premium-knop bovenaan (PremiumPill, 7 okt 2026):
            zonder deze extra marge zat de knop tegen de titel. */}
-        <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingBottom: 44 }, { paddingTop: 7 }]}>
+        <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingBottom: 44 }, { paddingTop: 7, marginTop: -10 }]}>
           {/* 23 okt 2026 (operator): zelfde kop als State Control — kleine, gespatieerde hoofdletters, gecentreerd. */}
           <View style={{ width: 60 }} />
           <Text style={s.libHeaderTitle}>Audio Library</Text>

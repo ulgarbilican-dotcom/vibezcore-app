@@ -56,7 +56,7 @@ export function PremiumPill({ hidden }: { hidden: boolean }) {
   if (bracelet.active || breathHost?.minimized) return null;
 
   return (
-    <View style={[s.wrap, { top: low ? insets.top + 58 : insets.top + 8 }]} pointerEvents="box-none">
+    <View style={[s.wrap, { top: low ? insets.top + 46 : insets.top + 8 }]} pointerEvents="box-none">
       <AnimatedPressable
         style={pressStyle}
         onPress={() => router.push('/subscribe' as never)}
