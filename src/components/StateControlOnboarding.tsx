@@ -150,7 +150,7 @@ type HrChoice = 'measure' | 'manual' | 'average';
 
 /* Inkomend per blok, zelfde rustige reveal als de Breathwork-onboarding
    (operator: "alles is nu weer statisch"). */
-const enter = (i: number) => FadeInDown.duration(420).delay(80 + i * 90);
+const enter = (i: number) => FadeInDown.springify().damping(20).stiffness(150).delay(80 + i * 90);
 type StepIdx = 0 | 1 | 2 | 3;
 
 export default function StateControlOnboarding({ onDone, onBack, includeRestingHr = false, finalLabel = 'Done' }: Props) {
@@ -167,7 +167,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
     },
     [],
   );
-  const pageIn = dir > 0 ? FadeInRight.duration(320) : FadeInLeft.duration(320);
+  const pageIn = dir > 0 ? FadeInRight.springify().damping(22).stiffness(190) : FadeInLeft.springify().damping(22).stiffness(190);
   /* Met hartslag: 4 stappen — 3 kiezen, 4 meten (operator: "stap 3 en 4").
      Kies je niet "meten", dan eindigt de onboarding na stap 3. */
   const lastStep = includeRestingHr ? 2 : 1;
@@ -566,7 +566,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         {step === 3 ? (
           <View style={s.footer}>
             {measured !== null ? (
-              <Animated.View entering={FadeInDown.duration(320)}>
+              <Animated.View entering={FadeInDown.springify().damping(20).stiffness(170)}>
                 <PressScale
                   haptic
                   scaleTo={0.97}

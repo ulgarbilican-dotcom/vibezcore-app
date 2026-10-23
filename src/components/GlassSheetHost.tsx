@@ -19,6 +19,7 @@
    `<Modal transparent animationType="slide">` had.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_SHEET, isReduceMotion } from '@/constants/motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 
@@ -145,18 +146,25 @@ export function GlassSheetHost() {
           drag.setValue(0);
           progress.stopAnimation();
           progress.setValue(0);
-          Animated.timing(progress, {
-            toValue: 1,
-            duration: 320,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }).start();
+          /* 23 okt 2026 (animatie-optimalisatie): een veer i.p.v. een tijd-curve — onderbreekbaar en met een
+             zachte uitloop, zoals een iOS-blad. */
+          if (isReduceMotion()) progress.setValue(1);
+          else
+            Animated.spring(progress, {
+              toValue: 1,
+              stiffness: SPRING_SHEET.stiffness,
+              damping: SPRING_SHEET.damping,
+              mass: SPRING_SHEET.mass,
+              useNativeDriver: true,
+            }).start();
         }
       } else if (was) {
-        Animated.timing(progress, {
+        Animated.spring(progress, {
           toValue: 0,
-          duration: 220,
-          easing: Easing.in(Easing.cubic),
+          stiffness: 320,
+          damping: 36,
+          mass: 1,
+          overshootClamping: true,
           useNativeDriver: true,
         }).start(({ finished }) => {
           /* Pas weg als er intussen geen nieuwe sheet kwam. */

@@ -18,3 +18,21 @@ export const SPRING_SETTLE = { stiffness: 220, damping: 22, mass: 0.9 } as const
 
 /** Grote verplaatsingen (sheets, overlays): rustiger, geen zichtbare nasprong. */
 export const SPRING_SHEET = { stiffness: 260, damping: 30, mass: 1 } as const;
+
+/* ── Beweging beperken (iOS "Verminder beweging" / Android "Animaties verwijderen") ──────────────────
+   Reanimated respecteert dit zelf; de RN-`Animated`-animaties (sheets, tabbalk) niet — die vragen het hier. */
+import { AccessibilityInfo } from 'react-native';
+
+let reduceMotion = false;
+AccessibilityInfo.isReduceMotionEnabled()
+  .then((v) => {
+    reduceMotion = v;
+  })
+  .catch(() => {});
+AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => {
+  reduceMotion = v;
+});
+
+export function isReduceMotion(): boolean {
+  return reduceMotion;
+}

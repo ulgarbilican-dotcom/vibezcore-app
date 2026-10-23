@@ -22,6 +22,7 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { isReduceMotion } from '@/constants/motion';
 import { isBreathPickerOpen, subscribeBreathPickerOpen } from '@/utils/breath-picker-ui';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
 import { saveLastTab } from '@/utils/last-tab';
@@ -188,7 +189,10 @@ function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) 
   const scale = useRef(new RNAnimated.Value(focused ? 1.1 : 1)).current;
   const lift = useRef(new RNAnimated.Value(0)).current;
   useEffect(() => {
-    if (focused) {
+    if (isReduceMotion()) {
+      scale.setValue(focused ? 1.1 : 1);
+      lift.setValue(0);
+    } else if (focused) {
       scale.setValue(0.8);
       lift.setValue(0);
       RNAnimated.parallel([
