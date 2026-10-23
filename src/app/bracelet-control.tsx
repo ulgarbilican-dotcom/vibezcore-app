@@ -1484,7 +1484,9 @@ function TrialSheet({
           <Text style={s.quickSheetCtaTxt}>{FREE_COPY.previewCta}</Text>
         </PressScale>
         {/* Free (operator, 19 okt 2026): één regel onder de knop. */}
-        <Text style={s.freeCtaNote}>{FREE_COPY.previewLine}</Text>
+        <PremiumNote style={s.freeCtaNote} preview interactive={false}>
+          {FREE_COPY.previewLine}
+        </PremiumNote>
         <PressScale onPress={onUnlock} style={s.quickSheetBack} accessibilityRole="button">
           <Text style={s.quickSheetBackTxt}>Unlock all sessions</Text>
         </PressScale>

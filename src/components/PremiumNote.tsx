@@ -13,12 +13,15 @@ export default function PremiumNote({
   style,
   preview,
   context = 'breathwork',
+  interactive = true,
   children,
 }: {
   style: StyleProp<TextStyle>;
   /** true = proefregel (tikbaar, opent de plannen). */
   preview: boolean;
   context?: 'breathwork' | 'state-control' | 'audio';
+  /** false = enkel tonen (bv. in een blad dat zelf al een koop-link heeft). */
+  interactive?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -43,6 +46,18 @@ export default function PremiumNote({
     flat as Record<string, unknown>;
   const rowStyle = { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf, minHeight, paddingHorizontal, paddingVertical, padding } as object;
   void lineHeight;
+  const row = (
+    <View style={[s.row, rowStyle]}>
+      <Text style={[textStyle as TextStyle, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {m[1]}
+      </Text>
+      <VibezGlass radius={999} style={s.pill}>
+        <Crown size={12} color={Brand.text} strokeWidth={2.2} />
+        <Text style={s.pillTxt}>Premium</Text>
+      </VibezGlass>
+    </View>
+  );
+  if (!interactive) return row;
   return (
     <>
       <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
