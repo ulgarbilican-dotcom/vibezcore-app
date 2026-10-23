@@ -27,6 +27,7 @@
    precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { useSubscription } from '@/hooks/useSubscription';
 import { iosFont } from '@/utils/ios-text-scale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -478,6 +479,13 @@ export default function BreathScreen() {
      als je van een sessie terugkomt. Dat is de bedoeling: het is een drempel
      die je even laat landen, geen scherm dat je één keer wegklikt. */
   const [intro, setIntro] = useState(true);
+  /* 23 okt 2026 (operator): wie Premium heeft ziet de welkomstkaart van deze tab niet meer — meteen de keuze. */
+  const proSub = useSubscription();
+  const isProRef = useRef(false);
+  isProRef.current = proSub.isPro;
+  useEffect(() => {
+    if (proSub.isPro) setIntro(false);
+  }, [proSub.isPro]);
   /* 21 okt 2026 (operator): na "Explore modes" geen tabbalk meer (zoals bij
      State Control) maar een terug-chevron naar het intro-scherm. */
   useEffect(() => {
@@ -629,7 +637,7 @@ export default function BreathScreen() {
         setIntro(false);
         return;
       }
-      setIntro(true);
+      setIntro(!isProRef.current);
       setIntroRun((n) => n + 1);
       focusedRef.current = true;
       return () => {

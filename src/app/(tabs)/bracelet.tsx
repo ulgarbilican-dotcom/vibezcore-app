@@ -40,6 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { useSubscription } from '@/hooks/useSubscription';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { ChevronLeft } from 'lucide-react-native';
@@ -329,7 +330,9 @@ export default function BraceletScreen() {
   const [showIntroRaw, setShowIntro] = useState(!open);
   /* Na de onboarding meteen geen intro (geen flits van de welkomstfoto). */
   const introSkip = useStateIntroSkip();
-  const showIntro = showIntroRaw && !introSkip;
+  /* 23 okt 2026 (operator): Premium ziet de welkomstkaart van deze tab niet meer. */
+  const proSub = useSubscription();
+  const showIntro = showIntroRaw && !introSkip && !proSub.isPro;
 
   useEffect(() => {
     if (open && open !== consumedOpen.current) {

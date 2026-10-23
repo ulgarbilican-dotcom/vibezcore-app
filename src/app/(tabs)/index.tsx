@@ -930,6 +930,12 @@ function AudioScreen({
      de vlag terug op `true` bij ELKE focus van deze tab, niet enkel de
      eerste montage. */
   const [intro, setIntro] = useState(true);
+  /* 23 okt 2026 (operator): Premium ziet de welkomstkaart van deze tab niet meer. */
+  const isProRef = useRef(false);
+  isProRef.current = sub.isPro;
+  useEffect(() => {
+    if (sub.isPro) setIntro(false);
+  }, [sub.isPro]);
   const finishAudioIntro = useCallback(() => {
     setIntro(false);
   }, []);
@@ -967,7 +973,7 @@ function AudioScreen({
         setActivePillarFilter(null);
         return;
       }
-      setIntro(true);
+      setIntro(!isProRef.current);
     }, []),
   );
 
