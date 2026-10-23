@@ -10,6 +10,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccentLight, BrandDark, BrandFonts } from '@/constants/theme';
+import Tap from '@/components/Tap';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { getModeMeta, type BraceletMode } from '@/services/ble-contract';
 import { dayKey, getAllSessions, useBraceletStats } from '@/utils/bracelet-history';
@@ -149,7 +150,7 @@ export default function ThisWeekCard() {
         </View>
       </View>
       {data.next ? (
-        <Pressable
+        <Tap
           style={({ pressed }) => [s.next, pressed && { opacity: 0.6 }]}
           onPress={() => router.push(data.next!.path as never)}
           accessibilityRole="button"
@@ -160,7 +161,7 @@ export default function ThisWeekCard() {
             {data.next.label} · {hhmm(data.next.at)}
           </Text>
           <ChevronRight size={16} color={ink(0.3)} />
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );

@@ -20,6 +20,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import SplatField from '@/components/SplatField';
 import Starfield from '@/components/Starfield';
@@ -246,9 +247,9 @@ function BreathSplatScreenInner() {
       </View>
 
       <View style={s.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.icon}>
+        <Tap onPress={() => router.back()} hitSlop={12} style={s.icon}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.72)" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
         <Text style={[s.eyebrow, { color: st.accent }]}>{st.eyebrow}</Text>
         <View style={s.icon} />
       </View>
@@ -275,7 +276,7 @@ function BreathSplatScreenInner() {
           const t = BREATH_STATES[k];
           const on = k === stateKey;
           return (
-            <Pressable
+            <Tap
               key={k}
               onPress={() => pick(k)}
               style={[
@@ -292,19 +293,19 @@ function BreathSplatScreenInner() {
               >
                 {t.eyebrow.split(' ')[0]}
               </Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
 
-      <Pressable
+      <Tap
         onPress={running ? stop : start}
         style={[s.cta, { borderColor: st.accent }]}
       >
         <Text style={[s.ctaTxt, { color: st.accent }]}>
           {running ? 'STOP' : 'START'}
         </Text>
-      </Pressable>
+      </Tap>
 
       <BalancedText style={s.note}>
         Prototype — the portrait replaces the figure once it is uploaded.

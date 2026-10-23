@@ -1,5 +1,6 @@
 import { openStateControl } from '@/utils/state-control-ui';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
@@ -485,7 +486,7 @@ function HeartButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Tap
       onPress={(e) => {
         e?.stopPropagation?.();
         onPress();
@@ -496,7 +497,7 @@ function HeartButton({
       <Text style={[s.heartGlyph, active && s.heartGlyphActive]}>
         {active ? '♥' : '♡'}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -544,7 +545,7 @@ function SessionRow({
      preview beschikbaar is. Combineert de "gate"-signaal met de "preview
      escape hatch"-info. */
   return (
-    <Pressable
+    <Tap
       style={[s.libRow, separated && s.libRowSeparated, !canPlay && s.libRowLocked]}
       onPress={onPress}
     >
@@ -643,7 +644,7 @@ function SessionRow({
         })()}
       </View>
       <HeartButton active={isFavorite} onPress={onToggleFav} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -1557,7 +1558,7 @@ function AudioScreen({
               Iter 9dq v41 (2026-06-03): marginTop 40 → 24 om beide
               links zichtbaar te houden bij grotere photo. */}
           <View style={{ marginTop: 24 }}>
-            <Pressable
+            <Tap
               style={s.bLandingPrimaryLink}
               onPress={() => {
                 setExploredLibrary(true);
@@ -1575,7 +1576,7 @@ function AudioScreen({
                   ? 'Get full Audio Library →'
                   : 'Enter the library →'}
               </Text>
-            </Pressable>
+            </Tap>
             {needsAudioUpsell && (
               <Pressable
                 style={s.bLandingSecondaryLink}
@@ -1714,14 +1715,14 @@ function AudioScreen({
           liggen — er hoeft niets onthouden te worden om terug te keren op
           exact dezelfde stap. */}
       {fromOnboarding && (
-        <Pressable
+        <Tap
           onPress={() => router.back()}
           style={s.backToOnboarding}
           hitSlop={10}
         >
           <ArrowLeft size={16} color="#0a0a0a" strokeWidth={2.4} />
           <Text style={s.backToOnboardingTxt}>Back to onboarding</Text>
-        </Pressable>
+        </Tap>
       )}
       <ScrollView
         ref={scrollViewRef}
@@ -1932,7 +1933,7 @@ function AudioScreen({
               autoFocus
             />
             {searchOpen || searchActive ? (
-              <Pressable
+              <Tap
                 onPress={() => {
                   setSearchQuery('');
                   setSearchOpen(false);
@@ -1945,7 +1946,7 @@ function AudioScreen({
                 }}
               >
                 <Text style={s.searchClearGlyph}>×</Text>
-              </Pressable>
+              </Tap>
             ) : null}
           </View>
         )}
@@ -2486,7 +2487,7 @@ function AudioScreen({
                   {/* Operator, 14 september 2026 (Apple-stijl): omlijnde
                      signaalblauwe pil weg — pure, minimalistische
                      tekstlink met een native pijlicoon, in Royal Indigo. */}
-                  <Pressable
+                  <Tap
                     onPress={() => {
                       setActivePillarFilter(null);
                       requestAnimationFrame(() => {
@@ -2521,7 +2522,7 @@ function AudioScreen({
                     >
                       Pillars
                     </Text>
-                  </Pressable>
+                  </Tap>
                   <View
                     style={{
                       flexDirection: 'row',
@@ -2543,7 +2544,7 @@ function AudioScreen({
                         uitleg over wat Auto-play doet. User-initiated zodat
                         we niet onnodig pop-ups gooien naar power-users die
                         de feature al kennen. */}
-                    <Pressable
+                    <Tap
                       onPress={() => setAutoPlayInfoOpen(true)}
                       hitSlop={10}
                       style={{
@@ -2567,7 +2568,7 @@ function AudioScreen({
                       >
                         i
                       </Text>
-                    </Pressable>
+                    </Tap>
                     {/* Operator, 14 september 2026: Auto-play is een
                        instelling, geen "nu actief"-afspeelstatus — die
                        laatste is waar Signal Blue voor gereserveerd is.
@@ -2730,7 +2731,7 @@ function AudioScreen({
                           const photo =
                             PILLAR_META[SERIES_PILLAR[sess.series]]?.img ?? SERIES_PHOTO[sess.series];
                           return (
-                            <Pressable
+                            <Tap
                               key={`free-row-${sess.url}`}
                               style={{
                                 flexDirection: 'row',
@@ -2809,7 +2810,7 @@ function AudioScreen({
                                   in Science, Philosophy & Psychology + bracelet
                                   KS) + Play Store install. Operator v173-feedback:
                                   sessie-naam alleen zegt outsiders niks. */}
-                              <Pressable
+                              <Tap
                                 onPress={(e) => {
                                   e.stopPropagation();
                                   const url = 'https://www.vibezcore.com/';
@@ -2831,7 +2832,7 @@ function AudioScreen({
                                 accessibilityLabel={`Share ${sess.title}`}
                               >
                                 <Share2 size={18} color={C.free} strokeWidth={2.2} />
-                              </Pressable>
+                              </Tap>
                               {/* Play-pijl */}
                               <Text
                                 style={{
@@ -2843,7 +2844,7 @@ function AudioScreen({
                               >
                                 ▶
                               </Text>
-                            </Pressable>
+                            </Tap>
                           );
                         })}
                       </View>
@@ -3289,7 +3290,7 @@ function AudioScreen({
                         bovenste knop, maar zelfde functie. Iter 9dq v152:
                         ook tonen bij 'free' mode (al-pillars-view). */}
                     {(activePillarFilter === pillar || isFreeMode) && (
-                      <Pressable
+                      <Tap
                         onPress={() => {
                           setActivePillarFilter(null);
                           requestAnimationFrame(() => {
@@ -3340,7 +3341,7 @@ function AudioScreen({
                         >
                           Back to pillars
                         </Text>
-                      </Pressable>
+                      </Tap>
                     )}
                   </View>
                 );
@@ -3371,7 +3372,7 @@ function AudioScreen({
         {!searchActive && !activePillarFilter && (
           /* Zelfde opbouw als de pijler-tegels erboven: foto, daaronder
              label + titel (Content-Card-regel: tekst onder de foto). */
-          <Pressable
+          <Tap
             style={({ pressed }) => [s.braceletCard, pressed && { opacity: 0.85 }]}
             onPress={() => void openBraceletWebsite()}
             accessibilityRole="button"
@@ -3392,7 +3393,7 @@ function AudioScreen({
               <Text style={s.braceletCardChev}>›</Text>
             </View>
             <BalancedText style={s.braceletCardSub}>Nature meets tech. Your rhythm, on your wrist.</BalancedText>
-          </Pressable>
+          </Tap>
         )}
 
         {/* ── BRACELET-TEASER (cross-product upsell) ──────────────────
@@ -3438,7 +3439,7 @@ function AudioScreen({
             patroon (Spotify-stijl footer). Bracelet owners en PRO users
             zien dit niet (zij hebben al een ander pad). */}
         {!searchActive && isSignedIn === false && !hasSub && !isBraceletOwner && (
-          <Pressable
+          <Tap
             style={s.signInFooterLink}
             onPress={() => {
               /* Iter 9dq v110 (2026-06-04): scroll-intent 'account-top'
@@ -3453,7 +3454,7 @@ function AudioScreen({
             <Text style={s.signInFooterText}>
               <Text style={s.signInFooterTextAccent}>Sign In</Text> or <Text style={s.signInFooterTextAccent}>Create Account</Text>
             </Text>
-          </Pressable>
+          </Tap>
         )}
 
         {/* Juridische regel onderaan als afsluiter, niet meer midden in de
@@ -3467,7 +3468,7 @@ function AudioScreen({
             houdt. */}
         {!searchActive && (
         <View style={s.legalBlock}>
-          <Pressable
+          <Tap
             style={s.legalToggle}
             onPress={toggleLegal}
             android_ripple={{ color: 'rgba(255,255,255,0.04)' }}
@@ -3483,7 +3484,7 @@ function AudioScreen({
               Independent Content & Third-Party References
             </Text>
             <Text style={[s.legalChev, legalOpen && s.legalChevOpen]}>›</Text>
-          </Pressable>
+          </Tap>
           {legalOpen && (
             <View style={s.legalBody}>
               <Text style={s.legalPara}>
@@ -3572,7 +3573,7 @@ function AudioScreen({
                 {BREATHWORK_CHOOSER.map((opt) => {
                   const modeMeta = getModeMeta(opt.mode);
                   return (
-                    <Pressable
+                    <Tap
                       key={opt.mode}
                       style={s.breathChooserRow}
                       onPress={() => {
@@ -3598,7 +3599,7 @@ function AudioScreen({
                         </Text>
                       </View>
                       <Text style={s.breathChooserRowArrow}>→</Text>
-                    </Pressable>
+                    </Tap>
                   );
                 })}
               </View>
@@ -3628,7 +3629,7 @@ function AudioScreen({
               <View style={s.pillarModalHandle} />
               {/* Uitlegblad = Done rechtsboven (onderblad-protocol), zoals het
                   Auto-play-blad verderop — geen ✕ (audit 16 okt 2026). */}
-              <Pressable
+              <Tap
                 style={s.sheetDoneTopRight}
                 onPress={() => setDetailPillar(null)}
                 hitSlop={14}
@@ -3636,7 +3637,7 @@ function AudioScreen({
                 accessibilityLabel="Done"
               >
                 <Text style={s.sheetDoneTopRightTxt}>Done</Text>
-              </Pressable>
+              </Tap>
               <Text style={s.pillarModalEyebrow}>
                 {detailPillar.num} · PILLAR
               </Text>
@@ -3669,14 +3670,14 @@ function AudioScreen({
               <View style={s.pillarModalHandle} />
               {/* Operator, 8 okt 2026 ("overal consistent"): uitlegbladen
                   sluiten met Done rechtsboven — was ✕ + "Got it" onderaan. */}
-              <Pressable
+              <Tap
                 style={s.sheetDoneTopRight}
                 onPress={() => setAutoPlayInfoOpen(false)}
                 hitSlop={10}
                 accessibilityLabel="Done"
               >
                 <Text style={s.sheetDoneTopRightTxt}>Done</Text>
-              </Pressable>
+              </Tap>
               <Text style={s.pillarModalEyebrow}>AUTO-PLAY</Text>
               <Text style={s.pillarModalTitle}>Continuous flow</Text>
               <BalancedText style={s.pillarModalDesc}>

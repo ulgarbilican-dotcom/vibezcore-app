@@ -27,6 +27,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { goToTab } from '@/utils/state-control-ui';
+import Tap from '@/components/Tap';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -259,7 +260,7 @@ export function BraceletUpsellModal() {
 
   return (
     <View style={s.overlay} pointerEvents="box-none">
-      <Pressable
+      <Tap
         style={[
           s.bar,
           /* marginBottom met safe-area-inset + extra 12px → card zweeft
@@ -288,7 +289,7 @@ export function BraceletUpsellModal() {
 
           <Text style={s.chevron}>›</Text>
         </View>
-      </Pressable>
+      </Tap>
     </View>
   );
 }

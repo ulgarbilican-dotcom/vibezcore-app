@@ -25,6 +25,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import { AudioAccent, AudioAccentLight, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
@@ -264,17 +265,17 @@ export default function MembershipPlans({
       </Text>
 
       <View style={s.links}>
-        <Pressable onPress={() => router.push('/legal/terms')} hitSlop={8} accessibilityRole="link">
+        <Tap onPress={() => router.push('/legal/terms')} hitSlop={8} accessibilityRole="link">
           <Text style={s.link}>Terms of Use</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.sep}>·</Text>
-        <Pressable onPress={() => router.push('/legal/privacy')} hitSlop={8} accessibilityRole="link">
+        <Tap onPress={() => router.push('/legal/privacy')} hitSlop={8} accessibilityRole="link">
           <Text style={s.link}>Privacy Policy</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.sep}>·</Text>
-        <Pressable onPress={onRestore} hitSlop={8} accessibilityLabel="Restore previous purchases">
+        <Tap onPress={onRestore} hitSlop={8} accessibilityLabel="Restore previous purchases">
           <Text style={s.link}>Restore Purchases</Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

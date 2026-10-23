@@ -41,6 +41,7 @@
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
@@ -246,7 +247,7 @@ function StateControlIntro({
       {onboarding && onNotNow && (
         /* Exact de plaats en stijl van "Not Now" in breath-welcome
            (topbar paddingVertical 10 / paddingHorizontal 18 + backBtn). */
-        <Pressable
+        <Tap
           onPress={onNotNow}
           hitSlop={14}
           style={[s.notNow, { top: insets.top + 10 }]}
@@ -255,7 +256,7 @@ function StateControlIntro({
         >
           <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
           <Text style={s.notNowTxt}>Not Now</Text>
-        </Pressable>
+        </Tap>
       )}
       <View style={[s.introWrap, { paddingBottom: onboarding ? insets.bottom + 24 : 34 + tabInset }]}>
         <View
@@ -305,7 +306,7 @@ function StateControlIntro({
         {/* Operator, 7 okt 2026 ("weinig ingangen naar de bracelet"): de
             bracelet hoort bij State Control — één rustige regel onder de
             knop, voor iedereen (er zijn nog geen eigenaars). */}
-        <Pressable
+        <Tap
           onPress={() => void openBraceletWebsite()}
           hitSlop={10}
           style={({ pressed }) => [s.braceletLink, pressed && { opacity: 0.6 }]}
@@ -315,7 +316,7 @@ function StateControlIntro({
           <Text style={s.braceletLinkTxt}>
             Early 2027 · <Text style={s.braceletLinkStrong}>Smart Bead Bracelet ›</Text>
           </Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

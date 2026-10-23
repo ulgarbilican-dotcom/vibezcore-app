@@ -12,6 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import PremiumNote from '@/components/PremiumNote';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
@@ -700,9 +701,9 @@ export default function AgendaScreen() {
                een andere dag te kiezen had daarvoor geen directe knop,
                enkel nogmaals op de datumrij zelf tikken. */}
             <View style={s.calendarDoneRow}>
-              <Pressable onPress={() => setCalendarOpen(false)} hitSlop={10}>
+              <Tap onPress={() => setCalendarOpen(false)} hitSlop={10}>
                 <Text style={s.calendarDoneTxt}>Done</Text>
-              </Pressable>
+              </Tap>
             </View>
             <View style={s.monthNav}>
               <AnimatedPressable
@@ -835,7 +836,7 @@ export default function AgendaScreen() {
                 ? (items.find((it) => it.reminderAt >= nowM) ?? items[0])
                 : items[0];
             return (
-              <Pressable
+              <Tap
                 style={s.tapStartZone}
                 onPress={() =>
                   openBreathSession({
@@ -852,7 +853,7 @@ export default function AgendaScreen() {
                 <Text style={s.tapStartTxt}>
                   {items.length > 1 ? `Tap to start · ${fmtAgendaTime(next.reminderAt)}` : 'Tap to start'}
                 </Text>
-              </Pressable>
+              </Tap>
             );
           })()}
         </Animated.View>
@@ -935,7 +936,7 @@ export default function AgendaScreen() {
         {/* Audit 10 okt 2026 (operator: "akkoord"): een plan kon je enkel
             vervangen, nooit stoppen. Klein en onderaan — geen hoofdactie. */}
         {plan && (
-          <Pressable
+          <Tap
             onPress={() => {
               hapticTap();
               setConfirmRemove(true);
@@ -945,7 +946,7 @@ export default function AgendaScreen() {
             accessibilityRole="button"
           >
             <Text style={s.removePlanTxt}>Remove plan</Text>
-          </Pressable>
+          </Tap>
         )}
       </ScrollView>
 
@@ -993,9 +994,9 @@ export default function AgendaScreen() {
                 <>
                   <View style={s.pickHeader}>
                     <Text style={[s.pickTitle, s.pickTitleInRow]}>{titleCase(st.eyebrow)} duration</Text>
-                    <Pressable onPress={() => setDurationPicking(null)} hitSlop={10} accessibilityRole="button">
+                    <Tap onPress={() => setDurationPicking(null)} hitSlop={10} accessibilityRole="button">
                       <Text style={s.pickDoneTxt}>Done</Text>
-                    </Pressable>
+                    </Tap>
                   </View>
                   <DurationWheel
                     options={durationOptionsFor(it.state, it.techniqueKey).options}
@@ -1082,7 +1083,7 @@ export default function AgendaScreen() {
                       {startKind === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
                     </PremiumNote>
                   ) : null}
-                  <Pressable
+                  <Tap
                     style={s.actionEditBtn}
                     onPress={() => {
                       const idx = actionItemIndex;
@@ -1091,7 +1092,7 @@ export default function AgendaScreen() {
                     }}
                   >
                     <Text style={s.actionEditTxt}>Edit duration</Text>
-                  </Pressable>
+                  </Tap>
                 </>
               );
             })()}

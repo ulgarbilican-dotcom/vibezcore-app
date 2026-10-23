@@ -9,6 +9,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
+import Tap from '@/components/Tap';
 import {
   connectHealth,
   HEALTH_INTEGRATION_ENABLED,
@@ -99,7 +100,7 @@ export default function HeartRateScreen() {
             Health Connect — enkel tonen zolang dat nog niet gekoppeld is.
             UIT bij de lancering (19 okt 2026, HEALTH_INTEGRATION_ENABLED). */}
         {HEALTH_INTEGRATION_ENABLED && isHealthModulePresent() && !healthOn ? (
-          <Pressable
+          <Tap
             style={({ pressed }) => [s.watchRow, pressed && { opacity: 0.7 }]}
             onPress={() => void connectHealth()}
             accessibilityRole="button"
@@ -111,7 +112,7 @@ export default function HeartRateScreen() {
               <Text style={s.watchSub}>Connect {healthAppName()} for your resting heart rate</Text>
             </View>
             <ChevronRight size={18} color="rgba(255,255,255,0.35)" />
-          </Pressable>
+          </Tap>
         ) : null}
 
         <HistorySectionLabel>History</HistorySectionLabel>
@@ -146,7 +147,7 @@ export default function HeartRateScreen() {
         {/* Audit 12 okt 2026 (privacy): je eigen hartslag-gegevens wissen,
             zoals Apple Health onderaan "Delete All Data". */}
         {history.length > 0 || pulse.source !== 'average' ? (
-          <Pressable
+          <Tap
             onPress={() => setConfirmClear(true)}
             hitSlop={10}
             style={s.clear}
@@ -154,7 +155,7 @@ export default function HeartRateScreen() {
             accessibilityLabel="Clear heart rate data"
           >
             <Text style={s.clearTxt}>Clear Heart Rate Data</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </ScrollView>
 

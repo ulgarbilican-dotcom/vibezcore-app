@@ -6,6 +6,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { showVibezAlert } from '@/components/VibezAlert';
+import Tap from '@/components/Tap';
 import { AudioAccent, BrandFonts } from '@/constants/theme';
 import {
   connectHealth,
@@ -89,9 +90,9 @@ export default function HealthSyncSetting({
           />
         </View>
         {on && Platform.OS === 'android' ? (
-          <Pressable onPress={openHealthSettings} hitSlop={8} style={s.link} accessibilityRole="button">
+          <Tap onPress={openHealthSettings} hitSlop={8} style={s.link} accessibilityRole="button">
             <Text style={s.linkTxt}>Manage access in Health Connect</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
     </>

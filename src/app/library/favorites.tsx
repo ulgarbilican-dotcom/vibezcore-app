@@ -8,6 +8,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
+import Tap from '@/components/Tap';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -54,10 +55,10 @@ export default function LibraryFavoritesScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={s.topbar}>
-        <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+        <Tap onPress={goBack} hitSlop={14} style={s.backBtn}>
           <Text style={s.backChev}>‹</Text>
           <Text style={s.backText}>Back</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.topbarTitle}>Your Favorites</Text>
         <View style={s.topbarRight} />
       </View>
@@ -90,7 +91,7 @@ export default function LibraryFavoritesScreen() {
               session={sess}
               onPress={() => openGated(sess)}
               rightAccessory={
-                <Pressable
+                <Tap
                   onPress={(e) => {
                     e?.stopPropagation?.();
                     toggleFavorite(sess);
@@ -99,7 +100,7 @@ export default function LibraryFavoritesScreen() {
                   style={s.heart}
                 >
                   <Text style={s.heartGlyph}>♥</Text>
-                </Pressable>
+                </Tap>
               }
             />
           ))

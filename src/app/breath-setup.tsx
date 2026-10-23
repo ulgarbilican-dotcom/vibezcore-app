@@ -31,6 +31,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import TimeWheel from '@/components/TimeWheel';
 import PremiumNote from '@/components/PremiumNote';
 import SheetScroll from '@/components/SheetScroll';
@@ -708,9 +709,9 @@ function TechniqueSegmentButton({
           {techShortLabel(t)}
         </Animated.Text>
         {selected && onInfo ? (
-          <Pressable onPress={onInfo} hitSlop={12} accessibilityLabel={`About ${t.name}`}>
+          <Tap onPress={onInfo} hitSlop={12} accessibilityLabel={`About ${t.name}`}>
             <Info size={14} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
     </AnimatedPressable>
@@ -3522,7 +3523,7 @@ export default function BreathSetupScreen() {
                   {/* Operator, 18 september 2026 ("vinkje moet pas komen als
                      de laatste popup weg is"): `techniquePicked` (het vinkje
                      op de Technique-tegel) gaat pas aan bij "Done". */}
-                  <Pressable
+                  <Tap
                     onPress={() => {
                       setTechniquePicked(true);
                       setActivePicker(null);
@@ -3530,7 +3531,7 @@ export default function BreathSetupScreen() {
                     hitSlop={10}
                   >
                     <Text style={[s.sheetDoneTxt, { color: accent }]}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               {/* Operator, 18 september 2026 ("technique popup ook iets meer
                  info suggestief"): niveau-badge (`t.level`) + de hook-zin
@@ -3550,7 +3551,7 @@ export default function BreathSetupScreen() {
                     return (
                       <View key={t.key}>
                         {i > 0 && <View style={s.sheetSeparator} />}
-                        <Pressable
+                        <Tap
                           style={s.sheetRow}
                           onPress={() => {
                             hapticTap();
@@ -3603,7 +3604,7 @@ export default function BreathSetupScreen() {
                             ) : null}
                           </View>
                           {isSel && <Check size={18} color={accent} strokeWidth={2.6} />}
-                        </Pressable>
+                        </Tap>
                       </View>
                     );
                   })}
@@ -3628,7 +3629,7 @@ export default function BreathSetupScreen() {
                   {/* Operator, 18 september 2026 ("vinkje moet pas komen als
                      de laatste popup weg is"): `durationTouched` (het
                      vinkje op de Duration-tegel) gaat pas aan bij "Done". */}
-                  <Pressable
+                  <Tap
                     onPress={() => {
                       setDurationTouched(true);
                       setActivePicker(null);
@@ -3636,7 +3637,7 @@ export default function BreathSetupScreen() {
                     hitSlop={10}
                   >
                     <Text style={[s.sheetDoneTxt, { color: accent }]}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               {/* Operator, 18 september 2026 ("de cta's in bv choose
                  duration popup staat nog te laag"): de echte oorzaak — een
@@ -3654,7 +3655,7 @@ export default function BreathSetupScreen() {
                     return (
                       <View key={d.name}>
                         {i > 0 && <View style={s.sheetSeparator} />}
-                        <Pressable
+                        <Tap
                           style={s.sheetRow}
                           /* Operator, 18 september 2026 ("pas na aanklikken
                              Done is handeling klaar"): kiest enkel, "Done"
@@ -3677,7 +3678,7 @@ export default function BreathSetupScreen() {
                             </Text>
                           )}
                           {isSel && <Check size={18} color={accent} strokeWidth={2.6} />}
-                        </Pressable>
+                        </Tap>
                       </View>
                     );
                   })}
@@ -3739,7 +3740,7 @@ export default function BreathSetupScreen() {
                      pas ok na done... vinkje moet pas komen als de laatste
                      popup weg is"): `horizonTouched` gaat pas aan bij
                      "Done". */}
-                  <Pressable
+                  <Tap
                     onPress={() => {
                       setHorizonTouched(true);
                       setActivePicker(null);
@@ -3747,7 +3748,7 @@ export default function BreathSetupScreen() {
                     hitSlop={10}
                   >
                     <Text style={[s.sheetDoneTxt, { color: accent }]}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
                 {/* Operator, 18 september 2026 ("ik zag pas achteraf dat
                    alle sessies naar 1 week gereset zijn — niet duidelijk
@@ -3771,7 +3772,7 @@ export default function BreathSetupScreen() {
                       return (
                         <View key={o.key}>
                           {i > 0 && <View style={s.sheetSeparator} />}
-                          <Pressable
+                          <Tap
                             style={s.sheetRow}
                             onPress={async () => {
                               /* Operator, 18 september 2026 ("Apple
@@ -3804,7 +3805,7 @@ export default function BreathSetupScreen() {
                               <Text style={s.sheetRowSub}>{o.hint}</Text>
                             </View>
                             {isSel && <Check size={18} color={accent} strokeWidth={2.6} />}
-                          </Pressable>
+                          </Tap>
                         </View>
                       );
                     })}

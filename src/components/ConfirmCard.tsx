@@ -9,6 +9,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
+import PopupCard from '@/components/PopupCard';
+import Tap from '@/components/Tap';
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import PressScale from '@/components/PressScale';
 import VibezGlass from '@/components/VibezGlass';
@@ -36,17 +38,17 @@ export default function ConfirmCard({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onCancel}>
-        <Pressable style={s.card} onPress={() => {}}>
+        <PopupCard style={s.card}>
           <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
           <Text style={s.title}>{title}</Text>
           <BalancedText style={s.body}>{body}</BalancedText>
           <PressScale style={s.btn} haptic scaleTo={0.97} onPress={onConfirm} accessibilityLabel={confirmLabel}>
             <Text style={[s.btnTxt, destructive && { color: Brand.error }]}>{confirmLabel}</Text>
           </PressScale>
-          <Pressable onPress={onCancel} hitSlop={10} style={s.cancel} accessibilityLabel={cancelLabel}>
+          <Tap onPress={onCancel} hitSlop={10} style={s.cancel} accessibilityLabel={cancelLabel}>
             <Text style={s.cancelTxt}>{cancelLabel}</Text>
-          </Pressable>
-        </Pressable>
+          </Tap>
+        </PopupCard>
       </Pressable>
     </Modal>
   );

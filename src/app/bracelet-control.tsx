@@ -25,6 +25,9 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import { SPRING_POP } from '@/constants/motion';
+import PopupCard from '@/components/PopupCard';
+import Tap from '@/components/Tap';
 import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow, { useWatchStatus } from '@/components/WatchHapticsRow';
@@ -922,7 +925,7 @@ function SwitchSessionConfirm({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <Pressable style={s.switchBackdrop} onPress={onCancel}>
-        <Pressable style={s.switchCard} onPress={() => {}}>
+        <PopupCard style={s.switchCard}>
           {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
           <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
           <Text style={s.switchTitle}>Switch to {toName}?</Text>
@@ -937,10 +940,10 @@ function SwitchSessionConfirm({
             <VibezGlass radius={999} tint={toColor} level="normal" flat style={StyleSheet.absoluteFill} />
             <Text style={s.primaryBtnText}>Switch</Text>
           </PressScale>
-          <Pressable onPress={onCancel} hitSlop={10} style={s.switchCancel} accessibilityLabel="Cancel">
+          <Tap onPress={onCancel} hitSlop={10} style={s.switchCancel} accessibilityLabel="Cancel">
             <Text style={s.switchCancelTxt}>Cancel</Text>
-          </Pressable>
-        </Pressable>
+          </Tap>
+        </PopupCard>
       </Pressable>
     </Modal>
   );
@@ -1311,9 +1314,9 @@ function ModeDetailModal({
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={handleClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Tap onPress={handleClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.modeModalHandle} />
-        </Pressable>
+        </Tap>
         <View style={s.modeModalHeader}>
           <View style={[s.modeModalDot, { backgroundColor: meta.color }]} />
           <View style={{ flex: 1 }}>
@@ -1322,9 +1325,9 @@ function ModeDetailModal({
               {meta.minMinutes}–{meta.maxMinutes} min session
             </Text>
           </View>
-          <Pressable onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+          <Tap onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Text style={s.modeModalDone}>Done</Text>
-          </Pressable>
+          </Tap>
         </View>
 
           {/* Intent — what state this mode is for */}
@@ -1414,9 +1417,9 @@ function IosLockNotice() {
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={close} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Tap onPress={close} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.modeModalHandle} />
-        </Pressable>
+        </Tap>
         <Text style={s.trialSheetEyebrow}>ON IPHONE</Text>
         <Text style={s.modeModalName}>Keep your screen on</Text>
         <BalancedText style={s.quickSheetLine}>Keep your screen on to feel the rhythm.</BalancedText>
@@ -1466,9 +1469,9 @@ function TrialSheet({
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Tap onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.modeModalHandle} />
-        </Pressable>
+        </Tap>
         <View style={s.quickSheetHead}>
           <View style={s.quickSheetIcon}>
             <Icon size={mode === BraceletMode.Theta ? 30 : 24} color={meta.color} strokeWidth={2.2} />
@@ -1539,9 +1542,9 @@ function QuickSessionSheet({
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Tap onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.modeModalHandle} />
-        </Pressable>
+        </Tap>
         <View style={s.quickSheetHead}>
           <View style={s.quickSheetIcon}>
             <QIcon size={key === 'chill' ? 30 : 24} color={meta.color} strokeWidth={2.2} />
@@ -2819,7 +2822,7 @@ function previewHeaderOptions(title: string, onBack?: () => void) {
     headerTitleAlign: 'center' as const,
     headerBackVisible: false,
     headerLeft: () => (
-      <Pressable
+      <Tap
         onPress={() => {
           if (onBack) {
             onBack();
@@ -2842,7 +2845,7 @@ function previewHeaderOptions(title: string, onBack?: () => void) {
         >
           ←
         </Text>
-      </Pressable>
+      </Tap>
     ),
   };
 }
@@ -2891,7 +2894,7 @@ function BraceletHeader({
   return (
     <View style={[s.customHeader, dark && { backgroundColor: '#000000' }]}>
       {showBack && onBack ? (
-        <Pressable
+        <Tap
           onPress={onBack}
           style={[s.headerSide, backLabel ? s.headerSideWithLabel : null]}
           hitSlop={12}
@@ -2912,7 +2915,7 @@ function BraceletHeader({
               {backLabel}
             </Text>
           ) : null}
-        </Pressable>
+        </Tap>
       ) : (
         <View style={s.headerSide} />
       )}
@@ -3521,7 +3524,7 @@ function ActiveSessionScreen({
              zoals Apple"): neerwaartse chevron linksboven, zoals Now Playing
              in Apple Music — vervangt de Minimize-knop. De sessie loopt door;
              het pilletje op de andere schermen brengt je terug. */}
-          <Pressable
+          <Tap
             style={s.minimizeChevron}
             /* Operator, 5 okt 2026: "minimize moet naar welcome state
                control gaan" — het intro-scherm van de State Control-tab. */
@@ -3534,7 +3537,7 @@ function ActiveSessionScreen({
             accessibilityLabel="Minimize — session keeps running"
           >
             <ChevronDown size={30} color="#ffffff" strokeWidth={2.2} />
-          </Pressable>
+          </Tap>
           <View style={s.activeModeRow}>
             <View style={[s.activeDot, { backgroundColor: activeMeta.color }]} />
             <Text style={[s.activeName, activeDark && { color: '#ffffff' }]}>
@@ -3693,7 +3696,7 @@ function ActiveSessionScreen({
               pil boven de play-knop, opent een glazen blad met de keuze
               Haptic / Haptic + Audio. */}
           <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={s.avBar}>
-            <Pressable
+            <Tap
               onPress={() => {
                 hapticTap();
                 setAvOpen(true);
@@ -3705,9 +3708,9 @@ function ActiveSessionScreen({
             >
               <SlidersHorizontal size={16} color="rgba(255,255,255,0.75)" strokeWidth={2} />
               <Text style={s.avBarTxt}>Audio & Haptics</Text>
-            </Pressable>
+            </Tap>
           </BlurView>
-          <Pressable
+          <Tap
             style={({ pressed }) => [
               s.pauseMain,
               pressed && { transform: [{ scale: 0.95 }] },
@@ -3739,7 +3742,7 @@ function ActiveSessionScreen({
             ) : (
               <Pause size={24} color="#ffffff" strokeWidth={2.2} />
             )}
-          </Pressable>
+          </Tap>
           {/* Iter v214 (2026-07-04): End = GEEN navigate — enkel
               setEndedLocally + onStop; de render valt vanzelf terug naar
               Choose Mode van dezelfde instance. */}
@@ -3748,7 +3751,7 @@ function ActiveSessionScreen({
               tekst mocht een sessie niet meer onomkeerbaar afsluiten.
               Gedeelde ConfirmCard (ook agenda/hartslag), niet de oude
               modal die in juli 6× faalde. */}
-          <Pressable
+          <Tap
             style={({ pressed }) => [s.endTxtWrap, pressed && { opacity: 0.6 }]}
             hitSlop={10}
             onPress={() => setConfirmEnd(true)}
@@ -3757,7 +3760,7 @@ function ActiveSessionScreen({
             accessibilityLabel="End session"
           >
             <Text style={s.endTxt}>END SESSION</Text>
-          </Pressable>
+          </Tap>
           <ConfirmCard
             visible={confirmEnd}
             title="End session?"
@@ -3831,19 +3834,19 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Tap onPress={onClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.avGrip} />
-        </Pressable>
+        </Tap>
         <View style={s.avHead}>
           <Text style={s.avTitle}>Audio & Haptics</Text>
-          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" style={s.avDoneTouch}>
+          <Tap onPress={onClose} hitSlop={12} accessibilityRole="button" style={s.avDoneTouch}>
             <Text style={s.avDone}>Done</Text>
-          </Pressable>
+          </Tap>
         </View>
         {options.map((o) => {
           const on = o.v === hear;
           return (
-            <Pressable
+            <Tap
               key={o.title}
               onPress={() => {
                 if (on) return;
@@ -3864,7 +3867,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
                 <Text style={s.avCardBody}>{o.body}</Text>
               </View>
               <View style={[s.avRadio, on && s.avRadioOn]}>{on ? <Check size={13} color="#0a0a0a" strokeWidth={3} /> : null}</View>
-            </Pressable>
+            </Tap>
           );
         })}
         {/* Operator, 11 okt 2026: sterkte van de trillingen — drie vaste
@@ -3875,7 +3878,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           {(['medium', 'strong'] as const).map((k) => {
             const on = k === strength;
             return (
-              <Pressable
+              <Tap
                 key={k}
                 onPress={() => {
                   if (on) return;
@@ -3892,7 +3895,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
                 <Text style={[s.avSegTxt, on && s.avSegTxtOn]}>
                   {k === 'medium' ? 'Medium' : 'Strong'}
                 </Text>
-              </Pressable>
+              </Tap>
             );
           })}
         </View>
@@ -3961,6 +3964,22 @@ type IdleScreenProps = {
   setDetailModeForModal: Dispatch<SetStateAction<BraceletMode | null>>;
   sim: SimulatedBracelet | null;
 };
+
+/* Paginabolletje van de toestandskeuze: de gekozen toestand groeit met een veer (iOS page control) en
+   neemt zijn kleur over; de rest krimpt terug. */
+function ModeDot({ active, color }: { active: boolean; color: string }) {
+  const k = useSharedValue(active ? 1 : 0);
+  useEffect(() => {
+    k.value = withSpring(active ? 1 : 0, SPRING_POP);
+  }, [active, k]);
+  const st = useAnimatedStyle(() => ({
+    width: 6 + 4 * k.value,
+    height: 6 + 4 * k.value,
+    opacity: 0.25 + 0.75 * k.value,
+  }));
+  return <Animated.View style={[s.modeDot, { backgroundColor: active ? color : '#ffffff' }, st]} />;
+}
+
 
 /* SCREEN 1: Idle — mode selection + duration + Start CTA.
    Iter 9 (operator-feedback): herschreven naar single-screen layout
@@ -4225,7 +4244,7 @@ function IdleScreen({
               {/* Tijdens de preview zit Audio & Haptics als pil boven "End
                   Preview" (operator, 19 okt 2026) — hier dan niet dubbel.
                   Plaats blijft, niets verschuift. */}
-              <Pressable
+              <Tap
                 onPress={() => {
                   hapticTap();
                   setHapticsOpen(true);
@@ -4238,12 +4257,12 @@ function IdleScreen({
                 accessibilityLabel="Audio and haptics, vibration strength"
               >
                 <Vibrate size={20} color={idleDark ? 'rgba(255,255,255,0.85)' : C.text} strokeWidth={2} />
-              </Pressable>
+              </Tap>
               {/* Niet tijdens de preview (18 okt 2026): de agenda opende een
                  scherm bovenop terwijl de preview doorliep, en een tik op een
                  toestand daar start zelf een preview. Zoals een lopende
                  Premium-sessie: geen agenda. Plaats blijft, niets verschuift. */}
-              <Pressable
+              <Tap
                 onPress={() =>
                   router.push((braceletPlan ? '/bracelet-agenda' : '/bracelet-set-day') as never)
                 }
@@ -4259,7 +4278,7 @@ function IdleScreen({
                   color={idleDark ? 'rgba(255,255,255,0.85)' : C.text}
                   strokeWidth={2}
                 />
-              </Pressable>
+              </Tap>
               {/* Operator, 27 september 2026 ("verwijder ook de
                  batterij icoon"): de statusDot (kleur naar batterij-
                  gezondheid) is weg.
@@ -4433,7 +4452,7 @@ function IdleScreen({
           {MODES.map((m: ModeMeta) => {
             const active = m.mode === selectedMode;
             return (
-              <Pressable
+              <Tap
                 key={m.mode}
                 hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                 onPress={() => {
@@ -4443,21 +4462,8 @@ function IdleScreen({
                 accessibilityLabel={`Select ${m.name} mode`}
                 accessibilityState={{ selected: active }}
               >
-                <View
-                  style={[
-                    s.modeDot,
-                    /* Wit, zoals iOS-paginabolletjes (operator, 5 okt 2026). */
-                    /* Operator, 9 okt 2026 ("zoals Apple, subtiel"): rond,
-                       de actieve iets groter en in de toestandskleur. */
-                    {
-                      backgroundColor: active ? m.color : '#ffffff',
-                      opacity: active ? 1 : 0.25,
-                      width: active ? 8 : 6,
-                      height: active ? 8 : 6,
-                    },
-                  ]}
-                />
-              </Pressable>
+                <ModeDot active={active} color={m.color} />
+              </Tap>
             );
           })}
         </View>
@@ -4547,7 +4553,7 @@ function IdleScreen({
               </Text>
             ) : null}
             <BlurView intensity={40} tint="dark" blurMethod="dimezisBlurViewSdk31Plus" style={s.avBar}>
-              <Pressable
+              <Tap
                 onPress={() => {
                   hapticTap();
                   setHapticsOpen(true);
@@ -4559,7 +4565,7 @@ function IdleScreen({
               >
                 <SlidersHorizontal size={16} color="rgba(255,255,255,0.75)" strokeWidth={2} />
                 <Text style={s.avBarTxt}>Audio & Haptics</Text>
-              </Pressable>
+              </Tap>
             </BlurView>
           </View>
         ) : null}
@@ -4603,7 +4609,7 @@ function IdleScreen({
                 <Pause size={24} color="#ffffff" strokeWidth={2.2} />
               )}
             </PressScale>
-            <Pressable
+            <Tap
               onPress={() => stopTrial(false)}
               hitSlop={12}
               style={s.trialEndBtn}
@@ -4611,7 +4617,7 @@ function IdleScreen({
               accessibilityLabel="End session"
             >
               <Text style={s.trialEndTxt}>END SESSION</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : (
           <PrimaryCtaButton
@@ -6346,31 +6352,31 @@ function SimDemoBar({ sim }: { sim: NonNullable<ReturnType<typeof getSimHooks>> 
     <View style={s.demoBox}>
       <Text style={s.demoTitle}>SIM · DEV ONLY</Text>
       <View style={s.demoLinkRow}>
-        <Pressable
+        <Tap
           style={s.demoLink}
           onPress={() => sim.simSetBattery(18)}
           accessibilityLabel="Trigger low battery in simulation"
         >
           <Text style={s.demoLinkText}>Low battery</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.demoSep}>·</Text>
-        <Pressable
+        <Tap
           style={s.demoLink}
           onPress={() => sim.simSetCharging(true)}
           accessibilityLabel="Trigger charging in simulation"
         >
           <Text style={s.demoLinkText}>Charging</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.demoSep}>·</Text>
-        <Pressable
+        <Tap
           style={s.demoLink}
           onPress={() => sim.simTriggerFault()}
           accessibilityLabel="Trigger fault in simulation"
         >
           <Text style={s.demoLinkText}>Fault</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.demoSep}>·</Text>
-        <Pressable
+        <Tap
           style={s.demoLink}
           onPress={() => {
             sim.simSetCharging(false);
@@ -6380,7 +6386,7 @@ function SimDemoBar({ sim }: { sim: NonNullable<ReturnType<typeof getSimHooks>> 
           accessibilityLabel="Reset simulation to healthy state"
         >
           <Text style={s.demoLinkText}>Reset</Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

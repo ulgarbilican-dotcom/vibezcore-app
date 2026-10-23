@@ -26,6 +26,8 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { goToTab } from '@/utils/state-control-ui';
+import { PopupView } from '@/components/PopupCard';
+import Tap from '@/components/Tap';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import {
   PILLAR_META,
@@ -109,18 +111,18 @@ export function WelcomeBackPopup() {
           ZIET achter het popup-blokje; voelt warmer / minder gegrendeld. */}
       <Pressable style={s.backdrop} onPress={dismissWelcomePopup} />
 
-      <View style={s.card}>
+      <PopupView style={s.card}>
           {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
           <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
         {/* ✕ rechtsboven. Pressable hitSlop voor mobile-tap-target ≥44dp. */}
-        <Pressable
+        <Tap
           style={s.close}
           onPress={dismissWelcomePopup}
           hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
           accessibilityLabel="Close welcome message"
         >
           <Text style={s.closeText}>✕</Text>
-        </Pressable>
+        </Tap>
 
         <Image source={VZ_WORDMARK} style={s.logo} resizeMode="contain" />
 
@@ -154,23 +156,23 @@ export function WelcomeBackPopup() {
           </View>
         </View>
 
-        <Pressable
+        <Tap
           style={s.primary}
           onPress={() => onContinue(lastPlayed)}
           android_ripple={{ color: 'rgba(10,10,10,0.12)' }}
           accessibilityLabel={lastPlayed.completed ? 'Listen to this session again' : 'Continue listening where you stopped'}
         >
           <Text style={s.primaryText}>{lastPlayed.completed ? 'Listen again' : 'Continue listening'}</Text>
-        </Pressable>
+        </Tap>
 
-        <Pressable
+        <Tap
           style={s.secondary}
           onPress={dismissWelcomePopup}
           accessibilityLabel="Dismiss welcome message, stay on library"
         >
           <Text style={s.secondaryText}>Not now</Text>
-        </Pressable>
-      </View>
+        </Tap>
+      </PopupView>
     </View>
   );
 }

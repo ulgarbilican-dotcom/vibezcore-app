@@ -10,6 +10,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import PopupCard from '@/components/PopupCard';
+import Tap from '@/components/Tap';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -84,7 +86,7 @@ export default function ProtocolTeaserModal({
         {/* Dummy stop-propagation Pressable — vangt enkel taps op de kaart
            op zodat ze niet doorborrelen naar de backdrop; geen eigen
            onPress-actie, dus geen press-scale nodig hier. */}
-        <Pressable style={s.card} onPress={() => {}}>
+        <PopupCard style={s.card}>
           {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
           <VibezGlass radius={22} level="sheet" style={StyleSheet.absoluteFill} />
           <AnimatedPressable
@@ -140,7 +142,7 @@ export default function ProtocolTeaserModal({
           >
             <Text style={s.later}>Maybe later</Text>
           </AnimatedPressable>
-        </Pressable>
+        </PopupCard>
       </Pressable>
     </Modal>
   );

@@ -17,6 +17,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { showVibezAlert } from '@/components/VibezAlert';
+import Tap from '@/components/Tap';
 import { BrandFonts } from '@/constants/theme';
 import { useSetting } from '@/utils/settings';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -109,7 +110,7 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
             accessibilityLabel={`Vibrate on ${name}`}
           />
         ) : w.status === 'noApp' && Platform.OS === 'android' ? (
-          <Pressable
+          <Tap
             style={({ pressed }) => [s.btn, pressed && { opacity: 0.7 }]}
             onPress={async () => {
               const ok = await openStoreOnWatch();
@@ -125,7 +126,7 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
             accessibilityLabel={`Install VIBEZCORE on ${name}`}
           >
             <Text style={s.btnTxt}>Install</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
     </>

@@ -33,6 +33,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { PopupView } from '@/components/PopupCard';
+import Tap from '@/components/Tap';
 import PremiumNote from '@/components/PremiumNote';
 import { vibrateCompat } from '@/services/breath-haptics';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
@@ -1365,15 +1367,15 @@ export default function BreathWelcomeScreen() {
            er is nergens naartoe terug. */}
         <View style={s.backWrap}>
           {slide > 0 ? (
-            <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+            <Tap onPress={goBack} hitSlop={14} style={s.backBtn}>
               <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
               <Text style={s.skipTxt}>Back</Text>
-            </Pressable>
+            </Tap>
           ) : (
-            <Pressable onPress={notNow} hitSlop={14} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Not now, look around first">
+            <Tap onPress={notNow} hitSlop={14} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Not now, look around first">
               <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
               <Text style={s.skipTxt}>Not Now</Text>
-            </Pressable>
+            </Tap>
           )}
         </View>
         <View style={s.stepCenter} pointerEvents="none">
@@ -1401,9 +1403,9 @@ export default function BreathWelcomeScreen() {
           </View>
         </View>
         <View style={s.backWrap}>
-          <Pressable onPress={askSkip} hitSlop={14} style={s.skipWrap}>
+          <Tap onPress={askSkip} hitSlop={14} style={s.skipWrap}>
             <Text style={s.skipTxtSecondary}>Skip</Text>
-          </Pressable>
+          </Tap>
         </View>
       </View>
 
@@ -1564,23 +1566,23 @@ export default function BreathWelcomeScreen() {
             blurTarget={rootBlurRef}
             style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
           />
-          <Pressable
+          <Tap
             onPress={() => setSkipAsk(false)}
             hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
             accessibilityLabel="Close"
           >
             <View style={s.skipSheetGrip} />
-          </Pressable>
+          </Tap>
           <Text style={s.skipSheetEyebrow}>YOUR FIRST SESSION</Text>
           <Text style={s.skipSheetTitle}>{skipCopy.title}</Text>
           <Text style={s.skipSheetBody}>{skipCopy.body}</Text>
-          <Pressable
+          <Tap
             style={({ pressed }) => [s.skipSheetBtn, pressed && { opacity: 0.85 }]}
             onPress={() => setSkipAsk(false)}
           >
             <Text style={s.skipSheetBtnTxt}>{skipCopy.cta}</Text>
-          </Pressable>
-          <Pressable
+          </Tap>
+          <Tap
             style={({ pressed }) => [s.skipSheetSecondary, pressed && { opacity: 0.6 }]}
             onPress={() => {
               setSkipAsk(false);
@@ -1589,7 +1591,7 @@ export default function BreathWelcomeScreen() {
             hitSlop={8}
           >
             <Text style={s.skipSheetSecondaryTxt}>Skip for now</Text>
-          </Pressable>
+          </Tap>
         </View>
       </GlassSheet>
     </View>
@@ -1822,7 +1824,7 @@ export function SlideIntro({
               aangeslagen, één keer per ademcyclus. */}
           {/* Twee lagen op elkaar, even groot en op dezelfde plek: de
               mandala zoals hij was, en de puntenwolk die hem overneemt. */}
-          <Pressable onPress={onTapOrb} style={{ width: ORB, height: ORB }}>
+          <Tap onPress={onTapOrb} style={{ width: ORB, height: ORB }}>
             <Animated.View style={[StyleSheet.absoluteFill, orbFade]}>
               {/* Op ONZE ademwaarde, niet op zijn eigen. Anders zet de rozet
                   uit terwijl de punten al krimpen en klopt de beweging niet
@@ -1847,7 +1849,7 @@ export function SlideIntro({
                   een onderbreking. */}
               <HapticOrb size={ORB} breath={breath} />
             </Animated.View>
-          </Pressable>
+          </Tap>
         </>
       )}
 
@@ -2138,7 +2140,7 @@ function BraceletTeaserCard({ onPress, h = BRACELET_TEASER_CARD_H }: { onPress: 
   const dispW = BRACELET_TEASER_SRC_W * scale;
   const dispH = BRACELET_TEASER_SRC_H * scale;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       style={[s.braceletTeaser, { height: h }]}
       onLayout={(e) => setW(e.nativeEvent.layout.width)}
@@ -2159,7 +2161,7 @@ function BraceletTeaserCard({ onPress, h = BRACELET_TEASER_CARD_H }: { onPress: 
       <View style={s.braceletTeaserBadge}>
         <Text style={s.braceletTeaserBadgeTxt}>Launching Early 2027</Text>
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -2210,9 +2212,9 @@ function BraceletInfoModal({
                   meer (operator, 14 okt 2026) */}
               <Text style={s.braceletModalHint}>Launching on Kickstarter, Early 2027</Text>
             </View>
-            <Pressable onPress={onClose} style={s.braceletModalClose}>
+            <Tap onPress={onClose} style={s.braceletModalClose}>
               <Text style={s.braceletModalCloseTxt}>Got it</Text>
-            </Pressable>
+            </Tap>
           </View>
         </View>
       </View>
@@ -2642,7 +2644,7 @@ function SlideExperience({
          aangestuurd vanuit het hoofdcomponent) wanneer je op de gedimde
          CTA tikt terwijl dit de enige ontbrekende stap is. */}
       <Animated.View style={safetyShakeStyle}>
-      <Pressable
+      <Tap
         onPress={onToggleSafetyAck}
         style={[s.safetyRow, { marginTop: safetyGap }]}
         accessibilityRole="checkbox"
@@ -2656,7 +2658,7 @@ function SlideExperience({
           or have epilepsy, a heart or respiratory condition, check with
           your doctor first.
         </BalancedText>
-      </Pressable>
+      </Tap>
       </Animated.View>
     </View>
   );
@@ -2948,17 +2950,17 @@ function StateInfoModal({
       <View style={s.braceletModalScrim}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         {cfg && (
-          <View style={s.stateInfoCard}>
+          <PopupView style={s.stateInfoCard}>
             <Text style={[s.stateInfoEyebrow, { color: cfg.accent }]}>{cfg.eyebrow}</Text>
             {/* Niet de figuurnaam ("Lotus") en ook niet de tagline erbij
                 ("Stillness in motion") — dat hoort bij de vorm van de
                 animatie, geen info voor de gebruiker (operator, 6 okt 2026). */}
             <Text style={s.stateInfoTitle}>{cfg.subtitle}</Text>
             <Text style={s.stateInfoDesc}>{cfg.description}</Text>
-            <Pressable onPress={onClose} style={s.braceletModalClose}>
+            <Tap onPress={onClose} style={s.braceletModalClose}>
               <Text style={s.braceletModalCloseTxt}>Got it</Text>
-            </Pressable>
-          </View>
+            </Tap>
+          </PopupView>
         )}
       </View>
     </Modal>
@@ -3314,7 +3316,7 @@ function StartCard({
             {titleCase(cfg.eyebrow)}
           </Text>
         </View>
-        <Pressable
+        <Tap
           onPress={(e) => {
             e.stopPropagation();
             onInfo();
@@ -3323,7 +3325,7 @@ function StartCard({
           style={s.startCardInfoBtn}
         >
           <Info size={15} color="rgba(255,255,255,0.5)" strokeWidth={2.2} />
-        </Pressable>
+        </Tap>
       </Animated.View>
     </AnimatedPressable>
   );

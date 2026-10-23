@@ -39,3 +39,8 @@ AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => {
 export function isReduceMotion(): boolean {
   return reduceMotion;
 }
+
+/* Popups en alerts: de kaart komt met een veer in beeld (kort groter en dan op zijn plek), de achtergrond
+   dooft zacht in. Overal dezelfde. */
+import { ZoomIn } from 'react-native-reanimated';
+export const POPUP_IN = ZoomIn.springify().damping(17).stiffness(240).withInitialValues({ transform: [{ scale: 0.9 }], opacity: 0 });

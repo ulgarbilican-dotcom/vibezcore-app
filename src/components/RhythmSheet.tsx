@@ -12,6 +12,7 @@
    "Not a medical device" staat bij elk getal. */
 
 import BalancedText from '@/components/BalancedText';
+import Tap from '@/components/Tap';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel } from '@/services/resting-pulse';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -201,9 +202,9 @@ export default function RhythmSheet({
           blurTarget={rootBlurRef}
           style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
         />
-        <Pressable onPress={guardedClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+        <Tap onPress={guardedClose} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
           <View style={s.grip} />
-        </Pressable>
+        </Tap>
         <View style={[s.head, step === 'choose' && { marginBottom: 4 }]}>
           {/* Operator, 10 okt 2026: gecentreerd in hoofdletters, zelfde kop
               als SESSION CONTROL / BREATHWORK (dit blad voelt als een pagina).

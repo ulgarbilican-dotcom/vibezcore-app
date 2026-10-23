@@ -40,6 +40,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_OUT } from '@/constants/motion';
+import PopupCard from '@/components/PopupCard';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
 import { getHapticStrength, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
@@ -3145,7 +3147,7 @@ export function BreathSession() {
                   {st.techniques.map((t, i) => {
                     const on = i === techIdx;
                     return (
-                      <Pressable
+                      <Tap
                         key={t.key}
                         onPress={() => {
                           hapticTap();
@@ -3172,7 +3174,7 @@ export function BreathSession() {
                         >
                           {patternOf(t)}
                         </Text>
-                      </Pressable>
+                      </Tap>
                     );
                   })}
                 </View>
@@ -3196,7 +3198,7 @@ export function BreathSession() {
               {DURATIONS.map((d, i) => {
                 const active = i === Math.min(durationIdx, DURATIONS.length - 1);
                 return (
-                  <Pressable
+                  <Tap
                     key={d.name}
                     onPress={() => pickDuration(i)}
                     style={[s.chip, active && s.chipActive]}
@@ -3210,7 +3212,7 @@ export function BreathSession() {
                     <Text style={[s.chipName, active && s.chipNameActive]}>
                       {d.name.split(' ')[0]}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </View>
@@ -3667,7 +3669,7 @@ export function BreathSession() {
         onRequestClose={cancelAskDefault}
       >
         <Pressable style={s.modalBackdrop} onPress={cancelAskDefault}>
-          <Pressable style={s.modalCard} onPress={() => {}}>
+          <PopupCard style={s.modalCard}>
             {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
                 7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
             <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
@@ -3689,13 +3691,13 @@ export function BreathSession() {
                dezelfde Modal, dus er zit kennelijk iets in DIT scherm
                specifiek dat niet samengaat met de druk-animatie — pragmatisch
                weggehaald i.p.v. verder te gokken naar de exacte oorzaak. */}
-            <Pressable
+            <Tap
               style={s.modalClose}
               onPress={cancelAskDefault}
               hitSlop={12}
             >
               <X size={18} color={C.dim55} strokeWidth={2.2} />
-            </Pressable>
+            </Tap>
             <Text style={s.modalEyebrow}>{askDefault?.what.toUpperCase()}</Text>
             {!askScopeStep ? (
               <>
@@ -3704,19 +3706,19 @@ export function BreathSession() {
                   Or keep it just for this session — nothing changes until
                   you say so.
                 </BalancedText>
-                <Pressable
+                <Tap
                   style={s.modalBtn}
                   onPress={() => setAskScopeStep(true)}
                 >
                   <Text style={s.modalBtnTxt}>Yes, remember it</Text>
-                </Pressable>
-                <Pressable
+                </Tap>
+                <Tap
                   style={s.modalSecondary}
                   onPress={closeAskDefault}
                   hitSlop={8}
                 >
                   <Text style={s.modalSecondaryTxt}>Just this time</Text>
-                </Pressable>
+                </Tap>
               </>
             ) : (
               <>
@@ -3724,7 +3726,7 @@ export function BreathSession() {
                 <BalancedText style={s.modalBody}>
                   Or make it the default for every breathwork mode.
                 </BalancedText>
-                <Pressable
+                <Tap
                   style={s.modalBtn}
                   onPress={() => {
                     askDefault?.apply('all');
@@ -3732,8 +3734,8 @@ export function BreathSession() {
                   }}
                 >
                   <Text style={s.modalBtnTxt}>All breathwork modes</Text>
-                </Pressable>
-                <Pressable
+                </Tap>
+                <Tap
                   style={s.modalSecondary}
                   onPress={() => {
                     askDefault?.apply('state');
@@ -3742,10 +3744,10 @@ export function BreathSession() {
                   hitSlop={8}
                 >
                   <Text style={s.modalSecondaryTxt}>Just {stateLabel}</Text>
-                </Pressable>
+                </Tap>
               </>
             )}
-          </Pressable>
+          </PopupCard>
         </Pressable>
       </Modal>
 
@@ -3776,7 +3778,7 @@ export function BreathSession() {
             proceedToStart(ujjayiPreviewRef.current);
           }}
         >
-          <Pressable style={s.modalCard} onPress={() => {}}>
+          <PopupCard style={s.modalCard}>
             {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
                 7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
             <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
@@ -3809,7 +3811,7 @@ export function BreathSession() {
             >
               <Text style={s.modalBtnTxt}>Got it, start</Text>
             </AnimatedPressable>
-          </Pressable>
+          </PopupCard>
         </Pressable>
       </Modal>
 
@@ -3832,13 +3834,13 @@ export function BreathSession() {
               blurTarget={rootBlurRef}
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
-            <Pressable
+            <Tap
               onPress={() => setEndTrialConfirm(false)}
               hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
               accessibilityLabel="Close"
             >
               <View style={s.sheetGrip} />
-            </Pressable>
+            </Tap>
             <Text style={s.modalEyebrow}>{st.eyebrow}</Text>
             <Text style={s.modalTitle}>End free session?</Text>
             <BalancedText style={s.modalBody}>
@@ -3895,12 +3897,12 @@ export function BreathSession() {
             {/* Operator, 25 september 2026 ("streep bovenaan doet niets,
                kan daarmee niet sluiten"): het streepje was puur decoratief.
                Nu tikbaar — sluit hetzelfde als een backdrop-tap. */}
-            <Pressable
+            <Tap
               onPress={() => setScapeOpen(false)}
               hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
             >
               <View style={s.sheetGrip} />
-            </Pressable>
+            </Tap>
             {/* Onderblad-protocol (audit 16 okt 2026): kiezer = Done
                 rechtsboven naast de titel, zoals Audio & Haptics. */}
             <View style={s.avHeaderRow}>
@@ -4044,12 +4046,12 @@ export function BreathSession() {
             {/* Operator, 25 september 2026 ("streep bovenaan doet niets,
                kan daarmee niet sluiten"): het streepje was puur decoratief.
                Nu tikbaar — sluit hetzelfde als een backdrop-tap. */}
-            <Pressable
+            <Tap
               onPress={() => setAvSheetOpen(false)}
               hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
             >
               <View style={s.sheetGrip} />
-            </Pressable>
+            </Tap>
             {/* Operator, 19 september 2026 ("na kiezen instellingen sluiten
                via kruisje? misschien beter cta done"): een klein kruisje
                in de hoek oogt als een uitgang, niet als een bevestiging —
@@ -4169,7 +4171,7 @@ export function BreathSession() {
               {GROUP_ORDER.map((g) => {
                 const on = g === scapeTab;
                 return (
-                  <Pressable
+                  <Tap
                     key={g}
                     onPress={() => {
                       if (on) return;
@@ -4184,7 +4186,7 @@ export function BreathSession() {
                     <Text style={[s.scapeTabTxt, on && s.scapeTabTxtOn]}>
                       {g.charAt(0).toUpperCase() + g.slice(1).toLowerCase()}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </View>
@@ -4320,7 +4322,7 @@ export function BreathSession() {
                 {(['medium', 'strong'] as const).map((l) => {
                   const on = l === hapticStrength;
                   return (
-                    <Pressable
+                    <Tap
                       key={l}
                       onPress={() => {
                         if (on) return;
@@ -4338,7 +4340,7 @@ export function BreathSession() {
                         <VibezGlass radius={10} level="raised" tint={accent} style={StyleSheet.absoluteFill} />
                       ) : null}
                       <Text style={[s.levelTxt, on && s.levelTxtOn]}>{l.charAt(0).toUpperCase() + l.slice(1)}</Text>
-                    </Pressable>
+                    </Tap>
                   );
                 })}
               </View>
@@ -4431,7 +4433,7 @@ export function BreathSession() {
         onRequestClose={() => setInfoIdx(null)}
       >
         <Pressable style={s.modalBackdrop} onPress={() => setInfoIdx(null)}>
-          <Pressable style={s.modalCard} onPress={() => {}}>
+          <PopupCard style={s.modalCard}>
             {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
                 7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
             <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
@@ -4460,7 +4462,7 @@ export function BreathSession() {
                 </AnimatedPressable>
               </>
             )}
-          </Pressable>
+          </PopupCard>
         </Pressable>
       </Modal>
 
@@ -4549,15 +4551,15 @@ export function BreathSession() {
                   <>
                     <Text style={s.instantFeedbackLabel}>How was that?</Text>
                     <View style={s.instantFeedbackChips}>
-                      <Pressable onPress={() => onInstantFeedback('worked')} hitSlop={6}>
+                      <Tap onPress={() => onInstantFeedback('worked')} hitSlop={6}>
                         <Text style={s.instantFeedbackChip}>Worked</Text>
-                      </Pressable>
-                      <Pressable onPress={() => onInstantFeedback('too_hard')} hitSlop={6}>
+                      </Tap>
+                      <Tap onPress={() => onInstantFeedback('too_hard')} hitSlop={6}>
                         <Text style={s.instantFeedbackChip}>Too hard</Text>
-                      </Pressable>
-                      <Pressable onPress={() => onInstantFeedback('too_long')} hitSlop={6}>
+                      </Tap>
+                      <Tap onPress={() => onInstantFeedback('too_long')} hitSlop={6}>
                         <Text style={s.instantFeedbackChip}>Too long</Text>
-                      </Pressable>
+                      </Tap>
                     </View>
                   </>
                 )}

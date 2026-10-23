@@ -35,6 +35,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
+import Tap from '@/components/Tap';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
@@ -380,11 +381,11 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         <View style={s.topbar}>
           <View style={s.backWrap}>
             {(step > 0 || onBack) && (
-              <Pressable onPress={goBack} hitSlop={14} style={s.backBtn} accessibilityRole="button">
+              <Tap onPress={goBack} hitSlop={14} style={s.backBtn} accessibilityRole="button">
                 {/* Stap 1: "Not Now", zoals bij Breathwork (19 okt 2026). */}
                 {step > 0 && <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />}
                 <Text style={s.skipTxt}>{step > 0 ? 'Back' : 'Not Now'}</Text>
-              </Pressable>
+              </Tap>
             )}
           </View>
           <View style={s.stepCenter} pointerEvents="none">
@@ -394,9 +395,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             </View>
           </View>
           <View style={[s.backWrap, { alignItems: 'flex-end' }]}>
-            <Pressable onPress={skip} hitSlop={14} style={s.skipWrap} accessibilityRole="button">
+            <Tap onPress={skip} hitSlop={14} style={s.skipWrap} accessibilityRole="button">
               <Text style={s.skipTxtSecondary}>Skip</Text>
-            </Pressable>
+            </Tap>
           </View>
         </View>
 

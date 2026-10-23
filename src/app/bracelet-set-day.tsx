@@ -49,6 +49,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, TypeScale, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -479,13 +480,13 @@ export default function BraceletSetDayScreen() {
       <SafeAreaView style={s.root} edges={['top']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={s.bar}>
-          <Pressable onPress={() => setAddingMode(null)} hitSlop={12} style={s.back}>
+          <Tap onPress={() => setAddingMode(null)} hitSlop={12} style={s.back}>
             {/* Operator, 1 okt 2026 ("headers overal consistent"): pijl-
                specificatie (size 20, strokeWidth 2.8) — de "officiële
                iOS-chevron.backward"-stijl uit build-choice.tsx (18 sept),
                nu de app-brede standaard. */}
             <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
-          </Pressable>
+          </Tap>
         </View>
 
         <ScrollView
@@ -501,9 +502,9 @@ export default function BraceletSetDayScreen() {
           </View>
 
           <Text style={[s.sectionLabel, { marginTop: 28 }]}>STARTS AT</Text>
-          <Pressable style={s.timeRow} onPress={() => setShowTimePicker(true)}>
+          <Tap style={s.timeRow} onPress={() => setShowTimePicker(true)}>
             <Text style={s.timeValue}>{fmtTime(draftTime)}</Text>
-          </Pressable>
+          </Tap>
 
           {/* Operator, 30 september 2026 ("mag nooit aparte states en 2
              zelfde momenten kunnen kiezen, ook rekening houden met de
@@ -553,9 +554,9 @@ export default function BraceletSetDayScreen() {
          opzet + pijl-specificatie (size 22, strokeWidth 2.4) als overal
          elders in de app. */}
       <View style={s.bar}>
-        <Pressable onPress={finish} hitSlop={12} style={s.back}>
+        <Tap onPress={finish} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
         <Text style={s.barTitle} numberOfLines={1}>
           Set your plan
         </Text>
@@ -618,7 +619,7 @@ export default function BraceletSetDayScreen() {
            popup" — samenvattingsrij i.p.v. de volledige lijst altijd
            uitgeklapt; tikken opent het overzicht hieronder. */}
         <Text style={[s.sectionLabel, { marginTop: 24 }]}>YOUR PLAN</Text>
-        <Pressable
+        <Tap
           style={s.planSummaryRow}
           onPress={() => sessions.length > 0 && setPlanPopupOpen(true)}
         >
@@ -630,7 +631,7 @@ export default function BraceletSetDayScreen() {
           {sessions.length > 0 && (
             <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.4} />
           )}
-        </Pressable>
+        </Tap>
       </ScrollView>
 
       <View style={[s.ctaFloat, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
@@ -660,9 +661,9 @@ export default function BraceletSetDayScreen() {
                 sessie. */}
             <View style={s.sheetHeader}>
               <Text style={[s.pickTitle, { marginBottom: 0 }]}>Your plan</Text>
-              <Pressable onPress={() => setPlanPopupOpen(false)} hitSlop={10}>
+              <Tap onPress={() => setPlanPopupOpen(false)} hitSlop={10}>
                 <Text style={s.sheetDoneTxt}>Done</Text>
-              </Pressable>
+              </Tap>
             </View>
             <ScrollView style={{ width: '100%', maxHeight: 360 }} showsVerticalScrollIndicator={false}>
               {sessions.map((sess, i) => {
@@ -680,7 +681,7 @@ export default function BraceletSetDayScreen() {
                         {fmtTime(sess.timeAt)} · {sess.durationMinutes} min
                       </Text>
                     </View>
-                    <Pressable
+                    <Tap
                       onPress={() => {
                         removeSession(i);
                         if (sessions.length <= 1) setPlanPopupOpen(false);
@@ -688,7 +689,7 @@ export default function BraceletSetDayScreen() {
                       hitSlop={10}
                     >
                       <X size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.4} />
-                    </Pressable>
+                    </Tap>
                   </View>
                 );
               })}
@@ -715,17 +716,17 @@ export default function BraceletSetDayScreen() {
               blurTarget={rootBlurRef}
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
-            <Pressable
+            <Tap
               onPress={() => setInfoMode(null)}
               hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
               accessibilityLabel="Close"
             >
               <View style={s.infoGrip} />
-            </Pressable>
+            </Tap>
             {/* Uitlegblad → Done rechtsboven (protocol, 8 okt 2026). */}
-            <Pressable style={s.sheetDoneTopRight} onPress={() => setInfoMode(null)} hitSlop={10}>
+            <Tap style={s.sheetDoneTopRight} onPress={() => setInfoMode(null)} hitSlop={10}>
               <Text style={s.sheetDoneTopRightTxt}>Done</Text>
-            </Pressable>
+            </Tap>
             <View style={s.infoIconBadge}>
               <VibezGlass radius={22} tint={infoModeMeta.color} level="raised" style={StyleSheet.absoluteFill} />
               {(() => {

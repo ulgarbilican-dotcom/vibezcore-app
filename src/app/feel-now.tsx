@@ -27,6 +27,7 @@
    zonder enige limiet. */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import VibezGlass from '@/components/VibezGlass';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -229,7 +230,7 @@ export default function FeelNowScreen() {
               return (
                 <View key={situation.id}>
                   {idx > 0 ? <View style={s.listSep} /> : null}
-                  <Pressable
+                  <Tap
                     onPress={() => choose(situation)}
                     onLongPress={() => {
                       hapticTap();
@@ -243,7 +244,7 @@ export default function FeelNowScreen() {
                     <Icon size={20} color="#ffffff" strokeWidth={2} />
                     <Text style={s.listLabel}>{situation.label}</Text>
                     <ChevronRight size={18} color="rgba(255,255,255,0.35)" strokeWidth={2.4} />
-                  </Pressable>
+                  </Tap>
                 </View>
               );
             })}
@@ -290,22 +291,22 @@ export default function FeelNowScreen() {
               const duration = pickInstantDuration(st, technique, infoFor);
               return (
                 <>
-                  <Pressable
+                  <Tap
                     onPress={() => setInfoFor(null)}
                     hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
                   >
                     <View style={s.sheetGrip} />
-                  </Pressable>
+                  </Tap>
                   <View style={s.sheetHeader}>
                     <Text style={[s.modalTitle, { color: st.accent }]}>
                       {technique.name}
                     </Text>
-                    <Pressable
+                    <Tap
                       onPress={() => setInfoFor(null)}
                       hitSlop={10}
                     >
                       <Text style={s.sheetDoneTxt}>Done</Text>
-                    </Pressable>
+                    </Tap>
                   </View>
                   <Text style={s.modalEyebrow}>
                     FOR "{labelOf(infoFor).toUpperCase()}"

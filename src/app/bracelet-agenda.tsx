@@ -77,6 +77,7 @@ import van BREATH_STATES/plan-store), dus 1-op-1 hergebruikbaar i.p.v.
    ───────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
+import Tap from '@/components/Tap';
 import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
@@ -383,9 +384,9 @@ export default function BraceletAgendaScreen() {
          iOS-chevron.backward i.p.v. dunne, langgerekte Android-pijl")
          is de app-brede standaard geworden, niet de 22/2.2-variant. */}
       <View style={s.bar}>
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/bracelet' as never))} hitSlop={12} style={s.back}>
+        <Tap onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/bracelet' as never))} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
         <Text style={s.barTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
           Your State Control plan
         </Text>
@@ -411,7 +412,7 @@ export default function BraceletAgendaScreen() {
                op een modus-kaart alle tijden van die modus in het midden
                terwijl hun bolletjes oplichten. Vervangt de losse uur-labels
                rond de ring en de datum in het midden. */}
-            <Pressable
+            <Tap
               onPress={() => {
                 hapticTap();
                 setCalendarOpen((o) => !o);
@@ -431,17 +432,17 @@ export default function BraceletAgendaScreen() {
                 strokeWidth={2.6}
                 style={calendarOpen ? { transform: [{ rotate: '180deg' }] } : undefined}
               />
-            </Pressable>
+            </Tap>
 
             {calendarOpen && (
               <View style={s.calendarDropdown}>
                 <View style={s.calendarDoneRow}>
-                  <Pressable onPress={() => setCalendarOpen(false)} hitSlop={10}>
+                  <Tap onPress={() => setCalendarOpen(false)} hitSlop={10}>
                     <Text style={s.calendarDoneTxt}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
                 <View style={s.monthNav}>
-                  <Pressable
+                  <Tap
                     onPress={() => {
                       const d = new Date(selected);
                       d.setMonth(d.getMonth() - 1);
@@ -450,11 +451,11 @@ export default function BraceletAgendaScreen() {
                     hitSlop={10}
                   >
                     <ChevronLeft size={18} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
-                  </Pressable>
+                  </Tap>
                   <Text style={s.monthNavTxt}>
                     {selected.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                   </Text>
-                  <Pressable
+                  <Tap
                     onPress={() => {
                       const d = new Date(selected);
                       d.setMonth(d.getMonth() + 1);
@@ -463,7 +464,7 @@ export default function BraceletAgendaScreen() {
                     hitSlop={10}
                   >
                     <ChevronRight size={18} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
-                  </Pressable>
+                  </Tap>
                 </View>
                 <View style={s.monthGrid}>
                   {WEEKDAY.map((w, i) => (
@@ -536,7 +537,7 @@ export default function BraceletAgendaScreen() {
                     ? (modeItems.find((it) => it.reminderAt >= nowMins) ?? modeItems[0])
                     : modeItems[0];
                 return (
-                  <Pressable
+                  <Tap
                     style={s.tapStartZone}
                     onPress={() => tryItem(next.mode as BraceletMode, next.durationMinutes)}
                     accessibilityLabel={`Start ${getModeMeta(next.mode as BraceletMode).name} now`}
@@ -544,7 +545,7 @@ export default function BraceletAgendaScreen() {
                     <Text style={s.tapStartTxt}>
                       {modeItems.length > 1 ? `Tap to start · ${fmtTime(next.reminderAt)}` : 'Tap to start'}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 );
               })()}
             </View>
@@ -593,25 +594,25 @@ export default function BraceletAgendaScreen() {
             (operator, 5 okt 2026). */}
         {plan ? (
           <View style={s.bottomActions}>
-            <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
+            <Tap style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
               <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
               <Text style={s.pillBtnTxt}>Check your protocol</Text>
-            </Pressable>
-            <Pressable style={s.pillBtn} onPress={() => router.push('/bracelet-set-day' as never)}>
+            </Tap>
+            <Tap style={s.pillBtn} onPress={() => router.push('/bracelet-set-day' as never)}>
               <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
               <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.pillBtnTxt}>Change protocol</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : (
-          <Pressable style={s.editLink} onPress={() => router.push('/bracelet-set-day' as never)}>
+          <Tap style={s.editLink} onPress={() => router.push('/bracelet-set-day' as never)}>
             <Pencil size={12} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
             <Text style={s.editLinkTxt}>Set your plan</Text>
-          </Pressable>
+          </Tap>
         )}
         {/* Audit 10 okt 2026: zelfde "Remove plan" als in de breathwork-agenda. */}
         {plan && (
-          <Pressable
+          <Tap
             onPress={() => {
               hapticTap();
               setConfirmRemove(true);
@@ -621,7 +622,7 @@ export default function BraceletAgendaScreen() {
             accessibilityRole="button"
           >
             <Text style={s.removePlanTxt}>Remove plan</Text>
-          </Pressable>
+          </Tap>
         )}
       </ScrollView>
 
@@ -682,7 +683,7 @@ export default function BraceletAgendaScreen() {
                     </Text>
                   </View>
                 </View>
-                <Pressable
+                <Tap
                   style={s.actionPlayBtn}
                   onPress={() => {
                     tryItem(item.mode as BraceletMode, item.durationMinutes);
@@ -701,13 +702,13 @@ export default function BraceletAgendaScreen() {
                         ? FREE_COPY.freeCta
                         : 'Start session'}
                   </Text>
-                </Pressable>
+                </Tap>
                 {startKindFor(item.mode) !== 'full' ? (
                   <PremiumNote style={s.actionFreeNote} context="state-control" preview={startKindFor(item.mode) === 'preview'}>
                     {startKindFor(item.mode) === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
                   </PremiumNote>
                 ) : null}
-                <Pressable
+                <Tap
                   style={s.actionEditBtn}
                   onPress={() => {
                     const idx = actionItemIndex;
@@ -716,8 +717,8 @@ export default function BraceletAgendaScreen() {
                   }}
                 >
                   <Text style={s.actionEditTxt}>Edit duration</Text>
-                </Pressable>
-                <Pressable
+                </Tap>
+                <Tap
                   style={[s.actionRemoveBtn, { paddingTop: 4 }]}
                   onPress={() => {
                     void removeItem(actionItemIndex);
@@ -725,7 +726,7 @@ export default function BraceletAgendaScreen() {
                   }}
                 >
                   <Text style={s.actionRemoveTxt}>Remove from plan</Text>
-                </Pressable>
+                </Tap>
               </View>
           </GlassSheet>
         );
@@ -751,9 +752,9 @@ export default function BraceletAgendaScreen() {
               <>
                 <View style={s.pickHeaderRow}>
                   <Text style={s.pickHeaderTitle}>{meta.name} duration</Text>
-                  <Pressable onPress={() => setDurationEditIndex(null)} hitSlop={10} accessibilityRole="button">
+                  <Tap onPress={() => setDurationEditIndex(null)} hitSlop={10} accessibilityRole="button">
                     <Text style={s.pickHeaderDone}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
                 <View style={{ width: 266, alignSelf: 'center' }}>
                   <DurationWheel

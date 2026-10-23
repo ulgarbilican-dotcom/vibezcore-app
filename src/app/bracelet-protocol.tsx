@@ -12,6 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
+import Tap from '@/components/Tap';
 import { MODE_GLYPH_ICONS, MODE_STATE_KEY } from '@/components/ModeGlyph';
 import VibezGlass from '@/components/VibezGlass';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
@@ -71,9 +72,9 @@ export default function BraceletProtocol() {
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={s.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
+        <Tap onPress={() => router.back()} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
         <Text style={s.barTitle}>Your protocol</Text>
         <View style={s.back} />
       </View>
@@ -86,9 +87,9 @@ export default function BraceletProtocol() {
           <View style={s.empty}>
             <Text style={s.emptyT}>No protocol yet</Text>
             <BalancedText style={s.emptyB}>Choose your states, times and durations to build one.</BalancedText>
-            <Pressable style={s.primary} onPress={() => router.push('/bracelet-set-day' as never)}>
+            <Tap style={s.primary} onPress={() => router.push('/bracelet-set-day' as never)}>
               <Text style={s.primaryTxt}>Set your plan</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : (
           <>
@@ -148,7 +149,7 @@ export default function BraceletProtocol() {
             {items.map((it, i) => {
               const meta = getModeMeta(it.mode as BraceletMode);
               return (
-                <Pressable
+                <Tap
                   key={`${it.reminderAt}-${i}`}
                   style={({ pressed }) => [s.card, pressed && { opacity: 0.85 }]}
                   onPress={() => startNow(it.mode as BraceletMode, it.durationMinutes)}
@@ -169,18 +170,18 @@ export default function BraceletProtocol() {
                     </Text>
                   </View>
                   <ChevronRight size={18} color="rgba(255,255,255,0.35)" strokeWidth={2.2} />
-                </Pressable>
+                </Tap>
               );
             })}
 
-            <Pressable
+            <Tap
               style={s.change}
               onPress={() => router.push('/bracelet-set-day' as never)}
             >
               <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
               <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.changeTxt}>Change protocol</Text>
-            </Pressable>
+            </Tap>
           </>
         )}
       </ScrollView>

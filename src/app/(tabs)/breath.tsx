@@ -28,6 +28,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_POP, SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { iosFont } from '@/utils/ios-text-scale';
@@ -1167,7 +1168,7 @@ export default function BreathScreen() {
              zachte-fade voor niet-Premium-gebruikers (`instant=1`, zie
              breath-session.tsx) blijft wel bestaan, enkel de knoptekst
              zelf wisselt niet meer mee. */}
-          <Pressable
+          <Tap
             onPress={() => router.push('/feel-now' as never)}
             hitSlop={8}
             style={({ pressed }) => [s.feelNowLink, pressed && { opacity: 0.85 }]}
@@ -1176,7 +1177,7 @@ export default function BreathScreen() {
             tekstlink — wit, geen onderlijning, subtiel pijltje. */}
             <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
             <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
-          </Pressable>
+          </Tap>
         </View>
       ) : (
         <>
@@ -1233,7 +1234,7 @@ export default function BreathScreen() {
         </Text>
       ) : null}
       {!intro ? (
-        <Pressable
+        <Tap
           onPress={() => setIntro(true)}
           hitSlop={8}
           accessibilityRole="button"
@@ -1251,7 +1252,7 @@ export default function BreathScreen() {
           }}
         >
           <ChevronLeft size={24} color="#ffffff" strokeWidth={2.2} />
-        </Pressable>
+        </Tap>
       ) : null}
 
       {/* Operator, 8 september 2026 (3e ronde): "waar moet die header dan
@@ -1346,12 +1347,12 @@ export default function BreathScreen() {
               blurTarget={rootBlurRef}
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
-            <Pressable
+            <Tap
               onPress={() => setInfoOpen(false)}
               hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }}
             >
               <View style={s.infoGrip} />
-            </Pressable>
+            </Tap>
             <View style={s.infoHeader}>
               <View style={s.infoHeaderLeft}>
                 {/* Zelfde glazen toestandsicoon als in "Set your plan". */}
@@ -1365,9 +1366,9 @@ export default function BreathScreen() {
                   {sentenceCase(st.eyebrow)}
                 </Text>
               </View>
-              <Pressable onPress={() => setInfoOpen(false)} hitSlop={10}>
+              <Tap onPress={() => setInfoOpen(false)} hitSlop={10}>
                 <Text style={[s.infoDoneTxt, { color: '#ffffff' }]}>Done</Text>
-              </Pressable>
+              </Tap>
             </View>
             {/* Operator, 10 september 2026: "moet tonen wat de ademtechniek
                doet en varieert van de andere 2... niet als je niet verder
@@ -1437,7 +1438,7 @@ export default function BreathScreen() {
           teruggedraaid — het ene bestaande vignet regelt dit al, geen
           tweede laag meer nodig. */}
       <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(40)}>
-      <Pressable
+      <Tap
         onPress={() => setInfoOpen(true)}
         hitSlop={10}
         style={s.thumbNameRow}
@@ -1446,7 +1447,7 @@ export default function BreathScreen() {
       >
         <Text style={s.thumbNameSel}>{sentenceCase(st.eyebrow)}</Text>
         <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-      </Pressable>
+      </Tap>
       </Animated.View>
       <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(110)} style={s.thumbsPill}>
         <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
@@ -1528,7 +1529,7 @@ export default function BreathScreen() {
          intro-overlay. Overal beschikbaar i.p.v. navigatie-acrobatiek om
          er te raken — zo zou Apple dit oplossen. */}
       <Animated.View entering={FadeInDown.springify().damping(18).stiffness(170).delay(250)}>
-      <Pressable
+      <Tap
         onPress={() => router.push('/feel-now' as never)}
         hitSlop={8}
         style={({ pressed }) => [s.feelNowLink, pressed && { opacity: 0.85 }]}
@@ -1537,7 +1538,7 @@ export default function BreathScreen() {
         tekstlink — wit, geen onderlijning, subtiel pijltje. */}
         <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
         <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
-      </Pressable>
+      </Tap>
       </Animated.View>
 
       {/* Operator, 8 september 2026 (2e ronde): "verwijder more than

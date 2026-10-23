@@ -20,6 +20,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import {
   PILLAR_META,
@@ -678,7 +679,7 @@ export default function PlayerScreen() {
            een apart paneel; enkel zichtbaar als deze sessie daadwerkelijk
            ergens hervat is (savedPositionSec > 4 bij het laden). */}
         {playerState.savedPositionSec > 4 && (
-          <Pressable
+          <Tap
             onPress={startOver}
             hitSlop={8}
             style={s.resumedLineWrap}
@@ -687,7 +688,7 @@ export default function PlayerScreen() {
             <Text style={s.resumedLineText}>
               Resumed from {fmt(playerState.savedPositionSec)} · <Text style={s.resumedLineAction}>Start over</Text>
             </Text>
-          </Pressable>
+          </Tap>
         )}
         {/* ── Progress ─────────────────────────────────────────────────── */}
         <View style={s.progressWrap}>
@@ -840,7 +841,7 @@ export default function PlayerScreen() {
               15
             </Text>
           </AnimatedPressable>
-          <Pressable
+          <Tap
             onPress={openMore}
             hitSlop={8}
             accessibilityRole="button"
@@ -848,7 +849,7 @@ export default function PlayerScreen() {
             style={s.moreBtn}
           >
             <MoreHorizontal size={24} color={C.text} strokeWidth={2} />
-          </Pressable>
+          </Tap>
         </View>
 
         {/* 19 okt 2026 (operator, build 38): "wij hebben een systeem voor
@@ -1047,14 +1048,14 @@ export default function PlayerScreen() {
                   >
                     <Text style={s.modalPrimaryText}>Try Again</Text>
                   </AnimatedPressable>
-                  <Pressable
+                  <Tap
                     onPress={() => router.back()}
                     hitSlop={10}
                     style={{ alignSelf: 'center', paddingVertical: 12 }}
                     accessibilityRole="button"
                   >
                     <Text style={s.modalSecondaryText}>Close</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               </>
             )}
@@ -1098,19 +1099,19 @@ export default function PlayerScreen() {
               Not ready? Browse Free Picks to keep listening for free.
             </Text>
             <View style={s.modalBtns}>
-              <Pressable style={s.modalPrimary} onPress={openUpgrade}>
+              <Tap style={s.modalPrimary} onPress={openUpgrade}>
                 <Text style={s.modalPrimaryText}>
                   {isBraceletOwner && !realIsPro && !isBundleUser
                     ? 'Add Audio Library'
                     : 'Get Full Access'}
                 </Text>
-              </Pressable>
-              <Pressable
+              </Tap>
+              <Tap
                 style={s.modalSecondary}
                 onPress={onUpsellMaybeLater}
               >
                 <Text style={s.modalSecondaryText}>Maybe later</Text>
-              </Pressable>
+              </Tap>
             </View>
           </View>
         </View>
@@ -1132,13 +1133,13 @@ export default function PlayerScreen() {
                   {playerState.endedPanel.nextSession.series}
                 </Text>
                 <View style={s.endedBtns}>
-                  <Pressable
+                  <Tap
                     onPress={dismissEndedPanel}
                     style={s.endedDone}
                   >
                     <Text style={s.endedDoneText}>Done</Text>
-                  </Pressable>
-                  <Pressable
+                  </Tap>
+                  <Tap
                     onPress={playNextFromPanel}
                     style={s.endedPlayNext}
                   >
@@ -1152,7 +1153,7 @@ export default function PlayerScreen() {
                           consistent UX voor alle user-types. */}
                       ▶ Play next
                     </Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               </>
             ) : (
@@ -1162,12 +1163,12 @@ export default function PlayerScreen() {
                   You've finished {playerState.endedPanel.finishedSeries}
                 </Text>
                 <View style={[s.endedBtns, { justifyContent: 'center' }]}>
-                  <Pressable
+                  <Tap
                     onPress={dismissEndedPanel}
                     style={s.endedDone}
                   >
                     <Text style={s.endedDoneText}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               </>
             )}
@@ -1197,7 +1198,7 @@ function ExtraBtn({
      gebruikt Share2-glyph van lucide (officieel Android share-symbool); andere
      extras blijven met Unicode-glyph strings werken. */
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
@@ -1212,7 +1213,7 @@ function ExtraBtn({
       ) : (
         <View style={s.extraIconBox}>{icon}</View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -1224,7 +1225,7 @@ function SpeedBtn({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
@@ -1232,7 +1233,7 @@ function SpeedBtn({
       style={[s.extraBtn, { alignItems: 'center', width: 52 }]}
     >
       <Text style={s.speedText} allowFontScaling={false}>{`${Number.isInteger(rate) ? rate : rate.toFixed(rate * 10 % 1 === 0 ? 1 : 2)}×`}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

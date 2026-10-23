@@ -21,6 +21,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
 import { planItemStatuses } from '@/utils/plan-status';
@@ -853,9 +854,9 @@ export default function PlanScreen() {
                 gepropt en saai"). */}
             <View style={s.pickHandle} />
             {/* Kiezerblad → Done rechtsboven (protocol, 8 okt 2026). */}
-            <Pressable style={s.sheetDoneTopRight} onPress={() => setPicking(null)} hitSlop={10}>
+            <Tap style={s.sheetDoneTopRight} onPress={() => setPicking(null)} hitSlop={10}>
               <Text style={s.pickDoneTxt}>Done</Text>
-            </Pressable>
+            </Tap>
             {(() => {
               const item = picking !== null ? items[picking] : null;
               if (!item) return null;
@@ -894,7 +895,7 @@ export default function PlanScreen() {
                   return out.map((mins) => {
                     const on = mins === cur;
                     return (
-                      <Pressable
+                      <Tap
                         key={mins}
                         onPress={async () => {
                           const slot = item.moment.key;
@@ -978,7 +979,7 @@ export default function PlanScreen() {
                         >
                           {fmtTime(mins)}
                         </Text>
-                      </Pressable>
+                      </Tap>
                     );
                   });
                 })()}
@@ -1013,9 +1014,9 @@ export default function PlanScreen() {
                 <>
                   <View style={s.pickHeader}>
                     <Text style={[s.pickTitle, s.pickTitleInRow]}>{item.state.eyebrow} duration</Text>
-                    <Pressable onPress={() => setDurationPicking(null)} hitSlop={10} accessibilityRole="button">
+                    <Tap onPress={() => setDurationPicking(null)} hitSlop={10} accessibilityRole="button">
                       <Text style={s.pickDoneTxt}>Done</Text>
-                    </Pressable>
+                    </Tap>
                   </View>
                   <DurationWheel
                     options={durationOptionsFor(item.state.key, item.techKey).options}
@@ -1116,7 +1117,7 @@ function PlanItemCard({
         <Text style={[s.state, s.stateInRow]}>{it.state.eyebrow}</Text>
       </View>
       {plan ? (
-        <Pressable
+        <Tap
           style={s.detailBtn}
           onPress={() => {
             hapticTap();
@@ -1128,7 +1129,7 @@ function PlanItemCard({
             {it.techName} · {it.minutes} min
           </Text>
           <Pencil size={12} color="rgba(255,255,255,0.4)" strokeWidth={2.2} />
-        </Pressable>
+        </Tap>
       ) : (
         <Text style={s.detail}>
           {it.techName} · {it.minutes} min
@@ -1145,7 +1146,7 @@ function PlanItemCard({
           van wat daar is ingesteld. Een eigen 12/24-schakelaar in de
           app zou een tweede plek zijn die hetzelfde regelt, en dat is
           vandaag al twee keer misgegaan. */}
-      <Pressable
+      <Tap
         style={s.timeRow}
         onPress={() => {
           hapticTap();
@@ -1170,7 +1171,7 @@ function PlanItemCard({
           color="rgba(255,255,255,0.4)"
           strokeWidth={2.2}
         />
-      </Pressable>
+      </Tap>
 
       {it.done && <Text style={s.doneTxt}>Done today</Text>}
     </AnimatedPressable>

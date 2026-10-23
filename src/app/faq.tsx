@@ -14,6 +14,7 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import {
   FAQ_CATEGORY_LABELS,
@@ -190,14 +191,14 @@ export default function FaqScreen() {
             clearButtonMode="while-editing"
           />
           {query.length > 0 && (
-            <Pressable
+            <Tap
               style={s.searchClear}
               onPress={() => setQuery('')}
               hitSlop={10}
               accessibilityLabel="Clear search"
             >
               <Text style={s.searchClearText}>✕</Text>
-            </Pressable>
+            </Tap>
           )}
         </View>
 

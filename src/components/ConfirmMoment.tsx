@@ -27,6 +27,7 @@
    Modal die nog aan het verdwijnen is. */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Tap from '@/components/Tap';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';

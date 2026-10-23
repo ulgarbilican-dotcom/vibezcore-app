@@ -33,6 +33,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Tap from '@/components/Tap';
 import { Animated, AppState, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from '@/utils/safe-area';
@@ -349,9 +350,9 @@ function NudgeCard({
         blurTarget={rootBlurRef}
         style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
       />
-      <Pressable onPress={onNotNow} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+      <Tap onPress={onNotNow} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
         <View style={s.grip} />
-      </Pressable>
+      </Tap>
       <Animated.View style={reveal(0)}>
         <Text style={s.eyebrow}>VIBEZCORE PREMIUM</Text>
         <BalancedText style={s.title} accessibilityRole="header">

@@ -8,6 +8,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useState } from 'react';
+import Tap from '@/components/Tap';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from '@/utils/safe-area';
 
@@ -110,9 +111,9 @@ export default function TimePickerSheet({
         <View style={s.handle} />
         <View style={s.header}>
           <Text style={[s.title, { color: accent }]}>{title}</Text>
-          <Pressable onPress={done} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
+          <Tap onPress={done} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
             <Text style={[s.done, { color: accent }]}>Done</Text>
-          </Pressable>
+          </Tap>
         </View>
         <View style={s.body}>
           <View style={s.digitalRow}>
@@ -140,13 +141,13 @@ export default function TimePickerSheet({
                 {(['AM', 'PM'] as const).map((label) => {
                   const on = (label === 'PM') === pmNow;
                   return (
-                    <Pressable
+                    <Tap
                       key={label}
                       onPress={() => commitDigital(hourText, minuteText, label === 'PM')}
                       style={[s.ampmBtn, on && { backgroundColor: accent }]}
                     >
                       <Text style={[s.ampmTxt, on && { color: '#0a0a0a' }]}>{label}</Text>
-                    </Pressable>
+                    </Tap>
                   );
                 })}
               </View>

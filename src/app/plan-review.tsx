@@ -27,6 +27,7 @@
    hieronder). */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -673,9 +674,9 @@ export default function PlanReviewScreen() {
                   />
                   <View style={s.pickHeadRow}>
                     <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{st.eyebrow} duration</Text>
-                    <Pressable onPress={() => setPicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                    <Tap onPress={() => setPicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
                       <Text style={s.pickDone}>Done</Text>
-                    </Pressable>
+                    </Tap>
                   </View>
                   <DurationWheel
                     options={st.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
@@ -715,9 +716,9 @@ export default function PlanReviewScreen() {
                 <>
                   <View style={s.pickHeadRow}>
                     <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{SLOTS.find((sl) => sl.slot === it.slot)?.label ?? 'Session'} state</Text>
-                    <Pressable onPress={() => setStatePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                    <Tap onPress={() => setStatePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
                       <Text style={s.pickDone}>Done</Text>
-                    </Pressable>
+                    </Tap>
                   </View>
                   <View style={s.pickGrid}>
                     {(Object.keys(BREATH_STATES) as BreathStateKey[]).map((key) => (
@@ -754,9 +755,9 @@ export default function PlanReviewScreen() {
                sluitknop, naast tikken op de achtergrond. */}
             <View style={s.pickHeadRow}>
               <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>Why this protocol</Text>
-              <Pressable onPress={() => setWhyOpen(false)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+              <Tap onPress={() => setWhyOpen(false)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
                 <Text style={s.pickDone}>Done</Text>
-              </Pressable>
+              </Tap>
             </View>
             <Text style={s.whyIntro}>{explanation.intro}</Text>
             <View style={s.whyLines}>

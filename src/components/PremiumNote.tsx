@@ -3,6 +3,7 @@
    Is het de regel van de gratis volledige sessie, dan blijft het gewone tekst.
    23 okt 2026 (operator): het woord "Premium" staat als de Premium-knop bovenaan — glazen pil met kroon. */
 import { Crown } from 'lucide-react-native';
+import Tap from '@/components/Tap';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
@@ -31,9 +32,9 @@ export default function PremiumNote({
   if (!m) {
     return (
       <>
-        <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
+        <Tap onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
           <Text style={style}>{children}</Text>
-        </Pressable>
+        </Tap>
         <PremiumPaywallModal visible={open} onClose={() => setOpen(false)} context={context} />
       </>
     );
@@ -60,7 +61,7 @@ export default function PremiumNote({
   if (!interactive) return row;
   return (
     <>
-      <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
+      <Tap onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
         <View style={[s.row, rowStyle]}>
           <Text style={[textStyle as TextStyle, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
             {m[1]}
@@ -70,7 +71,7 @@ export default function PremiumNote({
             <Text style={s.pillTxt}>Premium</Text>
           </VibezGlass>
         </View>
-      </Pressable>
+      </Tap>
       <PremiumPaywallModal visible={open} onClose={() => setOpen(false)} context={context} />
     </>
   );

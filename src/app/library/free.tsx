@@ -16,6 +16,7 @@
    tegendeel. */
 
 import BalancedText from '@/components/BalancedText';
+import Tap from '@/components/Tap';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { MiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import { usePlayerState } from '@/services/audio-player';
@@ -107,11 +108,11 @@ function ReadyPlayButton({
     backgroundColor: interpolateColor(t.value, [0, 1], [AudioAccentLight, AudioAccent]),
   }));
   return (
-    <Pressable onPress={onPress} hitSlop={10}>
+    <Tap onPress={onPress} hitSlop={10}>
       <Animated.View style={[s.playBtn, animatedStyle]}>
         <Play size={13} color="#ffffff" fill="#ffffff" strokeWidth={0} />
       </Animated.View>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -168,9 +169,9 @@ export default function LibraryFreeScreen() {
          Apple's "large title"-navigatiepatroon; de échte titel leeft in
          het H1-blok. */}
       <View style={s.topbar}>
-        <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+        <Tap onPress={goBack} hitSlop={14} style={s.backBtn}>
           <Text style={s.backChev}>‹</Text>
-        </Pressable>
+        </Tap>
       </View>
       <ScrollView
         contentContainerStyle={[

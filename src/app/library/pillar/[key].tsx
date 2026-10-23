@@ -29,6 +29,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { MiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
+import Tap from '@/components/Tap';
 import { usePlayerState } from '@/services/audio-player';
 import {
   PILLAR_META,
@@ -127,7 +128,7 @@ function TrackRow({
        Reanimated-reëntrantiecrash ("Should not already be working") zodra
        je tijdens/na die animaties een sessie opende. Geen animaties meer
        hier — stabiliteit boven polish. Gewone, statische rij. */
-    <Pressable
+    <Tap
       onPress={onPress}
       style={s.row}
       android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
@@ -159,7 +160,7 @@ function TrackRow({
         </View>
       ) : null}
       {!isLast && <View style={s.rowSep} pointerEvents="none" />}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -233,13 +234,13 @@ export default function PillarFocusScreen() {
       <SafeAreaView style={s.root} edges={['top']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={s.topbar}>
-          <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+          <Tap onPress={goBack} hitSlop={14} style={s.backBtn}>
             {/* Operator, 1 okt 2026 ("headers overal consistent"): size
                24→20, stroke 2.4→2.8 — de "officiële iOS-chevron.backward"-
                stijl uit build-choice.tsx (18 sept), nu de app-brede
                standaard. */}
             <ChevronLeft size={20} color="#ffffff" strokeWidth={2.8} />
-          </Pressable>
+          </Tap>
         </View>
       </SafeAreaView>
     );
@@ -249,9 +250,9 @@ export default function PillarFocusScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={s.topbar}>
-        <Pressable onPress={goBack} hitSlop={14} style={s.backBtn}>
+        <Tap onPress={goBack} hitSlop={14} style={s.backBtn}>
           <ChevronLeft size={20} color="#ffffff" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
       </View>
       <ScrollView
         contentContainerStyle={[

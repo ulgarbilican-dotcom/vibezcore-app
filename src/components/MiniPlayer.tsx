@@ -28,6 +28,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { PlayPauseGlyph } from '@/components/PlayPauseGlyph';
 import { PILLAR_META, SERIES_PHOTO, SERIES_PILLAR } from '@/data/audio-library-data';
 import { AudioAccent } from '@/constants/theme';
@@ -227,9 +228,9 @@ export function MiniPlayer({
          en de knop viel niet op. Groter, vetter en gecentreerd BOVENAAN
          de balk (net onder de voortgangslijn) — de klassieke "sleep/tik
          omhoog"-positie, meteen het eerste wat opvalt. */}
-      <Pressable style={s.expandHint} onPress={onExpand} hitSlop={8} accessibilityLabel="Open player">
+      <Tap style={s.expandHint} onPress={onExpand} hitSlop={8} accessibilityLabel="Open player">
         <ChevronUp size={16} color={C.dim} strokeWidth={3} />
-      </Pressable>
+      </Tap>
 
       <AnimatedPressable
         onPress={onExpand}
@@ -257,9 +258,9 @@ export function MiniPlayer({
         >
           <PlayPauseGlyph size={22} color="#ffffff" playing={state.playing} />
         </AnimatedPressable>
-        <Pressable onPress={onClose} hitSlop={10} style={s.closeBtn}>
+        <Tap onPress={onClose} hitSlop={10} style={s.closeBtn}>
           <X size={18} color={C.dim} strokeWidth={2.2} />
-        </Pressable>
+        </Tap>
       </AnimatedPressable>
     </View>
   );

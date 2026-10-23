@@ -18,6 +18,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
+import Tap from '@/components/Tap';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
@@ -126,9 +127,9 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
             blurTarget={rootBlurRef}
             style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
           />
-          <Pressable onPress={dismiss} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
+          <Tap onPress={dismiss} hitSlop={{ top: 10, bottom: 14, left: 40, right: 40 }} accessibilityLabel="Close">
             <View style={s.grip} />
-          </Pressable>
+          </Tap>
           <View style={s.head}>
             <Text style={s.eyebrow}>
               {context === 'state-control'
@@ -137,10 +138,10 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
                   ? 'VIBEZCORE AUDIO LIBRARY'
                   : 'VIBEZCORE BREATHWORK'}
             </Text>
-            <Pressable onPress={dismiss} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now" style={s.doneTouch}>
+            <Tap onPress={dismiss} hitSlop={12} accessibilityRole="button" accessibilityLabel="Not now" style={s.doneTouch}>
               {/* "Not now" i.p.v. "Done": er is niets gedaan om te bevestigen (audit 16 okt 2026). */}
               <Text style={s.done}>Not now</Text>
-            </Pressable>
+            </Tap>
           </View>
 
           <ScrollView

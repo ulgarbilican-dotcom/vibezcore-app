@@ -23,6 +23,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { stopPhaseHaptic, vibrateCompat } from '@/services/breath-haptics';
+import { PopupView } from '@/components/PopupCard';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
 import GuidanceSelector, {
@@ -435,7 +436,7 @@ export default function BreathSampleScreen() {
 
       <Modal visible={finished} transparent animationType="fade" onRequestClose={goBreathTab}>
         <View style={s.modalBackdrop}>
-          <View style={s.modalCard}>
+          <PopupView style={s.modalCard}>
           {/* Operator, 10 okt 2026: alle popupkaarten in glas. */}
           <VibezGlass radius={20} level="sheet" style={StyleSheet.absoluteFill} />
             <Text style={s.modalEyebrow}>SESSION COMPLETE</Text>
@@ -480,7 +481,7 @@ export default function BreathSampleScreen() {
                 </AnimatedPressable>
               </>
             )}
-          </View>
+          </PopupView>
         </View>
       </Modal>
     </SafeAreaView>

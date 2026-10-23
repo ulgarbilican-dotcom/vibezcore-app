@@ -20,6 +20,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -239,9 +240,9 @@ export default function AuthCallback() {
             <Text style={s.sub}>One moment — verifying your link.</Text>
             {/* Hangt het netwerk, dan na 12 s een uitweg (audit 16 okt 2026). */}
             {slow && (
-              <Pressable onPress={() => goToTab('/account')} hitSlop={12} accessibilityRole="button" style={{ marginTop: 24, paddingVertical: 12 }}>
+              <Tap onPress={() => goToTab('/account')} hitSlop={12} accessibilityRole="button" style={{ marginTop: 24, paddingVertical: 12 }}>
                 <Text style={[s.sub, { color: '#ffffff' }]}>Cancel</Text>
-              </Pressable>
+              </Tap>
             )}
           </>
         )}

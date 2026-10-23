@@ -49,6 +49,7 @@
      geen vaste operator-tekstkeuze). */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { BrandDark, BrandLight, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -257,13 +258,13 @@ export default function BuildChoiceScreen() {
          zie de toelichting bovenaan het bestand. Vóór een keuze (nog geen
          `choice`) tonen we 5, dezelfde aanname als de puntjes onderaan. */}
       <View style={s.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
+        <Tap onPress={() => router.back()} hitSlop={12} style={s.back}>
           {/* Operator, 18 september 2026 ("officiële iOS-chevron.backward
              i.p.v. dunne, langgerekte Android-pijl"): kleiner + dikker
              (22→20, strokeWidth 2.2→2.8) — compacter en steviger, past
              beter bij de vette titels op dit scherm. */}
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
         {/* Operator, 21 september 2026 ("balk is storend zo laag, zet 'm
            naast de pijl"): terug in de knoppenrij, na een korte poging
            eronder (Apple HIG-full-width). */}
@@ -323,13 +324,13 @@ export default function BuildChoiceScreen() {
       {/* Vaste knop onder de scroll (geen overlay): de scrollruimte eindigt erboven,
           dus geen kaart kan er ooit onder schuiven. */}
       <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) + 16 }}>
-          <Pressable
+          <Tap
             style={[s.cta, !choice && s.ctaDisabled]}
             disabled={!choice}
             onPress={next}
           >
             <Text style={[s.ctaTxt, !choice && CTA.labelDisabled]}>Continue</Text>
-          </Pressable>
+          </Tap>
       </View>
 
 

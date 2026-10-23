@@ -21,6 +21,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { PopupView } from '@/components/PopupCard';
 import { Brand, BrandFonts } from '@/constants/theme';
 import VibezGlass from './VibezGlass';
 import { useEffect, useState } from 'react';
@@ -148,7 +149,7 @@ export function VibezAlertHost() {
       statusBarTranslucent
     >
       <Pressable style={s.scrim} onPress={() => { /* tap outside = no dismiss */ }}>
-        <View style={[s.card, light && s.cardLight]}>
+        <PopupView style={[s.card, light && s.cardLight]}>
           {/* Operator, 10 okt 2026 ("popupkaarten moeten allemaal glas"):
               zelfde VIBEZCORE-glas als de kaarten in de ademsessie. */}
           {!light ? <VibezGlass radius={20} level="sheet" style={StyleSheet.absoluteFill} /> : null}
@@ -179,7 +180,7 @@ export function VibezAlertHost() {
               />
             ))}
           </View>
-        </View>
+        </PopupView>
       </Pressable>
     </Modal>
   );

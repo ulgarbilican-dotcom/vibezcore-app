@@ -39,6 +39,7 @@
      licht fel op in de merk-indigo zodra er iets gekozen is. */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, CTA } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
@@ -305,13 +306,13 @@ const GoalTile = memo(function GoalTile({
          Operator, 8 okt 2026 ("i-knoppen werken niet"): stond VÓÓR de
          inhoud in de boom → de inhoud lag erover en ving de tik. Nu als
          laatste, bovenop. */}
-      <Pressable
+      <Tap
         hitSlop={10}
         onPress={() => setShowInfo((v) => !v)}
         style={s.tileInfoBtn}
       >
         <Info size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
-      </Pressable>
+      </Tap>
     </AnimatedPressable>
   );
 });
@@ -401,9 +402,9 @@ export default function GoalScreen() {
       </View>
 
       <View style={s.bar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.back}>
+        <Tap onPress={() => router.back()} hitSlop={12} style={s.back}>
           <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2.8} />
-        </Pressable>
+        </Tap>
         {/* Operator, 21 september 2026 ("balk is storend zo laag, zet 'm
            naast de pijl"): terug in de knoppenrij, na een korte poging
            eronder (Apple HIG-full-width) — zie StepIndicator.tsx. */}

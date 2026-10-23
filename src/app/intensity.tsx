@@ -48,6 +48,7 @@
    yourself", nu ook hier. */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import SheetScroll from '@/components/SheetScroll';
 import { useBackTo } from '@/hooks/useBackTo';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -1161,7 +1162,7 @@ export default function IntensityScreen() {
                 const on = level === l.key;
                 return (
                   <View key={l.key}>
-                    <Pressable
+                    <Tap
                       style={[s.sheetRow, on && s.sheetRowOn]}
                       onPress={() => {
                         hapticTap();
@@ -1180,7 +1181,7 @@ export default function IntensityScreen() {
                         <Text style={s.sheetRowSub}>{l.detail}</Text>
                       </View>
                       {on && <Check size={18} color="#ffffff" strokeWidth={2.6} />}
-                    </Pressable>
+                    </Tap>
                   </View>
                 );
               })}
@@ -1222,7 +1223,7 @@ export default function IntensityScreen() {
                 const on = horizon === o.key;
                 return (
                   <View key={o.key}>
-                    <Pressable
+                    <Tap
                       style={[s.sheetRow, on && s.sheetRowOn]}
                       onPress={() => {
                         hapticTap();
@@ -1247,7 +1248,7 @@ export default function IntensityScreen() {
                         <Text style={s.sheetRowSub}>{o.hint}</Text>
                       </View>
                       {on && <Check size={18} color="#ffffff" strokeWidth={2.6} />}
-                    </Pressable>
+                    </Tap>
                   </View>
                 );
               })}
@@ -1302,7 +1303,7 @@ export default function IntensityScreen() {
                   const disabled = locked || (!on && picked.length >= count);
                   return (
                     <View key={sl.slot}>
-                      <Pressable
+                      <Tap
                         style={[s.sheetRow, on && s.sheetRowOn, disabled && !on && { opacity: 0.4 }]}
                         disabled={locked}
                         onPress={() => tapSlot(sl.slot)}
@@ -1322,7 +1323,7 @@ export default function IntensityScreen() {
                             {sl.body}
                           </Text>
                           {on && (
-                            <Pressable
+                            <Tap
                               onPress={() => setTimePicking(sl.slot)}
                               hitSlop={6}
                               style={s.timePickRow}
@@ -1331,11 +1332,11 @@ export default function IntensityScreen() {
                               <Text style={s.timePickTxt}>
                                 at {fmtTime(times[sl.slot] ?? sl.hour * 60)}
                               </Text>
-                            </Pressable>
+                            </Tap>
                           )}
                         </View>
                         {on && <Check size={18} color="#ffffff" strokeWidth={2.6} />}
-                      </Pressable>
+                      </Tap>
                     </View>
                   );
                 })}
@@ -1365,9 +1366,9 @@ export default function IntensityScreen() {
                   <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>
                     {SLOTS.find((sl) => sl.slot === timePicking)?.label} time
                   </Text>
-                  <Pressable onPress={() => setTimePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                  <Tap onPress={() => setTimePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
                     <Text style={{ fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 12, paddingLeft: 12 }}>Done</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
                 <View style={s.pickGrid}>
                   {(() => {
@@ -1379,7 +1380,7 @@ export default function IntensityScreen() {
                     return out.map((mins) => {
                       const on = (times[timePicking] ?? -1) === mins;
                       return (
-                        <Pressable
+                        <Tap
                           key={mins}
                           onPress={() => {
                             setTimes((cur) => ({ ...cur, [timePicking]: mins }));
@@ -1390,7 +1391,7 @@ export default function IntensityScreen() {
                           <Text style={[s.pickChipTxt, on && s.pickChipTxtOn]}>
                             {fmtTime(mins)}
                           </Text>
-                        </Pressable>
+                        </Tap>
                       );
                     });
                   })()}

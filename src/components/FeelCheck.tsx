@@ -7,6 +7,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { BrandFonts } from '@/constants/theme';
+import Tap from '@/components/Tap';
 import { recordFeel, type Feel, type FeelCheckin } from '@/utils/feel-checkin';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
@@ -27,7 +28,7 @@ export default function FeelCheck({ session }: { session: Omit<FeelCheckin, 'at'
         {OPTIONS.map((o) => {
           const on = picked === o.feel;
           return (
-            <Pressable
+            <Tap
               key={o.feel}
               disabled={picked !== null}
               onPress={() => {
@@ -41,7 +42,7 @@ export default function FeelCheck({ session }: { session: Omit<FeelCheckin, 'at'
               accessibilityLabel={o.label}
             >
               <Text style={[s.chipTxt, on && s.chipTxtOn, picked !== null && !on && s.chipTxtDim]}>{o.label}</Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

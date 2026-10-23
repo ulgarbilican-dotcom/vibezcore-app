@@ -21,6 +21,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import { SERIES_PHOTO } from '@/data/audio-library-data';
 import {
@@ -267,7 +268,7 @@ export default function HistoryScreen() {
          ruimte in als echte H2-sectiekop. Witte balk + flinterdunne
          scheidingslijn i.p.v. de vorige donkere balk. */}
       <View style={s.topbar}>
-        <Pressable
+        <Tap
           onPress={goBack}
           style={s.backBtn}
           hitSlop={14}
@@ -277,17 +278,17 @@ export default function HistoryScreen() {
           }}
         >
           <Text style={s.backChev}>‹</Text>
-        </Pressable>
+        </Tap>
         <Text style={s.topbarTitle} numberOfLines={1}>
           Your Journey
         </Text>
-        <Pressable
+        <Tap
           onPress={() => setMenuOpen((v) => !v)}
           style={s.menuBtn}
           hitSlop={14}
         >
           <Text style={s.menuDots}>⋮</Text>
-        </Pressable>
+        </Tap>
       </View>
 
       {menuOpen ? (

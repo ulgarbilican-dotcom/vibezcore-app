@@ -24,6 +24,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import { getCrashReportsEnabled, setCrashReportsEnabled } from '@/services/crash-reporting';
 import HealthSyncSetting from '@/components/HealthSyncSetting';
@@ -375,7 +376,7 @@ export default function SettingsScreen() {
             2026). */}
         <Text style={s.sectionLabel}>Notifications</Text>
         <View style={s.card}>
-          <Pressable
+          <Tap
             style={s.row}
             onPress={() => void Linking.openSettings()}
             accessibilityRole="button"
@@ -388,7 +389,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Text style={s.notifValue}>{notifOn === null ? '' : notifOn ? 'On' : 'Off'}</Text>
-          </Pressable>
+          </Tap>
         </View>
 
         <Text style={s.sectionLabel}>Breathwork</Text>
@@ -669,7 +670,7 @@ export default function SettingsScreen() {
               {/* Puntenveld-prototype (3 augustus 2026). Stond alleen achter
                   een deeplink, en die moet je met een commando afvuren — dat
                   is geen manier om iets te beoordelen. */}
-              <Pressable
+              <Tap
                 style={s.row}
                 onPress={() => router.push('/breath-splat' as never)}
                 accessibilityLabel="Open the point-field prototype"
@@ -682,9 +683,9 @@ export default function SettingsScreen() {
                     START.
                   </BalancedText>
                 </View>
-              </Pressable>
+              </Tap>
               <View style={s.divider} />
-              <Pressable
+              <Tap
                 style={s.row}
                 onPress={() =>
                   router.push(
@@ -700,9 +701,9 @@ export default function SettingsScreen() {
                     echt account.
                   </BalancedText>
                 </View>
-              </Pressable>
+              </Tap>
               <View style={s.divider} />
-              <Pressable
+              <Tap
                 style={s.row}
                 onPress={() => router.push('/subscribe?tier=monthly' as never)}
                 accessibilityLabel="Preview subscribe screen as guest"
@@ -713,7 +714,7 @@ export default function SettingsScreen() {
                     Toont email/password form (account-create-pad).
                   </BalancedText>
                 </View>
-              </Pressable>
+              </Tap>
               <View style={s.divider} />
               {/* Iter breath-onboarding: zet de completed-vlag terug op null
                  en opent de onboarding direct. Voorkomt dat je de hele
@@ -872,7 +873,7 @@ function DevUserOverrideSection() {
         {options.map((opt, i) => {
           const active = current === opt.value;
           return (
-            <Pressable
+            <Tap
               key={String(opt.value)}
               style={[
                 devS.row,
@@ -889,7 +890,7 @@ function DevUserOverrideSection() {
                 <Text style={devS.sub}>{opt.sub}</Text>
               </View>
               {active && <Text style={devS.tick}>✓</Text>}
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
@@ -901,7 +902,7 @@ function DevUserOverrideSection() {
       </BalancedText>
       {/* Dev: rusthartslag-keuze wissen → "Your Resting Heart Rate"-pagina
           verschijnt opnieuw na de State Control-intro. */}
-      <Pressable
+      <Tap
         style={[devS.row, { marginTop: 10 }]}
         onPress={() => {
           resetRestingPulse();
@@ -909,7 +910,7 @@ function DevUserOverrideSection() {
         }}
       >
         <Text style={devS.label}>Reset resting heart rate</Text>
-      </Pressable>
+      </Tap>
     </>
   );
 }
