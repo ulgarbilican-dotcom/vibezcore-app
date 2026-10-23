@@ -37,8 +37,12 @@ export default function PremiumNote({
   }
   /* Marges/uitlijning van de oude tekststijl naar de rij; de rest blijft op de tekst. */
   const flat = StyleSheet.flatten(style) ?? {};
-  const { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf, ...textStyle } = flat as Record<string, unknown>;
-  const rowStyle = { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf } as object;
+  /* Layout-eigenschappen (marges, minimumhoogte, opvulling) horen bij de RIJ, niet bij de tekst: anders staat de tekst
+     bovenin een hoger vak terwijl de pil in het midden staat. */
+  const { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf, minHeight, paddingHorizontal, paddingVertical, padding, lineHeight, ...textStyle } =
+    flat as Record<string, unknown>;
+  const rowStyle = { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf, minHeight, paddingHorizontal, paddingVertical, padding } as object;
+  void lineHeight;
   return (
     <>
       <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">

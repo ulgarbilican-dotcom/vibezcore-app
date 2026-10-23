@@ -1720,6 +1720,8 @@ function AudioScreen({
       )}
       <ScrollView
         ref={scrollViewRef}
+        /* 23 okt 2026 (operator: kop en pil te laag): de lijst begint hoger, zodat de titel net onder de statusbalk staat. */
+        style={{ marginTop: -29 }}
         contentContainerStyle={[
           s.scroll,
           /* Iter 9dq v154+v155 (operator-fix 2026-06-18):
@@ -1820,7 +1822,7 @@ function AudioScreen({
            helemaal geen titel op dit scherm — alleen de zoekbalk). */}
         {/* Ruimte voor de Premium-knop bovenaan (PremiumPill, 7 okt 2026):
            zonder deze extra marge zat de knop tegen de titel. */}
-        <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingBottom: 44 }, { paddingTop: 7, marginTop: -10 }]}>
+        <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingBottom: 24 }, { paddingTop: 7 }]}>
           {/* 23 okt 2026 (operator): zelfde kop als State Control — kleine, gespatieerde hoofdletters, gecentreerd. */}
           <View style={{ width: 60 }} />
           <Text style={s.libHeaderTitle}>Audio Library</Text>

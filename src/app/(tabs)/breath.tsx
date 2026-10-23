@@ -406,7 +406,7 @@ function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boole
      (7 okt 2026: op de Samsung stond hij 13dp lager). 52 = eigen hoogte. */
   const insets = useSafeAreaInsets();
   /* Op de keuzepagina staat de knop op de kop-rij, onder de Premium-knop (zelfde rij als de titel). */
-  const alignTop = lowered ? insets.top + 34 - 26 : insets.top + 8 + 16 - 26;
+  const alignTop = lowered ? insets.top + 12 - 26 : insets.top + 8 + 16 - 26;
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
@@ -1194,7 +1194,7 @@ export default function BreathScreen() {
             position: 'absolute',
             left: 0,
             right: 0,
-            top: insets.top + 26,
+            top: insets.top + 4,
             textAlign: 'center',
             color: '#ffffff',
             fontSize: 13,
@@ -1216,7 +1216,7 @@ export default function BreathScreen() {
           style={{
             position: 'absolute',
             left: 16,
-            top: insets.top + 14,
+            top: insets.top - 8,
             width: 40,
             height: 40,
             borderRadius: 20,

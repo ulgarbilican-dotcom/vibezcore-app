@@ -6485,7 +6485,7 @@ const s = StyleSheet.create({
        48→88 geeft de hele gestapelde titel+badge-kolom genoeg ruimte om
        volledig binnen de header (en dus binnen de safe area) te blijven. */
     height: 88,
-    marginTop: -10,
+    marginTop: -32,
     paddingHorizontal: 8,
     backgroundColor: C.bg,
   },
