@@ -195,9 +195,9 @@ function TabGlyph({ Icon, focused }: { Icon: IconComponent; focused: boolean }) 
     } else if (focused) {
       scale.setValue(0.8);
       lift.setValue(0);
-      /* Eén bounce: dempingsratio ≈ 0,5 (stiffness 300, damping 17, mass 1) — één nasprong en dan rust. */
+      /* Apple-licht: dempingsratio ≈ 0,8 (stiffness 300, damping 28, mass 1) — hooguit één nauwelijks zichtbare nasprong. */
       RNAnimated.parallel([
-        RNAnimated.spring(scale, { toValue: 1.1, stiffness: 300, damping: 17, mass: 1, useNativeDriver: true }),
+        RNAnimated.spring(scale, { toValue: 1.1, stiffness: 300, damping: 28, mass: 1, useNativeDriver: true }),
         RNAnimated.sequence([
           RNAnimated.timing(lift, { toValue: -4, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }),
           RNAnimated.spring(lift, { toValue: 0, stiffness: 260, damping: 24, mass: 1, useNativeDriver: true }),

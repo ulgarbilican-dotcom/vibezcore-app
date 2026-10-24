@@ -11,10 +11,10 @@
 export const SPRING_PRESS_IN = { stiffness: 560, damping: 36, mass: 0.6 } as const;
 
 /** Loslaten: een minieme overshoot en dan rust — de typische iOS-veer. */
-export const SPRING_PRESS_OUT = { duration: 340, dampingRatio: 0.52 } as const;
+export const SPRING_PRESS_OUT = { duration: 300, dampingRatio: 0.85 } as const;
 
 /** Een gekozen element "popt": kort groter en dan terug, met een voelbare nasprong. */
-export const SPRING_POP = { stiffness: 380, damping: 16, mass: 0.7 } as const; /* dempingsratio ≈ 0,5: één zichtbare nasprong, dan rust */
+export const SPRING_POP = { stiffness: 380, damping: 26, mass: 0.7 } as const; /* dempingsratio ≈ 0,8: hooguit één nauwelijks zichtbare nasprong (Apple-licht) */
 
 /** Elementen die op hun plek veren (kaarten, balken, blaadjes): zacht met een kleine nasprong. */
 export const SPRING_SETTLE = { stiffness: 220, damping: 22, mass: 0.9 } as const;
@@ -43,4 +43,4 @@ export function isReduceMotion(): boolean {
 /* Popups en alerts: de kaart komt met een veer in beeld (kort groter en dan op zijn plek), de achtergrond
    dooft zacht in. Overal dezelfde. */
 import { ZoomIn } from 'react-native-reanimated';
-export const POPUP_IN = ZoomIn.springify().damping(17).stiffness(240).withInitialValues({ transform: [{ scale: 0.9 }], opacity: 0 });
+export const POPUP_IN = ZoomIn.springify().damping(26).stiffness(240).withInitialValues({ transform: [{ scale: 0.9 }], opacity: 0 });

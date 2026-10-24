@@ -398,14 +398,14 @@ function StateThumb({
                 `opacity` van de view zelf en liet de gloed kort volledig dekkend flitsen. */}
             <View pointerEvents="none" style={s.thumbGlow}>
               <Animated.View
-                entering={ZoomIn.springify().damping(15).stiffness(200)}
+                entering={ZoomIn.springify().damping(28).stiffness(200)}
                 exiting={FadeOut.duration(120)}
                 style={[s.thumbFill, { backgroundColor: t.accent }]}
               />
             </View>
             <View pointerEvents="none" style={s.thumbRing}>
               <Animated.View
-                entering={ZoomIn.springify().damping(15).stiffness(200)}
+                entering={ZoomIn.springify().damping(28).stiffness(200)}
                 exiting={FadeOut.duration(120)}
                 style={[s.thumbFill, { borderWidth: 1, borderColor: t.accent }]}
               />
@@ -2034,8 +2034,8 @@ const s = StyleSheet.create({
   },
   thumbGlow: {
     position: 'absolute',
-    width: THUMB + 14,
-    height: THUMB + 14,
+    width: THUMB + 8,
+    height: THUMB + 8,
     opacity: 0.09,
   },
   thumbFill: { flex: 1, borderRadius: 999 },

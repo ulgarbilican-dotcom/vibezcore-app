@@ -25,7 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
-import { SPRING_POP } from '@/constants/motion';
+import { SPRING_SETTLE } from '@/constants/motion';
 import PopupCard from '@/components/PopupCard';
 import Tap from '@/components/Tap';
 import PremiumNote from '@/components/PremiumNote';
@@ -3970,16 +3970,14 @@ type IdleScreenProps = {
 function ModeDot({ active, color }: { active: boolean; color: string }) {
   const k = useSharedValue(active ? 1 : 0);
   useEffect(() => {
-    k.value = withSpring(active ? 1 : 0, SPRING_POP);
+    k.value = withSpring(active ? 1 : 0, SPRING_SETTLE);
   }, [active, k]);
   const st = useAnimatedStyle(() => ({
-    width: 6 + 4 * k.value,
-    height: 6 + 4 * k.value,
+    transform: [{ scale: 0.6 + 0.4 * k.value }],
     opacity: 0.25 + 0.75 * k.value,
   }));
   return <Animated.View style={[s.modeDot, { backgroundColor: active ? color : '#ffffff' }, st]} />;
 }
-
 
 /* SCREEN 1: Idle — mode selection + duration + Start CTA.
    Iter 9 (operator-feedback): herschreven naar single-screen layout
@@ -6713,7 +6711,9 @@ const s = StyleSheet.create({
     marginTop: 26,
   },
   modeDot: {
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   trialInfo: { alignItems: 'center', gap: 10, marginTop: 14 },
   /* Duidelijk leesbaar en gecentreerd (operator, 7 okt 2026). */
