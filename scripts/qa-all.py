@@ -21,6 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ADB = os.environ.get('ADB', r'C:\Users\ulgar\AppData\Local\Android\Sdk\platform-tools\adb.exe')
 SER = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('--') else None
 STATIC_ONLY = '--static-only' in sys.argv
+TIERS = tuple(a.split('=', 1)[1].split(',') for a in sys.argv if a.startswith('--tier='))[0] if any(a.startswith('--tier=') for a in sys.argv) else ('free', 'premium')
 PKG = 'com.ubili.vibezcoreapp'
 REPORT = os.path.join(ROOT, 'scratchpad', 'qa-report.md')
 rows = []          # (laag, controle, uitkomst PASS/FAIL/SKIP, detail)
@@ -187,6 +188,12 @@ def layer2(tier):
             ensure_ready(); open_route(path); st = qa_state() or st
             if st.get('path') == '/welcome':
                 add(L, f'{path}: route bereikt', False, 'landt op /welcome (poort) - ONBEKEND, niet getest', skip=True); continue
+        for _try in range(4):                  # wacht tot de positie van de uitweg bekend en plausibel is
+            ex_now = [e for e in st.get('exits', []) if re.match(r'^(Back|Close|Cancel|Done|Not now|Maybe later|Minimize|Skip|Got it)', e, re.I)]
+            good = [e for e in ex_now if (st.get('xy') or {}).get(e) and (st['xy'][e][1] > 100 or st['xy'][e][0] > 100)]
+            if not ex_now or good:
+                break
+            time.sleep(1.8); st = qa_state() or st
         m = lum()
         exits = [e for e in st.get('exits', []) if re.match(r'^(Back|Close|Cancel|Done|Not now|Maybe later|Minimize|Skip|Got it)', e, re.I)]
         add(L, f'{path}: geen wit scherm', m < 200, f'luminantie={m:.0f}')
@@ -258,7 +265,7 @@ def main():
         if st is None:
             add('2 routes', 'Dit is een QA-build (EXPO_PUBLIC_QA=1)', False, 'geen [QA]-regels in het log')
         else:
-            for tier in ('free', 'premium'):
+            for tier in TIERS:
                 tabs_sweep(tier); layer2(tier)
         layer3()
     fails = [r for r in rows if r[2] == 'FAIL']; skips = [r for r in rows if r[2] == 'SKIP']
