@@ -21,7 +21,20 @@ import { Platform } from 'react-native';
 
 const ANDROID_API = Platform.OS === 'android' ? Number(Platform.Version) : 0;
 
+/* 24 okt 2026 (operator: "sommige knoppen wel haptiek, andere niet"): elke knop (Tap, PressScale) tikt nu zelf
+   op het moment van de tik, op één plek. Knoppen die hapticTap()/hapticPress() nog zelf aanroepen vallen binnen
+   dit venster en trillen dus niet dubbel. */
+const DEDUPE_MS = 120;
+let lastFire = 0;
+function dedupe(): boolean {
+  const now = Date.now();
+  if (now - lastFire < DEDUPE_MS) return true;
+  lastFire = now;
+  return false;
+}
+
 export function hapticTap(): void {
+  if (dedupe()) return;
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Keyboard_Tap).catch(() => {});
   } else {
@@ -31,6 +44,7 @@ export function hapticTap(): void {
 
 /** Lichte "impact" voor hoofdknoppen (Start e.d.) — op Android dezelfde fijne tik. */
 export function hapticPress(): void {
+  if (dedupe()) return;
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Keyboard_Tap).catch(() => {});
   } else {
