@@ -9,11 +9,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0a0a0a",
     "ios": {
-      "icon": {
-        "light": "./assets/vibezcore_icon_ios_1024.png",
-        "dark": "./assets/icon/ios_dark_1024.png",
-        "tinted": "./assets/icon/ios_tinted_1024.png"
-      },
+      "icon": "./assets/vibezcore_icon_ios_1024.png",
       "bundleIdentifier": "com.ubili.vibezcoreapp",
       "appleTeamId": "88AL3UW7L7",
       "supportsTablet": false,
