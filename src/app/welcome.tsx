@@ -413,7 +413,6 @@ export default function WelcomeScreen() {
               {/* Operator 19 okt 2026: ook voor wie nog geen account heeft. */}
               <Text style={s.bottomLinkAction}>Sign In</Text> or <Text style={s.bottomLinkAction}>Create Account</Text>
             </Text>
-            <ChevronRight size={15} color="#ffffff" strokeWidth={2} />
           </AnimatedPressable>
         </View>
       </SafeAreaView>
