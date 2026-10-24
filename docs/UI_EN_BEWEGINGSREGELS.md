@@ -59,6 +59,6 @@
 - Elke wijziging: tsc schoon, bouwen, op de A16 bekijken, pixel/gfxinfo meten waar het kan, pas dan melden. Wat niet gezien is, zeggen.
 
 ## Toevoeging 24 okt 2026 — cascade, tabwissel, paginabolletjes
-- **Cascade ("vloeien")**: de grote blokken van elk scherm komen na elkaar in beeld met `reveal(i)` uit `src/constants/motion.ts` (FadeInDown, veer dempingsratio ≈ 0,85, staffel 70 ms, i = volgorde van boven naar onder, max. 8). Zelfde bewegingstaal als de Breath-picker. Niet op elk los element.
+- **Cascade ("vloeien")**: de grote blokken van elk scherm komen na elkaar in beeld met `reveal(i)` uit `src/constants/motion.ts` (FadeInDown (begint 25 dp onder zijn plek en veert omhoog), veer dempingsratio ≈ 0,85, staffel 70 ms, i = volgorde van boven naar onder, max. 8). Zelfde bewegingstaal als de Breath-picker. Niet op elk los element.
 - **Tabwissel**: zachte crossfade (`animation: 'fade'` in `(tabs)/_layout.tsx`), geen harde wissel.
 - **Paginabolletjes (State Control)**: niet-actief = grijs (wit 32%) en iets kleiner (schaal 0,7); actief = wit en groter (schaal 1). Overgang met `SPRING_SETTLE`.
