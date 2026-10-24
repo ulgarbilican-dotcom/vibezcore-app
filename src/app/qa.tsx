@@ -23,6 +23,8 @@ export default function QaScreen() {
         await ensureSettingsLoaded();      // eerst laden, anders overschrijft het laden onze reset
         await setSetting('stateOnboardingCompletedAt', null);
         await setSetting('breathOnboardingCompletedAt', null);
+        await setSetting('stateFreeSessionUsedAt', null);   // nieuwe gebruiker = ook de gratis sessies nog niet gebruikt
+        await setSetting('breathFreeSessionUsedAt', null);
         await setSetting('stateOnboardingDeferredCount', 0);
         await setSetting('breathOnboardingDeferredCount', 0);
         resetRestingPulse();

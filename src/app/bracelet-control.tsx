@@ -30,6 +30,7 @@ import { Reveal } from '@/components/Reveal';
 import { SPRING_SETTLE } from '@/constants/motion';
 import PopupCard from '@/components/PopupCard';
 import Tap from '@/components/Tap';
+import { QaPressable } from '@/components/QaPressable';
 import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow, { useWatchStatus } from '@/components/WatchHapticsRow';
@@ -890,7 +891,7 @@ function PrimaryCtaButton({
     opacity: 1 - (1 - scale.value) * 5,
   }));
   return (
-    <Pressable
+    <QaPressable
       onPress={onPress}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
@@ -903,7 +904,7 @@ function PrimaryCtaButton({
       }}
     >
       <ReanimatedAnimated.View style={[style, pressStyle]}>{children}</ReanimatedAnimated.View>
-    </Pressable>
+    </QaPressable>
   );
 }
 

@@ -385,7 +385,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         <View style={s.topbar}>
           <View style={s.backWrap}>
             {(step > 0 || onBack) && (
-              <Tap onPress={goBack} hitSlop={14} style={s.backBtn} accessibilityRole="button">
+              <Tap onPress={goBack} hitSlop={14} style={s.backBtn} accessibilityRole="button" accessibilityLabel={step > 0 ? 'Back' : 'Not now, look around first'}>
                 {/* Stap 1: "Not Now", zoals bij Breathwork (19 okt 2026). */}
                 {step > 0 && <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />}
                 <Text style={s.skipTxt}>{step > 0 ? 'Back' : 'Not Now'}</Text>
@@ -399,7 +399,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             </View>
           </View>
           <View style={[s.backWrap, { alignItems: 'flex-end' }]}>
-            <Tap onPress={skip} hitSlop={14} style={s.skipWrap} accessibilityRole="button">
+            <Tap onPress={skip} hitSlop={14} style={s.skipWrap} accessibilityRole="button" accessibilityLabel="Skip onboarding">
               <Text style={s.skipTxtSecondary}>Skip</Text>
             </Tap>
           </View>

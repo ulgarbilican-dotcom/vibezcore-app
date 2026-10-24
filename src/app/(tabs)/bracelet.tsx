@@ -46,6 +46,7 @@ import { goToTab } from '@/utils/state-control-ui';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { TabReveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
+import { QaPressable } from '@/components/QaPressable';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
@@ -265,7 +266,8 @@ function StateControlIntro({
         </View>
         <TabReveal i={2} style={{ marginTop: 28, alignSelf: 'stretch' }}>
         <Animated.View style={ctaPressStyle}>
-          <Pressable
+          <QaPressable
+            qaLabel="CTA Explore State Control"
             onPress={() => {
               hapticPress();
               onDone();
@@ -294,7 +296,7 @@ function StateControlIntro({
               />
             </Animated.View>
 </View>
-          </Pressable>
+          </QaPressable>
         </Animated.View>
         </TabReveal>
         {/* Operator, 7 okt 2026 ("weinig ingangen naar de bracelet"): de

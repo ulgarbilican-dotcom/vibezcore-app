@@ -52,9 +52,9 @@ def wait(pred, timeout=9.0):
     return False, s
 
 
-def find_target(s, pattern):
+def find_target(s, pattern, cs=False):
     for label, xy in (s.get('xy') or {}).items():
-        if re.search(pattern, label, re.I):
+        if re.search(pattern, label, 0 if cs else re.I):
             return label, xy
     return None, None
 
@@ -82,12 +82,12 @@ def tap_xy(x, y, wait_s=1.5):
     sh('shell', 'input', 'tap', str(x), str(y)); time.sleep(wait_s)
 
 
-def tap(pattern, timeout=9.0):
+def tap(pattern, timeout=9.0, cs=False):
     """Tikt de eerste knop waarvan de naam bij het patroon past (positie komt uit de app zelf)."""
     end = time.time() + timeout
     while time.time() < end:
         s = state()
-        label, xy = find_target(s, pattern)
+        label, xy = find_target(s, pattern, cs)
         if xy:
             tap_xy(xy[0], xy[1], 1.6)
             return label
@@ -167,7 +167,7 @@ def sco(s):
 def onboarding(F):
     section('A. Eerste gebruik (onboarding)')
     """A2-A4: de State Control-onboarding vanaf het begin, stap voor stap, inclusief Back en de rusthartslag-keuze."""
-    act_expect(F, 'A2 Explore -> onboarding stap 1', lambda: tap_frac(0.5, 0.738, 4.5), lambda s: s.get('path') == '/state-onboarding' and sco(s).get('step') == 0)
+    act_expect(F, 'A2 Explore -> onboarding stap 1', lambda: tap(r'^CTA Explore State Control', 4.5), lambda s: s.get('path') == '/state-onboarding' and sco(s).get('step') == 0)
     act_expect(F, 'A3 CTA stap 1 -> stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
     act_expect(F, 'A3 Back op stap 2 -> terug op stap 1', lambda: tap(r'^Back'), lambda s: sco(s).get('step') == 0)
     act_expect(F, 'A3 CTA -> weer stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
@@ -183,13 +183,26 @@ def onboarding(F):
 
 def statecontrol_free():
     F = 'SC/free'
-    act_expect(F, 'A1 tab opent met tabbalk (intro)', lambda: go_tab('State Control'), lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is True)
+    # nieuwe gebruiker: het intro is de start van de onboarding = schermvullend, zonder tabbalk, met 'Not now, look around first' als uitweg
+    act_expect(F, 'A1 nieuwe gebruiker: intro schermvullend met uitweg "Not now"', lambda: 'intro',
+               lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is False and any(e.startswith('Not now') for e in s.get('exits', [])))
     onboarding(F)
     section('B. Keuzescherm')
     act_expect(F, 'B1 keuzescherm zonder tabbalk, met Back', lambda: 'picker',
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and s.get('tabbar') is False and any(e.startswith('Back') for e in s.get('exits', [])))
     modes_flow(F)
-    section('C. Voorproef')
+    section('C. Eerste gratis sessie, daarna voorproef')
+    act_expect(F, 'C6 nieuwe gebruiker: "Start your free <toestand> session" -> sessiescherm opent op PAUSED (ontwerp: play start de sessie)', lambda: tap(r'^Start your free .* session$'),
+               lambda s: (s.get('sc') or {}).get('view') == 'session' and (s.get('sc') or {}).get('paused') is True, timeout=14)
+    act_expect(F, 'C6 play -> sessie loopt', lambda: tap(r'^Resume session'), lambda s: (s.get('sc') or {}).get('paused') is False)
+    act_expect(F, 'C6 pauzeren -> gepauzeerd', lambda: tap(r'^Pause session'), lambda s: (s.get('sc') or {}).get('paused') is True)
+    act_expect(F, 'C6 hervatten -> loopt weer', lambda: tap(r'^Resume session'), lambda s: (s.get('sc') or {}).get('paused') is False)
+    act_expect(F, 'C6 minimaliseren -> keuzescherm met sessie-pil', lambda: tap(r'^Minimize'),
+               lambda s: (s.get('sc') or {}).get('view') in ('picker', 'session-open') and find_target(s, r'^Return to your .* session')[1] is not None and any(e.startswith('Back') for e in s.get('exits', [])))
+    act_expect(F, 'C6 pil aantikken -> sessie weer open', lambda: tap(r'^Return to your .* session'),
+               lambda s: (s.get('sc') or {}).get('view') in ('session', 'session-open'))
+    act_expect(F, 'C6 sessie stoppen -> geen pil meer, keuzescherm', lambda: (tap(r'^End session'), time.sleep(1.5), tap(r'^End Session$', 5, True))[0] or 'end',
+               lambda s: (s.get('sc') or {}).get('view') == 'picker' and find_target(s, r'^Return to your .* session')[1] is None, timeout=12)
     act_expect(F, 'preview-knop opent het voorproef-blad (niet meteen een sessie)', lambda: tap(r'^Start a 30-second preview'),
                lambda s: any(re.match(r'^(Cancel|Close|Done|Not now)', e) for e in s.get('exits', [])) or (s.get('sc') or {}).get('view') == 'preview')
     clear_overlays()
@@ -204,15 +217,16 @@ def statecontrol_premium():
     act_expect(F, 'tab opent direct op het keuzescherm (geen intro), met Back', lambda: go_tab('State Control', 4.5),
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and any(e.startswith('Back') for e in s.get('exits', [])))
     modes_flow(F)
-    act_expect(F, 'sessie starten -> sessiescherm (loopt)', lambda: tap(r'^Start .* session$'),
-               lambda s: (s.get('sc') or {}).get('view') == 'session' and (s.get('sc') or {}).get('paused') is False, timeout=14)
+    act_expect(F, 'sessie starten -> sessiescherm opent op PAUSED (ontwerp)', lambda: tap(r'^Start .* session$'),
+               lambda s: (s.get('sc') or {}).get('view') == 'session' and (s.get('sc') or {}).get('paused') is True, timeout=14)
+    act_expect(F, 'play -> loopt', lambda: tap(r'^Resume session'), lambda s: (s.get('sc') or {}).get('paused') is False)
     act_expect(F, 'pauzeren -> gepauzeerd', lambda: tap(r'^Pause session'), lambda s: (s.get('sc') or {}).get('paused') is True)
     act_expect(F, 'hervatten -> loopt weer', lambda: tap(r'^Resume session'), lambda s: (s.get('sc') or {}).get('paused') is False)
     act_expect(F, 'minimaliseren -> keuzescherm met sessie-pil', lambda: tap(r'^Minimize'),
-               lambda s: (s.get('sc') or {}).get('view') == 'picker' and find_target(s, r'^Return to your .* session')[1] is not None)
+               lambda s: (s.get('sc') or {}).get('view') in ('picker', 'session-open') and find_target(s, r'^Return to your .* session')[1] is not None and any(e.startswith('Back') for e in s.get('exits', [])))
     act_expect(F, 'pil aantikken -> sessie weer open', lambda: tap(r'^Return to your .* session'),
                lambda s: (s.get('sc') or {}).get('view') in ('session', 'session-open'))
-    act_expect(F, 'sessie stoppen -> geen pil meer, keuzescherm', lambda: (tap(r'^End session'), time.sleep(1.5), tap(r'^(End session|End|Yes)', 5))[0] or 'end',
+    act_expect(F, 'sessie stoppen -> geen pil meer, keuzescherm', lambda: (tap(r'^End session'), time.sleep(1.5), tap(r'^End Session$', 5, True))[0] or 'end',
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and find_target(s, r'^Return to your .* session')[1] is None, timeout=12)
     act_expect(F, 'Back -> verlaat de tab naar het hoofdtabblad met tabbalk', lambda: tap(r'^Back'),
                lambda s: s.get('path') in ('/', '/index') and s.get('tabbar') is True)
