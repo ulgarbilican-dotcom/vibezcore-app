@@ -139,18 +139,31 @@ def app_routes():
     out = []
     for f in sorted(glob.glob(os.path.join(ROOT, 'src', 'app', '**', '*.tsx'), recursive=True)):
         rel = os.path.relpath(f, os.path.join(ROOT, 'src', 'app')).replace('\\', '/')[:-4]
-        if rel.startswith('_layout') or rel.startswith('(tabs)') or rel in ('qa', 'auth-callback', 'test-tier'):
+        if rel.startswith('_layout') or rel.startswith('(tabs)') or rel in ('qa', 'qa-haptics', 'auth-callback', 'test-tier'):
             continue
         rel = rel.replace('legal/[doc]', 'legal/privacy-policy').replace('library/pillar/[key]', 'library/pillar/resilience')
         out.append('/' + rel)
     return out
 
 
-def open_route(path):
+def foreground_is_app():
+    out = sh('shell', 'dumpsys', 'window').stdout.decode('utf-8', 'ignore')
+    m = re.search(r'mCurrentFocus=.*', out)
+    return bool(m) and PKG in m.group(0)
+
+
+def ensure_ready():
+    """App koud starten en voorbij het welkomstscherm brengen, zodat deep links echt op hun route landen."""
     sh('shell', 'am', 'force-stop', PKG)
-    sh('logcat', '-c'); sh('logcat', '-b', 'crash', '-c')
+    sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1')
+    time.sleep(12)
+    tap(540, 1729, 4)
+
+
+def open_route(path):
+    sh('logcat', '-b', 'crash', '-c')
     sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', 'vibezcoreapp://' + path.lstrip('/'), PKG)
-    time.sleep(7.5)
+    time.sleep(5.5)
 
 
 def layer2(tier):
@@ -158,13 +171,22 @@ def layer2(tier):
     sh('shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS')
     sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={tier}', PKG)
     time.sleep(8)
-    for path in app_routes():
+    ensure_ready()
+    for n, path in enumerate(app_routes()):
+        if n and n % 12 == 0:
+            ensure_ready()                      # af en toe vers beginnen, zodat de stapel niet ontspoort
         open_route(path)
         st = qa_state()
         if crashed():
-            add(L, f'{path}: geen crash', False, 'FATAL EXCEPTION'); continue
+            add(L, f'{path}: geen crash', False, 'FATAL EXCEPTION'); ensure_ready(); continue
+        if not foreground_is_app():
+            add(L, f'{path}: route getest', False, 'opent een andere app (extern) - niet te meten', skip=True); ensure_ready(); continue
         if st is None:
-            add(L, f'{path}: scherm meldt zich', False, 'geen [QA]-regel (app niet gestart?)'); continue
+            add(L, f'{path}: scherm meldt zich', False, 'geen [QA]-regel'); continue
+        if st.get('path') == '/welcome' and path != '/welcome':
+            ensure_ready(); open_route(path); st = qa_state() or st
+            if st.get('path') == '/welcome':
+                add(L, f'{path}: route bereikt', False, 'landt op /welcome (poort) - ONBEKEND, niet getest', skip=True); continue
         m = lum()
         exits = [e for e in st.get('exits', []) if re.match(r'^(Back|Close|Cancel|Done|Not now|Maybe later|Minimize|Skip|Got it)', e, re.I)]
         add(L, f'{path}: geen wit scherm', m < 200, f'luminantie={m:.0f}')
@@ -207,11 +229,12 @@ def tabs_sweep(tier):
 
 def layer3():
     L = '3 crashveiligheid'
-    res = sorted(glob.glob(os.path.join(ROOT, 'scratchpad', 'testlab-run*.log')))
-    if not res:
-        add(L, 'Firebase Test Lab (5 toestellen)', False, 'nog niet gedraaid: bash scripts/testlab.sh', skip=True); return
+    res = sorted(glob.glob(os.path.join(ROOT, 'scratchpad', 'testlab-run*.log')), key=os.path.getmtime)
+    apk = os.path.join(ROOT, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk')
+    if not res or (os.path.exists(apk) and os.path.getmtime(res[-1]) < os.path.getmtime(apk)):
+        add(L, 'Firebase Test Lab (5 toestellen) op DEZE build', False, 'geen run nieuwer dan de build: bash scripts/testlab.sh', skip=True); return
     t = open(res[-1], encoding='utf-8', errors='ignore').read()
-    passed = len(re.findall(r'\bPassed\b', t)); failed = len(re.findall(r'\b(Failed|Crashed|Inconclusive)\b', t))
+    passed = len(re.findall(r'Passed', t)); failed = len(re.findall(r'(Failed|Crashed|Inconclusive)', t))
     add(L, f'Firebase ({os.path.basename(res[-1])})', failed == 0 and passed > 0, f'passed={passed} failed/crashed={failed}')
 
 
