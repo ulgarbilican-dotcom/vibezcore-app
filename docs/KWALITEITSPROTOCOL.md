@@ -36,6 +36,12 @@ eerste scherm door. Heeft een onderdeel meer dan één spoor (bv. het Breathwork
 **elk spoor volledig** doorlopen en worden beide met elkaar vergeleken (zelfde eindresultaat). Tab voor tab: pas na volledig PASS van Free volgt Premium, en pas na
 volledig PASS van een onderdeel volgt het volgende. Per scherm: elke terugknop en elke CTA (tekst, actief/inactief, juiste doel). Lijsten: `docs/FLOWS_*.md`.
 
+**R7 — Elk scherm past zich aan; elke flow draait op een toestelmatrix.** Een flow telt pas als hij slaagt op **alle** maten van de matrix, niet alleen op het toestel van de operator.
+Matrix (via `adb shell wm size` / `wm density` / `settings put system font_scale`, na afloop ALTIJD hersteld): klein (720x1280 @ 320 dpi) · standaard (A16, 1080x2340 @ 420) ·
+hoog/groot (1080x2520 @ 440) · lettergrootte 1,3× · "weergavegrootte" groot · navigatie met 3 knoppen én met gebaren. Per stap ook gemeten: **elke knop ligt volledig in het zichtbare
+scherm** (niet onder de systeembalken of de tabbalk, niet afgekapt) en **tikken landen op de bedoelde knop** (posities komen uit de app zelf, geen vaste pixels). Echte toestellen: Firebase Test Lab (5).
+Tikken met vaste coördinaten zijn daarom verboden in flows; alleen via benoemde knoppen of verhoudingen van het scherm.
+
 ## 3. De vloeiwandeling (automatisch): `scripts/flow-walk.py`
 Loopt op de aangesloten telefoon alle hoofdroutes af en controleert per scherm R2:
 - elk tabblad: bereikbaar, en heeft tabbalk of uitweg;
