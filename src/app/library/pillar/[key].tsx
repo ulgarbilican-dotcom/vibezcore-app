@@ -30,6 +30,7 @@
 
 import { MiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
 import Tap from '@/components/Tap';
+import { Reveal } from '@/components/Reveal';
 import { usePlayerState } from '@/services/audio-player';
 import {
   PILLAR_META,
@@ -266,6 +267,7 @@ export default function PillarFocusScreen() {
         {/* ── KUNSTWERK — los, ingekaderd vlak (geen edge-to-edge banner),
            gecentreerd, met schaduw — Apple Music/Podcasts-showpagina, geen
            marketing-hero. */}
+        <Reveal i={0}>
         <View style={s.artWrap}>
           {meta.img ? (
             /* Operator ("ik vraag letterlijk om de fotos mooi te laten
@@ -289,10 +291,12 @@ export default function PillarFocusScreen() {
             <View style={[s.art, { backgroundColor: C.card }]} />
           )}
         </View>
+        </Reveal>
 
         {/* ── TITELBLOK — onder het kunstwerk, platte paginategekst (geen
            wit-op-foto meer). Beantwoordt "wat IS een pillar": naam +
            tagline, uitgesproken, leesbaar tegen de gewone achtergrond. */}
+        <Reveal i={1}>
         <View style={s.titleBlock}>
           <Text style={s.eyebrow}>{`PILLAR ${meta.num}`}</Text>
           <Text style={s.title}>{meta.name}</Text>
@@ -306,6 +310,7 @@ export default function PillarFocusScreen() {
             {totalCount} {totalCount === 1 ? 'Session' : 'Sessions'}
           </Text>
         </View>
+        </Reveal>
 
         {/* Operator, 26 september 2026 ("play-knop moet niet actief zijn
            maar decoratief — nu speelt dat enkel eerste audio af"): had
@@ -314,18 +319,21 @@ export default function PillarFocusScreen() {
            meer — puur visueel label, de sessie-rijen eronder zijn de
            enige echte play-affordance. */}
         {firstSession ? (
+          <Reveal i={2}>
           <View style={s.playBtn}>
             <Play size={15} color={C.ctaText} fill={C.ctaText} strokeWidth={0} />
             <Text style={s.playBtnText}>Play</Text>
           </View>
+          </Reveal>
         ) : null}
 
         {/* ── TRACKLIJST — per serie gegroepeerd onder een subtiel,
            ALL-CAPS sectielabel (Apple's eigen "Disc 1/Disc 2"-taal),
            genummerde rijen eronder, geen expand/collapse: dit scherm
            bestaat juist om alles in één keer te tonen. */}
-        {groups.map((group) => (
-          <View key={group.name} style={s.group}>
+        {groups.map((group, gi) => (
+          <Reveal key={group.name} i={3 + gi}>
+          <View style={s.group}>
             {/* Operator ("ik mis inspired by / VIBEZCORE Original Series
                in de library, lijkt mij wel belangrijk"): stond al in de
                player (zie series/subtitle daar) maar ontbrak hier op het
@@ -349,6 +357,7 @@ export default function PillarFocusScreen() {
               ))}
             </BlurView>
           </View>
+          </Reveal>
         ))}
       </ScrollView>
       <MiniPlayer standalone />

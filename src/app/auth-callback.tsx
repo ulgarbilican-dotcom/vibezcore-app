@@ -21,6 +21,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
+import { Reveal } from '@/components/Reveal';
 import BalancedText from '@/components/BalancedText';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -32,7 +33,8 @@ import { refreshSubscription } from '@/hooks/useSubscription';
 import { getLastContentTabRoute } from '@/utils/last-tab';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+
 import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useState } from 'react';
 import {
@@ -235,9 +237,15 @@ export default function AuthCallback() {
       <View style={s.center}>
         {state.phase === 'loading' && (
           <>
-            <ActivityIndicator size="large" color={Brand.textDim} />
-            <Text style={s.title}>Signing you in…</Text>
-            <Text style={s.sub}>One moment — verifying your link.</Text>
+            <Reveal i={0}>
+              <ActivityIndicator size="large" color={Brand.textDim} />
+            </Reveal>
+            <Reveal i={1}>
+              <Text style={s.title}>Signing you in…</Text>
+            </Reveal>
+            <Reveal i={2}>
+              <Text style={s.sub}>One moment — verifying your link.</Text>
+            </Reveal>
             {/* Hangt het netwerk, dan na 12 s een uitweg (audit 16 okt 2026). */}
             {slow && (
               <Tap onPress={() => goToTab('/account')} hitSlop={12} accessibilityRole="button" style={{ marginTop: 24, paddingVertical: 12 }}>
@@ -248,24 +256,37 @@ export default function AuthCallback() {
         )}
         {state.phase === 'success' && (
           <>
-            <View style={s.checkCircle}>
-              <Text style={s.checkText}>✓</Text>
-            </View>
-            <Text style={s.title}>You're in</Text>
-            <Text style={s.sub}>
-              {state.needsPasswordSetup
-                ? 'Setting up your account…'
-                : 'Opening VIBEZCORE…'}
-            </Text>
+            <Reveal i={0}>
+              <View style={s.checkCircle}>
+                <Text style={s.checkText}>✓</Text>
+              </View>
+            </Reveal>
+            <Reveal i={1}>
+              <Text style={s.title}>You're in</Text>
+            </Reveal>
+            <Reveal i={2}>
+              <Text style={s.sub}>
+                {state.needsPasswordSetup
+                  ? 'Setting up your account…'
+                  : 'Opening VIBEZCORE…'}
+              </Text>
+            </Reveal>
           </>
         )}
         {state.phase === 'error' && (
           <>
-            <View style={s.errorCircle}>
-              <Text style={s.errorText}>!</Text>
-            </View>
-            <Text style={s.title}>Link expired</Text>
-            <BalancedText style={s.sub}>{state.message}</BalancedText>
+            <Reveal i={0}>
+              <View style={s.errorCircle}>
+                <Text style={s.errorText}>!</Text>
+              </View>
+            </Reveal>
+            <Reveal i={1}>
+              <Text style={s.title}>Link expired</Text>
+            </Reveal>
+            <Reveal i={2}>
+              <BalancedText style={s.sub}>{state.message}</BalancedText>
+            </Reveal>
+            <Reveal i={3}>
             <AnimatedPressable
               style={[s.btn, signInBtnPressStyle]}
               onPress={() => goToTab('/account')}
@@ -275,6 +296,7 @@ export default function AuthCallback() {
             >
               <Text style={s.btnText}>Go to sign in</Text>
             </AnimatedPressable>
+            </Reveal>
           </>
         )}
       </View>

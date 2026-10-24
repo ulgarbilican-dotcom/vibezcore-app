@@ -39,6 +39,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from '@/utils/safe-area';
+import { Reveal } from '@/components/Reveal';
 
 /* Press-scale recipe (zie breath-welcome.tsx `StartCard`) — de "Open
    Support page"-knop had nog geen enkele press-feedback. */
@@ -103,11 +104,16 @@ export default function SupportScreen() {
         }}
       />
       <View style={s.center}>
-        <Text style={s.title}>Opening Support…</Text>
-        <BalancedText style={s.body}>
-          We&apos;re taking you to the VIBEZCORE Support page where you can
-          submit your request.
-        </BalancedText>
+        <Reveal i={0}>
+          <Text style={s.title}>Opening Support…</Text>
+        </Reveal>
+        <Reveal i={1}>
+          <BalancedText style={s.body}>
+            We&apos;re taking you to the VIBEZCORE Support page where you can
+            submit your request.
+          </BalancedText>
+        </Reveal>
+        <Reveal i={2}>
         <AnimatedPressable
           style={[s.btn, pressStyle]}
           onPress={() => {
@@ -118,6 +124,7 @@ export default function SupportScreen() {
         >
           <Text style={s.btnText}>Open Support page</Text>
         </AnimatedPressable>
+        </Reveal>
       </View>
     </SafeAreaView>
   );

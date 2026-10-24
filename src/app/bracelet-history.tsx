@@ -16,6 +16,7 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import { HeaderBackButton } from '@/components/HeaderBackButton';
+import { Reveal } from '@/components/Reveal';
 import {
   ClearHistoryButton,
   HistoryDayHeader,
@@ -172,22 +173,27 @@ export default function BraceletHistory() {
         }}
       />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <Reveal i={0}>
         <WeekSummaryCard
           days={weekDays.map((d) => ({ key: d.dayKey, letter: d.dayLabel.slice(0, 1), minutes: d.minutes, today: d.dayLabel === 'Today' }))}
           sessions={weekSessions}
           streak={stats.streak}
           allTimeMinutes={stats.totalMinutes}
         />
+        </Reveal>
 
         {sessions.length === 0 ? (
-          <HistoryEmpty
-            title="No sessions yet"
-            body="Start your first State Control session and it will appear here."
-            cta="Back to State Control"
-            onPress={() => router.back()}
-          />
+          <Reveal i={1}>
+            <HistoryEmpty
+              title="No sessions yet"
+              body="Start your first State Control session and it will appear here."
+              cta="Back to State Control"
+              onPress={() => router.back()}
+            />
+          </Reveal>
         ) : (
           <>
+            <Reveal i={1}>
             <HistorySectionLabel>By state</HistorySectionLabel>
             <HistoryGroup>
               {byState.map((e, i) => {
@@ -204,7 +210,9 @@ export default function BraceletHistory() {
                 );
               })}
             </HistoryGroup>
+            </Reveal>
 
+            <Reveal i={2}>
             <HistorySectionLabel>All sessions</HistorySectionLabel>
             {groups.map((g) => {
               const open = effectiveOpen.has(g.key);
@@ -237,8 +245,11 @@ export default function BraceletHistory() {
                 </View>
               );
             })}
+            </Reveal>
 
-            <ClearHistoryButton label="Clear history" onPress={onClear} />
+            <Reveal i={3}>
+              <ClearHistoryButton label="Clear history" onPress={onClear} />
+            </Reveal>
           </>
         )}
       </ScrollView>

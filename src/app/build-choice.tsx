@@ -50,6 +50,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
+import { Reveal } from '@/components/Reveal';
 import { BrandDark, BrandLight, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
@@ -297,12 +298,14 @@ export default function BuildChoiceScreen() {
            krachtiger, zoals 'Choose your path'"): was gecentreerd over 2
            regels ("How do you want to build it?") — brak de links-
            uitgelijnde flow die de kaarten eronder al hebben. */}
+        <Reveal i={0}>
         <Text style={s.header}>Choose your path</Text>
         {/* Operator, 18 september 2026: subheader "Your goal. Your
            approach." — zelfde links uitlijning als de titel. */}
         {/* Operator, 18 september 2026: geen punt aan het eind — tagline,
            geen zin (zelfde regel als headers/subheaders elders). */}
         <Text style={s.subheader}>Your goal. Your approach</Text>
+        </Reveal>
 
         {/* Operator, 20/21 september 2026: kaarten zijn compacte,
            horizontale rijen (foto klein rechts, contain — geen crop),
@@ -310,13 +313,14 @@ export default function BuildChoiceScreen() {
            oplicht (zelfde recept als intensity.tsx), en nu ook dezelfde
            druk-animatie als goal.tsx (`PathCard`, hierboven). */}
         <View style={s.list}>
-          {PATHS.map((p) => (
-            <PathCard
-              key={p.key}
-              p={p}
-              on={choice === p.key}
-              onPress={() => setChoice(p.key)}
-            />
+          {PATHS.map((p, idx) => (
+            <Reveal key={p.key} i={1 + idx}>
+              <PathCard
+                p={p}
+                on={choice === p.key}
+                onPress={() => setChoice(p.key)}
+              />
+            </Reveal>
           ))}
         </View>
 
@@ -324,6 +328,7 @@ export default function BuildChoiceScreen() {
       {/* Vaste knop onder de scroll (geen overlay): de scrollruimte eindigt erboven,
           dus geen kaart kan er ooit onder schuiven. */}
       <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) + 16 }}>
+          <Reveal i={3}>
           <Tap
             style={[s.cta, !choice && s.ctaDisabled]}
             disabled={!choice}
@@ -331,6 +336,7 @@ export default function BuildChoiceScreen() {
           >
             <Text style={[s.ctaTxt, !choice && CTA.labelDisabled]}>Continue</Text>
           </Tap>
+          </Reveal>
       </View>
 
 

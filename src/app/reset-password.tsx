@@ -22,6 +22,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -366,8 +367,12 @@ export default function ResetPassword() {
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={s.center}>
-          <ActivityIndicator size="large" color={Brand.textDim} />
-          <Text style={s.title}>Verifying link…</Text>
+          <Reveal i={0}>
+            <ActivityIndicator size="large" color={Brand.textDim} />
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.title}>Verifying link…</Text>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -385,17 +390,24 @@ export default function ResetPassword() {
           }}
         />
         <View style={s.center}>
-          <View style={s.errorCircle}>
-            <Text style={s.errorText}>!</Text>
-          </View>
-          <Text style={s.title}>
-            {mode === 'recovery' ? 'Link expired' : 'Session expired'}
-          </Text>
-          <Text style={s.sub}>
-            {mode === 'recovery'
-              ? 'This recovery link has expired or was already used. Request a new one.'
-              : 'Your sign-in session expired before you could set a password. Please sign in again.'}
-          </Text>
+          <Reveal i={0}>
+            <View style={s.errorCircle}>
+              <Text style={s.errorText}>!</Text>
+            </View>
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.title}>
+              {mode === 'recovery' ? 'Link expired' : 'Session expired'}
+            </Text>
+          </Reveal>
+          <Reveal i={2}>
+            <Text style={s.sub}>
+              {mode === 'recovery'
+                ? 'This recovery link has expired or was already used. Request a new one.'
+                : 'Your sign-in session expired before you could set a password. Please sign in again.'}
+            </Text>
+          </Reveal>
+          <Reveal i={3}>
           <AnimatedPressable
             style={[s.btnPrimary, errorBtnPressStyle]}
             onPress={() =>
@@ -412,6 +424,7 @@ export default function ResetPassword() {
               {mode === 'recovery' ? 'Request new link' : 'Back to sign in'}
             </Text>
           </AnimatedPressable>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -422,11 +435,17 @@ export default function ResetPassword() {
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={s.center}>
-          <View style={s.checkCircle}>
-            <Text style={s.checkText}>✓</Text>
-          </View>
-          <Text style={s.title}>{copy.doneTitle}</Text>
-          <Text style={s.sub}>Opening your library…</Text>
+          <Reveal i={0}>
+            <View style={s.checkCircle}>
+              <Text style={s.checkText}>✓</Text>
+            </View>
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.title}>{copy.doneTitle}</Text>
+          </Reveal>
+          <Reveal i={2}>
+            <Text style={s.sub}>Opening your library…</Text>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -448,9 +467,12 @@ export default function ResetPassword() {
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
+        <Reveal i={0}>
         <Text style={s.title}>{copy.heading}</Text>
         <BalancedText style={s.sub}>{copy.sub}</BalancedText>
+        </Reveal>
 
+        <Reveal i={1}>
         <Text style={s.label}>
           {mode === 'recovery' ? 'New password' : 'Password'}
         </Text>
@@ -477,7 +499,9 @@ export default function ResetPassword() {
             <Text style={s.toggleText}>{showPw ? 'Hide' : 'Show'}</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
+        <Reveal i={2}>
         <Text style={s.label}>Confirm password</Text>
         <View style={s.inputWrap}>
           <TextInput
@@ -502,6 +526,7 @@ export default function ResetPassword() {
             <Text style={s.toggleText}>{showPw2 ? 'Hide' : 'Show'}</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
         {showMatchHint && (
           <Text style={matches ? s.matchOk : s.matchBad}>
@@ -511,6 +536,7 @@ export default function ResetPassword() {
 
         {err && <Text style={s.err}>{err}</Text>}
 
+        <Reveal i={3}>
         <AnimatedPressable
           style={[s.btnPrimary, phase === 'updating' && s.btnDisabled, submitPressStyle]}
           onPress={onSubmit}
@@ -525,6 +551,7 @@ export default function ResetPassword() {
             <Text style={s.btnPrimaryText}>{copy.submit}</Text>
           )}
         </AnimatedPressable>
+        </Reveal>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

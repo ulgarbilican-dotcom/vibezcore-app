@@ -27,6 +27,7 @@
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { AudioAccent, AudioAccentLight, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { useIAP } from '@/hooks/useIAP';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -170,14 +171,15 @@ export default function MembershipPlans({
   return (
     <View>
       {showHero && (
-        <>
+        <Reveal i={0}>
           <Text style={s.hero}>Unlock your potential</Text>
           <BalancedText style={s.heroSub}>
             One VIBEZCORE membership unlocks Breathwork, State Control and the Audio Library
           </BalancedText>
-        </>
+        </Reveal>
       )}
 
+      <Reveal i={1}>
       <View style={s.row}>
         <Bounce
           style={s.cardOuter}
@@ -228,8 +230,10 @@ export default function MembershipPlans({
           </View>
         </Bounce>
       </View>
+      </Reveal>
 
       {showDay && (
+        <Reveal i={2}>
         <Bounce
           style={s.dayOuter}
           onPress={() => setPlan('day')}
@@ -249,8 +253,10 @@ export default function MembershipPlans({
             </View>
           </View>
         </Bounce>
+        </Reveal>
       )}
 
+      <Reveal i={3}>
       <Text style={s.summary}>{summary}</Text>
 
       <Bounce style={s.cta} onPress={() => onContinue(plan)} accessibilityLabel={cta}>
@@ -258,8 +264,10 @@ export default function MembershipPlans({
           <Text style={s.ctaTxt}>{cta}</Text>
         </View>
       </Bounce>
+      </Reveal>
 
       {/* Schedule 2: verlenging + opzeggen vóór de aankoop. */}
+      <Reveal i={4}>
       <Text style={s.disclosure}>
         {disclosure}
       </Text>
@@ -277,6 +285,7 @@ export default function MembershipPlans({
           <Text style={s.link}>Restore Purchases</Text>
         </Tap>
       </View>
+      </Reveal>
     </View>
   );
 }

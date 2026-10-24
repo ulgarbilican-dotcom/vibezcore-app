@@ -22,6 +22,7 @@
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import {
   PILLAR_META,
   SERIES_PHOTO,
@@ -423,35 +424,6 @@ export default function PlayerScreen() {
     transform: [{ scale: artworkScale.value }],
   }));
 
-  /* Operator, 26 september 2026 (Apple-redesign, staggered entrance):
-     eyebrow/titel/hoes/knoppen vliegen na elkaar in bij het openen van dit
-     scherm — Apple-patroon i.p.v. alles in één keer tonen. Dit draait
-     UITSLUITEND op mount (lege dependency-array), volledig losstaand van
-     elke Pressable's press-in/out — geen enkele component unmountet
-     tijdens deze animatie, dus geen risico op de crashklasse die de
-     resume-knoppen eerder troffen. */
-  const entranceArt = useSharedValue(0);
-  const entranceTitle = useSharedValue(0);
-  const entranceControls = useSharedValue(0);
-  useEffect(() => {
-    entranceArt.value = withTiming(1, { duration: 500 });
-    entranceTitle.value = withDelay(120, withTiming(1, { duration: 450 }));
-    entranceControls.value = withDelay(240, withTiming(1, { duration: 450 }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const entranceArtStyle = useAnimatedStyle(() => ({
-    opacity: entranceArt.value,
-    transform: [{ translateY: (1 - entranceArt.value) * 14 }],
-  }));
-  const entranceTitleStyle = useAnimatedStyle(() => ({
-    opacity: entranceTitle.value,
-    transform: [{ translateY: (1 - entranceTitle.value) * 14 }],
-  }));
-  const entranceControlsStyle = useAnimatedStyle(() => ({
-    opacity: entranceControls.value,
-    transform: [{ translateY: (1 - entranceControls.value) * 10 }],
-  }));
-
   /* ── Press-scale animaties (per knop, additief — geen logica-wijziging) ── */
   const pressScaleMinimize = useSharedValue(1);
   const onPressInMinimize = () => { pressScaleMinimize.value = withSpring(0.92, SPRING_PRESS_IN); };
@@ -623,6 +595,7 @@ export default function PlayerScreen() {
            Krimpt licht bij pauze via artworkAnimStyle (zie useEffect
            hierboven), niet gekoppeld aan een Pressable dus geen
            unmount-race mogelijk. */}
+        <Reveal i={0} style={{ alignSelf: 'center' }}>
         <Animated.View
           style={[
             s.artworkWrap,
@@ -630,7 +603,6 @@ export default function PlayerScreen() {
                — anders schoven de knoppen op kleine telefoons onder de rand. */
             photoAspect ? { height: Math.min(ARTWORK_SIZE / photoAspect, ARTWORK_SIZE * 1.25) } : null,
             artworkAnimStyle,
-            entranceArtStyle,
           ]}
         >
           {photoUri ? (
@@ -644,8 +616,9 @@ export default function PlayerScreen() {
             <View style={[s.artworkImage, s.backdropFallback]} />
           )}
         </Animated.View>
+        </Reveal>
 
-        <Animated.View style={[s.titleBlock, entranceTitleStyle]}>
+        <Reveal i={1} style={s.titleBlock}>
           {/* Operator (Apple-HIG-brief, "de titel van de sessie hoort
              altijd bovenaan, groot en vet — categorie/auteur eronder in
              een veel kleiner, rustiger grijs font"): hiërarchie omgedraaid
@@ -662,13 +635,13 @@ export default function PlayerScreen() {
           </View>
           <Text style={s.series}>{session.series.toUpperCase()}</Text>
           {subtitle ? <BalancedText style={s.subtitle}>{subtitle}</BalancedText> : null}
-        </Animated.View>
+        </Reveal>
 
         {/* Operator, 8 okt 2026: "zet vanaf voortgangsbalk lager" — de vrije
            ruimte staat nu boven de voortgangsbalk i.p.v. eronder, zodat
            balk + knoppen onderaan staan en hoes + titel op hun plek blijven. */}
         <View style={{ marginTop: 'auto' }} />
-        <Animated.View style={entranceControlsStyle}>
+        <Reveal i={2}>
         {/* Operator ("continue-popup verschijnt telkens overal, heel
            storend — hoe kunnen we dat anders doen?"): het blokkerende
            Continue/Start over-paneel is weg. `loadSession()` hervat nu
@@ -877,7 +850,7 @@ export default function PlayerScreen() {
           />
         </View>
 
-        </Animated.View>
+        </Reveal>
 
         {/* ── Extras row — operator (Apple-HIG-brief, "favorite/share
             verhuizen naar de absolute onderkant, zodat ze de rust rond

@@ -16,6 +16,7 @@
    tegendeel. */
 
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { MiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/MiniPlayer';
@@ -187,18 +188,21 @@ export default function LibraryFreeScreen() {
            Dat schreeuwt om aandacht." Titel nu links uitgelijnd (H1,
            32px Bold, -0.4) i.p.v. gecentreerd, exact boven de
            thumbnails; em-streepje uit de hulptekst gehaald. */}
+        <Reveal i={0}>
         <View style={s.header}>
           <Text style={s.h1}>Free Sessions</Text>
           {/* BalancedText: in blok, nooit één los woord op de laatste regel
               (operator, 16 okt 2026 — regel voor de hele app). */}
           <BalancedText style={s.subtitle}>Listen to these any time, no subscription required</BalancedText>
         </View>
+        </Reveal>
         {/* Eén doorlopend wit Bento-vlak i.p.v. losse rijen op de kale
            achtergrond — zelfde patroon als de tracklijst op "Your
            Journey". `hideTag`: de FREE-badge boven elke titel is weg,
            de pagina zelf ("Free Sessions") vertelt dat al. Het grijze
            "Free"-knopje rechts is vervangen door de minimalistische
            Indigo play-knop. */}
+        <Reveal i={1}>
         <View style={s.listCard}>
           <View style={s.listCardClip}>
             {sessions.map((sess, i) => (
@@ -218,6 +222,7 @@ export default function LibraryFreeScreen() {
             ))}
           </View>
         </View>
+        </Reveal>
       </ScrollView>
       <MiniPlayer standalone />
     </SafeAreaView>

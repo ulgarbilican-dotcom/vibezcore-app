@@ -27,6 +27,7 @@
    hieronder). */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { Reveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
@@ -533,6 +534,7 @@ export default function PlanReviewScreen() {
            herhaling "Your moments, your sessions, your day" door een
            kortere Apple-achtige zin; het aantal/duur staat niet meer in
            een zware capsule maar als subtiele tekstregel eronder. */}
+        <Reveal i={0}>
         <Text style={s.header}>Your protocol</Text>
         <Text style={s.lead}>Review your daily breathing rhythm</Text>
         <Text style={s.countLine}>
@@ -540,6 +542,7 @@ export default function PlanReviewScreen() {
             ? `${items.length} session${items.length > 1 ? 's' : ''} · ${totalMinutes} minutes total`
             : 'No sessions left — go back and pick at least one'}
         </Text>
+        </Reveal>
 
         {/* Operator, 21 september 2026 ("kort en duidelijk uitleggen
            waarom deze keuzes, gepersonaliseerd voor eender welk
@@ -551,6 +554,7 @@ export default function PlanReviewScreen() {
            matglazen pil i.p.v. een kale tekstlink — zelfde
            `dimezisBlurViewSdk31Plus`-recept als de rest van de app. */}
         {items.length > 0 && (
+          <Reveal i={1}>
           <AnimatedPressable
             style={[s.whyTrigger, whyTriggerStyle]}
             onPress={() => {
@@ -570,6 +574,7 @@ export default function PlanReviewScreen() {
             <Info size={13} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
             <Text style={s.whyTriggerTxt}>Why this protocol</Text>
           </AnimatedPressable>
+          </Reveal>
         )}
 
         {/* Operator, 18 september 2026 ("sessies voor zelfde tijdsperiode
@@ -577,8 +582,9 @@ export default function PlanReviewScreen() {
            een kaart PER SESSIE (ook bij 2 sessies in dezelfde Morning) —
            nu één kaart per dagdeel (`groupedSlots`, zie hierboven), de
            foto maar één keer, sessies als rijen erbinnen. */}
-        {groupedSlots.map((g) => (
-          <View key={g.slot} style={s.groupSection}>
+        {groupedSlots.map((g, gi) => (
+          <Reveal key={g.slot} i={Math.min(2 + gi, 8)}>
+          <View style={s.groupSection}>
             <Text style={s.groupLabel}>{g.label.toUpperCase()}</Text>
             <View style={s.groupCard}>
               <View style={s.groupPhoto}>
@@ -612,6 +618,7 @@ export default function PlanReviewScreen() {
               </View>
             </View>
           </View>
+          </Reveal>
         ))}
       </ScrollView>
 
@@ -633,6 +640,7 @@ export default function PlanReviewScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
+        <Reveal i={3}>
         <AnimatedPressable
           style={[s.cta, (items.length === 0 || saving) && s.ctaDisabled, ctaStyle]}
           disabled={items.length === 0 || saving}
@@ -642,6 +650,7 @@ export default function PlanReviewScreen() {
         >
           <Text style={[s.ctaTxt, (items.length === 0 || saving) && CTA.labelDisabled]}>{saving ? 'Building…' : 'Continue'}</Text>
         </AnimatedPressable>
+        </Reveal>
       </View>
 
       {/* ── Duur-kiezer ── de bestaande duren van die toestand, niets

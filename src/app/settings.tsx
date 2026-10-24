@@ -25,6 +25,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
+import { Reveal } from '@/components/Reveal';
 import BalancedText from '@/components/BalancedText';
 import { getCrashReportsEnabled, setCrashReportsEnabled } from '@/services/crash-reporting';
 import HealthSyncSetting from '@/components/HealthSyncSetting';
@@ -276,6 +277,7 @@ export default function SettingsScreen() {
         {AUDIO_ENABLED && (
         <>
         {/* ── PLAYBACK ────────────────────────────────────────────── */}
+        <Reveal i={0}>
         <Text style={s.sectionLabel}>Playback</Text>
         <View style={s.card}>
           {/* Iter 9pp: auto-play next session (verhuisd van Library) */}
@@ -320,11 +322,13 @@ export default function SettingsScreen() {
           {/* "Audio quality" verwijderd (audit 8 okt 2026): de keuze werd nergens
               gelezen — er bestaat geen lagere kwaliteit om naar te schakelen. */}
         </View>
+        </Reveal>
 
         {/* ── PRIVACY ─────────────────────────────────────────────── */}
         </>
         )}
 
+        <Reveal i={1}>
         <Text style={s.sectionLabel}>Privacy</Text>
         <View style={s.card}>
           <View style={s.row}>
@@ -362,6 +366,7 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
+        </Reveal>
 
         {/* De intro opnieuw kunnen bekijken (operator, 3 augustus 2026). Hij
             liep maar één keer en zat daarna achter een ontwikkelaarsschakelaar
@@ -374,6 +379,7 @@ export default function SettingsScreen() {
             niet iedereen heeft een bracelet, en instellingen voor iets dat je
             niet bezit maken een scherm onbegrijpelijk (operator, 5 augustus
             2026). */}
+        <Reveal i={2}>
         <Text style={s.sectionLabel}>Notifications</Text>
         <View style={s.card}>
           <Tap
@@ -391,7 +397,9 @@ export default function SettingsScreen() {
             <Text style={s.notifValue}>{notifOn === null ? '' : notifOn ? 'On' : 'Off'}</Text>
           </Tap>
         </View>
+        </Reveal>
 
+        <Reveal i={3}>
         <Text style={s.sectionLabel}>Breathwork</Text>
         <Text style={s.subLabel}>Daily reminders</Text>
         <View style={s.card}>
@@ -431,11 +439,13 @@ export default function SettingsScreen() {
             </View>
           ))}
         </View>
+        </Reveal>
 
         {/* Operator, 5 okt 2026 ("hoe kan de user deze meldingen afzetten?
             moet echt duidelijk zijn"): de herinneringen van het dagplan
             hadden geen eigen schakelaar — de rijen hierboven gelden enkel
             voor de vaste dagmomenten. */}
+        <Reveal i={4}>
         <View style={s.card}>
           <View style={s.row}>
             <View style={s.rowText}>
@@ -461,6 +471,9 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        </Reveal>
+
+        <Reveal i={5}>
         <Text style={s.subLabel}>General</Text>
         <View style={s.card}>
           <PressFeedback
@@ -491,11 +504,13 @@ export default function SettingsScreen() {
              de tab (zie (tabs)/index.tsx), geen eenmalige vlag meer om te
              resetten. */}
         </View>
+        </Reveal>
 
         {/* ── STATE CONTROL ────────────────────────────────────────────
             Een State Control-dagplan bestaat voor iedereen (telefoon-
             haptiek), niet enkel voor bracelet-bezitters — dus deze
             schakelaar staat buiten het bracelet-blok. */}
+        <Reveal i={6}>
         <Text style={s.sectionLabel}>State Control</Text>
         <View style={s.card}>
           <View style={s.row}>
@@ -535,10 +550,12 @@ export default function SettingsScreen() {
             <Text style={s.versionText}>›</Text>
           </PressFeedback>
         </View>
+        </Reveal>
 
         {/* ── HEALTH (12 okt 2026) — Apple Health / Health Connect.
             UIT bij de lancering (19 okt 2026, HEALTH_INTEGRATION_ENABLED). */}
         {HEALTH_INTEGRATION_ENABLED ? (
+          <Reveal i={7}>
           <HealthSyncSetting
             cardStyle={s.card}
             rowStyle={s.row}
@@ -547,6 +564,7 @@ export default function SettingsScreen() {
             subStyle={s.rowSub}
             labelStyle={s.sectionLabel}
           />
+          </Reveal>
         ) : null}
 
         {/* ── SMART BEAD BRACELET ──────────────────────────────────────
@@ -555,7 +573,7 @@ export default function SettingsScreen() {
             niet bezit — dat is het verschil tussen een app die meedenkt en
             een lijst met dode knoppen. */}
         {hasBracelet && (
-          <>
+          <Reveal i={7}>
             <Text style={s.sectionLabel}>Smart Bead Bracelet</Text>
             {/* Eigen herinneringen. Breathwork vraagt vijf minuten en
                 aandacht; de bracelet vraagt dat je op één knop drukt. Twee
@@ -621,9 +639,10 @@ export default function SettingsScreen() {
                 />
               </View>
             </View>
-          </>
+          </Reveal>
         )}
 
+        <Reveal i={8}>
         <PressFeedback
           style={s.dangerRow}
           onPress={onClearData}
@@ -638,8 +657,10 @@ export default function SettingsScreen() {
           </View>
           <Text style={s.dangerCta}>{clearing ? '…' : 'Clear'}</Text>
         </PressFeedback>
+        </Reveal>
 
         {/* ── ABOUT ────────────────────────────────────────────────── */}
+        <Reveal i={8}>
         <Text style={s.sectionLabel}>About</Text>
         <View style={s.card}>
           <View style={s.row}>
@@ -650,6 +671,7 @@ export default function SettingsScreen() {
             <Text style={s.versionText}>{versionLabel}</Text>
           </View>
         </View>
+        </Reveal>
 
         {/* ── DEV USER-STATE OVERRIDE (iter 9p) ────────────────────────
             Alleen zichtbaar in __DEV__ builds. Laat operator switchen
@@ -800,6 +822,7 @@ export default function SettingsScreen() {
           </>
         )}
 
+        <Reveal i={8}>
         <PressFeedback
           style={s.backLink}
           onPress={() => router.back()}
@@ -807,6 +830,7 @@ export default function SettingsScreen() {
         >
           <Text style={s.backLinkText}>← Back to Profile</Text>
         </PressFeedback>
+        </Reveal>
       </ScrollView>
     </SafeAreaView>
   );

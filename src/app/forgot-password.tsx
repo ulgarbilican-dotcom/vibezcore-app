@@ -17,6 +17,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { fetchWithTimeout } from '@/services/auth';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -204,15 +205,22 @@ export default function ForgotPassword() {
           }}
         />
         <View style={s.center}>
-          <View style={s.checkCircle}>
-            <Text style={s.checkText}>✓</Text>
-          </View>
-          <Text style={s.title}>Check your inbox</Text>
-          <BalancedText style={s.sub}>
-            If an account matches that email, a reset link is on its
-            way. It opens a secure page where you choose a new password
-            (valid for 1 hour) — then sign in here with it.
-          </BalancedText>
+          <Reveal i={0}>
+            <View style={s.checkCircle}>
+              <Text style={s.checkText}>✓</Text>
+            </View>
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.title}>Check your inbox</Text>
+          </Reveal>
+          <Reveal i={2}>
+            <BalancedText style={s.sub}>
+              If an account matches that email, a reset link is on its
+              way. It opens a secure page where you choose a new password
+              (valid for 1 hour) — then sign in here with it.
+            </BalancedText>
+          </Reveal>
+          <Reveal i={3}>
           <AnimatedPressable
             style={[s.btnSecondary, backToSignInPressStyle]}
             onPress={() => goToTab('/account')}
@@ -222,6 +230,7 @@ export default function ForgotPassword() {
           >
             <Text style={s.btnSecondaryText}>Back to sign in</Text>
           </AnimatedPressable>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -248,12 +257,15 @@ export default function ForgotPassword() {
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
+        <Reveal i={0}>
         <Text style={s.title}>Forgot your password?</Text>
         <BalancedText style={s.sub}>
           No problem. Enter the email associated with your account
           and we'll send a link to reset it.
         </BalancedText>
+        </Reveal>
 
+        <Reveal i={1}>
         <Text style={s.label}>Email</Text>
         <TextInput
           style={s.input}
@@ -267,8 +279,10 @@ export default function ForgotPassword() {
           autoComplete="email"
           textContentType="emailAddress"
         />
+        </Reveal>
         {err && <Text style={s.err}>{err}</Text>}
 
+        <Reveal i={2}>
         <AnimatedPressable
           style={[s.btnPrimary, busy && s.btnDisabled, submitPressStyle]}
           onPress={onSubmit}
@@ -283,10 +297,13 @@ export default function ForgotPassword() {
             <Text style={s.btnPrimaryText}>Send reset link</Text>
           )}
         </AnimatedPressable>
+        </Reveal>
 
+        <Reveal i={3}>
         <BalancedText style={s.helpLine}>
           The reset link opens directly in this app.
         </BalancedText>
+        </Reveal>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

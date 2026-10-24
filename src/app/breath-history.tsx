@@ -15,6 +15,7 @@ import { Brand } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { clearBreathHistory, type BreathHistoryEntry, useBreathHistory } from '@/utils/breath-history';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
+import { Reveal } from '@/components/Reveal';
 import {
   ClearHistoryButton,
   HistoryDayHeader,
@@ -290,22 +291,27 @@ export default function BreathHistoryScreen() {
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Reveal i={0}>
         <WeekSummaryCard
           days={week7.map((d) => ({ key: d.dateKey, letter: d.label, minutes: d.sec / 60, today: d.today }))}
           sessions={weekSessions}
           streak={stats.streakDays}
           allTimeMinutes={stats.totalSec / 60}
         />
+        </Reveal>
 
         {history.length === 0 ? (
-          <HistoryEmpty
-            title="No sessions yet"
-            body="Start a breathing session and it will appear here."
-            cta="Back to Breath"
-            onPress={() => router.back()}
-          />
+          <Reveal i={1}>
+            <HistoryEmpty
+              title="No sessions yet"
+              body="Start a breathing session and it will appear here."
+              cta="Back to Breath"
+              onPress={() => router.back()}
+            />
+          </Reveal>
         ) : (
           <>
+            <Reveal i={1}>
             <HistorySectionLabel>By state</HistorySectionLabel>
             <HistoryGroup>
               {stats.patternCounts
@@ -321,7 +327,9 @@ export default function BreathHistoryScreen() {
                   />
                 ))}
             </HistoryGroup>
+            </Reveal>
 
+            <Reveal i={2}>
             <HistorySectionLabel>All sessions</HistorySectionLabel>
             {dayGroups.map((group) => {
               const open = effectiveOpenDays.has(group.key);
@@ -356,8 +364,11 @@ export default function BreathHistoryScreen() {
                 </View>
               );
             })}
+            </Reveal>
 
-            <ClearHistoryButton label="Clear history" onPress={onClear} />
+            <Reveal i={3}>
+              <ClearHistoryButton label="Clear history" onPress={onClear} />
+            </Reveal>
           </>
         )}
       </ScrollView>

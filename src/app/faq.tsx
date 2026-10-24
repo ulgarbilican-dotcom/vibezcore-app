@@ -15,6 +15,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
+import { Reveal } from '@/components/Reveal';
 import BalancedText from '@/components/BalancedText';
 import {
   FAQ_CATEGORY_LABELS,
@@ -161,6 +162,7 @@ export default function FaqScreen() {
         keyboardDismissMode="on-drag"
       >
         {/* Hero — wordmark als brand-eyebrow ipv platte tekst */}
+        <Reveal i={0}>
         <Image
           source={WORDMARK}
           style={s.wordmark}
@@ -176,8 +178,10 @@ export default function FaqScreen() {
           Everything you need to know about VIBEZCORE — breathwork, the
           bracelet, the science, and your order.
         </BalancedText>
+        </Reveal>
 
         {/* Search */}
+        <Reveal i={1}>
         <View style={s.searchWrap}>
           <Text style={s.searchIcon}>⌕</Text>
           <TextInput
@@ -201,8 +205,10 @@ export default function FaqScreen() {
             </Tap>
           )}
         </View>
+        </Reveal>
 
         {/* Category tabs — horizontale scroll, "All" links */}
+        <Reveal i={2}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -228,9 +234,11 @@ export default function FaqScreen() {
             />
           ))}
         </ScrollView>
+        </Reveal>
 
         {/* No results */}
         {filteredItems.length === 0 && (
+          <Reveal i={3}>
           <View style={s.empty}>
             <Text style={s.emptyIcon}>⌕</Text>
             <Text style={s.emptyTitle}>No questions found</Text>
@@ -247,11 +255,13 @@ export default function FaqScreen() {
               <Text style={s.emptyBtnText}>Contact support</Text>
             </AnimatedPressable>
           </View>
+          </Reveal>
         )}
 
         {/* Items grouped per categorie */}
-        {grouped.map(({ cat, items }) => (
-          <View key={cat} style={s.section}>
+        {grouped.map(({ cat, items }, gi) => (
+          <Reveal key={cat} i={Math.min(3 + gi, 8)}>
+          <View style={s.section}>
             <Text style={s.sectionTitle}>{FAQ_CATEGORY_LABELS[cat]}</Text>
             {items.map((item) => (
               <FaqRow
@@ -262,10 +272,12 @@ export default function FaqScreen() {
               />
             ))}
           </View>
+          </Reveal>
         ))}
 
         {/* Footer CTA — als user niets vond na het scrollen */}
         {filteredItems.length > 0 && (
+          <Reveal i={8}>
           <View style={s.helpCard}>
             <Text style={s.helpTitle}>Still need help?</Text>
             <BalancedText style={s.helpSub}>
@@ -281,6 +293,7 @@ export default function FaqScreen() {
               <Text style={s.helpBtnText}>Contact support  →</Text>
             </AnimatedPressable>
           </View>
+          </Reveal>
         )}
       </ScrollView>
     </SafeAreaView>

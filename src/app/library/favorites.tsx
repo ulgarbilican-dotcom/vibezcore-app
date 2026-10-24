@@ -8,6 +8,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
@@ -70,13 +71,16 @@ export default function LibraryFavoritesScreen() {
             3x "Your Favorites" + harde rode eyebrow voelt overdone).
             Topbar geeft navigation-context, H1 + subtitle volstaan voor
             page-intro. Zelfde aanpak op /library/new en /library/free. */}
-        <View style={s.header}>
-          <Text style={s.h1}>Your Favorites</Text>
-          <Text style={s.subtitle}>
-            Sessions you've saved to come back to
-          </Text>
-        </View>
+        <Reveal i={0}>
+          <View style={s.header}>
+            <Text style={s.h1}>Your Favorites</Text>
+            <Text style={s.subtitle}>
+              Sessions you've saved to come back to
+            </Text>
+          </View>
+        </Reveal>
         {sessions.length === 0 ? (
+          <Reveal i={1}>
           <View style={s.empty}>
             <Text style={s.emptyGlyph}>♡</Text>
             <Text style={s.emptyTitle}>No favorites yet</Text>
@@ -84,10 +88,11 @@ export default function LibraryFavoritesScreen() {
               Tap the heart on any session to save it here.
             </BalancedText>
           </View>
+          </Reveal>
         ) : (
-          sessions.map((sess) => (
+          sessions.map((sess, idx) => (
+            <Reveal key={sess.url} i={idx + 1}>
             <LibraryListRow
-              key={sess.url}
               session={sess}
               onPress={() => openGated(sess)}
               rightAccessory={
@@ -103,6 +108,7 @@ export default function LibraryFavoritesScreen() {
                 </Tap>
               }
             />
+            </Reveal>
           ))
         )}
       </ScrollView>

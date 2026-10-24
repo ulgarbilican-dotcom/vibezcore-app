@@ -9,6 +9,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { Reveal } from '@/components/Reveal';
 import { showConfirmMoment } from '@/components/ConfirmMoment';
 import { useBackTo } from '@/hooks/useBackTo';
 import BalancedText from '@/components/BalancedText';
@@ -183,16 +184,19 @@ export default function PlanSummaryScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <Reveal i={0}>
         <Text style={s.lead}>
           {[goalNames.length > 0 ? goalNames.join(' + ') : 'No goal set', INTENSITY_LABEL[plan.intensity], HORIZON_LABEL[plan.horizon]]
             .filter(Boolean)
             .join(' · ')}
         </Text>
+        </Reveal>
 
         {today.items.map((it, i) => {
           const st = BREATH_STATES[it.state];
           return (
-            <View key={`${it.slot}-${i}`} style={s.card}>
+            <Reveal key={`${it.slot}-${i}`} i={Math.min(1 + i, 8)}>
+            <View style={s.card}>
               <View style={s.cardTop}>
                 <Text style={s.slotLabel}>{it.slot.toUpperCase()}</Text>
                 <Text style={s.time}>{fmtTime(it.reminderAt)}</Text>
@@ -205,9 +209,11 @@ export default function PlanSummaryScreen() {
                 {it.reason} · {it.minutes} min
               </Text>
             </View>
+            </Reveal>
           );
         })}
 
+        <Reveal i={Math.min(1 + today.items.length, 8)}>
         <BalancedText style={s.foot}>
           This repeats every day for the length of your plan. You can
           reshape it any time from your agenda.
@@ -221,6 +227,7 @@ export default function PlanSummaryScreen() {
         >
           <Text style={s.ctaTxt}>CONFIRM MY PROTOCOL</Text>
         </AnimatedPressable>
+        </Reveal>
       </ScrollView>
     </SafeAreaView>
   );

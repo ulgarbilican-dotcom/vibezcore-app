@@ -22,6 +22,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -333,13 +334,19 @@ export default function ChangePassword() {
       <SafeAreaView style={s.root}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={s.center}>
-          <View style={s.checkCircle}>
-            <Text style={s.checkText}>✓</Text>
-          </View>
-          <Text style={s.title}>Password changed</Text>
-          <BalancedText style={s.sub}>
-            Your password has been updated. Returning to your account…
-          </BalancedText>
+          <Reveal i={0}>
+            <View style={s.checkCircle}>
+              <Text style={s.checkText}>✓</Text>
+            </View>
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.title}>Password changed</Text>
+          </Reveal>
+          <Reveal i={2}>
+            <BalancedText style={s.sub}>
+              Your password has been updated. Returning to your account…
+            </BalancedText>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -361,22 +368,27 @@ export default function ChangePassword() {
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
+        <Reveal i={0}>
         <Text style={s.title}>Change your password</Text>
         <BalancedText style={s.sub}>
           Enter your current password to confirm it's you, then choose
           a new one — at least 8 characters.
         </BalancedText>
+        </Reveal>
 
         {/* Email (read-only context, helpt user te zien voor welk
             account 'ie het password wijzigt) */}
         {email && (
-          <View style={s.emailChip}>
-            <Text style={s.emailLabel}>Your account</Text>
-            <Text style={s.emailValue}>{email}</Text>
-          </View>
+          <Reveal i={1}>
+            <View style={s.emailChip}>
+              <Text style={s.emailLabel}>Your account</Text>
+              <Text style={s.emailValue}>{email}</Text>
+            </View>
+          </Reveal>
         )}
 
         {/* Current password */}
+        <Reveal i={2}>
         <Text style={s.label}>Current password</Text>
         <View style={s.inputWrap}>
           <TextInput
@@ -404,8 +416,10 @@ export default function ChangePassword() {
             <Text style={s.toggleText}>{showCurrent ? 'Hide' : 'Show'}</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
         {/* New password */}
+        <Reveal i={3}>
         <Text style={s.label}>New password</Text>
         <View style={s.inputWrap}>
           <TextInput
@@ -431,8 +445,10 @@ export default function ChangePassword() {
             <Text style={s.toggleText}>{show1 ? 'Hide' : 'Show'}</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
         {/* Confirm new password */}
+        <Reveal i={4}>
         <Text style={s.label}>Confirm new password</Text>
         <View style={s.inputWrap}>
           <TextInput
@@ -458,6 +474,7 @@ export default function ChangePassword() {
             <Text style={s.toggleText}>{show2 ? 'Hide' : 'Show'}</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
         {/* Match indicator */}
         {showMatch && (
@@ -468,6 +485,7 @@ export default function ChangePassword() {
 
         {err && <Text style={s.err}>{err}</Text>}
 
+        <Reveal i={5}>
         <AnimatedPressable
           style={[s.btnPrimary, !canSubmit && s.btnDisabled, submitPressStyle]}
           onPress={onSubmit}
@@ -483,12 +501,15 @@ export default function ChangePassword() {
             <Text style={s.btnPrimaryText}>Update password</Text>
           )}
         </AnimatedPressable>
+        </Reveal>
 
+        <Reveal i={6}>
         <Text style={s.help}>
           Forgot your current password? Sign out and use{' '}
           <Text style={s.helpLink}>Forgot password</Text> from the
           sign-in screen instead.
         </Text>
+        </Reveal>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

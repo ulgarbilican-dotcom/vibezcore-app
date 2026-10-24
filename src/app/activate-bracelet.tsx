@@ -21,6 +21,7 @@
 
 import PurchaseConfirm from '@/components/PurchaseConfirm';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { SESSIONS } from '@/data/audio-library-data';
 import { Brand, BrandFonts, AudioAccent, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
@@ -367,17 +368,20 @@ export default function ActivateBraceletScreen() {
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
+        <Reveal i={0}>
         <Text style={s.heading}>Activate your bracelet</Text>
         <Text style={s.sub}>
           {isSignedIn
             ? 'Enter the 12-character activation code from the email we sent when your bracelet shipped.'
             : 'Create your VIBEZCORE account and activate your bracelet in one step. Your bracelet is linked to this account for cross-device access.'}
         </Text>
+        </Reveal>
 
         {/* Iter v183 (2026-07-02): email + password inputs alleen tonen bij
             niet-ingelogde users. Signed-in users zien direct code-field. */}
         {!isSignedIn && (
           <>
+            <Reveal i={1}>
             <Text style={s.label}>Email</Text>
             <TextInput
               style={s.inputEmail}
@@ -395,7 +399,9 @@ export default function ActivateBraceletScreen() {
               textContentType="emailAddress"
               editable={phase !== 'submitting'}
             />
+            </Reveal>
 
+            <Reveal i={2}>
             <Text style={s.label}>Password</Text>
             <View style={s.pwWrap}>
               <TextInput
@@ -424,9 +430,11 @@ export default function ActivateBraceletScreen() {
                 <Text style={s.pwShowText}>{showPw ? 'Hide' : 'Show'}</Text>
               </AnimatedPressable>
             </View>
+            </Reveal>
           </>
         )}
 
+        <Reveal i={3}>
         <Text style={s.label}>Activation code</Text>
         <TextInput
           style={s.input}
@@ -442,9 +450,11 @@ export default function ActivateBraceletScreen() {
           onSubmitEditing={onSubmit}
           editable={phase !== 'submitting'}
         />
+        </Reveal>
 
         {errMsg && <Text style={s.err}>{errMsg}</Text>}
 
+        <Reveal i={4}>
         <AnimatedPressable
           style={[
             s.btnPrimary,
@@ -466,8 +476,10 @@ export default function ActivateBraceletScreen() {
             </Text>
           )}
         </AnimatedPressable>
+        </Reveal>
 
         {!isSignedIn && (
+          <Reveal i={5}>
           <AnimatedPressable
             onPress={() => goToTab('/account')}
             onPressIn={signInLinkScale.onPressIn}
@@ -480,13 +492,16 @@ export default function ActivateBraceletScreen() {
               <Text style={s.signInLinkAccent}>Sign in first</Text>
             </Text>
           </AnimatedPressable>
+          </Reveal>
         )}
 
+        <Reveal i={6}>
         <Text style={s.legal}>
           You'll find your activation code in the shipping confirmation
           email. If you can't find it, check your spam folder or contact
           support via the Profile tab.
         </Text>
+        </Reveal>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

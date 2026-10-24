@@ -97,6 +97,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { ModeMeta } from '@/services/ble-contract';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { Reveal } from '@/components/Reveal';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -493,18 +494,22 @@ export default function BraceletSetDayScreen() {
           contentContainerStyle={[s.scroll, { paddingBottom: Math.max(insets.bottom, 14) + 150 }]}
           showsVerticalScrollIndicator={false}
         >
+          <Reveal i={0}>
           <Text style={[s.sectionLabel, { textAlign: 'center' }]}>DURATION</Text>
+          </Reveal>
           {/* Operator, 17 okt 2026 ("Set your plan: ook via de cirkel
               instellen, consistent"): exact de cirkel van State Control —
               met je vinger over de rand slepen, geen draaiwiel meer. */}
-          <View style={s.ringWrap}>
+          <Reveal i={1} style={s.ringWrap}>
             <DurationDial mode={addingMode!} value={draftDuration} onChange={setDraftDuration} />
-          </View>
+          </Reveal>
 
+          <Reveal i={2}>
           <Text style={[s.sectionLabel, { marginTop: 28 }]}>STARTS AT</Text>
           <Tap style={s.timeRow} onPress={() => setShowTimePicker(true)}>
             <Text style={s.timeValue}>{fmtTime(draftTime)}</Text>
           </Tap>
+          </Reveal>
 
           {/* Operator, 30 september 2026 ("mag nooit aparte states en 2
              zelfde momenten kunnen kiezen, ook rekening houden met de
@@ -535,11 +540,13 @@ export default function BraceletSetDayScreen() {
              achtergrond is de CTA altijd wit + donkere tekst — nooit de
              accentkleur als knop-achtergrond (dat was hier de bug, zie
              `feedback-signal-blue-never-cta`-regel). */}
+          <Reveal i={3}>
           <PrimaryCta
             label="Add to your plan"
             disabled={!!conflictSession}
             onPress={confirmAdd}
           />
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -572,13 +579,16 @@ export default function BraceletSetDayScreen() {
         {/* Operator, 5 okt 2026 ("choose your states then how often is
             raar"): zegt meteen wat je doet — een tik voegt een sessie toe.
             Hoeveel per dag staat al in de regel onder de kaarten. */}
+        <Reveal i={0}>
         <BalancedText style={s.lead}>Tap a state to add a session to your day</BalancedText>
+        </Reveal>
 
         {/* Operator, 30 september 2026 ("5 verikante kaarten transparant
            blur tekst en iconen links"): echte `BlurView`-matglas-tegels
            i.p.v. gekleurde-tint-vlakken — zelfde recept als (tabs)/
            activity.tsx's `SquareCard`/goal.tsx's `GoalTile`, icoon+naam
            links-onder i.p.v. gecentreerd. */}
+        <Reveal i={1}>
         <View style={s.grid}>
           {MODES.map((m) => (
             <ModeTile
@@ -590,16 +600,20 @@ export default function BraceletSetDayScreen() {
             />
           ))}
         </View>
+        </Reveal>
 
         {/* Operator: "recommended aantal sessies" — puur informatief, geen
            berekend cijfer (bracelet heeft geen doelen-systeem zoals
            breathwork om dat op te baseren). */}
+        <Reveal i={2}>
         <Text style={s.recommended}>Most people do 1–3 sessions a day.</Text>
+        </Reveal>
 
         {/* Operator, 30 september 2026 ("how long moet direct onder de
            kaarten komen"): horizon nu meteen na de tegels — herhaalt de
            dag-template hierboven over de gekozen periode (zelfde principe
            als protocol.ts's `buildPlanFromTemplate` voor breathwork). */}
+        <Reveal i={3}>
         <Text style={s.sectionLabel}>HOW LONG</Text>
         <View style={s.horizonRow}>
           {HORIZONS.map((h) => (
@@ -614,10 +628,12 @@ export default function BraceletSetDayScreen() {
             />
           ))}
         </View>
+        </Reveal>
 
         {/* Operator: "your plan mag geen opsomming worden maar een
            popup" — samenvattingsrij i.p.v. de volledige lijst altijd
            uitgeklapt; tikken opent het overzicht hieronder. */}
+        <Reveal i={4}>
         <Text style={[s.sectionLabel, { marginTop: 24 }]}>YOUR PLAN</Text>
         <Tap
           style={s.planSummaryRow}
@@ -632,14 +648,17 @@ export default function BraceletSetDayScreen() {
             <ChevronRight size={16} color="rgba(255,255,255,0.4)" strokeWidth={2.4} />
           )}
         </Tap>
+        </Reveal>
       </ScrollView>
 
       <View style={[s.ctaFloat, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
+        <Reveal i={5}>
         <PrimaryCta
           label="Save your plan"
           disabled={sessions.length === 0}
           onPress={() => void save()}
         />
+        </Reveal>
       </View>
 
       {/* "Your plan"-popup — overzicht + verwijderen, zie de toelichting

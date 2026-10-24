@@ -50,6 +50,7 @@ import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
    met een native dialoog + scherm-overgang liep, zie de toelichting
    daar). Hier is er geen dialoog of overgang op hetzelfde moment, enkel
    een gewone mount — veilig. */
+import { Reveal } from '@/components/Reveal';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -266,38 +267,6 @@ export default function AgendaScreen() {
      eerdere zwart-scherm-crash op plan-success.tsx toen het gelijktijdig
      met een native dialoog + scherm-overgang liep) — dit is een gewone
      mount zonder dialoog erbij, dus veilig. */
-  const heroOpacity = useSharedValue(0);
-  const heroY = useSharedValue(14);
-  const ringOpacity = useSharedValue(0);
-  const ringScale = useSharedValue(0.92);
-  const listOpacity = useSharedValue(0);
-  const listY = useSharedValue(14);
-  const actionsOpacity = useSharedValue(0);
-
-  useEffect(() => {
-    heroOpacity.value = withTiming(1, { duration: 380 });
-    heroY.value = withTiming(0, { duration: 380, easing: Easing.out(Easing.cubic) });
-    ringOpacity.value = withDelay(120, withTiming(1, { duration: 420 }));
-    ringScale.value = withDelay(120, withSpring(1, { damping: 15, stiffness: 120 }));
-    listOpacity.value = withDelay(260, withTiming(1, { duration: 380 }));
-    listY.value = withDelay(260, withTiming(0, { duration: 380, easing: Easing.out(Easing.cubic) }));
-    actionsOpacity.value = withDelay(420, withTiming(1, { duration: 320 }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const heroStyle = useAnimatedStyle(() => ({
-    opacity: heroOpacity.value,
-    transform: [{ translateY: heroY.value }],
-  }));
-  const ringAnimStyle = useAnimatedStyle(() => ({
-    opacity: ringOpacity.value,
-    transform: [{ scale: ringScale.value }],
-  }));
-  const listStyle = useAnimatedStyle(() => ({
-    opacity: listOpacity.value,
-    transform: [{ translateY: listY.value }],
-  }));
-  const actionsStyle = useAnimatedStyle(() => ({ opacity: actionsOpacity.value }));
 
   /* Press-scale voor elke losstaande (niet-lijst) tikbare knop op dit
      scherm — zelfde patroon als StartCard in breath-welcome.tsx, elk zijn
@@ -597,7 +566,7 @@ export default function AgendaScreen() {
           <Text style={s.title}>Your breathwork plan</Text>
           <View style={s.back} />
         </View>
-        <View style={s.emptyWrap}>
+        <Reveal i={0} style={s.emptyWrap}>
           {/* Operator, 17 september 2026: wie zijn gratis proefronde al
              verbruikt heeft (`protocolLocked`) ziet dat HIER, met dezelfde
              "je doel verschuift"-taal als de teaser-popup verderop — niet
@@ -625,7 +594,7 @@ export default function AgendaScreen() {
               {protocolLocked ? 'BUILD ANOTHER PROTOCOL' : 'BUILD MY PROTOCOL'}
             </Text>
           </AnimatedPressable>
-        </View>
+        </Reveal>
       </SafeAreaView>
     );
   }
@@ -671,7 +640,7 @@ export default function AgendaScreen() {
            datum-navigatie per modus — vervangen door één regel die een
            compacte kalender laat uitklappen. Hergebruikt de bestaande
            maand-grid hieronder i.p.v. een aparte Week/Dag-weergave. */}
-        <Animated.View style={heroStyle}>
+        <Reveal i={0}>
         <AnimatedPressable
           onPress={() => setCalendarOpen((o) => !o)}
           style={[s.dateRow, dateRowPressStyle]}
@@ -689,7 +658,7 @@ export default function AgendaScreen() {
             style={calendarOpen ? { transform: [{ rotate: '180deg' }] } : undefined}
           />
         </AnimatedPressable>
-        </Animated.View>
+        </Reveal>
 
         {calendarOpen && (
           <View style={s.calendarDropdown}>
@@ -765,7 +734,7 @@ export default function AgendaScreen() {
         {/* ── De Rhythm Ring — de 24 uur van de dag als één cirkel i.p.v.
            een lijst kaarten, zie components/RhythmRing.tsx voor de
            toelichting (wiskunde, sleep-interactie, beperkingen). */}
-        <Animated.View style={[s.ringWrap, ringAnimStyle]}>
+        <Reveal i={1} style={s.ringWrap}>
           {(() => {
             /* Operator, 2-3 okt 2026 ("i op de kaarten, info rond de ring
                ademt niet, tik op kaart toont info in het midden, bij
@@ -856,7 +825,7 @@ export default function AgendaScreen() {
               </Tap>
             );
           })()}
-        </Animated.View>
+        </Reveal>
 
         {/* Operator, 1 okt 2026 ("your daily plan principe van bracelet
            vind ik goed"): dezelfde kaarten-legende als bracelet-
@@ -869,7 +838,7 @@ export default function AgendaScreen() {
            session", die simpelweg terugkeert naar de standaard
            "Next"-weergave (`filterMode = null`) i.p.v. alles tegelijk op
            te stapelen. */}
-        <Animated.View style={listStyle}>
+        <Reveal i={2}>
           <View style={s.cardGrid}>
             {STATE_ORDER.map((key) => (
               <StateCard
@@ -897,9 +866,9 @@ export default function AgendaScreen() {
           {(!selectedDay || selectedDay.items.length === 0) && (
             <Text style={[s.emptyB, { marginTop: -8 }]}>Nothing planned this day.</Text>
           )}
-        </Animated.View>
+        </Reveal>
 
-        <Animated.View style={[s.bottomActions, actionsStyle]}>
+        <Reveal i={3} style={s.bottomActions}>
           {/* Operator, 3 okt 2026 ("onderaan ipv edit times check your
              protocol?"): zelfde bestemming (/plan — tijden+techniek per
              moment, met de potlood-iconen als bewerk-affordance), maar nu
@@ -932,7 +901,7 @@ export default function AgendaScreen() {
               <Text style={s.changeProtocolTxt}>Change protocol</Text>
             </AnimatedPressable>
           )}
-        </Animated.View>
+        </Reveal>
         {/* Audit 10 okt 2026 (operator: "akkoord"): een plan kon je enkel
             vervangen, nooit stoppen. Klein en onderaan — geen hoofdactie. */}
         {plan && (
@@ -1170,7 +1139,8 @@ const s = StyleSheet.create({
     height: 48,
     paddingHorizontal: 24,
     borderRadius: 999,
-    backgroundColor: CTA_GLASS,
+    backgroundColor: CTA_GLASS,
+
     ...CTA_GLOW,
   },
   ctaTxt: { fontFamily: BrandFonts.bold, fontSize: 12.5, letterSpacing: 1.4, color: '#0a0a0a' },

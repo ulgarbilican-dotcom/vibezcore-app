@@ -42,6 +42,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { imageSource } from '@/utils/image-source';
+import { Reveal } from '@/components/Reveal';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -250,12 +251,14 @@ export default function BuildYourDayScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <Reveal i={0}>
         <Text style={s.header}>Build once. Use daily</Text>
         <Text style={s.lead} numberOfLines={1}>
           Design your personal rhythm
         </Text>
+        </Reveal>
 
-        {SLOTS.map((sl) => {
+        {SLOTS.map((sl, si) => {
           const rows = sessions
             .map((it, i) => ({ it, i }))
             .filter((x) => x.it.slot === sl.slot);
@@ -275,8 +278,8 @@ export default function BuildYourDayScreen() {
              zonderen. */
           const isIconDaypart = true;
           return (
+            <Reveal key={sl.slot} i={si + 1}>
             <DaypartCard
-              key={sl.slot}
               sl={sl}
               card={card}
               rows={rows}
@@ -286,13 +289,16 @@ export default function BuildYourDayScreen() {
               onEdit={editSession}
               onRemove={removeSession}
             />
+            </Reveal>
           );
         })}
 
         {sessions.length >= MAX_PLAN_ITEMS && (
+          <Reveal i={0}>
           <Text style={s.capNote}>
             {MAX_PLAN_ITEMS} sessions a day is the most VIBEZCORE can remind you about.
           </Text>
+          </Reveal>
         )}
 
       </ScrollView>
@@ -319,6 +325,7 @@ export default function BuildYourDayScreen() {
            stippen die al bovenaan staan (`StepIndicator` in de `s.bar`-
            rij) — zelfde overbodige dubbele voortgang als build-choice.tsx
            eerder had. */}
+        <Reveal i={5}>
         <AnimatedPressable
           style={[s.cta, sessions.length < 1 && s.ctaDisabled, ctaPressStyle]}
           disabled={sessions.length < 1}
@@ -328,6 +335,7 @@ export default function BuildYourDayScreen() {
         >
           <Text style={[s.ctaTxt, sessions.length < 1 && CTA.labelDisabled]}>Continue</Text>
         </AnimatedPressable>
+        </Reveal>
       </View>
     </SafeAreaView>
   );

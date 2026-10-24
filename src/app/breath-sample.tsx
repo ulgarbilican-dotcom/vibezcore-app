@@ -26,6 +26,7 @@ import { stopPhaseHaptic, vibrateCompat } from '@/services/breath-haptics';
 import { PopupView } from '@/components/PopupCard';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import GuidanceSelector, {
   GUIDANCE_MODES,
   type GuidanceMode,
@@ -408,6 +409,7 @@ export default function BreathSampleScreen() {
         </Animated.View>
       </View>
 
+      <Reveal i={1}>
       <View style={s.counterRow}>
         <Text style={s.counterTxt}>Round</Text>
         <Text style={[s.counterTxt, s.counterNum, { color: CALM_COLOR }]}>
@@ -415,10 +417,12 @@ export default function BreathSampleScreen() {
         </Text>
         <Text style={s.counterTxt}>/ {ROUNDS}</Text>
       </View>
+      </Reveal>
 
       {/* ── Begeleidingsmodi — glass segmented control met morphende
          selectie-indicator. Bracelet zichtbaar maar vergrendeld zonder
          hardware. ── */}
+      <Reveal i={2}>
       <View style={s.modesWrap}>
         <GuidanceSelector
           value={mode}
@@ -433,6 +437,7 @@ export default function BreathSampleScreen() {
           </BalancedText>
         )}
       </View>
+      </Reveal>
 
       <Modal visible={finished} transparent animationType="fade" onRequestClose={goBreathTab}>
         <View style={s.modalBackdrop}>

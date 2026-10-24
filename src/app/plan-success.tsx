@@ -16,6 +16,7 @@ import { useSetting } from '@/utils/settings';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import ActivationHero from '@/components/ActivationHero';
+import { Reveal } from '@/components/Reveal';
 import VibezGlass from '@/components/VibezGlass';
 import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
@@ -153,28 +154,40 @@ export default function PlanSuccessScreen() {
 
       {building ? (
         <View style={s.center}>
-          <ActivityIndicator size="large" color={Brand.success} style={s.spinner} />
-          <Text style={s.buildingTxt}>Building your agenda…</Text>
+          <Reveal i={0}>
+            <ActivityIndicator size="large" color={Brand.success} style={s.spinner} />
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.buildingTxt}>Building your agenda…</Text>
+          </Reveal>
         </View>
       ) : (
         <>
           <View style={[s.top, { paddingTop: 36 }]}>
-            <Text style={s.title}>Your protocol is live</Text>
-            <Text style={s.body}>
-              {sessionsToday > 0
-                ? `${sessionsToday} session${sessionsToday > 1 ? 's' : ''} a day, right on schedule. Show up once and you're already moving.`
-                : "It's set. Show up once and you're already moving."}
-            </Text>
+            <Reveal i={0}>
+              <Text style={s.title}>Your protocol is live</Text>
+            </Reveal>
+            <Reveal i={1}>
+              <Text style={s.body}>
+                {sessionsToday > 0
+                  ? `${sessionsToday} session${sessionsToday > 1 ? 's' : ''} a day, right on schedule. Show up once and you're already moving.`
+                  : "It's set. Show up once and you're already moving."}
+              </Text>
+            </Reveal>
             {streak > 0 && (
-              <View style={s.streakPill}>
-                <Text style={s.streakTxt}>
-                  {streak} day{streak === 1 ? '' : 's'} in a row already
-                </Text>
-              </View>
+              <Reveal i={2} style={{ alignItems: 'center' }}>
+                <View style={s.streakPill}>
+                  <Text style={s.streakTxt}>
+                    {streak} day{streak === 1 ? '' : 's'} in a row already
+                  </Text>
+                </View>
+              </Reveal>
             )}
           </View>
           <View style={s.middle}>
-            <ActivationHero />
+            <Reveal i={3}>
+              <ActivationHero />
+            </Reveal>
           </View>
         </>
       )}
@@ -183,6 +196,7 @@ export default function PlanSuccessScreen() {
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 12) + 40 }]}>
         {/* Operator ("kijk alle CTA's na"): had helemaal geen tik-
            feedback — geen scale/opacity, geen haptiek. Huisstijl §5. */}
+        <Reveal i={4}>
         <PlanSuccessCta
           onPress={() => {
             /* Eerst de afgewerkte flow van de stapel (audit 16 okt 2026):
@@ -202,6 +216,7 @@ export default function PlanSuccessScreen() {
             );
           }}
         />
+        </Reveal>
       </View>
       )}
     </SafeAreaView>

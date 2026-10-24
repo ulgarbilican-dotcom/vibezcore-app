@@ -8,6 +8,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { AudioAccent } from '@/constants/theme';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
@@ -83,13 +84,16 @@ export default function LibraryNewScreen() {
       >
         {/* Iter 9dq v20 (2026-06-02): eyebrow weg — consistent met
             /library/favorites + /library/free. H1 + subtitle volstaan. */}
+        <Reveal i={0}>
         <View style={s.header}>
           <Text style={s.h1}>What's New</Text>
           <BalancedText style={s.subtitle}>
             Fresh sessions added in the last 30 days
           </BalancedText>
         </View>
+        </Reveal>
         {sessions.length === 0 ? (
+          <Reveal i={1}>
           <View style={s.empty}>
             <Text style={s.emptyGlyph}>✨</Text>
             <Text style={s.emptyTitle}>No new sessions this week</Text>
@@ -97,10 +101,11 @@ export default function LibraryNewScreen() {
               Check back soon — fresh sessions drop monthly.
             </BalancedText>
           </View>
+          </Reveal>
         ) : (
-          sessions.map((sess) => (
+          sessions.map((sess, idx) => (
+            <Reveal key={sess.url} i={idx + 1}>
             <LibraryListRow
-              key={sess.url}
               session={sess}
               onPress={() => openGated(sess)}
               rightAccessory={
@@ -109,6 +114,7 @@ export default function LibraryNewScreen() {
                 </View>
               }
             />
+            </Reveal>
           ))
         )}
       </ScrollView>

@@ -39,6 +39,7 @@
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import {
@@ -52,7 +53,8 @@ import { SLOTS } from '@/services/reminders';
 import { useSetting, type ExperienceLevel } from '@/utils/settings';
 import { claimFreeSessionParam } from '@/utils/breath-entry';
 import * as Haptics from 'expo-haptics';
-import { router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+
 import { goToTab } from '@/utils/state-control-ui';
 import { openBreathSession } from '@/services/breath-session-host';
 import { Check, ChevronLeft, Sparkles } from 'lucide-react-native';
@@ -314,6 +316,7 @@ export default function BreathQuizScreen() {
       >
         {step === 0 && (
           <>
+            <Reveal i={0}>
             <Text style={s.title}>When would you practice?</Text>
             <BalancedText style={s.lead}>
               Pick as many as you like — these become your daily plan.
@@ -324,11 +327,12 @@ export default function BreathQuizScreen() {
             <BalancedText style={s.privacy}>
               Your answers stay on this device. No account, no upload.
             </BalancedText>
-            {MOMENTS.map((m) => {
+            </Reveal>
+            {MOMENTS.map((m, mi) => {
               const on = selMoments.includes(m.key);
               return (
+                <Reveal key={m.key} i={mi + 1}>
                 <Choice
-                  key={m.key}
                   label={m.name}
                   hint={m.hint}
                   on={on}
@@ -339,6 +343,7 @@ export default function BreathQuizScreen() {
                     );
                   }}
                 />
+                </Reveal>
               );
             })}
           </>
@@ -349,19 +354,24 @@ export default function BreathQuizScreen() {
             begeleiding, elk herleidbaar tot een antwoord van net. */}
         {isResult && (
           <>
+            <Reveal i={0} style={{ alignSelf: 'flex-start' }}>
             <View style={s.planBadge}>
               <Sparkles size={13} color={AudioAccent} strokeWidth={2.2} />
               <Text style={s.planBadgeTxt}>Built from your answers</Text>
             </View>
+            </Reveal>
+            <Reveal i={1}>
             <Text style={s.title}>Your plan</Text>
             <BalancedText style={s.lead}>
               This shapes what gets suggested from here on — change any of
               it any time.
             </BalancedText>
+            </Reveal>
 
             {/* JOUW DAG. Elk moment zijn eigen toestand, met de reden
                 ernaast. Geen verzonnen kloktijden — het moment is de
                 afspraak, de exacte tijd zet je in Daily plan. */}
+            <Reveal i={2}>
             {plan.schedule.length > 0 ? (
               <View style={s.planCard}>
                 <Text style={s.planLbl}>Your day</Text>
@@ -416,11 +426,14 @@ export default function BreathQuizScreen() {
                 </BalancedText>
               </View>
             )}
+            </Reveal>
 
+            <Reveal i={3}>
             <View style={s.planCard}>
               <Text style={s.planLbl}>Your guidance</Text>
               <Text style={s.planBody}>{plan.guidance}</Text>
             </View>
+            </Reveal>
           </>
         )}
       </ScrollView>
@@ -430,6 +443,7 @@ export default function BreathQuizScreen() {
       <View
         style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 14 }]}
       >
+        <Reveal i={isResult ? 4 : 2}>
         <AnimatedPressable
           onPress={next}
           onPressIn={onCtaPressIn}
@@ -447,6 +461,7 @@ export default function BreathQuizScreen() {
               : 'CONTINUE'}
           </Text>
         </AnimatedPressable>
+        </Reveal>
         {isResult && !isPro && startKind !== 'full' ? (
           <PremiumNote style={s.ctaFreeNote} preview={startKind === 'preview'}>
             {startKind === 'preview' ? FREE_COPY.previewLine : FREE_COPY.freeLine}
@@ -652,9 +667,12 @@ const s = StyleSheet.create({
   cta: {
     height: 52,
     borderRadius: 999,
-    backgroundColor: CTA_GLASS,
+    backgroundColor: CTA_GLASS,
+
+
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center',
+
     ...CTA_GLOW,
   },
   ctaTxt: {

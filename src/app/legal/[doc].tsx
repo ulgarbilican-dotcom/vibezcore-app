@@ -23,6 +23,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 /* Operator, 26 september 2026 (Huisstijl & Design Handboek v4.4):
@@ -38,7 +39,8 @@ import {
   LegalSlug,
   SUPPORT_URL,
 } from '@/data/legal-content';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+
 import { goToTab } from '@/utils/state-control-ui';
 import * as WebBrowser from 'expo-web-browser';
 import { Fragment } from 'react';
@@ -284,10 +286,15 @@ export default function LegalDoc() {
           }}
         />
         <View style={s.center}>
-          <Text style={s.h2}>Page not found</Text>
-          <BalancedText style={s.p}>
-            The legal document you're looking for doesn't exist.
-          </BalancedText>
+          <Reveal i={0}>
+            <Text style={s.h2}>Page not found</Text>
+          </Reveal>
+          <Reveal i={1}>
+            <BalancedText style={s.p}>
+              The legal document you're looking for doesn't exist.
+            </BalancedText>
+          </Reveal>
+          <Reveal i={2}>
           <AnimatedPressable
             style={[s.btn, backToAccountPressStyle]}
             onPress={() => goToTab('/account')}
@@ -296,6 +303,7 @@ export default function LegalDoc() {
           >
             <Text style={s.btnText}>Back to Account</Text>
           </AnimatedPressable>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -318,6 +326,7 @@ export default function LegalDoc() {
         {/* Header — wordmark eyebrow + title + optionele subtitle +
             lastUpdated tekst. Date is platte tekst (Apple-stijl,
             geen pill, geen groene status-dot). */}
+        <Reveal i={0}>
         <Image
           source={WORDMARK}
           style={s.wordmark}
@@ -329,6 +338,7 @@ export default function LegalDoc() {
         <Text style={s.lastUpdatedText}>
           Last updated: {doc.lastUpdated}
         </Text>
+        </Reveal>
 
         {/* Body — alle blocks in document order. We tellen h2's vooraf
             zodat sectie-eyebrows ("01", "02") automatisch worden
@@ -344,10 +354,12 @@ export default function LegalDoc() {
               }
               return (
                 <Fragment key={i}>
-                  <BlockRenderer
-                    block={block}
-                    sectionNumber={sectionNumber}
-                  />
+                  <Reveal i={Math.min(i + 1, 8)}>
+                    <BlockRenderer
+                      block={block}
+                      sectionNumber={sectionNumber}
+                    />
+                  </Reveal>
                 </Fragment>
               );
             });
@@ -355,6 +367,7 @@ export default function LegalDoc() {
         </View>
 
         {/* Contact-support card aan de bodem */}
+        <Reveal i={8}>
         <View style={s.contactCard}>
           <Text style={s.contactLabel}>QUESTIONS?</Text>
           <BalancedText style={s.contactBody}>
@@ -371,11 +384,13 @@ export default function LegalDoc() {
             <Text style={s.contactBtnText}>Contact Support  →</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
         {/* Legal-nav — chips om tussen docs te springen. Active doc
             krijgt accent-fill, anderen subtle outline. Eigen component
             (i.p.v. inline in de `.map()`) omdat hooks niet in een loop
             mogen — zelfde patroon als `StartCard` in breath-welcome.tsx. */}
+        <Reveal i={8}>
         <View style={s.legalNav}>
           {LEGAL_ORDER.map((s2) => {
             const d = LEGAL_DOCS[s2];
@@ -383,6 +398,7 @@ export default function LegalDoc() {
             return <LegalNavChip key={s2} slug={s2} label={d.short} active={active} />;
           })}
         </View>
+        </Reveal>
       </ScrollView>
     </SafeAreaView>
   );

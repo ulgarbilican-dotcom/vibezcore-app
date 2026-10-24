@@ -39,6 +39,7 @@
      licht fel op in de merk-indigo zodra er iets gekozen is. */
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { Reveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import { BrandDark, BrandLight, BrandFonts, TypeScale, CTA } from '@/constants/theme';
@@ -423,8 +424,10 @@ export default function GoalScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <Reveal i={0}>
         <Text style={s.header}>Set your state</Text>
         <Text style={s.lead}>Choose what you want to shift</Text>
+        </Reveal>
 
         {/* Operator, 21 september 2026: TOP 2 = grote, vierkantere tegels
            (icoon gecentreerd), de overige (compact) = kleinere tegels.
@@ -433,12 +436,14 @@ export default function GoalScreen() {
            gewoon `GOALS.length - 2` (22 september 2026: 6→4 na het
            schrappen van Peak performance/Calm the mind, geen code hier
            hoefde daarvoor te veranderen). */}
+        <Reveal i={1}>
         <View style={s.grid}>
           {GOALS.map((g, i) => {
             const rank = g.key === primary ? 1 : g.key === secondary ? 2 : 0;
             return <GoalTile key={g.key} g={g} rank={rank} big={i < 2} onTap={tap} />;
           })}
         </View>
+        </Reveal>
       </ScrollView>
 
       {/* Operator, 21 september 2026 ("cta moet sticky"): zelfde patroon
@@ -455,7 +460,9 @@ export default function GoalScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <CtaButton active={!!primary} onPress={buildProtocol} />
+        <Reveal i={2}>
+          <CtaButton active={!!primary} onPress={buildProtocol} />
+        </Reveal>
       </View>
     </SafeAreaView>
   );

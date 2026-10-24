@@ -1559,17 +1559,17 @@ export default function AccountScreen() {
           <TabReveal i={2}><MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} /></TabReveal>
           <TabReveal i={3}><ProductsGroup /></TabReveal>
           <TabReveal i={4}><RhythmGroup /></TabReveal>
-          <Group title="Account">
+          <TabReveal i={5}><Group title="Account">
             {/* Volledig adres onder de titel i.p.v. afgekapt rechts (operator 19 okt 2026). */}
             <Row icon={Mail} title="Email" subtitle={email} />
             {provider === 'google' || provider === 'apple' ? null : (
               <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
             )}
-          </Group>
-          <TabReveal i={5}><SupportGroup /></TabReveal>
-          <TabReveal i={6}><AboutLegalGroups /></TabReveal>
+          </Group></TabReveal>
+          <TabReveal i={6}><SupportGroup /></TabReveal>
+          <TabReveal i={7}><AboutLegalGroups /></TabReveal>
           {/* Afmelden en verwijderen onderaan, apart — zoals in Instellingen. */}
-          <Group footer={`Deleting your account is permanent. It does not cancel an active subscription — do that in your ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play'} settings.`}>
+          <TabReveal i={8}><Group footer={`Deleting your account is permanent. It does not cancel an active subscription — do that in your ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play'} settings.`}>
             <Row icon={LogOut} title="Sign out" onPress={onSignOut} />
             <Row
               icon={Trash2}
@@ -1579,7 +1579,7 @@ export default function AccountScreen() {
               onPress={busy ? undefined : onDeleteAccount}
               accessibilityLabel="Delete your account"
             />
-          </Group>
+          </Group></TabReveal>
         </KeyboardAwareScrollView>
       </SafeAreaView>
     );
@@ -1601,11 +1601,11 @@ export default function AccountScreen() {
         extraScrollHeight={20}
         enableAutomaticScroll={true}
       >
-        <Text style={g.title}>Profile</Text>
+        <TabReveal i={0}><Text style={g.title}>Profile</Text></TabReveal>
         {/* 19 okt 2026: eerst je plan (ook zonder account), dan pas het
             optionele account. */}
-        <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
-        <Group>
+        <TabReveal i={1}><MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} /></TabReveal>
+        <TabReveal i={2}><Group>
           <Row
             icon={CircleUserRound}
             title={authOpen ? (mode === 'login' ? 'Sign In' : 'Create Account') : 'Sign In or Create Account'}
@@ -1618,7 +1618,7 @@ export default function AccountScreen() {
             open={authOpen}
             accessibilityLabel="Sign in or create a VIBEZCORE account"
           />
-        </Group>
+        </Group></TabReveal>
         {authOpen ? (
         <View style={s.authCard}>
           {/* Geen eigen kop meer: de "Sign in"-rij erboven zegt het al (7 okt 2026). */}
@@ -1851,10 +1851,10 @@ export default function AccountScreen() {
 
         </View>
         ) : null}
-        <ProductsGroup />
-        <RhythmGroup />
-        <SupportGroup />
-        <AboutLegalGroups />
+        <TabReveal i={3}><ProductsGroup /></TabReveal>
+        <TabReveal i={4}><RhythmGroup /></TabReveal>
+        <TabReveal i={5}><SupportGroup /></TabReveal>
+        <TabReveal i={6}><AboutLegalGroups /></TabReveal>
 
         {__DEV__ && (
           <PressScale

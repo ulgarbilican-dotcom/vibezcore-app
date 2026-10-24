@@ -33,6 +33,7 @@ import PurchaseConfirm from '@/components/PurchaseConfirm';
 import { usePreventRemove } from '@react-navigation/native';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import MembershipPlans from '@/components/MembershipPlans';
+import { Reveal } from '@/components/Reveal';
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
@@ -1115,9 +1116,15 @@ export default function SubscribeScreen() {
           }}
         />
         <View style={s.center}>
-          <ActivityIndicator size="large" color={Brand.textDim} />
-          <Text style={s.busyTitle}>Just a moment</Text>
-          <Text style={s.busySub}>{sub}</Text>
+          <Reveal i={0}>
+            <ActivityIndicator size="large" color={Brand.textDim} />
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.busyTitle}>Just a moment</Text>
+          </Reveal>
+          <Reveal i={2}>
+            <Text style={s.busySub}>{sub}</Text>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -1260,11 +1267,17 @@ ${
           }}
         />
         <View style={s.center}>
-          <View style={s.errorCircle}>
-            <Text style={s.errorText}>!</Text>
-          </View>
-          <Text style={s.busyTitle}>Something went wrong</Text>
-          <Text style={s.busySub}>{errMsg ?? 'Please try again.'}</Text>
+          <Reveal i={0}>
+            <View style={s.errorCircle}>
+              <Text style={s.errorText}>!</Text>
+            </View>
+          </Reveal>
+          <Reveal i={1}>
+            <Text style={s.busyTitle}>Something went wrong</Text>
+          </Reveal>
+          <Reveal i={2}>
+            <Text style={s.busySub}>{errMsg ?? 'Please try again.'}</Text>
+          </Reveal>
 
           {__DEV__ && errDebug && (
             <Text selectable style={s.debugInfo}>
@@ -1272,6 +1285,7 @@ ${
             </Text>
           )}
 
+          <Reveal i={3}>
           {ownedError ? (
             <>
               <AnimatedPressable
@@ -1321,6 +1335,7 @@ ${
           >
             <Text style={s.linkText}>Contact support</Text>
           </AnimatedPressable>
+          </Reveal>
         </View>
       </SafeAreaView>
     );
@@ -1395,7 +1410,7 @@ ${
         enableOnAndroid={true}
         extraScrollHeight={20}
       >
-        {OrderSummary}
+        <Reveal i={0}>{OrderSummary}</Reveal>
 
         {/* Iter v150 (2026-06-25): operator-feedback — copy was verwarrend
             voor users die via pricing CTA komen ("ik kom om te kopen,
@@ -1406,6 +1421,7 @@ ${
             een account is niet meer VEREIST om te kopen (zie guest-CTA
             onderaan dit form), alleen aanbevolen voor cross-device sync.
             linkingAccount = optionele post-purchase koppeling. */}
+        <Reveal i={1}>
         <Text style={s.heading}>
           {linkingAccount
             ? 'Save your subscription'
@@ -1420,6 +1436,7 @@ ${
               ? 'Create a free VIBEZCORE account so your subscription works on all your devices.'
               : 'Enter your existing VIBEZCORE credentials to link this subscription to your account.'}
         </Text>
+        </Reveal>
 
         {/* Iter v175 (2026-06-30): tabs "New account" / "I have an account"
             verwijderd. Operator-feedback: 80% van Subscribe-visits = nieuwe
@@ -1432,6 +1449,7 @@ ${
             "or"-divider voor users die geen Google/Apple-account willen
             gebruiken of er geen hebben. */}
         {(googleAvailable || appleAvailable) && (
+          <Reveal i={2}>
           <View style={s.socialBlock}>
             {appleAvailable && (
               <AppleAuthentication.AppleAuthenticationButton
@@ -1461,8 +1479,10 @@ ${
               <View style={s.dividerLine} />
             </View>
           </View>
+          </Reveal>
         )}
 
+        <Reveal i={3}>
         <Text style={s.label}>Email</Text>
         <TextInput
           style={s.input}
@@ -1479,6 +1499,7 @@ ${
           autoComplete="email"
           textContentType="emailAddress"
         />
+        </Reveal>
 
         {/* Iter v144: live email-feedback. Toont niets bij leeg veld; bij
             valid format → groen "Looks good"; bij typo → tap-baar
@@ -1518,6 +1539,7 @@ ${
           return <Text style={[s.emailHintBase, tone]}>{hint.text}</Text>;
         })()}
 
+        <Reveal i={4}>
         <Text style={s.label}>Password</Text>
         <View style={s.pwWrap}>
           <TextInput
@@ -1546,6 +1568,7 @@ ${
             <Text style={s.pwToggleText}>{showPw ? 'Hide' : 'Show'}</Text>
           </AnimatedPressable>
         </View>
+        </Reveal>
 
         {/* Iter 9dq v134 (2026-06-14): live password-hint voor signup. Begint
             dim, wordt success-groen zodra de 8-char drempel is gehaald. Geen
@@ -1585,6 +1608,7 @@ ${
           </Text>
         )}
 
+        <Reveal i={5}>
         <AnimatedPressable
           style={[s.btnPrimary, submitPress.pressStyle]}
           onPress={onSubmit}
@@ -1597,6 +1621,7 @@ ${
               : mode === 'signup' ? 'Create account & continue' : 'Sign in & continue'}
           </Text>
         </AnimatedPressable>
+        </Reveal>
 
         {/* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase
             entry point / skip-link. Registratie is optioneel — koop direct
@@ -1626,8 +1651,8 @@ ${
             prominenter gemaakt). Users met bestaand account zonder sub
             loggen in via Account tab → keren terug naar subscribe. */}
 
-        {!linkingAccount && LegalLine}
-        {!linkingAccount && RestoreLink}
+        {!linkingAccount && <Reveal i={6}>{LegalLine}</Reveal>}
+        {!linkingAccount && <Reveal i={7}>{RestoreLink}</Reveal>}
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

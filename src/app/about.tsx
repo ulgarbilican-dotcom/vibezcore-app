@@ -24,6 +24,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { AudioAccent, Brand, BrandFonts } from '@/constants/theme';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { openBraceletWebsite } from '@/services/bracelet-upsell';
@@ -73,6 +74,7 @@ export default function AboutScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero ── */}
+        <Reveal i={0}>
         <Image
           source={WORDMARK}
           style={s.wordmark}
@@ -99,12 +101,14 @@ export default function AboutScreen() {
         <Text style={s.heroResult}>
           Control Your State. Build Your Future.
         </Text>
+        </Reveal>
 
         {/* ── Two products (commercieel: wat je NU kunt kopen vs. wat nog
             komt — dit is een aankoop-indeling, geen merk-identiteit; de
             drie instrumenten hieronder blijven wel apart benoemd) ── */}
         {/* 14 okt 2026 (operator-goedkeuring copyvoorstel A2): State Control
             op telefoon en horloge is nu de kern — eigen kaart, bovenaan. */}
+        <Reveal i={1}>
         <ProductCard
           status="available"
           badge="AVAILABLE NOW"
@@ -114,6 +118,8 @@ export default function AboutScreen() {
           ctaLabel="Open State Control"
           onPress={() => router.dismissTo('/bracelet' as never)}
         />
+        </Reveal>
+        <Reveal i={2}>
         <ProductCard
           status="available"
           badge="AVAILABLE NOW"
@@ -123,10 +129,12 @@ export default function AboutScreen() {
           ctaLabel="Start Breathing"
           onPress={() => router.dismissTo('/breath' as never)}
         />
+        </Reveal>
         {/* Derde productkaart toegevoegd (operator, 11 augustus 2026: "je
             hebt onder blok personal development engineered de audio
             library niet staan"). Alle drie instrumenten horen hier
             benoemd, niet alleen Breathwork en Bracelet. */}
+        <Reveal i={3}>
         <ProductCard
           status="available"
           badge="AVAILABLE NOW"
@@ -136,12 +144,14 @@ export default function AboutScreen() {
           ctaLabel="Explore Library"
           onPress={() => router.dismissTo('/' as never)}
         />
+        </Reveal>
         {/* Vijfde ronde (operator, 11 augustus 2026: "verwijder gewoon die
             blok met bracelet info" — de losse "EXCLUSIVE ADDITION"-sectie
             stond direct ná deze kaart en herhaalde grotendeels dezelfde
             boodschap. Verwijderd; de kernboodschap (HapticCore/gemstones,
             breathwork als eigen selling point) zit nu in de kaart-desc
             hieronder, één keer, niet twee blokken na elkaar. */}
+        <Reveal i={4}>
         <ProductCard
           status="upcoming"
           badge="KICKSTARTER · EARLY 2027"
@@ -152,8 +162,10 @@ export default function AboutScreen() {
           /* Bracelet-links → de website (operator 7 okt; audit 8 okt 2026). */
           onPress={() => void openBraceletWebsite()}
         />
+        </Reveal>
 
         {/* ── 01. Why ── */}
+        <Reveal i={5}>
         <SectionHeader num="01" title="Why VIBEZCORE exists" />
         <P>
           The life you want requires a version of you that doesn&apos;t
@@ -172,11 +184,13 @@ export default function AboutScreen() {
           Long term: better habits, greater self-awareness, stronger
           mental resilience, more intentional living.
         </P>
+        </Reveal>
 
         {/* ── 02. How — drie instrumenten, elk een eigen functie.
             Volgorde en labels (operator, definitieve essentie-tekst):
             Bracelet = Instant/Passive State Control, Breathwork = Active
             State Training, Audio Library = Long-Term Growth. */}
+        <Reveal i={6}>
         <SectionHeader num="02" title="How the three instruments work" />
 
         <Text style={s.subSection}>Instant State Control</Text>
@@ -199,7 +213,9 @@ export default function AboutScreen() {
         <Text style={[s.p, s.pBoldClose]}>
           <Text style={s.bold}>Body first. Mind follows.</Text>
         </Text>
+        </Reveal>
 
+        <Reveal i={7}>
         <Text style={[s.subSection, { marginTop: 32 }]}>
           Active State Training
         </Text>
@@ -213,7 +229,9 @@ export default function AboutScreen() {
           active practice: something you do, not something you passively
           receive.
         </P>
+        </Reveal>
 
+        <Reveal i={8}>
         <Text style={[s.subSection, { marginTop: 32 }]}>
           Long-Term Growth
         </Text>
@@ -262,10 +280,12 @@ export default function AboutScreen() {
             desc="Engineer your autonomy"
           />
         </View>
+        </Reveal>
 
         {/* Vierde onderscheid naast de drie instrumenten: de interface
             zelf (operator, 11 augustus 2026: "onze interface is ook heel
             uniek en gebouwd om rust en happy gevoel te brengen"). */}
+        <Reveal i={8}>
         <Text style={[s.subSection, { marginTop: 32 }]}>
           The Interface
         </Text>
@@ -282,10 +302,12 @@ export default function AboutScreen() {
           independent of VIBEZCORE. No affiliation or endorsement of any
           kind exists or is implied.
         </BalancedText>
+        </Reveal>
 
         {/* ── 03. Who — operator, definitieve essentie-tekst: "voor
             mensen die meer controle willen over zichzelf... kort: voor
             mensen die niet willen leven op automatische piloot." */}
+        <Reveal i={8}>
         <SectionHeader num="03" title="Who it's for" />
         <P>
           VIBEZCORE is for anyone who wants more control over how they
@@ -299,8 +321,10 @@ export default function AboutScreen() {
         <BalancedText style={s.smallNote}>
           VIBEZCORE is for ages 13 and up; under 18 with a parent or guardian's permission.
         </BalancedText>
+        </Reveal>
 
         {/* ── Closing — Mission ── */}
+        <Reveal i={8}>
         <View style={s.missionBlock}>
           <BalancedText style={s.missionLine}>
             Self-understanding. Self-control. Self-respect.
@@ -316,6 +340,7 @@ export default function AboutScreen() {
         <View style={s.footer}>
           <Text style={s.footerText}>© VIBEZCORE</Text>
         </View>
+        </Reveal>
       </ScrollView>
     </SafeAreaView>
   );

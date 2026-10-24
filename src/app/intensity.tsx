@@ -99,6 +99,7 @@ import { SLOTS } from '@/services/reminders';
 import { generateTemplate, RECOMMENDED_INTENSITY } from '@/utils/protocol';
 import { GOALS } from '@/data/goals';
 import { hapticPress, hapticTap } from '@/utils/haptics';
+import { Reveal } from '@/components/Reveal';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const C = BrandDark;
@@ -890,6 +891,7 @@ export default function IntensityScreen() {
            de intro-tekst zit al op routine-intro.tsx (stap 3) — hier geen
            tweede kop meer nodig, de cirkel spreekt voor zich. */}
 
+        <Reveal i={0}>
         <AddToDayHero
           accent={heroAccent}
           photo={heroPhoto}
@@ -920,12 +922,14 @@ export default function IntensityScreen() {
             },
           ]}
         />
+        </Reveal>
 
         {/* Operator, 21 september 2026 ("waarom doe je niet op deze
            manier?" — breath-setup.tsx se stippenrij + "Next: ..."):
            zelfde patroon hier — 4 stippen (gevuld = bevestigd, holle rand
            = eerstvolgende), en de tekst eronder noemt het ÉNE
            eerstvolgende veld i.p.v. alles op te sommen. */}
+        <Reveal i={1}>
         <View style={s.stepDots}>
           {NEXT_ORDER.map((k) => (
             <View
@@ -939,8 +943,9 @@ export default function IntensityScreen() {
           ))}
         </View>
         <Text style={s.progressTxt}>{nextField ? `Next: ${nextField}` : 'All set'}</Text>
+        </Reveal>
 
-        <View style={s.tiles}>
+        <Reveal i={2} style={s.tiles}>
           {/* Operator, 21 september 2026 ("state-knop moet ook open kunnen,
              gebruiker heeft al gekozen — moet als preselectie staan maar
              mag hier ook aangepast worden, hoeft niet terug"): opent een
@@ -1000,7 +1005,7 @@ export default function IntensityScreen() {
             onPress={() => setActivePicker('horizon')}
             full
           />
-        </View>
+        </Reveal>
       </ScrollView>
 
       <View
@@ -1013,6 +1018,7 @@ export default function IntensityScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
+        <Reveal i={3}>
         <AnimatedPressable
           style={[s.cta, !canContinue && s.ctaDisabled, ctaPressStyle]}
           disabled={!canContinue}
@@ -1028,6 +1034,7 @@ export default function IntensityScreen() {
         >
           <Text style={[s.ctaTxt, !canContinue && CTA.labelDisabled]}>Continue</Text>
         </AnimatedPressable>
+        </Reveal>
       </View>
 
       {/* ── State-popup ── */}

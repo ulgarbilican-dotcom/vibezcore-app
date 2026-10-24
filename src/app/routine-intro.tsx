@@ -19,6 +19,7 @@
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import { BrandDark, CTA, TypeScale } from '@/constants/theme';
 import { StepIndicator } from '@/components/StepIndicator';
 import { GOALS } from '@/data/goals';
@@ -132,6 +133,7 @@ export default function RoutineIntroScreen() {
            kaart — is beetje slordig nu"): tekst zwierf los op de
            achtergrond, geen eigen vlak — nu dezelfde matglas-kaart-taal
            als de rest van de flow. */}
+        <Reveal i={0} style={{ alignSelf: 'stretch' }}>
         <View style={s.textCard}>
           <BlurView
             intensity={40}
@@ -145,15 +147,18 @@ export default function RoutineIntroScreen() {
             A few quick questions, then we'll do the rest.
           </BalancedText>
         </View>
+        </Reveal>
 
         {chosenGoals.length > 0 && (
-          <View style={[s.iconArea, { paddingBottom: iconPadBottom }]}>
-            <View style={s.iconWrap}>
-              {chosenGoals.map((g) => (
-                <GoalIconBadge key={g.key} g={g} size={iconSize} />
-              ))}
+          <Reveal i={1} style={{ flex: 1, alignSelf: 'stretch' }}>
+            <View style={[s.iconArea, { paddingBottom: iconPadBottom }]}>
+              <View style={s.iconWrap}>
+                {chosenGoals.map((g) => (
+                  <GoalIconBadge key={g.key} g={g} size={iconSize} />
+                ))}
+              </View>
             </View>
-          </View>
+          </Reveal>
         )}
       </View>
 
@@ -167,14 +172,16 @@ export default function RoutineIntroScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <AnimatedPressable
-          style={[s.cta, ctaPressStyle]}
-          onPress={() => router.push('/intensity' as never)}
-          onPressIn={onCtaPressIn}
-          onPressOut={onCtaPressOut}
-        >
-          <Text style={s.ctaTxt}>Continue</Text>
-        </AnimatedPressable>
+        <Reveal i={2}>
+          <AnimatedPressable
+            style={[s.cta, ctaPressStyle]}
+            onPress={() => router.push('/intensity' as never)}
+            onPressIn={onCtaPressIn}
+            onPressOut={onCtaPressOut}
+          >
+            <Text style={s.ctaTxt}>Continue</Text>
+          </AnimatedPressable>
+        </Reveal>
       </View>
     </SafeAreaView>
   );

@@ -11,6 +11,7 @@
 
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BreathPacer from '@/components/BreathPacer';
+import { Reveal } from '@/components/Reveal';
 import LotusPacer from '@/components/LotusPacer';
 import { BrandFonts } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -69,11 +70,14 @@ function BreathPacerPreviewInner() {
           <ChevronLeft size={20} color="#ffffff" strokeWidth={2.8} />
         </AnimatedPressable>
 
-        <View style={s.center}>
-          <Text style={s.eyebrow}>BreathPacer · Bouwsteen 1</Text>
-          <BreathPacer size={260} accent={STATES[0].accent} />
-        </View>
+        <Reveal i={0} style={{ flex: 1 }}>
+          <View style={s.center}>
+            <Text style={s.eyebrow}>BreathPacer · Bouwsteen 1</Text>
+            <BreathPacer size={260} accent={STATES[0].accent} />
+          </View>
+        </Reveal>
 
+        <Reveal i={1}>
         <View style={s.swatchRow}>
           {STATES.map((st) => (
             <View key={st.key} style={s.swatchCol}>
@@ -82,12 +86,14 @@ function BreathPacerPreviewInner() {
             </View>
           ))}
         </View>
+        </Reveal>
 
         {/* Operator, 9 september 2026: proef of de platte SessionArt-vormen
             (sun/flower/lotus/crystal/tree) ook procedureel in 3D kunnen —
             hieronder alleen de Lotus (Calm Control), losstaand van de
             BreathPacer-rij hierboven. Mag weg zodra de operator besliste of
             dit traject wordt voortgezet voor de andere 4 vormen. */}
+        <Reveal i={2}>
         <View style={s.lotusSection}>
           <Text style={s.eyebrow}>LotusPacer · Vormproef (Calm Control)</Text>
           {/* Operator, 9 september 2026 (6e ronde): "kunnen we eerst 2
@@ -104,6 +110,7 @@ function BreathPacerPreviewInner() {
             </View>
           </View>
         </View>
+        </Reveal>
       </SafeAreaView>
     </View>
   );

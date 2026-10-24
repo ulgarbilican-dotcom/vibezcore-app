@@ -22,6 +22,7 @@
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
+import { Reveal } from '@/components/Reveal';
 import SplatField from '@/components/SplatField';
 import Starfield from '@/components/Starfield';
 import { SESSION_ART } from '@/components/SessionArt';
@@ -271,6 +272,7 @@ function BreathSplatScreenInner() {
       </Text>
       <Text style={s.secs}>{running ? `${Math.max(0, secsLeft)}` : st.techniques[0].name}</Text>
 
+      <Reveal i={1}>
       <View style={s.modes}>
         {ORDER.map((k) => {
           const t = BREATH_STATES[k];
@@ -297,7 +299,9 @@ function BreathSplatScreenInner() {
           );
         })}
       </View>
+      </Reveal>
 
+      <Reveal i={2} style={{ alignSelf: 'center' }}>
       <Tap
         onPress={running ? stop : start}
         style={[s.cta, { borderColor: st.accent }]}
@@ -306,10 +310,13 @@ function BreathSplatScreenInner() {
           {running ? 'STOP' : 'START'}
         </Text>
       </Tap>
+      </Reveal>
 
+      <Reveal i={3}>
       <BalancedText style={s.note}>
         Prototype — the portrait replaces the figure once it is uploaded.
       </BalancedText>
+      </Reveal>
     </SafeAreaView>
   );
 }

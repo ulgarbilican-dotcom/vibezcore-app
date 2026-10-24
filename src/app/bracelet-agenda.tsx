@@ -124,7 +124,9 @@ import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { hapticTap } from '@/utils/haptics';
 import { useStateFreeStart } from '@/hooks/useStateFreeStart';
 import { FREE_COPY } from '@/constants/free-session-copy';
-
+import { Reveal } from '@/components/Reveal';
+
+
 import PremiumNote from '@/components/PremiumNote';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -398,11 +400,11 @@ export default function BraceletAgendaScreen() {
         showsVerticalScrollIndicator={false}
       >
         {!plan ? (
-          <View style={s.emptyWrap}>
+          <Reveal i={0} style={s.emptyWrap}>
             <Watch size={22} color="rgba(255,255,255,0.3)" strokeWidth={2} />
             <Text style={s.emptyT}>No State Control plan yet</Text>
             <BalancedText style={s.emptyB}>Choose your states and times to get started.</BalancedText>
-          </View>
+          </Reveal>
         ) : (
           <>
             {/* Operator, 5 okt 2026 ("doe zoals bij breathwork"): zelfde
@@ -412,6 +414,7 @@ export default function BraceletAgendaScreen() {
                op een modus-kaart alle tijden van die modus in het midden
                terwijl hun bolletjes oplichten. Vervangt de losse uur-labels
                rond de ring en de datum in het midden. */}
+            <Reveal i={0}>
             <Tap
               onPress={() => {
                 hapticTap();
@@ -433,6 +436,7 @@ export default function BraceletAgendaScreen() {
                 style={calendarOpen ? { transform: [{ rotate: '180deg' }] } : undefined}
               />
             </Tap>
+            </Reveal>
 
             {calendarOpen && (
               <View style={s.calendarDropdown}>
@@ -492,7 +496,7 @@ export default function BraceletAgendaScreen() {
               </View>
             )}
 
-            <View style={s.ringWrap}>
+            <Reveal i={1} style={s.ringWrap}>
               {(() => {
                 const filteredItems =
                   filterMode !== null && filterMode !== 'all'
@@ -548,7 +552,7 @@ export default function BraceletAgendaScreen() {
                   </Tap>
                 );
               })()}
-            </View>
+            </Reveal>
 
             {/* Operator, 1 okt 2026 ("niet duidelijk of je op de bollen
                moet drukken"): korte hint boven de kaarten — de bolletjes
@@ -561,6 +565,7 @@ export default function BraceletAgendaScreen() {
                dit bestand. Kiest WELKE uur+duur-labels op de ring
                verschijnen, niets meer — de bolletjes zelf staan er al
                altijd, ongeacht selectie. */}
+            <Reveal i={2}>
             <View style={s.cardGrid}>
               {MODES.map((m) => (
                 <StateCard
@@ -586,6 +591,7 @@ export default function BraceletAgendaScreen() {
                 }}
               />
             </View>
+            </Reveal>
           </>
         )}
 
@@ -593,7 +599,7 @@ export default function BraceletAgendaScreen() {
             overzicht van wat je samenstelde, "Change protocol" de bouwer
             (operator, 5 okt 2026). */}
         {plan ? (
-          <View style={s.bottomActions}>
+          <Reveal i={3} style={s.bottomActions}>
             <Tap style={s.pillBtn} onPress={() => router.push('/bracelet-protocol' as never)}>
               <VibezGlass radius={18} style={StyleSheet.absoluteFill} />
               <Text style={s.pillBtnTxt}>Check your protocol</Text>
@@ -603,12 +609,14 @@ export default function BraceletAgendaScreen() {
               <Pencil size={13} color="rgba(255,255,255,0.7)" strokeWidth={2.2} />
               <Text style={s.pillBtnTxt}>Change protocol</Text>
             </Tap>
-          </View>
+          </Reveal>
         ) : (
+          <Reveal i={1}>
           <Tap style={s.editLink} onPress={() => router.push('/bracelet-set-day' as never)}>
             <Pencil size={12} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
             <Text style={s.editLinkTxt}>Set your plan</Text>
           </Tap>
+          </Reveal>
         )}
         {/* Audit 10 okt 2026: zelfde "Remove plan" als in de breathwork-agenda. */}
         {plan && (

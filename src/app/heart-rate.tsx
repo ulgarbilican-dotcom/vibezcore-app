@@ -10,6 +10,7 @@
 
 import BalancedText from '@/components/BalancedText';
 import Tap from '@/components/Tap';
+import { Reveal } from '@/components/Reveal';
 import {
   connectHealth,
   HEALTH_INTEGRATION_ENABLED,
@@ -77,6 +78,7 @@ export default function HeartRateScreen() {
       />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Wat nu geldt — zelfde opbouw als het blad achter de bpm-pil. */}
+        <Reveal i={0}>
         <View style={s.card}>
           {/* Operator, 10 okt 2026: het hart in Bio-Teal, de accentkleur. */}
           <View style={s.icon}>
@@ -95,11 +97,13 @@ export default function HeartRateScreen() {
             <Text style={s.ctaTxt}>Measure or Update</Text>
           </PressScale>
         </View>
+        </Reveal>
 
         {/* 12 okt 2026: rusthartslag van je horloge/ring via Apple Health /
             Health Connect — enkel tonen zolang dat nog niet gekoppeld is.
             UIT bij de lancering (19 okt 2026, HEALTH_INTEGRATION_ENABLED). */}
         {HEALTH_INTEGRATION_ENABLED && isHealthModulePresent() && !healthOn ? (
+          <Reveal i={1}>
           <Tap
             style={({ pressed }) => [s.watchRow, pressed && { opacity: 0.7 }]}
             onPress={() => void connectHealth()}
@@ -113,8 +117,10 @@ export default function HeartRateScreen() {
             </View>
             <ChevronRight size={18} color="rgba(255,255,255,0.35)" />
           </Tap>
+          </Reveal>
         ) : null}
 
+        <Reveal i={2}>
         <HistorySectionLabel>History</HistorySectionLabel>
         {history.length === 0 ? (
           <Text style={s.empty}>Your measurements appear here.</Text>
@@ -143,6 +149,8 @@ export default function HeartRateScreen() {
             ))}
           </HistoryGroup>
         )}
+        </Reveal>
+        <Reveal i={3}>
         <BalancedText style={s.note}>For wellness only, not a medical measurement.</BalancedText>
         {/* Audit 12 okt 2026 (privacy): je eigen hartslag-gegevens wissen,
             zoals Apple Health onderaan "Delete All Data". */}
@@ -157,6 +165,7 @@ export default function HeartRateScreen() {
             <Text style={s.clearTxt}>Clear Heart Rate Data</Text>
           </Tap>
         ) : null}
+        </Reveal>
       </ScrollView>
 
       <ConfirmCard
