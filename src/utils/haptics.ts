@@ -21,20 +21,15 @@ import { Platform } from 'react-native';
 
 const ANDROID_API = Platform.OS === 'android' ? Number(Platform.Version) : 0;
 
-/* 24 okt 2026 (operator: "sommige knoppen wel haptiek, andere niet"): elke knop (Tap, PressScale) tikt nu zelf
-   op het moment van de tik, op één plek. Knoppen die hapticTap()/hapticPress() nog zelf aanroepen vallen binnen
-   dit venster en trillen dus niet dubbel. */
-const DEDUPE_MS = 120;
-let lastFire = 0;
-function dedupe(): boolean {
-  const now = Date.now();
-  if (now - lastFire < DEDUPE_MS) return true;
-  lastFire = now;
-  return false;
-}
+/* 24 okt 2026 (operator: "laat de haptics op knoppen vallen" — een tik die niet exact gelijk loopt met het indrukken voelt
+   goedkoop, en de vertraging van de trilmotor verschilt per toestel en is niet te garanderen): GEEN haptiek meer op
+   knoppen, keuzes en tabs. hapticTap()/hapticPress() blijven bestaan (±110 aanroepen) maar doen niets, zodat één
+   schakelaar volstaat als dit ooit terugkomt. Blijft wel: hapticTick (slepen over een waarde), succes/fout
+   (notificationAsync) en de sessie-haptiek (ademhaling, bracelet) — die zijn geen knoppen. */
+const BUTTON_HAPTICS = false;
 
 export function hapticTap(): void {
-  if (dedupe()) return;
+  if (!BUTTON_HAPTICS) return;
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Keyboard_Tap).catch(() => {});
   } else {
@@ -44,7 +39,7 @@ export function hapticTap(): void {
 
 /** Lichte "impact" voor hoofdknoppen (Start e.d.) — op Android dezelfde fijne tik. */
 export function hapticPress(): void {
-  if (dedupe()) return;
+  if (!BUTTON_HAPTICS) return;
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Keyboard_Tap).catch(() => {});
   } else {

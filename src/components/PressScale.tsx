@@ -29,7 +29,7 @@ type Props = Omit<PressableProps, 'style' | 'children'> & {
   haptic?: boolean;
 };
 
-export default function PressScale({ style, children, scaleTo = 0.96, haptic = true, onPress, onPressIn, onPressOut, ...rest }: Props) {
+export default function PressScale({ style, children, scaleTo = 0.96, haptic = false, onPressIn, onPressOut, ...rest }: Props) {
   const scale = useSharedValue(1);
   const dim = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({
@@ -40,17 +40,10 @@ export default function PressScale({ style, children, scaleTo = 0.96, haptic = t
     <AnimatedPressable
       {...rest}
       style={[style, animated]}
-      onPress={
-        onPress
-          ? (e) => {
-              if (haptic) hapticPress();
-              onPress(e);
-            }
-          : undefined
-      }
       onPressIn={(e) => {
         scale.value = withSpring(scaleTo, SPRING_PRESS_IN);
         dim.value = withTiming(0.85, { duration: 90 });
+        if (haptic) hapticPress();
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
