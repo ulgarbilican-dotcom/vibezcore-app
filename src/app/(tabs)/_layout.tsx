@@ -22,6 +22,7 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { QaPressable } from '@/components/QaPressable';
 import { qaFlag } from '@/utils/qa-probe';
 import { isReduceMotion } from '@/constants/motion';
 import { isBreathPickerOpen, subscribeBreathPickerOpen } from '@/utils/breath-picker-ui';
@@ -88,7 +89,7 @@ function TabButton({
   testID?: string;
 }) {
   return (
-    <Pressable
+    <QaPressable
       onPress={() => {
         if (__DEV__) console.log('TABBUTTON tap:', path);
         /* Iter 9dq v98 (2026-06-04): tap op Audio Library-tab reset de
@@ -131,7 +132,7 @@ function TabButton({
       android_ripple={{ color: 'rgba(255,255,255,0.14)', borderless: true }}
     >
       {children}
-    </Pressable>
+    </QaPressable>
   );
 }
 

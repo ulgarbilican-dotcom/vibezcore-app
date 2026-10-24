@@ -51,6 +51,25 @@ def find_target(s, pattern):
     return None, None
 
 
+def screen_size():
+    out = sh('shell', 'wm', 'size').stdout.decode('utf-8', 'ignore')
+    m = re.findall(r'(\d+)x(\d+)', out)
+    return tuple(map(int, m[-1])) if m else (1080, 2340)
+
+
+def tap_frac(fx, fy, wait_s=1.5):
+    """Tik op een verhouding van het scherm (nooit vaste pixels): werkt op elke schermmaat."""
+    w, h = screen_size()
+    tap_xy(int(w * fx), int(h * fy), wait_s)
+
+
+def go_tab(name, wait_s=3.5):
+    """Tabblad openen via de knop die de app zelf meldt (naam bevat het tabblad)."""
+    lab = tap(rf'^{re.escape(name)}', 6)
+    time.sleep(wait_s)
+    return lab
+
+
 def tap_xy(x, y, wait_s=1.5):
     sh('shell', 'input', 'tap', str(x), str(y)); time.sleep(wait_s)
 
@@ -88,7 +107,7 @@ def prepare():
     sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}&fresh=1', PKG); time.sleep(8)
     sh('shell', 'am', 'force-stop', PKG); sh('logcat', '-c')
     sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); time.sleep(12)
-    tap_xy(540, 1729, 4)                                       # welkom -> "Control Your State"
+    tap_frac(0.5, 0.739, 4)                                    # welkom -> "Control Your State"
     clear_overlays(); end_any_session()
 
 
@@ -130,7 +149,7 @@ def sco(s):
 
 def onboarding(F):
     """A2-A4: de State Control-onboarding vanaf het begin, stap voor stap, inclusief Back en de rusthartslag-keuze."""
-    act_expect(F, 'A2 Explore -> onboarding stap 1', lambda: tap_xy(540, 1726, 4.5), lambda s: s.get('path') == '/state-onboarding' and sco(s).get('step') == 0)
+    act_expect(F, 'A2 Explore -> onboarding stap 1', lambda: tap_frac(0.5, 0.738, 4.5), lambda s: s.get('path') == '/state-onboarding' and sco(s).get('step') == 0)
     act_expect(F, 'A3 CTA stap 1 -> stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
     act_expect(F, 'A3 Back op stap 2 -> terug op stap 1', lambda: tap(r'^Back'), lambda s: sco(s).get('step') == 0)
     act_expect(F, 'A3 CTA -> weer stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
@@ -146,7 +165,7 @@ def onboarding(F):
 
 def statecontrol_free():
     F = 'SC/free'
-    act_expect(F, 'A1 tab opent met tabbalk (intro)', lambda: tap_xy(*TABS['State Control'], 3.5), lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is True)
+    act_expect(F, 'A1 tab opent met tabbalk (intro)', lambda: go_tab('State Control'), lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is True)
     onboarding(F)
     act_expect(F, 'B1 keuzescherm zonder tabbalk, met Back', lambda: 'picker',
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and s.get('tabbar') is False and any(e.startswith('Back') for e in s.get('exits', [])))
@@ -162,7 +181,7 @@ def statecontrol_free():
 
 def statecontrol_premium():
     F = 'SC/premium'
-    act_expect(F, 'tab opent direct op het keuzescherm (geen intro), met Back', lambda: tap_xy(*TABS['State Control'], 4.5),
+    act_expect(F, 'tab opent direct op het keuzescherm (geen intro), met Back', lambda: go_tab('State Control', 4.5),
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and any(e.startswith('Back') for e in s.get('exits', [])))
     modes_flow(F)
     act_expect(F, 'sessie starten -> sessiescherm (loopt)', lambda: tap(r'^Start .* session$'),
