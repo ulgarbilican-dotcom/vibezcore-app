@@ -385,6 +385,8 @@ export default function TabLayout() {
           headerShown: false,
           /* Zachte crossfade tussen tabs i.p.v. een harde wissel (24 okt 2026). */
           animation: 'fade',
+          /* Tijdens de crossfade scheen de standaard (witte) scène-achtergrond even door: effen donker (operator, 24 okt 2026: "heel even een witte pagina"). */
+          sceneStyle: { backgroundColor: '#0a0a0a' },
           /* Operator, 25 september 2026: eerst een echte `BlurView`-Material
              geprobeerd, operator vond matglas niet mooi — "kunnen we het
              transparant maken". Daarna (derde ronde, toen de app nog licht
