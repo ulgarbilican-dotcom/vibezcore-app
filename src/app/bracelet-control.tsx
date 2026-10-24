@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import { qaFlag } from '@/utils/qa-probe';
 import { Reveal } from '@/components/Reveal';
 import { SPRING_SETTLE } from '@/constants/motion';
 import PopupCard from '@/components/PopupCard';
@@ -3444,6 +3445,8 @@ function ActiveSessionScreen({
      zodat andere schermen in dit bestand ongemoeid blijven. */
   const activeDark = true;
   const [confirmEnd, setConfirmEnd] = useState(false);
+  qaFlag('sc', { view: 'session', paused: !!isPaused, mode: activeMeta.mode });
+
   return (
     <SafeAreaView
       style={[s.root, activeDark && { backgroundColor: '#000000' }]}
@@ -4190,6 +4193,14 @@ function IdleScreen({
     setSelectedMode(next);
     setDuration(getModeMeta(next).defaultMinutes);
   };
+
+  /* QA-meetpunt (docs/KWALITEITSPROTOCOL.md): wat State Control nu toont. */
+  qaFlag('sc', {
+    view: viewingRunning ? 'session-open' : trialRunning ? 'preview' : 'picker',
+    mode: selectedMode,
+    min: duration,
+    running: sessionRunning,
+  });
 
   return (
     /* Iter 9bb (2026-05-31): SafeAreaView edges conditional op owner-status.

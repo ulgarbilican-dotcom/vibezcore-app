@@ -13,7 +13,7 @@ const flags: Record<string, unknown> = {};
 export const QA_EXIT_RE = /^(Back|Close|Cancel|Done|Not now|Minimize)\b/i;
 
 export function qaExit(label: string | undefined, delta: 1 | -1, ref?: RefObject<View | null>): void {
-  if (!QA_ENABLED || !label || !QA_EXIT_RE.test(label)) return;
+  if (!QA_ENABLED || !label) return;
   const n = (exits.get(label) ?? 0) + delta;
   if (n <= 0) {
     exits.delete(label);
@@ -29,7 +29,7 @@ export function qaFlag(key: string, value: unknown): void {
 }
 
 export function qaSnapshot(): Record<string, unknown> {
-  return { exits: [...exits.keys()].sort(), ...flags };
+  return { exits: [...exits.keys()].filter((l) => QA_EXIT_RE.test(l)).sort(), targets: [...exits.keys()].sort(), ...flags };
 }
 
 /** Zoals qaSnapshot, plus de positie van elke uitweg in schermpixels — NU gemeten (niet bij de eerste layout, want een
