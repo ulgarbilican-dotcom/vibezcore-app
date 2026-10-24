@@ -3974,11 +3974,15 @@ function ModeDot({ active }: { active: boolean; color?: string }) {
   useEffect(() => {
     k.value = withSpring(active ? 1 : 0, SPRING_SETTLE);
   }, [active, k]);
-  const st = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.7 + 0.3 * k.value }],
-    backgroundColor: interpolateColor(k.value, [0, 1], ['rgba(255,255,255,0.32)', '#ffffff']),
-  }));
-  return <Animated.View style={[s.modeDot, st]} />;
+  /* Grijs = rust, wit = gekozen. Geen kleur-interpolatie (24 okt 2026: die liet de dots op het toestel verdwijnen):
+     een vaste grijze dot met daarover een witte laag waarvan enkel de doorzichtigheid verandert. */
+  const sizeStyle = useAnimatedStyle(() => ({ transform: [{ scale: 0.7 + 0.3 * k.value }] }));
+  const whiteStyle = useAnimatedStyle(() => ({ opacity: k.value }));
+  return (
+    <Animated.View style={[s.modeDot, { backgroundColor: 'rgba(255,255,255,0.32)' }, sizeStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { borderRadius: 5, backgroundColor: '#ffffff' }, whiteStyle]} />
+    </Animated.View>
+  );
 }
 
 /* SCREEN 1: Idle — mode selection + duration + Start CTA.
