@@ -598,15 +598,20 @@ export default function BreathScreen() {
   const WORD_STAGGER_MS = 220;
   const WORD_RISE_MS = 620;
   const wordReveal = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
+  /* Speelt OPNIEUW af zodra het intro (weer) in beeld komt: `introRun` gaat omhoog bij elke terugkeer naar deze
+     tab, `intro` wisselt bij terug-chevron/Explore modes (24 okt 2026: "werkt niet elke keer"). */
   useEffect(() => {
     wordReveal.forEach((v, i) => {
+      cancelAnimation(v);
+      v.value = 0;
+      if (!intro) return;
       v.value = withDelay(
         300 + i * WORD_STAGGER_MS,
         withTiming(1, { duration: WORD_RISE_MS, easing: Easing.out(Easing.cubic) }),
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [introRun, intro]);
   /* Drie losse `useAnimatedStyle`-aanroepen i.p.v. een helper-functie die
      de hook aanroept — hooks horen rechtstreeks in het component te staan,
      niet achter een gewone functie verstopt.

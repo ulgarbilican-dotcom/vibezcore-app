@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_OUT } from '@/constants/motion';
 import PopupCard from '@/components/PopupCard';
 import Tap from '@/components/Tap';
@@ -3064,7 +3065,7 @@ export function BreathSession() {
            gekozen): enkel voor Calm Control de echte-foto-3D-lotus i.p.v.
            de generieke orb — de andere vier toestanden hebben nog geen
            eigen 3D-vorm, dus blijven bij `BreathPacer`. */}
-        <View style={s.figureStage}>
+        <Reveal i={1}><View style={s.figureStage}>
           {/* Operator, 11 september 2026 (21e ronde): "lichtbron rondom de
              animatie" — zie de toelichting bij `FigureGlow` hierboven:
              deze wrapper heeft BEWUST geen `overflow:hidden` (in
@@ -3122,7 +3123,7 @@ export function BreathSession() {
             />
           )}
           </View>
-        </View>
+        </View></Reveal>
 
         {/* Operator, 11 september 2026 (13e ronde): "teller moet mee onder
            de lijn komen" — stond hier los, boven de ademboog. Verhuisd naar
@@ -3331,7 +3332,7 @@ export function BreathSession() {
         style={[s.footerScrim, { height: FOOTER_H + Math.max(insets.bottom, 10) + 88 }]}
       />
 
-      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 24 }]}>
+      <Reveal i={2} style={[s.footer, { paddingBottom: Math.max(insets.bottom, 10) + 24 }]}>
         {/* Blijvende, niet-opdringerige banner (operator, 14 augustus 2026 —
            zie de toelichting bij batteryRestricted hierboven). Alleen op
            het startscherm (niet tijdens running), zodat hij niet ook nog
@@ -3591,7 +3592,7 @@ export function BreathSession() {
             <Text style={s.unlockLinkTxt}>Unlock all sessions →</Text>
           </AnimatedPressable>
         )}
-      </View>
+      </Reveal>
 
       {/* Premium-popup — gedeelde component (operator, 13 augustus 2026:
           welcome.tsx had dezelfde popup nodig; nu één bron in
