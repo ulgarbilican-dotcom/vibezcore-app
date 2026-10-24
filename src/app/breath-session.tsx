@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_OUT } from '@/constants/motion';
 import PopupCard from '@/components/PopupCard';
@@ -217,7 +218,7 @@ import { imageSource } from '@/utils/image-source';
    breath-welcome.tsx, hier als herbruikbare hook i.p.v. 30+ keer dezelfde
    drie regels te herhalen. `scale` = 0.96 voor één volle-breedte primaire
    CTA, 0.95 voor kaarten/rijen, 0.92-0.94 voor kleine icoon-only knoppen. */
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 function usePressScale(scale = 0.95) {
   const pressScale = useSharedValue(1);
   const onPressIn = () => {

@@ -645,7 +645,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
     const id = setInterval(() => {
       if (finished.current) return;
       /* Diagnose (10 okt 2026): elke seconde de beeldwaarden in de log. */
-      if (__DEV__ && ++logTick % 4 === 0) {
+      if (++logTick % 4 === 0) { /* TIJDELIJK DIAGNOSE — NIET COMMITTEN */
         const r0 = lastRaw.current;
         console.log(
           `[PulseMeter] r=${r0 ? Math.round(r0.r) : '-'} g=${r0 ? Math.round(r0.g) : '-'} finger=${fingerSince.current !== null} fps=${fpsRef.current} samples=${samples.current.length} hist=${liveHist.current.join('/')} live=${liveEma.current} flashSeen=${flashSeen.current} darkMs=${darkSince.current ? Date.now() - darkSince.current : 0} batteryLow=${batteryLowRef.current} torchErr=${torchErrors.current} revive=${revives.current}`,
@@ -766,6 +766,7 @@ export default function PulseMeter({ onResult, onElevated, onManual, onErrorChan
         /* Controle zit in robustPulse: enkel schone stukken tellen, en die
            moeten samen ~12 s dekken en het eens zijn. */
         const ok = !!res && res.bpm >= 45 && res.bpm <= 100 && res.confidence >= 0.35;
+        console.log(`[PulseMeter][RESULT] elapsed=${elapsed} window=${window.length} fps=${fpsRef.current} bpm=${res ? res.bpm : 'null'} conf=${res ? Math.round(res.confidence * 100) / 100 : 'null'} ok=${ok} flashSeen=${flashSeen.current} batteryLow=${batteryLowRef.current}`); /* TIJDELIJK DIAGNOSE */
         /* Geldig maar boven het rustbereik (101–180): meteen tonen, niet
            eerst doormeten tot de foutmelding. */
         const high = purpose !== 'session' && !!res && res.bpm > 100 && res.confidence >= 0.35;

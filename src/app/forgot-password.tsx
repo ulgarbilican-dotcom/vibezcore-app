@@ -15,6 +15,7 @@
    2026-05-27.
    ─────────────────────────────────────────────────────────────────── */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import { Reveal } from '@/components/Reveal';
@@ -49,7 +50,7 @@ import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
 /* Standaard press-scale-animatie (zie breath-welcome.tsx `StartCard`
    voor de referentie-implementatie) — additief, geen layout/logica-
    wijziging. */
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 /* Redirect-URL die in de email-link verschijnt. Supabase voegt zelf
    `&token_hash=...&type=recovery` toe.
 

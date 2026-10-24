@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
@@ -227,7 +228,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 /* Standaard druk-vering-recept (zie StartCard in breath-welcome.tsx) — hier
    op module-niveau want dit bestand heeft tientallen Pressables die allemaal
    dezelfde tactiele feedback nodig hebben. */
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 /* Operator, 9 september 2026: "die rechthoekige kaart in cirkel veranderen
    en hoger zetten" — de rechthoekige samenvattingskaart is vervangen door
    deze grote cirkel, hoger op het scherm. Zelfde ring-vul-taal als de

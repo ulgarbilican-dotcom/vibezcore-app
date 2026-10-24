@@ -12,6 +12,7 @@
    `haptic`: een lichte tik bij indrukken — voor hoofdknoppen (Start,
    Continue), niet voor elke kleine knop. */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
@@ -19,7 +20,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } fr
 import { hapticPress } from '@/utils/haptics';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 
 type Props = Omit<PressableProps, 'style' | 'children'> & {
   style?: StyleProp<ViewStyle>;

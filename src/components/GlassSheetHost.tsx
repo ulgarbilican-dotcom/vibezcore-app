@@ -19,6 +19,7 @@
    `<Modal transparent animationType="slide">` had.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { QaPressable } from '@/components/QaPressable';
 import { SPRING_SHEET, isReduceMotion } from '@/constants/motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
@@ -197,7 +198,7 @@ export function GlassSheetHost() {
       {shown ? (
         <>
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: progress }]}>
-            <Pressable style={s.backdrop} onPress={() => current?.onClose()} accessibilityLabel="Close" />
+            <QaPressable style={s.backdrop} onPress={() => current?.onClose()} accessibilityLabel="Close" />
           </Animated.View>
           <Animated.View
             style={[

@@ -26,6 +26,7 @@
    plaats van een harde cut, Premium/bracelet-eigenaars de volledige sessie
    zonder enige limiet. */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
@@ -83,7 +84,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { hapticTap } from '@/utils/haptics';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 
 type Phase = 'pick' | 'personalizing';
 

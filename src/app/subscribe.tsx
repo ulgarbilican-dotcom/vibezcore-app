@@ -25,6 +25,7 @@
      - (tabs)/index.tsx pricing-cards en GET FULL ACCESS-knop.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import { SPRING_PRESS_OUT } from '@/constants/motion';
 import { friendlyError } from '@/utils/friendly-error';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
@@ -95,7 +96,7 @@ import Animated, {
 import { hapticPress } from '@/utils/haptics';
 import { markSalesCardShown, recordPlansDismissed, recordPurchase } from '@/services/sales-nudges';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 
 /* Standaard press-scale animatie voor tappables op dit scherm. Elke
    Pressable krijgt zijn EIGEN instantie (aparte state) door deze hook

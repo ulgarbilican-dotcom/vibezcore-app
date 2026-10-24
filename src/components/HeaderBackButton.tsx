@@ -25,6 +25,7 @@
    — zelfde gedrag als React Navigation's eigen default voor de systeem-
    pijl. `onPress`/`color` zijn overrides voor de uitzonderingsgevallen. */
 
+import { QaAnimatedPressable } from '@/components/QaPressable';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { Brand } from '@/constants/theme';
 import { router } from 'expo-router';
@@ -37,7 +38,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = QaAnimatedPressable;
 
 export function HeaderBackButton({
   onPress,
