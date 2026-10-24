@@ -30,6 +30,7 @@
    voorportaal toe voor die ene ingang.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import TimeWheel from '@/components/TimeWheel';
@@ -2401,7 +2402,7 @@ export default function BreathSetupScreen() {
            (Breath-tab → dit scherm) blijft ONGEWIJZIGD: enkel die toont dit
            kopje nog. */}
         {!isAddToDay && (
-        <View style={s.stateHeader}>
+        <Reveal i={0}><View style={s.stateHeader}>
           {/* Operator, 10 okt 2026 (zelfde opbouw als State Control, daar
               "SESSION CONTROL"): algemene titel bovenaan, de toestand staat
               nu in de cirkel. */}
@@ -2410,7 +2411,7 @@ export default function BreathSetupScreen() {
           </Text>
           {/* Operator, 5 okt 2026 ("heel druk — de 'From high activation…'-
              tekst mag weg"): enkel nog de naam van de toestand. */}
-        </View>
+        </View></Reveal>
         )}
 
         {/* Operator, 18 september 2026 ("cirkel mag groter en in het
@@ -2459,12 +2460,12 @@ export default function BreathSetupScreen() {
         {/* Operator, 10 okt 2026: boven de cirkel de toestand; de techniek
             staat in de cirkel. */}
         {!isAddToDay && (
-        <Text style={[s.techTitle, s.techTitleTxt]} numberOfLines={1}>
+        <Reveal i={1}><Text style={[s.techTitle, s.techTitleTxt]} numberOfLines={1}>
           {displayName(st.eyebrow)}
-        </Text>
+        </Text></Reveal>
         )}
         {!isAddToDay && (
-        <GestureHandlerRootView style={{ flex: 0 }}>
+        <Reveal i={2}><GestureHandlerRootView style={{ flex: 0 }}>
         <GestureDetector gesture={heroDial}>
         <View style={s.heroWrap}>
           {/* Operator, 11 september 2026: "binnenkant van de cirkel moet
@@ -2630,7 +2631,7 @@ export default function BreathSetupScreen() {
           </View>
         </View>
         </GestureDetector>
-        </GestureHandlerRootView>
+        </GestureHandlerRootView></Reveal>
         )}
 
 
@@ -2979,7 +2980,7 @@ export default function BreathSetupScreen() {
            labelregel opent de uitleg van de gekozen techniek. */}
         {/* Operator, 10 okt 2026: duurwiel weg (tijd via de rand van de
             cirkel); de technieken als draaiwiel ONDER de cirkel. */}
-        <View style={s.techWheelWrap}>
+        <Reveal i={3}><View style={s.techWheelWrap}>
           <DurationWheel
             options={st.techniques.map((t, i) => ({ value: i, label: techShortLabel(t) }))}
             textMode
@@ -2991,13 +2992,13 @@ export default function BreathSetupScreen() {
               pickTechnique(i);
             }}
           />
-        </View>
+        </View></Reveal>
         </>
         )}
 
       </ContentWrap>
 
-      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 12) + 26 }]}>
+      <Reveal i={4}><View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 12) + 26 }]}>
         {/* Operator, 9 september 2026: "cta knop moet in ons wit" — zelfde
            vaste, enkele witte CTA-kleur als (tabs)/breath.tsx (niet meer de
            toestand-accentkleur als vulling); de accentkleur blijft elders
@@ -3074,7 +3075,7 @@ export default function BreathSetupScreen() {
             {locked ? FREE_COPY.previewLine : FREE_COPY.freeLine}
           </PremiumNote>
         ) : null}
-      </View>
+      </View></Reveal>
 
       {/* Operator, 24 september 2026 (pasted Apple sheets-referentie, zelfde
          behandeling als de duur-infopopup hieronder): geen gecentreerde

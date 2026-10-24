@@ -25,6 +25,7 @@
    - Glass-chip status indicators
    ─────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { SPRING_SETTLE } from '@/constants/motion';
 import PopupCard from '@/components/PopupCard';
 import Tap from '@/components/Tap';
@@ -4341,7 +4342,7 @@ function IdleScreen({
             i-paneel opent. */}
         {/* Operator, 9 okt 2026: cirkel lager — net boven het midden. */}
         <View style={{ height: 0 }} />
-        <View style={s.durationRingWrap}>
+        <Reveal i={0}><View style={s.durationRingWrap}>
           {/* Operator, 10 okt 2026: de bpm-pil BOVEN de cirkel (was erin).
               Operator, 9 okt 2026: je hartslag als klein pilletje onder de
               vaste tijden — enkel hart, bpm en pijltje (in de ring was het
@@ -4442,12 +4443,12 @@ function IdleScreen({
               </HeartbeatScale>
             </View>
           </ModeSwipeRing>
-        </View>
+        </View></Reveal>
 
         {/* Paginabolletjes zoals iOS (wit): waar je zit, hoeveel modi er
             zijn, en een tik springt meteen naar die modus (5 okt 2026 —
             vervangt de rij met vijf knoppen). */}
-        <View style={[s.modeDots, trialRunning && { opacity: 0 }]} pointerEvents={trialRunning ? 'none' : 'auto'}>
+        <Reveal i={1}><View style={[s.modeDots, trialRunning && { opacity: 0 }]} pointerEvents={trialRunning ? 'none' : 'auto'}>
           {MODES.map((m: ModeMeta) => {
             const active = m.mode === selectedMode;
             return (
@@ -4465,7 +4466,7 @@ function IdleScreen({
               </Tap>
             );
           })}
-        </View>
+        </View></Reveal>
         {/* De losse i-knop hier is weg: de i staat nu in de ring, naast de
             naam van de toestand (6 okt 2026). */}
 
@@ -4492,7 +4493,7 @@ function IdleScreen({
             popup met korte info en start of back" + "boven de cta naast
             elkaar"). Zelfde tekens als de toestand erachter. */}
         {!sessionRunning && !trialRunning ? (
-          <View style={s.quickBlock}>
+          <Reveal i={2}><View style={s.quickBlock}>
             {/* Operator, 9 okt 2026 (Apple-stijl "Quick Start Cards"): twee
                 liggende kaartjes met tekst i.p.v. losse icoontjes — je ziet
                 meteen wat ze doen. Tik = kort infoblad met Start. */}
@@ -4528,7 +4529,7 @@ function IdleScreen({
                 );
               })}
             </View>
-          </View>
+          </View></Reveal>
         ) : null}
 
 
@@ -4574,7 +4575,7 @@ function IdleScreen({
           /* Operator, 5 okt 2026: andere modus bekijken tijdens een lopende
              sessie mag; wisselen vraagt één bevestiging (een sessie stoppen
              is onomkeerbaar). */
-          <PrimaryCtaButton
+          <Reveal i={3}><PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, stateGlass(meta.color), busy && s.btnDisabled]}
             onPress={() => setConfirmSwitch(true)}
             disabled={busy}
@@ -4582,11 +4583,11 @@ function IdleScreen({
           >
             <VibezGlass radius={999} tint={meta.color} level="normal" flat style={StyleSheet.absoluteFill} />
             <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Switch to {meta.name}</Text>
-          </PrimaryCtaButton>
+          </PrimaryCtaButton></Reveal>
         ) : trialRunning && startLocked ? (
           /* 21 okt 2026 (operator: "die cta is storend"): geen grote witte knop meer in de
              lopende preview, maar een ronde play/pauze en eronder END SESSION (zoals Breath). */
-          <View style={s.trialControls}>
+          <Reveal i={3}><View style={s.trialControls}>
             <PressScale
               onPress={toggleTrialPause}
               scaleTo={0.94}
@@ -4618,9 +4619,9 @@ function IdleScreen({
             >
               <Text style={s.trialEndTxt}>END SESSION</Text>
             </Tap>
-          </View>
+          </View></Reveal>
         ) : (
-          <PrimaryCtaButton
+          <Reveal i={3}><PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, stateGlass(meta.color), (busy || criticalBattery) && s.btnDisabled]}
             onPress={
               startLocked ? (trialRunning ? () => stopTrial(false) : () => setTrialSheetOpen(true)) : withRhythm(onStart)
@@ -4648,14 +4649,14 @@ function IdleScreen({
             ) : (
               <Text style={[s.primaryBtnText, s.chooseCtaTxt]}>Start {meta.name}</Text>
             )}
-          </PrimaryCtaButton>
+          </PrimaryCtaButton></Reveal>
         )}
         {/* Free (operator, 19 okt 2026): vóór de start altijd zeggen wat er
             volgt — de ene gratis volledige sessie, of de preview van 30 s. */}
         {freeSession && !sessionRunning ? (
-          <View style={s.trialInfo}>
+          <Reveal i={4}><View style={s.trialInfo}>
             <Text style={s.trialInfoTxt}>{FREE_COPY.freeLine}</Text>
-          </View>
+          </View></Reveal>
         ) : null}
         {/* Gratis (operator, 7 okt 2026: "alles opgepropt"): de uitleg en
             "Unlock all sessions" staan nu in het paneel bij het aantikken.
