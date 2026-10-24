@@ -4703,7 +4703,7 @@ function IdleScreen({
           </View>
         ) : null}
         {/* Vaste ruimte onder de knop/pil (zoals bij Breathwork onder zijn knop): de Start-knop, de pil van een lopende sessie en de preview-knoppen staan zo altijd op dezelfde hoogte als de knop van Breathwork. */}
-        <View style={{ height: 60 }} />
+        <View style={{ height: 83 }} />
         <SwitchSessionConfirm
           visible={confirmSwitch}
           fromName={runSnap.modeName}

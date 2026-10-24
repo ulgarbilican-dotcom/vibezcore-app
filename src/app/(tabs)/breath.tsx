@@ -438,7 +438,7 @@ function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boole
      (7 okt 2026: op de Samsung stond hij 13dp lager). 52 = eigen hoogte. */
   const insets = useSafeAreaInsets();
   /* Op de keuzepagina staat de knop op de kop-rij, onder de Premium-knop (zelfde rij als de titel). */
-  const alignTop = lowered ? insets.top + 12 - 26 : insets.top + 8 + 16 - 26;
+  const alignTop = lowered ? insets.top + 10 - 26 : insets.top + 8 + 16 - 26;
   const pressScale = useSharedValue(1);
   const onPressIn = () => {
     pressScale.value = withSpring(0.95, SPRING_PRESS_IN);
@@ -462,14 +462,15 @@ function GoalButton({ onPress, lowered }: { onPress: () => void; lowered?: boole
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      hitSlop={10}
+      hitSlop={14}
       style={[s.goalBtn, { top: alignTop }, pressStyle]}
       accessibilityLabel="Your goal and daily plan"
     >
       {/* Altijd de kalender (operator, 7 okt 2026): het slot las als een
           winkelmandje en gaf de knop een andere betekenis. Dat het plan
           Premium is, ziet een gratis gebruiker in "Choose your path" zelf. */}
-      <CalendarDays size={20} color="rgba(255,255,255,0.85)" strokeWidth={2} />
+      {/* 25 okt 2026: volledig wit (zoals bij State Control) — 0.85 over de foto las als grijs. */}
+      <CalendarDays size={20} color="#ffffff" strokeWidth={2} />
     </AnimatedPressable>
   );
 }
@@ -1775,13 +1776,13 @@ const s = StyleSheet.create({
   },
   goalBtn: {
     position: 'absolute',
-    right: 10,
+    right: 19,   // midden van het icoon op dezelfde plek als de kalender bij State Control
     top: 48,
-    width: 52,
-    height: 52,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5,
+    zIndex: 30,   // boven de zachte kop-vervaging (15) en de titel (20)
   },
   /* Licht gewicht met veel letterafstand, zoals de koppen in de onboarding.
      Het gewicht doet niets, de ruimte doet alles. */
