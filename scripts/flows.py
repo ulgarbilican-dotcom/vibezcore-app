@@ -123,6 +123,8 @@ def prepare():
     sh('shell', 'am', 'force-stop', PKG); sh('logcat', '-c')
     sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); time.sleep(12)
     tap_frac(0.5, 0.739, 4)                                    # welkom -> "Control Your State"
+    # poort NU terugzetten, in dezelfde app-start, zonder het scherm te verlaten (stay=1): nieuwe gebruiker op het intro
+    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}&fresh=1&stay=1', PKG); time.sleep(4)
     clear_overlays(); end_any_session()
 
 

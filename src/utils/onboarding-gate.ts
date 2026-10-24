@@ -65,6 +65,14 @@ export function mayAutoShowOnboarding(kind: OnboardingKind): boolean {
   return !isAnySessionRunning();
 }
 
+/** Alleen voor de testbuild (docs/KWALITEITSPROTOCOL.md): onboarding-poort volledig terug op "nieuwe gebruiker", ook het uitstel in het geheugen. */
+export function qaResetGate(): void {
+  deferredThisRun.breath = false;
+  deferredThisRun.state = false;
+  void setSetting(DEFER_KEY.breath, 0);
+  void setSetting(DEFER_KEY.state, 0);
+}
+
 /** "Not Now" / zonder afronden weggaan: telt één uitstel, en niet opnieuw in
  *  deze app-run. Meerdere keren in dezelfde run tellen als één. */
 export function deferOnboarding(kind: OnboardingKind): void {
