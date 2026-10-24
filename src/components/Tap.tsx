@@ -11,7 +11,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useRef } from 'react';
-import { PixelRatio, View } from 'react-native';
+import { PixelRatio, StatusBar, View } from 'react-native';
 import { Pressable, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
@@ -37,7 +37,8 @@ export default function Tap({ style, scaleTo = 0.95, onPressIn, onPressOut, chil
       ? () => {
           qaRef.current?.measureInWindow((x, y, w, h) => {
             const r = PixelRatio.get();
-            qaPos(qaLabel, (x + w / 2) * r, (y + h / 2) * r);
+            /* measureInWindow telt de (doorzichtige) statusbalk niet mee: die erbij voor echte schermpixels. */
+            qaPos(qaLabel, (x + w / 2) * r, (y + h / 2 + (StatusBar.currentHeight ?? 0)) * r);
           });
         }
       : undefined;
