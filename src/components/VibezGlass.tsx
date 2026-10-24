@@ -12,6 +12,11 @@
      3. een glanslaag BINNENIN: bovenaan een zachte lichte waas die naar
         onderen uitdooft — licht dat op het glas valt, geen lijn.
    Eén plek, zodat het overal hetzelfde materiaal is.
+
+   24 okt 2026 (operator: "de saleskaart bij State Control ziet er niet echt glass uit"): de sheet-tint van 0,74 en een
+   onderkant van 0,94-0,97 maakten het glas feitelijk ondoorzichtig — de gekleurde cirkel erachter was niet meer te zien.
+   Nu 0,50 en een onderkant tot 0,62: de vervaagde kleur van het scherm erachter schemert door, tekst blijft leesbaar
+   door de vervaging (blur 70) en de tint.
    ───────────────────────────────────────────────────────────────────────── */
 
 import { BlurView } from 'expo-blur';
@@ -64,7 +69,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
       : level === 'sheet' && blurTarget
         ? /* Echte vervaging (GlassSheetHost, 7 okt 2026): dunnere tint, zodat
              het glas zichtbaar is — de vervaging zelf houdt tekst leesbaar. */
-          { ...LEVEL.sheet, base: 'rgba(10,10,12,0.74)', blur: 70 } /* operator, 10 okt 2026: "achtergrond van de popup donkerder" (was 0.16) */
+          { ...LEVEL.sheet, base: 'rgba(10,10,12,0.5)', blur: 70, sheen: 0.12 } /* operator, 10 okt 2026: "achtergrond van de popup donkerder" (was 0.16) */
         : LEVEL[level];
   /* expo-blur (Android) stelt het glas in bij de EERSTE weergave, nog vóór
      het weet wat zijn blurTarget is; het valt dan terug op een egale grijze
@@ -124,7 +129,7 @@ export default function VibezGlass({ radius, tint, level = 'normal', style, chil
           pointerEvents="none"
           /* Operator, 7 okt 2026 ("onderkant niet transparant, kleine tekst
              niet leesbaar"): onderste kwart zo goed als dekkend. */
-          colors={['rgba(12,12,15,0)', 'rgba(12,12,15,0.4)', 'rgba(12,12,15,0.94)', 'rgba(12,12,15,0.97)']}
+          colors={['rgba(12,12,15,0)', 'rgba(12,12,15,0.22)', 'rgba(12,12,15,0.5)', 'rgba(12,12,15,0.62)']}
           locations={[0, 0.5, 0.74, 1]}
           style={StyleSheet.absoluteFill}
         />
