@@ -294,8 +294,10 @@ export default function TabLayout() {
   useEffect(() => subscribeStateControlIntroFullScreen(setIntroFull), []);
   const [breathPicker, setBreathPicker] = useState(isBreathPickerOpen());
   useEffect(() => subscribeBreathPickerOpen(setBreathPicker), []);
-  const hideStateControlBar = sessionVisible || (chooseVisible && !introVisible) || introFull;
-  qaFlag('tabbar', !(hideStateControlBar || breathPicker));
+  /* 24 okt 2026 (operator: elke beginpagina van een onderdeel toont de tabbladen): de keuzepagina's van State Control en Breath
+     tonen de tabbalk; schermvullend zijn enkel de lopende sessie en de onboarding-start. */
+  const hideStateControlBar = sessionVisible || introFull;
+  qaFlag('tabbar', !hideStateControlBar);
   /* Voor openStateControl: tab wisselen als de tabbladen bovenaan liggen,
      anders terugkeren naar de tabbladen (6 okt 2026). */
   useFocusEffect(
@@ -472,8 +474,6 @@ export default function TabLayout() {
               <TabLabel label="Breath" focused={focused} />
             ),
             tabBarButton: (props) => <TabButton path="/breath" {...props} />,
-            /* Sleutel enkel meegeven als de balk weg moet (zie State Control). */
-            ...(breathPicker ? { tabBarStyle: { display: 'none' as const } } : {}),
           }}
         />
         {/* De audiobibliotheek is VERBORGEN, niet verwijderd (operator,

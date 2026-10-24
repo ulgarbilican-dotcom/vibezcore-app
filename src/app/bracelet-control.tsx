@@ -4044,12 +4044,14 @@ function IdleScreen({
   const idleDark = true;
 
   const idleInTab = usePathname() === '/bracelet';
+  const idleBarInset = useTabBarInset();
+  const idleIsPro = useSubscription().isPro;
   /* Geen tabbalk op dit keuzescherm, zoals de breathwork-setup (operator,
      6 okt 2026: "zo krijgt de pagina meer ademruimte"). */
   useFocusEffect(
     useCallback(() => {
       if (!idleInTab) return undefined;
-      setChooseScreenVisible(true);
+      setChooseScreenVisible(true);   // alleen nog informatief; de tabbalk blijft zichtbaar
       return () => setChooseScreenVisible(false);
     }, [idleInTab]),
   );
@@ -4228,6 +4230,8 @@ function IdleScreen({
     >
       <Stack.Screen options={{ headerShown: false }} />
       <BraceletHeader
+        /* 24 okt 2026: Premium opent hier direct (geen intro) mét tabbalk — de tabbalk is de navigatie, dus geen terugpijl. */
+        showBack={!(idleInTab && idleIsPro)}
         /* Tijdens de 30 s-preview de toestand bovenaan, zoals een lopende
            Premium-sessie ("● Boost") — operator, 18 okt 2026. */
         title={trialRunning ? meta.name : 'State Control'}
@@ -4334,7 +4338,7 @@ function IdleScreen({
           s.idleSingleScreen,
           /* Zonder tabbalk: de knop op dezelfde hoogte als "Start session"
              in de breathwork-setup (6 okt 2026). */
-          { paddingBottom: Math.max(safeInsets.bottom, 12) + 26 },
+          { paddingBottom: idleBarInset > 0 ? idleBarInset + 14 : Math.max(safeInsets.bottom, 12) + 26 },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native

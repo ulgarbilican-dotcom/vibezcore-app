@@ -1244,7 +1244,7 @@ export default function BreathScreen() {
           Breathwork
         </Text>
       ) : null}
-      {!intro ? (
+      {!intro && !proSub.isPro ? (
         <Tap
           /* Premium heeft geen intro (23 okt): de pijl verlaat de tab, zoals de Android-terugknop (24 okt 2026). */
           onPress={() => (proSub.isPro ? goToTab('/') : setIntro(true))}
