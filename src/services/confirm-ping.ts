@@ -3,11 +3,11 @@
    (ConfirmMoment, punt 25 — operator, 19 okt 2026: "een moment dat zegt:
    het is gelukt").
 
-   Geluid: assets/confirm-ping.wav, ZELF GEGENEREERD (geen licentie), 21 okt 2026
-   herzien (operator: "heel slecht, kan dat professioneler en aangenamer"): twee
-   zachte stijgende tonen G4 (392 Hz) en D5 (587 Hz) met warme, lage boventonen,
-   inzet 12 ms, uitsterven τ 260-300 ms, lichte echo (190 ms), 1,5 s, piek -9 dBFS,
-   44,1 kHz mono 16-bit. Het vorige klokje (E6 + scherpe boventonen) klonk schel.
+   Geluid: assets/confirm-ping.wav, ZELF GEGENEREERD (geen licentie), 24 okt 2026 opnieuw
+   (operator: "pinggeluid moet een professionele ping zijn"): twee zuivere, stijgende tonen
+   A5 (880 Hz) -> E6 (1318 Hz), aanslag 3 ms, uitsterven tau 170-190 ms, een korte donkere
+   plaat-galm (geen echo-herhaling), 1,2 s, piek -10 dBFS, 44,1 kHz mono 16-bit.
+   Eerdere versies: E6 met scherpe boventonen (schel), daarna G4/D5 met 190 ms echo.
    Script: scripts/gen-confirm-ping.py.
 
    Regels (zelfde lijn als heartbeat-sound.ts):

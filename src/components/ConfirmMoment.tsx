@@ -5,7 +5,7 @@
    rustig, en de tweede keer dezelfde dag korter"): één herbruikbaar
    bevestigingsmoment, schermvullend in de donkere huisstijl.
 
-     1. "thinking" (optioneel, ~1,1 s): een Bio-Teal boog draait rond met
+     1. "thinking" (optioneel, 3,6 s = vier rondes): een Bio-Teal boog draait rond met
         één korte statusregel die één keer wisselt (bv. "Building your
         plan…" → "Matching your rhythm…").
      2. "done": de ring tekent zich dicht in Bio-Teal, het vinkje springt
@@ -15,7 +15,7 @@
         mengt met muziek, iOS stil bij de stille-schakelaar, nooit tijdens
         een sessie of audiobibliotheek).
 
-   Max ~2,5 s, daarna vanzelf onDone; een tik waar ook = meteen onDone.
+   Thinking 3,6 s + done ~1,4 s, daarna vanzelf onDone; een tik waar ook = meteen onDone.
    Reduce motion → geen draaiende boog en geen ademhaling.
    `quick` slaat de thinking-fase over — showConfirmMoment() zet dat zelf
    als de lange versie vandaag al getoond is voor dezelfde soort.
@@ -53,12 +53,15 @@ import { getRestingPulse } from '@/services/resting-pulse';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const RING = 132;
-const STROKE = 6;
+const STROKE = 3;
 const R = (RING - STROKE) / 2;
 const C = 2 * Math.PI * R;
 
-const THINK_MS = 1100;
-const LINE_SWITCH_MS = 550;
+/* 24 okt 2026 (operator: "laat het 3 à 4 keer ronddraaien zodat het lijkt of we nadenken"): vier volle rondes
+   van de boog (4 × SPIN_MS), de statusregel wisselt halverwege. */
+const SPIN_MS = 900;
+const THINK_MS = SPIN_MS * 4;
+const LINE_SWITCH_MS = THINK_MS / 2;
 const RING_CLOSE_MS = 450;
 const CHECK_AT_MS = 320;
 const DONE_HOLD_MS = 1400;
@@ -147,7 +150,7 @@ export default function ConfirmMoment({
   /* Thinking-fase: draaiende boog + één wissel van de statusregel. */
   useEffect(() => {
     if (!visible || !shown || phase !== 'thinking') return;
-    spin.value = withRepeat(withTiming(360, { duration: 900, easing: Easing.linear }), -1, false);
+    spin.value = withRepeat(withTiming(360, { duration: SPIN_MS, easing: Easing.linear }), -1, false);
     const t1 = thinking && thinking.length > 1 ? setTimeout(() => setLine(1), LINE_SWITCH_MS) : null;
     const t2 = setTimeout(() => setPhase('done'), THINK_MS);
     return () => {
@@ -269,7 +272,7 @@ export default function ConfirmMoment({
             </Svg>
           )}
           <Animated.View style={checkStyle}>
-            <Check size={54} color="#ffffff" strokeWidth={3} />
+            <Check size={54} color="#ffffff" strokeWidth={2.4} />
           </Animated.View>
         </Animated.View>
 
