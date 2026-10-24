@@ -1,5 +1,5 @@
 import { openStateControl } from '@/utils/state-control-ui';
-import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import BalancedText from '@/components/BalancedText';
@@ -1978,7 +1978,7 @@ function AudioScreen({
             {/* 23 okt 2026 (operator): deze kaart blijft ALTIJD de Free Sessions-kaart; "Last Listened" opent enkel de
                 popup via het segment in de balk erboven. */}
             {!hasSub && (
-              <Animated.View entering={FadeInUp.delay(80).springify().damping(16)} style={s.featureWrap}>
+              <Animated.View entering={reveal(0)} style={s.featureWrap}>
                 <CardBounce
                   style={s.featureCard}
                   onPress={() => navigateAway(() => router.push('/library/free'))}
@@ -2032,9 +2032,7 @@ function AudioScreen({
                   <Animated.View
                     key={p.num}
                     renderToHardwareTextureAndroid
-                    entering={FadeInUp.delay(150 + pillarIdx * 40)
-                      .springify()
-                      .damping(16)}
+                    entering={reveal(1 + pillarIdx)}
                     style={[
                       {
                         /* Operator, 14 okt 2026 ("bij premium moet de

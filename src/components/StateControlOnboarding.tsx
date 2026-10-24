@@ -34,6 +34,7 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { reveal } from '@/constants/motion';
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import Tap from '@/components/Tap';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
@@ -151,7 +152,7 @@ type HrChoice = 'measure' | 'manual' | 'average';
 
 /* Inkomend per blok, zelfde rustige reveal als de Breathwork-onboarding
    (operator: "alles is nu weer statisch"). */
-const enter = (i: number) => FadeInDown.springify().damping(20).stiffness(150).delay(80 + i * 90);
+const enter = (i: number) => reveal(i);
 type StepIdx = 0 | 1 | 2 | 3;
 
 export default function StateControlOnboarding({ onDone, onBack, includeRestingHr = false, finalLabel = 'Done' }: Props) {
@@ -567,7 +568,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         {step === 3 ? (
           <View style={s.footer}>
             {measured !== null ? (
-              <Animated.View entering={FadeInDown.springify().damping(20).stiffness(170)}>
+              <Animated.View entering={reveal(0)}>
                 <PressScale
                   haptic
                   scaleTo={0.97}

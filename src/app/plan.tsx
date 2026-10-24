@@ -20,6 +20,7 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { reveal } from '@/constants/motion';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import { useBackTo } from '@/hooks/useBackTo';
@@ -552,7 +553,7 @@ export default function PlanScreen() {
             {chosen.map((g, idx) => (
               <Animated.View
                 key={g.key}
-                entering={FadeInUp.delay(150 + idx * 40).duration(280)}
+                entering={reveal(idx)}
                 style={[s.goalCard, s.protoCardSelected]}
               >
                 <BlurView
@@ -595,7 +596,7 @@ export default function PlanScreen() {
              als één doorlopende reveal voelt. */}
           <View style={s.goalCardRow}>
             <Animated.View
-              entering={FadeInUp.delay(150 + chosen.length * 40).duration(280)}
+              entering={reveal(chosen.length)}
               style={s.metaCard}
             >
               <Text style={s.metaCardLabel}>LEVEL</Text>
@@ -604,7 +605,7 @@ export default function PlanScreen() {
               </Text>
             </Animated.View>
             <Animated.View
-              entering={FadeInUp.delay(150 + (chosen.length + 1) * 40).duration(280)}
+              entering={reveal(chosen.length + 1)}
               style={s.metaCard}
             >
               <Text style={s.metaCardLabel}>ROUTINE</Text>
@@ -622,7 +623,7 @@ export default function PlanScreen() {
               <Text style={s.metaCardHint}>{items.length} sessions a day</Text>
             </Animated.View>
             <Animated.View
-              entering={FadeInUp.delay(150 + (chosen.length + 2) * 40).duration(280)}
+              entering={reveal(chosen.length + 2)}
               style={s.metaCard}
             >
               <Text style={s.metaCardLabel}>PLAN LENGTH</Text>

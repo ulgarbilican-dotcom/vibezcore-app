@@ -11,6 +11,7 @@
    (/bracelet-set-day), zoals bij breathwork.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { reveal } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import Tap from '@/components/Tap';
 import { MODE_GLYPH_ICONS, MODE_STATE_KEY } from '@/components/ModeGlyph';
@@ -104,7 +105,7 @@ export default function BraceletProtocol() {
                 return (
                   <Animated.View
                     key={m.mode}
-                    entering={FadeInUp.delay(120 + i * 40).duration(280)}
+                    entering={reveal(i)}
                     style={s.modeCard}
                   >
                     <BlurView
@@ -136,7 +137,7 @@ export default function BraceletProtocol() {
               ].map((m, i) => (
                 <Animated.View
                   key={m.label}
-                  entering={FadeInUp.delay(120 + (modesUsed.length + i) * 40).duration(280)}
+                  entering={reveal(modesUsed.length + i)}
                   style={s.metaCard}
                 >
                   <Text style={s.metaLabel}>{m.label}</Text>

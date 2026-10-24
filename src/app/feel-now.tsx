@@ -26,6 +26,7 @@
    plaats van een harde cut, Premium/bracelet-eigenaars de volledige sessie
    zonder enige limiet. */
 
+import { reveal } from '@/constants/motion';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
@@ -377,6 +378,7 @@ function SituationCard({
     ? (st.techniques.find((t) => t.key === situation.technique)?.name ?? '')
     : '';
   return (
+    <Animated.View entering={reveal(index)} style={s.cardSlot}>
     <AnimatedPressable
       /* Operator, 2 okt 2026 ("voelt statisch aan, voeg de animatie volgens
          ons protocol toe" → vervolg: "nu te veel bounce, niet hoe de
@@ -386,7 +388,6 @@ function SituationCard({
          `.springify()` volledig — rechte, niet-bouncy fade zoals
          `history.tsx` se `FadeIn.delay(150).duration(280)`, geen enkel
          overshoot-risico meer. */
-      entering={FadeInUp.delay(150 + index * 40).duration(280)}
       onPress={onPress}
       /* 13 okt 2026: geen i-knop meer op de kaart — lang drukken toont
          waarom deze techniek en duur helpen. */
@@ -398,7 +399,7 @@ function SituationCard({
       accessibilityHint="Starts a session. Long press for why it helps."
       onPressIn={() => { scale.value = withSpring(0.97, SPRING_PRESS_IN); }}
       onPressOut={() => { scale.value = withSpring(1, SPRING_PRESS_OUT); }}
-      style={[s.cardSlot, pressStyle]}
+      style={pressStyle}
     >
       {/* Operator ("de 4 hoofdkaarten lichter dan de achtergrond, de 8
          chips blijven effen en vlak zodat de top-sectie erbovenuit
@@ -440,6 +441,7 @@ function SituationCard({
         </>
       }
     </AnimatedPressable>
+    </Animated.View>
   );
 }
 

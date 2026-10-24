@@ -20,6 +20,7 @@
    webapp behouden, achterwaarts uitbreidbaar).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { reveal } from '@/constants/motion';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
@@ -346,13 +347,13 @@ export default function HistoryScreen() {
           renderItem={({ item }) =>
             item.kind === 'header' ? (
               <Animated.Text
-                entering={FadeIn.delay(150).duration(280)}
+                entering={reveal(1)}
                 style={s.dayLabel}
               >
                 {item.label.toUpperCase()}
               </Animated.Text>
             ) : (
-              <Animated.View entering={FadeIn.delay(150).duration(280)}>
+              <Animated.View entering={reveal(1)}>
                 <EntryRow
                   entry={item.entry}
                   isFirst={item.isFirst}
@@ -420,7 +421,7 @@ function StreakCard({ streak }: { streak: number }) {
     : 'Play your first session to start a streak.';
   return (
     <Animated.View
-      entering={FadeInUp.springify().damping(16)}
+      entering={reveal(0)}
       style={s.streakCard}
     >
       <View style={s.streakRow}>

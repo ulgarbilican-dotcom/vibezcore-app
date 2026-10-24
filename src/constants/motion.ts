@@ -42,11 +42,11 @@ export function isReduceMotion(): boolean {
 
 /* Popups en alerts: de kaart komt met een veer in beeld (kort groter en dan op zijn plek), de achtergrond
    dooft zacht in. Overal dezelfde. */
-import { FadeInDown, ZoomIn } from 'react-native-reanimated';
-export const POPUP_IN = ZoomIn.springify().damping(26).stiffness(240).withInitialValues({ transform: [{ scale: 0.9 }], opacity: 0 });
+import { FadeInDown } from 'react-native-reanimated';
+export const POPUP_IN = FadeInDown.springify().damping(18).stiffness(170);
 
 /* Inhoud die in een scherm "vloeit": elk blok schuift een klein stukje omhoog en vervaagt in, één na één
-   (Apple-cascade). Eén veer (dempingsratio ≈ 0,85, geen nasprong), korte staffel; i = volgorde van boven naar
+   (Apple-cascade). Exact de veer van de Breath-kiezer (damping 18, stiffness 170), korte staffel; i = volgorde van boven naar
    onder. Gebruik op de grote blokken van een scherm, niet op elk los element. */
 export const reveal = (i: number) =>
-  FadeInDown.springify().damping(22).stiffness(170).delay(40 + Math.min(i, 8) * 70);
+  FadeInDown.springify().damping(18).stiffness(170).delay(40 + Math.min(i, 8) * 70);

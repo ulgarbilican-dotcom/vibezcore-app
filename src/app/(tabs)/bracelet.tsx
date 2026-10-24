@@ -40,7 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
-import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -163,8 +163,6 @@ function StateControlIntro({
   const shimmer = useSharedValue(-1);
   const kenBurns = useSharedValue(1);
   const introFocused = useIsFocused();
-  const eyebrowReveal = useSharedValue(0);
-  const titleReveal = useSharedValue(0);
   /* Eindeloze animaties enkel zolang dit tabblad zichtbaar is. */
   useEffect(() => {
     if (!introFocused) return;
@@ -182,8 +180,6 @@ function StateControlIntro({
       -1,
       true,
     );
-    eyebrowReveal.value = withDelay(300, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
-    titleReveal.value = withDelay(520, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
     return () => {
       cancelAnimation(shimmer);
       cancelAnimation(kenBurns);
@@ -195,14 +191,6 @@ function StateControlIntro({
   }));
   const kenBurnsStyle = useAnimatedStyle(() => ({
     transform: [{ scale: kenBurns.value * INTRO_ZOOM }],
-  }));
-  const eyebrowStyle = useAnimatedStyle(() => ({
-    opacity: eyebrowReveal.value,
-    transform: [{ translateY: 10 * (1 - eyebrowReveal.value) }],
-  }));
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleReveal.value,
-    transform: [{ translateY: 10 * (1 - titleReveal.value) }],
   }));
 
   return (
@@ -266,12 +254,13 @@ function StateControlIntro({
             setTextTop((prev) => (prev != null && Math.abs(prev - y) < 1 ? prev : y));
           }}
         >
-          <Animated.Text style={[s.introEyebrow, eyebrowStyle]}>STATE CONTROL</Animated.Text>
+          <Animated.Text entering={reveal(0)} style={s.introEyebrow}>STATE CONTROL</Animated.Text>
           {/* Operator, 10 okt 2026: nieuwe titel (was "Guided by touch, on your wrist."). */}
           {/* Operator, 10 okt 2026: nieuwe kop (was "Feel different. Perform differently."). */}
-          <Animated.Text style={[s.introTitle, titleStyle]}>The Power to Shift.{'\n'}From Your Wrist.</Animated.Text>
+          <Animated.Text entering={reveal(1)} style={s.introTitle}>The Power to Shift.{'\n'}From Your Wrist.</Animated.Text>
         </View>
-        <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
+        <Animated.View entering={reveal(2)} style={{ marginTop: 28, alignSelf: 'stretch' }}>
+        <Animated.View style={ctaPressStyle}>
           <Pressable
             onPress={() => {
               hapticPress();
@@ -303,9 +292,11 @@ function StateControlIntro({
 </View>
           </Pressable>
         </Animated.View>
+        </Animated.View>
         {/* Operator, 7 okt 2026 ("weinig ingangen naar de bracelet"): de
             bracelet hoort bij State Control — één rustige regel onder de
             knop, voor iedereen (er zijn nog geen eigenaars). */}
+        <Animated.View entering={reveal(3)}>
         <Tap
           onPress={() => void openBraceletWebsite()}
           hitSlop={10}
@@ -317,6 +308,7 @@ function StateControlIntro({
             Early 2027 · <Text style={s.braceletLinkStrong}>Smart Bead Bracelet ›</Text>
           </Text>
         </Tap>
+        </Animated.View>
       </View>
     </View>
   );
