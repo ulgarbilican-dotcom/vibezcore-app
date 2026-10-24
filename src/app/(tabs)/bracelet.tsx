@@ -40,6 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { qaFlag } from '@/utils/qa-probe';
 import { goToTab } from '@/utils/state-control-ui';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { TabReveal } from '@/components/Reveal';
@@ -70,7 +71,7 @@ import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse, getRestingPulse, chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
-import { deferOnboarding, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
+import { deferOnboarding, isAnySessionRunning, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import { setStateIntroSkip, useStateIntroSkip } from '@/utils/state-intro-skip';
 import { useSafeAreaInsets } from '@/utils/safe-area';
 import { hapticPress } from '@/utils/haptics';
@@ -430,6 +431,7 @@ export default function BraceletScreen() {
   }, []);
 
   const introIsOnboarding = needsOnboarding && mayAutoShowOnboarding('state');
+  qaFlag('scGate', { settingsLoaded, onboardedAt: String(onboardedAt), may: mayAutoShowOnboarding('state'), sessionRunning: isAnySessionRunning() });
   if (showIntro) {
     return (
       <StateControlIntro
