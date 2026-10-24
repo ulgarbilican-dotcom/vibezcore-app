@@ -1,0 +1,58 @@
+<!--
+  VIBEZCORE — Breathwork: vaste mini-navigatie (Apple "local nav") — wit, want hij staat boven de witte hero.
+  Apart HTML-blok: in Wix bovenaan de pagina, 52px hoog, volle breedte, "Pin to Screen"
+  (mobiel: via Layers weer zichtbaar zetten). "Try free" → saleskaart (#start);
+  soepel scrollen met wix-velo-mini-nav.js, anders valt hij terug op de link.
+  21 okt 2026: "7 days free" vervangen door de dagpas (trial bestaat niet meer).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VIBEZCORE &mdash; Breathwork nav</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:52px;overflow:hidden;background:rgba(255,255,255,.96);font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.bar{height:52px;border-bottom:1px solid #D2D2D7}
+.in{max-width:1200px;height:100%;margin:0 auto;padding:0 56px;display:flex;align-items:center;justify-content:space-between}
+.name{font-size:21px;font-weight:600;letter-spacing:-.01em;color:#1D1D1F}
+.right{display:flex;align-items:center;gap:20px}
+.price{font-size:13px;font-weight:500;color:#6E6E73}
+.cta{display:inline-flex;align-items:center;height:30px;padding:0 14px;font-size:13px;font-weight:600;color:#FFFFFF;background:#1D1D1F;border-radius:999px;text-decoration:none;transition:background-color .3s cubic-bezier(.25,1,.5,1),transform .3s cubic-bezier(.25,1,.5,1)}
+.cta:active{transform:scale(.97)}
+@media(hover:hover) and (pointer:fine){.cta:hover{background:#333336}}
+a:focus-visible{outline:2px solid #1D1D1F;outline-offset:3px}
+@media(max-width:768px){.in{padding:0 24px}.name{font-size:17px}.price{display:none}}
+</style>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <span class="name">Breathwork</span>
+  <div class="right">
+    <span class="price"><span id="dp">Day Pass <span class="vz-d">&euro;1.29</span> &middot; or </span>from <span class="vz-p">&euro;5.83</span>/mo</span>
+    <a class="cta" id="try" href="https://www.vibezcore.com/breathwork#start" target="_top" rel="noopener">Try free</a>
+  </div>
+</div></div>
+<script>
+/* prijs in de valuta van de bezoeker (zelfde regel als de Breathwork-pagina): EUR / USD; GBP heeft geen eigen vastgelegde prijs -> de prijsregel verdwijnt */
+(function(){try{var tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'',lc=(navigator.language||'').toLowerCase(),
+  cu=(tz==='Europe/London'||tz==='Europe/Belfast'||lc.indexOf('en-gb')===0)?'GBP':((tz.indexOf('Europe/')===0||tz.indexOf('Atlantic/')===0||tz.indexOf('Africa/')===0)?'EUR':'USD'),
+  P={EUR:'€5.83',USD:'$5.83'}[cu],D={EUR:'€1.29',USD:'$1.29'}[cu];
+  if(!P){var pr=document.querySelector('.price');if(pr)pr.hidden=true}else{[].forEach.call(document.querySelectorAll('.vz-p'),function(e){e.textContent=P});[].forEach.call(document.querySelectorAll('.vz-d'),function(e){e.textContent=D})}}catch(e){}})();
+</script>
+<script>
+/* Try free -> sales card (Start free today, #start).
+   With Wix page code: smooth scroll on the same page. Without it: fallback to /breathwork#start. */
+(function(){var a=document.getElementById('try'),t=null;
+a.addEventListener('click',function(e){e.preventDefault();
+  try{window.parent.postMessage({vz:'goto',id:'start'},'*')}catch(_){}
+  t=setTimeout(function(){window.top.location.href=a.href},450);});
+window.addEventListener('message',function(e){if(e.data&&e.data.vz==='ok'&&t){clearTimeout(t);t=null}});
+})();
+</script>
+</body>
+</html>

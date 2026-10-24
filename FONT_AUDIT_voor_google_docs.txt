@@ -1,0 +1,131 @@
+FONT-CONSISTENTIE — UITGEVOERDE AANPASSINGEN VIBEZCORE APP
+Datum: 11 september 2026
+Typecheck: schoon na elke stap hieronder.
+
+
+FASE 1 — NIEUWE GEDEELDE BRON (TypeScale)
+
+Twee tokens toegevoegd aan TypeScale (src/constants/theme.ts):
+
+- tabHeader — de grote titel-rol op een tab-scherm (bold, 26px, letterSpacing -0.3).
+- compactCardTitle — de titel op een compacte, horizontale entry-kaart (extrabold, 17px, letterSpacing -0.2).
+
+Per pagina, wat er echt is aangepast:
+
+(tabs)/breath.tsx
+Niets aangepast — geen generieke pagina-titel op dit scherm.
+
+(tabs)/index.tsx (Audio Library)
+- bLandingTitle: 30px regular/-0.8 → tabHeader (bold, 26px, -0.3)
+- bLandingEyebrow: 10px regular/2.4 → cardEyebrow (10.5px semibold, 1.4)
+
+(tabs)/bracelet.tsx
+- detailName: 26px extrabold/-0.6 → tabHeader
+- wlTitle: 24px extrabold/-0.6 → tabHeader
+- activateBraceletEntryLabel: 18px extrabold → compactCardTitle (17px)
+- Bewust niet aangepast: specHeroVal, priceMain/priceMainSmall (cijfer-displays, geen koppen)
+
+(tabs)/activity.tsx
+Niets aangepast — geen aantoonbare inconsistentie gevonden.
+
+(tabs)/account.tsx
+- screenTitle: 26px extrabold/1 → tabHeader
+- productTitle: 22px extrabold/-0.4 → cardHeadline (22px bold, -0.3)
+- activateBraceletCardLabel: 17px extrabold → compactCardTitle, gelijkgetrokken met bracelet.tsx
+- Bewust niet aangepast: bundleInlineBadgeText (micro-badge, geen vergelijkbare rol elders)
+
+
+FASE 2 — EXACTE, PER-SCHERM SPECIFICATIE (AppTypeScale + letterlijke waarden)
+Datum: 11 september 2026, vervolg.
+
+De meeste onderstaande waarden staan letterlijk in het scherm zelf, omdat de
+exacte, door de operator aangeleverde spec per scherm net iets afweek van de
+generieke rol — bewust, niet per ongeluk.
+
+welcome.tsx
+- Tagline: 16px Regular, geen letterSpacing (was 17px/0.1)
+- Card-koptekst ("Reset Yourself" e.d.): 18px SemiBold — was al correct
+- Card-eyebrow ("BREATHWORK"): 12px Bold, +0.5 (was 11px/+0.8)
+- Onderste links ("Have a bracelet?"): 14px Medium, normale spacing (was 12px/+0.1)
+
+(tabs)/breath.tsx — "Choose Your State"
+- "CHOOSE YOUR STATE": 13px Bold, +1.5 (was 12px semibold/1.6)
+- Geselecteerde modusnaam: 14px SemiBold, accentkleur
+- Niet-geselecteerde modusnaam: 14px Medium, grijs
+- "Continue"/"Explore modes"-knop: 16px (was 14px)
+- "How it works →": 14px (was 12px)
+- Geselecteerde cirkel: scale 1.1 — bevestigd goed
+- CTA-knop: border volledig verwijderd
+- Teruggedraaid: extra gradient achter de cirkel-rij (gaf zichtbare naad) — volledig gerevert
+
+breath-setup.tsx
+- State-naam (bv. "BOOST"): 14px Bold, +1.5 (was 13px semibold/1.6)
+- "SESSION LENGTH": 11px Medium, +0.5 (was 10.5px semibold/1.4)
+- Timer: 54px Bold, -1.0 (was 42px, geen spacing)
+- Ademritme-tekst: 14px Regular (was 11.5px medium/0.2)
+- Techniek-knoppen (Diaphragmatic/Equal/Faster): van flexWrap naar vaste flex:1-rij
+  (loste asymmetrische "driehoek"-layout op); tekst 14px SemiBold
+- "Session duration": 18px (was 13px)
+- "Try 30 seconds free"-knop: 16px (was 14px)
+- Marge boven "Session duration": 20 → 36 → 48
+- Toegevoegd: fromSetup-param op de push naar breath-session.tsx
+
+breath-session.tsx
+- State-naam (bv. "CALM CONTROL"): 14px Bold, +1.5 (was 12px bold/3.6)
+- Afteller-cijfer: 64px Bold, -1.0 (was 46px/-1.2)
+- "SEC": 11px Medium, +0.5 (was 11px semibold/1.6)
+- "EXHALE · NOSE": 22px SemiBold, +1.0 (was 17px bold/2)
+- Ronde-info: 13px Regular, rgba(255,255,255,0.55) (was 11px medium/0.4, #f4f4f4)
+- Voice/Soundscape/Phone-labels: 12px Medium (was 9px semibold)
+- arcOverlay top: 48 → 62 (compenseert groter cijfer) — NOG NIET live bevestigd of
+  het cijfer nu exact in het midden van de boog staat
+- Navigatie-bug opgelost: stoppen na start vanuit breath-setup.tsx toonde eerst nog
+  even dat oude scherm. Nieuwe leaveSession()-functie navigeert nu direct naar
+  /breath i.p.v. terug te gaan in de stack. LIVE BEVESTIGD OP TOESTEL: werkt.
+
+PremiumPaywallModal.tsx (paywall-popup)
+- "VIBEZCORE BREATHWORK": 11px Bold, +1.5 — was al correct
+- "Unlock every session": 26px Bold, -0.5 (was 22px extrabold/-0.3)
+- Voordelenlijst: 15px Regular (was 13.5px)
+- Gouden bracelet-tekst: 13px Medium (was 13.5px semibold)
+- "Yearly"/"Monthly"-naam: 16px SemiBold (was 15px bold)
+- Prijzen: 16px SemiBold
+- Maandprijs-uitleg: 12px Regular (was 11.5px medium)
+- "Continue with Yearly"-knop: 17px SemiBold (was 15px bold)
+
+  NOG OPEN — Apple-ontwerptips, nog niet uitgevoerd:
+  - Prijzen bij Yearly/Monthly exact rechts uitlijnen, beide vakken zelfde layout
+  - "SAVE 42%"-badge herpositioneren
+  - Sluitkruisje (X): hitSlop vergroten naar minimaal 44x44px
+  - Achtergrond achter de popup donkerder/wazig maken
+
+breath-welcome.tsx — Onboarding stap 1 ("Breathe. Build. Become.")
+- "STEP 1 OF 7": 12px Bold, +1.5 (was 13px/2)
+- "Skip": lichtgrijs i.p.v. zwart — secundaire actie; "Back" blijft zwart
+- Titel "Breathe. Build. Become.": 28px Bold, -0.5 (was 30px via gedeelde token)
+- Subtekst "Control the input...": 16px Regular, kleur #636366 (was 17px/0.1, #6e6e73)
+- "Next →"-knop: 17px SemiBold, geen letterSpacing (was 16px bold/0.3) — geldt voor
+  de knop op ALLE 7 onboarding-stappen, niet enkel stap 1
+- Ruimte tussen "STEP X OF 7" en de stipjes: 7 → 10 → 14 (twee nudges)
+- Modus-kaarten op stap 2: 4 nieuwe operator-aangeleverde beelden
+  (voice / smartphone haptics / voice+haptics / silent) — LIVE BEVESTIGD
+
+  Niet aanpasbaar, bewust met rust gelaten:
+  - Tandwiel linksboven = Expo dev-reload-knop (niet de app), altijd negeren
+  - Witte halfronde vorm achter "Skip" zit in de achtergrondfoto zelf
+
+CONTENT-FIX (geen font, in dezelfde ronde ontdekt)
+"All 35 breathwork sessions" stond fout op meerdere plekken — echte telling
+(5 states x 3 technieken x eigen duur-opties) is 49, niet 35. Gecorrigeerd in:
+subscribe.tsx (2x), ProtocolTeaserModal.tsx, PremiumPaywallModal.tsx.
+NOG OPEN: breath-sample.tsx regel 375-376 (2 voorkomens) — nog niet gecorrigeerd.
+
+
+OPENSTAAND (NOG NIET GEDAAN)
+
+1. breath-sample.tsx: "35" naar "49" (2 plekken)
+2. PremiumPaywallModal: de 4 Apple-ontwerptips hierboven
+3. breath-session.tsx: boog-centrering nog niet live bevestigd; Bracelet-knop-styling
+   gelijktrekken met Voice/Soundscape/Phone; onderste control-bar symmetrie
+4. breath-welcome.tsx: alleen onboarding-stap 1 volledig langsgelopen op exacte
+   fonts — stap 2 t/m 7 nog niet

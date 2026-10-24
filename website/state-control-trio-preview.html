@@ -1,0 +1,337 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>State Control trio preview</title>
+<style>html,body{margin:0;background:#000;color:#fff;font-family:"Helvetica Neue",Arial,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:60px 40px}
+.demo{width:496px;max-width:100%;margin:0 auto}
+h2{font-size:12px;letter-spacing:.2em;color:#888;text-transform:uppercase;margin:60px 0 24px;text-align:center}
+iframe{display:block;margin:0 auto;border:1px solid #222;border-radius:12px;background:#000}
+.spacer{height:900px}
+.solo .wrap{padding:24px 20px}
+</style></head><body><div class="wrap">
+<h2>Desktop (scroll: blok animeert pas in beeld)</h2><div class="spacer" style="height:300px"></div>
+<div class="demo">
+<!-- VIBEZCORE — State Control-blok (homepage, Wix HTML-embed).
+     Vervangt het bestaande <div class="sc-trio">…</div>. Zelfstandig: CSS + HTML + JS in één blok.
+     Links: grote telefoon met foto + tekst. Rechtsboven: State Control-keuzescherm (Calm Control, Premium).
+     Rechtsonder: LIVE actieve Calm Control-sessie (aftellend, pulserende ring op hartslagritme).
+     Bron voor opbouw/maten/kleuren/timing: src/app/bracelet-control.tsx, src/components/HapticPulseRings.tsx,
+     src/components/LiquidWave.tsx, src/services/bracelet-haptics.ts, src/data/state-zones.ts. -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+.sc-trio{--vz:#B478FF;--vz-rgb:180,120,255;--teal:#00A3A3;display:flex;justify-content:space-between;width:100%;aspect-ratio:496/667;font-family:Inter,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#fff}
+.sc-trio *,.sc-trio *::before,.sc-trio *::after{box-sizing:border-box}
+.sc-trio .sc-big{width:64.52%}
+.sc-trio .sc-col{width:31.05%;display:flex;flex-direction:column;justify-content:space-between}
+.sc-trio .ad{position:relative;width:100%;aspect-ratio:403/840}
+.sc-trio .ad-host{position:absolute;left:0;top:0;width:403px;height:840px;transform-origin:0 0;filter:drop-shadow(0 40px 50px rgba(0,0,0,.85)) drop-shadow(0 10px 16px rgba(0,0,0,.6))}
+.sc-trio .phone{position:relative;display:block;width:403px;height:840px;margin:0;padding:14px;border-radius:62px;background:linear-gradient(145deg,#cfc6b8 0%,#9e9587 16%,#6b645a 42%,#7f776c 62%,#a89f91 84%,#c7bdae 100%);box-shadow:inset 0 0 0 1px rgba(255,240,220,.35),inset 0 0 0 3px #2a2621,inset 0 2px 2px rgba(255,245,230,.4)}
+.sc-trio .phone::after{content:'';position:absolute;inset:6px;border-radius:56px;background:#000;z-index:0}
+.sc-trio .sidebtn{position:absolute;width:4px;border-radius:2px;background:linear-gradient(90deg,#6b645a,#b9b0a2 45%,#6b645a)}
+.sc-trio .sb1{left:-4px;top:120px;height:28px}.sc-trio .sb2{left:-4px;top:168px;height:52px}.sc-trio .sb3{left:-4px;top:230px;height:52px}.sc-trio .sb4{right:-4px;top:190px;height:80px}
+.sc-trio .screen{position:relative;z-index:1;width:100%;height:100%;background:#000;border-radius:48px;overflow:hidden;box-shadow:inset 0 0 0 2px #000}
+.sc-trio .island{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:96px;height:28px;border-radius:16px;background:#000;z-index:40}
+.sc-trio .reflection{position:absolute;inset:0;z-index:50;pointer-events:none;background:linear-gradient(118deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,.03) 14%,rgba(255,255,255,0) 26%,rgba(255,255,255,0) 74%,rgba(255,255,255,.05) 100%);mix-blend-mode:screen}
+.sc-trio .statusbar{position:absolute;top:0;left:0;right:0;height:48px;z-index:30;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;color:#fff;font:600 14px/1 Inter,-apple-system,sans-serif}
+.sc-trio .statusbar i{display:flex;gap:5px;align-items:center;font-style:normal}
+
+/* ── grote telefoon: foto + tekst ── */
+.sc-trio .sc-img{position:absolute;left:0;top:0;width:100%;height:auto;display:block;max-width:none}
+.sc-trio .sc-fade{position:absolute;left:0;right:0;top:300px;height:264px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.4) 40%,rgba(0,0,0,.85) 68%,#000 88%)}
+.sc-trio .sc-topfade{position:absolute;left:0;right:0;top:0;height:90px;background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,0))}
+.sc-trio .sc-copy{position:absolute;left:30px;right:26px;top:616px;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+.sc-trio .sc-eyebrow{display:block;font-size:11px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:#fff;margin-bottom:14px}
+.sc-trio .sc-title{margin:0;font-size:35px;font-weight:700;line-height:1.08;letter-spacing:-.03em;color:#fff}
+
+/* ── app-schermen (375 × 812 punten, 1-op-1 met de app) ── */
+.sc-trio .app{position:absolute;inset:0;font-family:Inter,-apple-system,sans-serif;background:#000}
+.sc-trio .a-hdr{position:absolute;left:0;right:0;top:62px;height:44px}
+.sc-trio .a-hdr .ttl{position:absolute;left:0;right:0;top:0;height:44px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;letter-spacing:1.2px;text-transform:uppercase}
+.sc-trio .a-hdr .l{position:absolute;left:16px;top:0;height:44px;width:44px;display:flex;align-items:center}
+.sc-trio .a-hdr .r{position:absolute;right:16px;top:0;height:44px;display:flex;align-items:center;gap:18px;color:rgba(255,255,255,.85)}
+.sc-trio svg{display:block}
+.sc-trio .hr{position:absolute;left:50%;top:128px;transform:translateX(-50%);height:30px;padding:0 12px;border-radius:15px;background:rgba(255,255,255,.08);display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;white-space:nowrap}
+.sc-trio .ring-wrap{position:absolute;left:50%;top:184px;width:264px;height:264px;margin-left:-132px}
+.sc-trio .swipe{position:absolute;top:290px;color:rgba(255,255,255,.22)}
+.sc-trio .swipe.l{left:30px}.sc-trio .swipe.r{right:30px}
+.sc-trio .inner{position:absolute;left:4px;top:4px;width:256px;height:256px;border-radius:50%;overflow:hidden;background:#000}
+.sc-trio .shine-mask{position:absolute;left:0;top:0;width:264px;height:264px;border-radius:50%;overflow:hidden}
+.sc-trio .shine{position:absolute;top:-264px;bottom:-264px;left:97px;width:70px;background:linear-gradient(90deg,#ffffff00,#EAF2FF99,#ffffff00);opacity:0;transform:translateX(-198px) rotate(45deg)}
+.sc-trio .punch{position:absolute;left:2px;top:2px;width:260px;height:260px;border-radius:50%;background:#000}
+.sc-trio .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.sc-trio .nm{display:flex;align-items:center;gap:6px;font-weight:400;font-size:14px;line-height:18px;color:rgba(255,255,255,.75);text-shadow:0 0 6px rgba(0,0,0,.5)}
+.sc-trio .clk{font-weight:700;font-size:54px;letter-spacing:-1px;line-height:64px;text-shadow:0 0 6px rgba(0,0,0,.5)}
+.sc-trio .zone{display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:500;font-size:12px;letter-spacing:.3px;color:rgba(255,255,255,.6)}
+.sc-trio .zone b{display:block;width:6px;height:6px;border-radius:3px;background:var(--vz)}
+.sc-trio .dots{position:absolute;left:0;right:0;top:482px;display:flex;justify-content:center;align-items:center;gap:8px}
+.sc-trio .dots i{display:block;border-radius:50%;background:#fff;opacity:.25;width:6px;height:6px}
+.sc-trio .dots i.on{background:var(--vz);opacity:1;width:8px;height:8px}
+.sc-trio .quick{position:absolute;left:26px;right:26px;top:648px;display:flex;gap:10px}
+.sc-trio .qc{flex:1;height:52px;border-radius:14px;background:#1c1c1e;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:14px}
+.sc-trio .cta{position:absolute;left:26px;right:26px;top:712px;height:56px;border-radius:14px;background:#fff;color:#1D1D1F;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;letter-spacing:.1px}
+
+/* ── actieve sessie ── */
+.sc-trio .act-name{position:absolute;left:0;right:0;top:62px;height:44px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:15px;letter-spacing:.2px}
+.sc-trio .act-name b{display:block;width:8px;height:8px;border-radius:4px;background:var(--vz)}
+.sc-trio .act-chev{position:absolute;left:18px;top:64px}
+.sc-trio .timer-wrap{position:absolute;left:50%;top:166px;width:300px;height:300px;margin-left:-150px}
+.sc-trio .glow{position:absolute;left:32px;top:32px;width:236px;height:236px;border-radius:50%;background:var(--vz);opacity:.28;box-shadow:0 0 50px rgba(var(--vz-rgb),.9)}
+.sc-trio .waves{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.sc-trio .a-circle{position:absolute;left:18px;top:18px;width:264px;height:264px;will-change:transform}
+.sc-trio .a-bg{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#0a0a0a}
+.sc-trio .a-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:68px;letter-spacing:-2.5px;line-height:72px;font-variant-numeric:tabular-nums;text-shadow:0 0 3px rgba(0,0,0,.3)}
+.sc-trio .ctl{position:absolute;left:0;right:0;bottom:44px;display:flex;flex-direction:column;align-items:center}
+.sc-trio .av{height:44px;padding:0 20px;border-radius:22px;border:1px solid rgba(255,255,255,.15);background:#1b1b1f;display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;color:rgba(255,255,255,.75);margin-bottom:22px}
+.sc-trio .pause{width:72px;height:72px;border-radius:36px;border:1.5px solid rgba(255,255,255,.15);background:#2a2040;display:flex;align-items:center;justify-content:center}
+.sc-trio .end{margin-top:22px;font-weight:600;font-size:11px;letter-spacing:1.8px;color:rgba(255,255,255,.72)}
+
+/* ── golven (LiquidWave): twee lagen, lineair, eindeloos; pas in beeld → lopen ── */
+.sc-trio .wv{position:absolute;left:0;top:0}
+.sc-trio .wv.back{animation:scwave 5.2s linear infinite;animation-play-state:paused}
+.sc-trio .wv.front{animation:scwave 3.6s linear infinite;animation-play-state:paused}
+@keyframes scwave{from{transform:translateX(0)}to{transform:translateX(var(--wd,-256px))}}
+.sc-trio.play .wv{animation-play-state:running}
+/* flits-sweep over de buitenring: 7 s rust, 0,95 s sweep, 0,6 s rust (bracelet-control.tsx DurationRing) */
+.sc-trio .shine{animation:scshine 8.55s linear infinite;animation-play-state:paused}
+.sc-trio.play .shine{animation-play-state:running}
+@keyframes scshine{0%,81.9%{opacity:0;transform:translateX(-198px) rotate(45deg);animation-timing-function:cubic-bezier(.455,.03,.515,.955)}
+ 82.7%{opacity:1}90.5%{opacity:1}93%,100%{opacity:0;transform:translateX(198px) rotate(45deg)}}
+@media(prefers-reduced-motion:reduce){.sc-trio .wv,.sc-trio .shine{animation:none!important}}
+
+/* ── mobiel ── */
+@media(max-width:768px){
+  .sc-trio{flex-direction:column;aspect-ratio:auto;gap:22px}
+  .sc-trio .sc-big{width:100%}
+  .sc-trio .sc-col{width:100%;flex-direction:row;justify-content:space-between}
+  .sc-trio .sc-col .ad{width:47.7%}
+}
+</style>
+
+<div class="sc-trio" id="scTrio">
+
+  <!-- GROTE telefoon: foto + tekst -->
+  <div class="sc-big">
+    <div class="ad sc-ph"><div class="ad-host"><div class="phone"><div class="sidebtn sb1"></div><div class="sidebtn sb2"></div><div class="sidebtn sb3"></div><div class="sidebtn sb4"></div>
+      <div class="screen">
+        <img class="sc-img" src="https://vibezcore-audio.b-cdn.net/images/pic%20state%20control%202%20(1).png" alt="Two athletes mid-movement, one wearing a smartwatch and one wearing a VIBEZCORE bracelet" width="375" height="562" loading="lazy" decoding="async">
+        <div class="sc-topfade"></div><div class="sc-fade"></div>
+        <div class="sc-copy"><span class="sc-eyebrow">State Control</span><h3 class="sc-title">Guided by touch,<br>on your wrist.</h3></div>
+        <div class="statusbar"><span>9:41</span><i><svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx=".6" fill="#fff"/><rect x="4.5" y="4" width="3" height="7" rx=".6" fill="#fff"/><rect x="9" y="2" width="3" height="9" rx=".6" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx=".6" fill="#fff"/></svg><svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x=".75" y=".75" width="19.5" height="10.5" rx="2.5" stroke="#fff" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#fff"/><rect x="21" y="4" width="1.6" height="4" rx=".8" fill="#fff" fill-opacity=".5"/></svg></i></div>
+        <div class="island"></div><div class="reflection"></div>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div class="sc-col">
+
+    <!-- KLEINE telefoon rechtsboven: State Control, Calm Control gekozen (Premium) -->
+    <div class="ad sc-ph"><div class="ad-host"><div class="phone"><div class="sidebtn sb1"></div><div class="sidebtn sb2"></div><div class="sidebtn sb3"></div><div class="sidebtn sb4"></div>
+      <div class="screen"><div class="app" role="img" aria-label="VIBEZCORE State Control: Calm Control selected, 18 minutes, with Quick Chill and Quick Boost">
+        <div class="a-hdr">
+          <div class="l"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></div>
+          <div class="ttl">State Control</div>
+          <div class="r">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 8 2 2-2 2 2 2-2 2"/><path d="m22 8-2 2 2 2-2 2 2 2"/><rect width="8" height="14" x="8" y="5" rx="1"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:-4px"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+          </div>
+        </div>
+        <div class="hr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></svg>70 bpm<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></div>
+        <div class="swipe l"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></div>
+        <div class="swipe r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></div>
+        <div class="ring-wrap" id="idleRing">
+          <div class="shine-mask"><div class="shine"></div><div class="punch"></div></div>
+          <div class="inner" id="idleWaveHost"></div>
+          <div class="ctr">
+            <div class="nm">Calm Control<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+            <div class="clk">18:00</div>
+            <div class="zone"><b></b>Recommended</div>
+          </div>
+          <svg id="dial" width="296" height="296" viewBox="0 0 296 296" style="position:absolute;left:-16px;top:-16px;pointer-events:none"></svg>
+        </div>
+        <div class="dots"><i></i><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="quick">
+          <div class="qc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Quick Chill</div>
+          <div class="qc"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5A524" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>Quick Boost</div>
+        </div>
+        <div class="cta">Start Calm Control</div>
+      </div>
+        <div class="statusbar"><span>9:41</span><i><svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx=".6" fill="#fff"/><rect x="4.5" y="4" width="3" height="7" rx=".6" fill="#fff"/><rect x="9" y="2" width="3" height="9" rx=".6" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx=".6" fill="#fff"/></svg><svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x=".75" y=".75" width="19.5" height="10.5" rx="2.5" stroke="#fff" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#fff"/><rect x="21" y="4" width="1.6" height="4" rx=".8" fill="#fff" fill-opacity=".5"/></svg></i></div>
+        <div class="island"></div><div class="reflection"></div>
+      </div>
+    </div></div></div>
+
+    <!-- KLEINE telefoon rechtsonder: LIVE actieve Calm Control-sessie -->
+    <div class="ad sc-ph"><div class="ad-host"><div class="phone"><div class="sidebtn sb1"></div><div class="sidebtn sb2"></div><div class="sidebtn sb3"></div><div class="sidebtn sb4"></div>
+      <div class="screen"><div class="app" role="img" aria-label="VIBEZCORE State Control: a Calm Control session counting down, the ring pulsing like a heartbeat">
+        <div class="act-chev"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div class="act-name"><b></b>Calm Control</div>
+        <div class="timer-wrap">
+          <div class="glow"></div>
+          <svg class="waves" id="pwaves" width="399" height="399" viewBox="0 0 399 399" fill="none"><g id="pwg" opacity="0"><circle id="pwh" cx="199.5" cy="199.5" r="132" stroke="#B478FF" stroke-width="10" opacity=".3"/><circle id="pwc" cx="199.5" cy="199.5" r="132" stroke="#B478FF" stroke-width="3"/></g></svg>
+          <div class="a-circle" id="aCircle">
+            <div class="a-bg" id="aWaveHost"></div>
+            <svg width="264" height="264" viewBox="0 0 264 264" style="position:absolute;left:0;top:0"><circle cx="132" cy="132" r="131" stroke="#B478FF" stroke-width="2" fill="none"/></svg>
+          </div>
+          <div class="a-num" id="aClock">18:00</div>
+        </div>
+        <div class="ctl">
+          <div class="av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>Audio &amp; Haptics</div>
+          <div class="pause"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+          <div class="end">END SESSION</div>
+        </div>
+      </div>
+        <div class="statusbar"><span>9:41</span><i><svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx=".6" fill="#fff"/><rect x="4.5" y="4" width="3" height="7" rx=".6" fill="#fff"/><rect x="9" y="2" width="3" height="9" rx=".6" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx=".6" fill="#fff"/></svg><svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x=".75" y=".75" width="19.5" height="10.5" rx="2.5" stroke="#fff" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#fff"/><rect x="21" y="4" width="1.6" height="4" rx=".8" fill="#fff" fill-opacity=".5"/></svg></i></div>
+        <div class="island"></div><div class="reflection"></div>
+      </div>
+    </div></div></div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.getElementById('scTrio'); if(!root) return;
+  var VZ='#B478FF';
+  var reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 1 ── telefoons schalen: host is 403 breed, .ad is zo breed als de kolom */
+  function fit(){
+    var ads=root.querySelectorAll('.ad');
+    for(var i=0;i<ads.length;i++){
+      var h=ads[i].querySelector('.ad-host');
+      if(h) h.style.transform='scale('+(ads[i].clientWidth/403)+')';
+    }
+  }
+  fit(); window.addEventListener('resize',fit);
+  if(window.ResizeObserver){ try{ new ResizeObserver(fit).observe(root); }catch(e){} }
+
+  /* 2 ── golf (components/LiquidWave.tsx): zelfde pad, amplitude en kleursterkte (10 % / 15 %) */
+  var NS='http://www.w3.org/2000/svg';
+  function wavePath(S,y,amp){
+    var p=S, bottom=Math.max(S,y+amp)+2;
+    return 'M0 '+y+' C '+p*.25+' '+(y-amp)+', '+p*.25+' '+(y+amp)+', '+p*.5+' '+y+
+      ' C '+p*.75+' '+(y-amp)+', '+p*.75+' '+(y+amp)+', '+p+' '+y+
+      ' C '+p*1.25+' '+(y-amp)+', '+p*1.25+' '+(y+amp)+', '+p*1.5+' '+y+
+      ' C '+p*1.75+' '+(y-amp)+', '+p*1.75+' '+(y+amp)+', '+p*2+' '+y+
+      ' L '+p*2+' '+bottom+' L 0 '+bottom+' Z';
+  }
+  function makeWave(host,S){
+    var out={S:S};
+    ['back','front'].forEach(function(k){
+      var wrap=document.createElement('div'); wrap.className='wv '+k; wrap.style.cssText='width:'+S+'px;height:'+S+'px';
+      wrap.style.setProperty('--wd',(-S)+'px');
+      var svg=document.createElementNS(NS,'svg'); svg.setAttribute('width',S*2); svg.setAttribute('height',S);
+      var path=document.createElementNS(NS,'path'); path.setAttribute('fill',VZ); path.setAttribute('fill-opacity',k==='back'?'.1':'.15');
+      svg.appendChild(path); wrap.appendChild(svg); host.appendChild(wrap); out[k]=path;
+    });
+    out.set=function(waterY){
+      out.back.setAttribute('d',wavePath(S,waterY+S*.027,S*.04));
+      out.front.setAttribute('d',wavePath(S,waterY-S*.018,S*.031));
+    };
+    return out;
+  }
+  /* keuzescherm: motion 'choice' — leeg = 0,86·S, vol = 0,04·S; peil = gekozen duur / max = 18/30 */
+  var IS=256, iW=makeWave(document.getElementById('idleWaveHost'),IS);
+  var emptyY=IS*.86, fullY=IS*.04, LEVEL=18/30;
+  function yFor(l){ return emptyY-(emptyY-fullY)*l; }
+  /* actieve sessie: motion 'drain' — het peil zakt gelijkmatig; leeg = 1,05·S */
+  var AS=264, aW=makeWave(document.getElementById('aWaveHost'),AS);
+  function aY(progress){ var e=AS*1.05, f=AS*.04; return e-(e-f)*(1-progress); }
+  aW.set(aY(0));
+
+  /* 3 ── keuzescherm: boog + greep (DurationRing dialHandle), veert naar 18 van 30 min */
+  var dial=document.getElementById('dial');
+  var dC=148, dR=131, dCirc=2*Math.PI*dR;
+  function el(n,a){ var e=document.createElementNS(NS,n); for(var k in a) e.setAttribute(k,a[k]); dial.appendChild(e); return e; }
+  el('circle',{cx:dC,cy:dC,r:dR+1,stroke:'#000','stroke-width':4,fill:'none'});
+  el('circle',{cx:dC,cy:dC,r:dR,stroke:VZ,'stroke-opacity':.22,'stroke-width':1.5,fill:'none'});
+  var arc=el('circle',{cx:dC,cy:dC,r:dR,stroke:VZ,'stroke-width':2,'stroke-linecap':'round',fill:'none','stroke-dasharray':dCirc+' '+dCirc,transform:'rotate(-90 '+dC+' '+dC+')'});
+  var knob=el('circle',{r:7,fill:'#fff',stroke:VZ,'stroke-width':1.5});
+  function setDial(p){
+    var q=Math.min(.9999,Math.max(0,p)), a=q*2*Math.PI;
+    arc.setAttribute('stroke-dashoffset',dCirc*(1-q));
+    knob.setAttribute('cx',dC+dR*Math.sin(a)); knob.setAttribute('cy',dC-dR*Math.cos(a));
+  }
+  function spring(t){ /* zacht doorveren, zoals withSpring(damping 8, stiffness 90) */
+    if(t>=1) return 1; var s=t*1.3; return 1-Math.exp(-5.2*s)*Math.cos(6.5*s);
+  }
+  var introRaf=0;
+  function runIntro(){
+    cancelAnimationFrame(introRaf);
+    if(reduced){ setDial(LEVEL); iW.set(yFor(LEVEL)); return; }
+    var t0=performance.now(), DELAY=260, DUR=1300;
+    (function f(now){
+      var t=Math.max(0,(now-t0-DELAY)/DUR), k=spring(t);
+      setDial(LEVEL*k); iW.set(yFor(LEVEL*k));
+      if(t<1) introRaf=requestAnimationFrame(f); else { setDial(LEVEL); iW.set(yFor(LEVEL)); }
+    })(t0);
+  }
+  setDial(LEVEL); iW.set(yFor(LEVEL));
+
+  /* 4 ── actieve sessie: hartslagcurve 1-op-1 uit HapticPulseRings.tsx + bracelet-haptics.ts
+        Calm Control (Alpha), rust 70 bpm → startBpm 70, eindtempo max(50, 0,8·70) = 56 bpm.
+        Eerst 10 s vast op 70 bpm (SESSION_HOLD_SECONDS), dan 10 s glijden naar 56 (rampSec). */
+  var BEAT_LUB=1.07, BEAT_VALLEY=1.015, BEAT_DUB=1.04;
+  function eoq(k){ return 1-(1-k)*(1-k); }
+  function eis(k){ return .5-.5*Math.cos(Math.PI*k); }
+  function beatCurve(e,c){
+    if(e<0) return 1;
+    var dubAt=Math.round(Math.min(c*.3,350)), rise=80, back=Math.max(160,Math.min(520,c*.45,c-dubAt-rise-40));
+    if(e<rise) return 1+(BEAT_LUB-1)*eoq(e/rise);
+    if(e<dubAt) return BEAT_LUB+(BEAT_VALLEY-BEAT_LUB)*eis((e-rise)/Math.max(40,dubAt-rise));
+    if(e<dubAt+rise) return BEAT_VALLEY+(BEAT_DUB-BEAT_VALLEY)*eoq((e-dubAt)/rise);
+    if(e<dubAt+rise+back) return BEAT_DUB+(1-BEAT_DUB)*eis((e-dubAt-rise)/back);
+    return 1;
+  }
+  function waveProgress(e,c){
+    var dur=Math.min(1300,Math.max(450,c*.8)); if(e<0||e>=dur) return -1;
+    var k=e/dur; return 1-(1-k)*(1-k)*(1-k);
+  }
+  function bpmAt(sec){ return sec<10 ? 70 : 70+(56-70)*Math.min(1,(sec-10)/10); }
+
+  var circ=document.getElementById('aCircle'), clock=document.getElementById('aClock');
+  var wg=document.getElementById('pwg'), wc=document.getElementById('pwc'), wh=document.getElementById('pwh');
+  var TOTAL=18*60;
+  function fmt(rem){ var m=Math.floor(rem/60), s=rem%60; return m+':'+(s<10?'0':'')+s; }
+  var run=false, raf=0, t0=0, lubAt=-1, cycle=857, nextLub=0, lastSec=-1;
+  function frame(){
+    if(!run) return;
+    var now=performance.now(), sec=(now-t0)/1000;
+    if(now>=nextLub){ lubAt=nextLub; cycle=Math.round(60000/bpmAt((lubAt-t0)/1000)); nextLub=lubAt+cycle; }
+    var e=now-lubAt;
+    circ.style.transform='scale('+beatCurve(e,cycle)+')';
+    var p=waveProgress(e,cycle);
+    if(p<0){ wg.setAttribute('opacity','0'); }
+    else { var r=132*(1+.45*p); wc.setAttribute('r',r); wh.setAttribute('r',r); wg.setAttribute('opacity',(.95*(1-p)*(1-p)).toFixed(3)); }
+    var s=Math.floor(sec);
+    if(s!==lastSec){ lastSec=s; clock.textContent=fmt(Math.max(0,TOTAL-s)); aW.set(aY(Math.min(1,s/TOTAL))); }
+    raf=requestAnimationFrame(frame);
+  }
+  function startSession(){
+    if(reduced||run) return;
+    run=true; t0=performance.now(); lubAt=-1; nextLub=t0+500; lastSec=-1; clock.textContent=fmt(TOTAL);
+    raf=requestAnimationFrame(frame);
+  }
+  function stopSession(){
+    run=false; cancelAnimationFrame(raf);
+    circ.style.transform=''; wg.setAttribute('opacity','0'); clock.textContent=fmt(TOTAL); aW.set(aY(0));
+  }
+
+  /* 5 ── enkel animeren als het blok in beeld is (IntersectionObserver; scroll-events werken niet in de Wix-iframe) */
+  var seen=false;
+  function inView(on){
+    if(on){
+      root.classList.add('play');
+      if(!seen){ seen=true; runIntro(); }
+      startSession();
+    } else { root.classList.remove('play'); stopSession(); }
+  }
+  if(reduced){ runIntro(); }
+  else if('IntersectionObserver' in window){
+    new IntersectionObserver(function(en){ inView(en[0].isIntersecting); },{threshold:.25}).observe(root);
+    document.addEventListener('visibilitychange',function(){ if(document.hidden) inView(false); });
+  } else { inView(true); }
+})();
+</script>
+
+</div>
+<h2>Mobiel (390 px viewport)</h2><iframe src="state-control-trio-preview.html?solo=1" width="390" height="1500"></iframe><div class="spacer" style="height:200px"></div>
+</div><script>if(/solo=1/.test(location.search)){document.querySelectorAll("h2,iframe,.spacer").forEach(function(e){e.remove()});document.body.className="solo"}</script></body></html>
