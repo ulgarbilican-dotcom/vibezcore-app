@@ -150,7 +150,7 @@ def app_routes():
     out = []
     for f in sorted(glob.glob(os.path.join(ROOT, 'src', 'app', '**', '*.tsx'), recursive=True)):
         rel = os.path.relpath(f, os.path.join(ROOT, 'src', 'app')).replace('\\', '/')[:-4]
-        if rel.startswith('_layout') or rel.startswith('(tabs)') or rel in ('qa', 'qa-haptics', 'auth-callback', 'test-tier', 'breath-splat', 'breath-pacer-preview', 'breath-sample'):
+        if rel.startswith('_layout') or rel.startswith('(tabs)') or rel in ('qa', 'qa-haptics', 'auth-callback', 'test-tier', 'breath-splat', 'breath-pacer-preview'):
             continue
         rel = rel.replace('legal/[doc]', 'legal/privacy-policy').replace('library/pillar/[key]', 'library/pillar/resilience')
         out.append('/' + rel)
