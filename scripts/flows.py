@@ -73,7 +73,7 @@ def tap_frac(fx, fy, wait_s=1.5):
 
 def go_tab(name, wait_s=3.5):
     """Tabblad openen via de knop die de app zelf meldt (naam bevat het tabblad)."""
-    lab = tap(rf'^{re.escape(name)}', 6)
+    lab = tap(rf'^Tab {re.escape(name)}$', 6)
     time.sleep(wait_s)
     return lab
 

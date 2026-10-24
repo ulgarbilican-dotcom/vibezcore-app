@@ -5,9 +5,10 @@ import { Pressable, View, type PressableProps } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { qaExit } from '@/utils/qa-probe';
 
-export const QaPressable = forwardRef<View, PressableProps>(function QaPressable(props, ref) {
+export const QaPressable = forwardRef<View, PressableProps & { qaLabel?: string }>(function QaPressable({ qaLabel, ...props }, ref) {
   const inner = useRef<View | null>(null);
-  const label = props.accessibilityLabel;
+  /* qaLabel = naam voor het testmeetpunt alleen (laat het toegankelijkheidslabel voor schermlezers ongemoeid). */
+  const label = qaLabel ?? props.accessibilityLabel;
   useEffect(() => {
     qaExit(label, 1, inner);
     return () => qaExit(label, -1);

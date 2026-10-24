@@ -75,6 +75,14 @@ type IconComponent = LucideIcon | typeof BraceletIcon;
 
 /* Eigen tab-button. Wraps de bestaande icon+label-children van de navigator
    in een gewone Pressable; onPress doet één ding: navigeer naar path. */
+const TAB_QA_NAME: Record<TabPath, string> = {
+  '/': 'Library',
+  '/breath': 'Breath',
+  '/bracelet': 'State Control',
+  '/activity': 'Activity',
+  '/account': 'Profile',
+};
+
 function TabButton({
   path,
   children,
@@ -90,6 +98,7 @@ function TabButton({
 }) {
   return (
     <QaPressable
+      qaLabel={`Tab ${TAB_QA_NAME[path]}`}
       onPress={() => {
         if (__DEV__) console.log('TABBUTTON tap:', path);
         /* Iter 9dq v98 (2026-06-04): tap op Audio Library-tab reset de
