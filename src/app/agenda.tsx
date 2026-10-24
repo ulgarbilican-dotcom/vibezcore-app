@@ -153,7 +153,7 @@ function StateCard({
         scale.value = withSpring(0.96, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        scale.value = withTiming(1, { duration: 120 });
+        scale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
       style={s.cardSlot}
     >

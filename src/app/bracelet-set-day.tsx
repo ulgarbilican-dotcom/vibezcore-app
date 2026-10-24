@@ -233,7 +233,7 @@ function HorizonChip({
         scale.value = withSpring(0.97, SPRING_PRESS_IN);
       }}
       onPressOut={() => {
-        scale.value = withTiming(1, { duration: 120 });
+        scale.value = withSpring(1, SPRING_PRESS_OUT);
       }}
     >
       <Animated.View style={[s.horizonChip, pressStyle]}>

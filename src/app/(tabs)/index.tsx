@@ -1578,7 +1578,7 @@ function AudioScreen({
               </Text>
             </Tap>
             {needsAudioUpsell && (
-              <Pressable
+              <Tap
                 style={s.bLandingSecondaryLink}
                 onPress={() => {
                   /* Operator-fix 2026-06-18 iter 2: bracelet-owner "Listen
@@ -1608,7 +1608,7 @@ function AudioScreen({
                 <Text style={s.bLandingSecondaryLinkText}>
                   Listen free sessions first
                 </Text>
-              </Pressable>
+              </Tap>
             )}
           </View>
         </View>

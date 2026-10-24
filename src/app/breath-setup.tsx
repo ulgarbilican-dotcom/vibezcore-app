@@ -3474,7 +3474,7 @@ export default function BreathSetupScreen() {
                     return (
                       <View key={key}>
                         {i > 0 && <View style={s.sheetSeparator} />}
-                        <Pressable
+                        <Tap
                           style={s.sheetRow}
                           /* Operator, 18 september 2026 ("pas na aanklikken
                              Done is handeling klaar... nu bij aanvinken
@@ -3498,7 +3498,7 @@ export default function BreathSetupScreen() {
                             </Text>
                           </View>
                           {on && <Check size={18} color={accent} strokeWidth={2.6} />}
-                        </Pressable>
+                        </Tap>
                       </View>
                     );
                   })}
