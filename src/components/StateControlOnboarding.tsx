@@ -34,6 +34,7 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { qaFlag } from '@/utils/qa-probe';
 import { Reveal } from '@/components/Reveal';
 import { reveal } from '@/constants/motion';
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
@@ -376,6 +377,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
             ? 'Enter Heart Rate'
             : 'Continue'
         : finalLabel;
+  qaFlag('sco', { step, last: lastStep, cta: ctaLabel, hr: hrChoice });
 
   return (
     <View style={s.root}>
@@ -608,7 +610,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           </View>
         ) : (
         <View style={s.footer}>
-          <PressScale onPress={goNext} haptic scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button">
+          <PressScale onPress={goNext} haptic scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
             {/* Zelfde knop als de Breathwork-onboarding (operator, 16 okt
                 2026): stap 1 = matglas met lichtflits, daarna wit. */}
             {/* 19 okt 2026 (operator, build 38: "CTA kleur en stijl zelfde als
@@ -975,6 +977,7 @@ function HrOption({ title, sub, on, onPress }: { title: string; sub: string; on:
       scaleTo={0.97}
       style={[s.option, on && s.optionOn]}
       accessibilityRole="radio"
+      accessibilityLabel={`Option ${title}`}
       accessibilityState={{ selected: on }}
     >
       <View style={{ flex: 1 }}>

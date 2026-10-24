@@ -85,7 +85,7 @@ def act_expect(flow, desc, action, pred, timeout=9.0, **kw):
 def prepare():
     sh('shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS')
     sh('shell', 'am', 'force-stop', PKG)
-    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}', PKG); time.sleep(8)
+    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}&fresh=1', PKG); time.sleep(8)
     sh('shell', 'am', 'force-stop', PKG); sh('logcat', '-c')
     sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); time.sleep(12)
     tap_xy(540, 1729, 4)                                       # welkom -> "Control Your State"
@@ -124,10 +124,31 @@ def modes_flow(flow):
 
 
 # ───────────────────────── State Control ─────────────────────────
+def sco(s):
+    return s.get('sco') or {}
+
+
+def onboarding(F):
+    """A2-A4: de State Control-onboarding vanaf het begin, stap voor stap, inclusief Back en de rusthartslag-keuze."""
+    act_expect(F, 'A2 Explore -> onboarding stap 1', lambda: tap_xy(540, 1726, 4.5), lambda s: s.get('path') == '/state-onboarding' and sco(s).get('step') == 0)
+    act_expect(F, 'A3 CTA stap 1 -> stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
+    act_expect(F, 'A3 Back op stap 2 -> terug op stap 1', lambda: tap(r'^Back'), lambda s: sco(s).get('step') == 0)
+    act_expect(F, 'A3 CTA -> weer stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
+    for _ in range(3):
+        s = state(); cur = sco(s).get('step'); last = sco(s).get('last')
+        if cur is None or cur >= last:
+            break
+        act_expect(F, f'A3 CTA stap {cur + 1} -> stap {cur + 2}', lambda: tap(r'^CTA'), lambda s, c=cur: sco(s).get('step') == c + 1)
+    act_expect(F, 'A4 rusthartslag: "Use an average" kiezen', lambda: tap(r'^Option Use an average'), lambda s: sco(s).get('hr') == 'average')
+    act_expect(F, 'A4 CTA op laatste stap -> onboarding klaar, keuzescherm', lambda: tap(r'^CTA'),
+               lambda s: s.get('path') != '/state-onboarding' and (s.get('sc') or {}).get('view') == 'picker', timeout=16)
+
+
 def statecontrol_free():
     F = 'SC/free'
-    act_expect(F, 'tab opent met tabbalk (intro)', lambda: tap_xy(*TABS['State Control'], 3.5), lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is True)
-    act_expect(F, 'Explore -> keuzescherm zonder tabbalk, met Back', lambda: tap_xy(540, 1726, 4.5),
+    act_expect(F, 'A1 tab opent met tabbalk (intro)', lambda: tap_xy(*TABS['State Control'], 3.5), lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is True)
+    onboarding(F)
+    act_expect(F, 'B1 keuzescherm zonder tabbalk, met Back', lambda: 'picker',
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and s.get('tabbar') is False and any(e.startswith('Back') for e in s.get('exits', [])))
     modes_flow(F)
     act_expect(F, 'preview-knop opent het voorproef-blad (niet meteen een sessie)', lambda: tap(r'^Start a 30-second preview'),
