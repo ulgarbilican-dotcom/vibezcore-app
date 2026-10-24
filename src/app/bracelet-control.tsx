@@ -4029,7 +4029,6 @@ function IdleScreen({
   setDetailModeForModal,
   sim,
 }: IdleScreenProps) {
-  const { isPro: stateTabIntroSkipped } = useSubscription();
   const { plan: braceletPlan } = useActiveBraceletPlan();
   /* Operator, 16 september 2026 ("Optie 1 Hybride: de app blijft Light,
      maar dit specifieke bedieningsscherm maken we Dark — de felle
@@ -4216,10 +4215,6 @@ function IdleScreen({
            anders op "Connecting…" hangen (stil verbinden gebeurt één keer). */
         /* Audit 5 okt 2026: met een lopende sessie stopt de terugpijl NOOIT
            de sessie (disconnectAndBackToSource roept onStop aan). */
-        /* 24 okt 2026 (operator: "back knoppen werken bij State Control niet"): de terugpijl in de tab gaat naar het
-           intro van State Control — maar Premium ziet dat intro niet meer (23 okt), dus de pijl deed niets. Zonder
-           intro is dit het beginscherm van de tab en heeft het geen terugpijl nodig (zoals een andere hoofdtab). */
-        showBack={!(!!onMinimize && stateTabIntroSkipped)}
         onBack={
           sessionRunning
             ? onMinimize ?? (() => router.navigate('/bracelet' as never))

@@ -27,6 +27,7 @@
    precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { goToTab } from '@/utils/state-control-ui';
 import { TabReveal } from '@/components/Reveal';
 import { SPRING_POP, SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import Tap from '@/components/Tap';
@@ -1245,7 +1246,8 @@ export default function BreathScreen() {
       ) : null}
       {!intro ? (
         <Tap
-          onPress={() => setIntro(true)}
+          /* Premium heeft geen intro (23 okt): de pijl verlaat de tab, zoals de Android-terugknop (24 okt 2026). */
+          onPress={() => (proSub.isPro ? goToTab('/') : setIntro(true))}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Back"

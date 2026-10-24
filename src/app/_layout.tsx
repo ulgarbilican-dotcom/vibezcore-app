@@ -872,6 +872,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="qa" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         {/* bracelet-control.tsx zet zelf overal headerShown:false (eigen
            BraceletHeader) — title/headerBackTitle hier zijn dus nooit

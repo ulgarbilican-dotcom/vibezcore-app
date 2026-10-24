@@ -40,6 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { goToTab } from '@/utils/state-control-ui';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { TabReveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
@@ -418,7 +419,15 @@ export default function BraceletScreen() {
   /* Stabiele referentie: het sessiescherm koppelt er de terugknop aan in een
      focus-effect — een nieuwe functie per render zou dat steeds opnieuw
      doen (en de tabbalk laten flikkeren). */
-  const minimize = useCallback(() => setShowIntro(true), []);
+  /* Premium ziet het intro niet (23 okt) — dan is "terug" geen intro tonen maar het scherm verlaten. De tabbalk is op de
+     State Control-keuze verborgen, dus deze pijl is de enige uitweg (24 okt 2026: Premium zat vast). Naar het
+     hoofdtabblad (Library) — hetzelfde als de Android-terugknop (backBehavior="initialRoute"). */
+  const isProRef = useRef(false);
+  isProRef.current = proSub.isPro;
+  const minimize = useCallback(() => {
+    if (isProRef.current) goToTab('/');
+    else setShowIntro(true);
+  }, []);
 
   const introIsOnboarding = needsOnboarding && mayAutoShowOnboarding('state');
   if (showIntro) {

@@ -15,6 +15,7 @@
    ─────────────────────────────────────────────────────────────────── */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QA_ENABLED } from '@/utils/qa';
 import { useEffect, useState } from 'react';
 import { clearLastPlayed } from '@/utils/last-played';
 /* Iter v226 (2026-07-07): non-hook subscribe + snapshot voor bracelet-state.
@@ -72,7 +73,7 @@ export function getDevUserOverride(): DevUserOverride {
      in productie leidend. Een store-build leest ze dus ook niet meer — een
      achtergebleven waarde kan zo nooit iemand Premium of bracelet-eigenaar
      maken. */
-  return __DEV__ ? cached : null;
+  return __DEV__ || QA_ENABLED ? cached : null;
 }
 
 /** Iter 9dn (2026-05-31): publieke subscribe-API voor non-hook modules
@@ -148,7 +149,7 @@ export function useDevUserOverride(): DevUserOverride {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* Operator, 7 okt 2026: alleen testbuilds — zie getDevUserOverride. */
-  return __DEV__ ? value : null;
+  return __DEV__ || QA_ENABLED ? value : null;
 }
 
 /* ── Bracelet activation tracking (iter 9dq v89, 2026-06-03) ────────
