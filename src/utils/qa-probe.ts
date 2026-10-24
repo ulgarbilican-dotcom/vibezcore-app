@@ -2,26 +2,26 @@
    ReactNativeJS, prefix "[QA]" — op welk scherm de gebruiker zit, of de tabbalk zichtbaar is en welke uitwegen
    (Back/Close/Cancel/Done/Not now) op dat moment bestaan. Betrouwbaarder dan het scherm uitlezen (uiautomator werkt niet
    met doorlopende animaties). In winkelbuilds doet alles hier niets. */
+import { PixelRatio, StatusBar, type View } from 'react-native';
+import type { RefObject } from 'react';
 import { QA_ENABLED } from '@/utils/qa';
 
 const exits = new Map<string, number>();
-const pos = new Map<string, [number, number]>();
+const refs = new Map<string, RefObject<View | null>>();
 const flags: Record<string, unknown> = {};
 
 export const QA_EXIT_RE = /^(Back|Close|Cancel|Done|Not now|Minimize)\b/i;
 
-export function qaExit(label: string | undefined, delta: 1 | -1): void {
+export function qaExit(label: string | undefined, delta: 1 | -1, ref?: RefObject<View | null>): void {
   if (!QA_ENABLED || !label || !QA_EXIT_RE.test(label)) return;
   const n = (exits.get(label) ?? 0) + delta;
   if (n <= 0) {
     exits.delete(label);
-    pos.delete(label);
-  } else exits.set(label, n);
-}
-
-/** Midden van de uitweg in schermpixels, zodat het testscript hem kan tikken. */
-export function qaPos(label: string, x: number, y: number): void {
-  if (QA_ENABLED && exits.has(label)) pos.set(label, [Math.round(x), Math.round(y)]);
+    refs.delete(label);
+  } else {
+    exits.set(label, n);
+    if (ref && delta === 1) refs.set(label, ref);
+  }
 }
 
 export function qaFlag(key: string, value: unknown): void {
@@ -29,5 +29,28 @@ export function qaFlag(key: string, value: unknown): void {
 }
 
 export function qaSnapshot(): Record<string, unknown> {
-  return { exits: [...exits.keys()].sort(), xy: Object.fromEntries(pos), ...flags };
+  return { exits: [...exits.keys()].sort(), ...flags };
+}
+
+/** Zoals qaSnapshot, plus de positie van elke uitweg in schermpixels — NU gemeten (niet bij de eerste layout, want een
+ *  scherm dat nog inschuift geeft verkeerde coördinaten). */
+export async function qaSnapshotAsync(): Promise<Record<string, unknown>> {
+  const xy: Record<string, [number, number]> = {};
+  const r = PixelRatio.get();
+  await Promise.all(
+    [...refs.entries()].map(
+      ([label, ref]) =>
+        new Promise<void>((resolve) => {
+          const node = ref.current;
+          if (!node) return resolve();
+          const to = setTimeout(resolve, 250);
+          node.measureInWindow((x, y, w, h) => {
+            clearTimeout(to);
+            if (w > 0 && h > 0) xy[label] = [Math.round((x + w / 2) * r), Math.round((y + h / 2 + (StatusBar.currentHeight ?? 0)) * r)];
+            resolve();
+          });
+        }),
+    ),
+  );
+  return { ...qaSnapshot(), xy };
 }

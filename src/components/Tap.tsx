@@ -11,12 +11,11 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import { useEffect, useRef } from 'react';
-import { PixelRatio, StatusBar, View } from 'react-native';
+import { View } from 'react-native';
 import { Pressable, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
-import { QA_EXIT_RE, qaExit, qaPos } from '@/utils/qa-probe';
-import { QA_ENABLED } from '@/utils/qa';
+import { qaExit } from '@/utils/qa-probe';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -32,18 +31,8 @@ export default function Tap({ style, scaleTo = 0.95, onPressIn, onPressOut, chil
   useEffect(() => () => cancelAnimation(scale), [scale]);
   const qaRef = useRef<View>(null);
   const qaLabel = rest.accessibilityLabel;
-  const qaOnLayout =
-    QA_ENABLED && qaLabel && QA_EXIT_RE.test(qaLabel)
-      ? () => {
-          qaRef.current?.measureInWindow((x, y, w, h) => {
-            const r = PixelRatio.get();
-            /* measureInWindow telt de (doorzichtige) statusbalk niet mee: die erbij voor echte schermpixels. */
-            qaPos(qaLabel, (x + w / 2) * r, (y + h / 2 + (StatusBar.currentHeight ?? 0)) * r);
-          });
-        }
-      : undefined;
   useEffect(() => {
-    qaExit(qaLabel, 1);
+    qaExit(qaLabel, 1, qaRef);
     return () => qaExit(qaLabel, -1);
   }, [qaLabel]);
   const resolved = typeof style === 'function' ? style({ pressed: false, hovered: false } as PressableStateCallbackType) : style;
@@ -51,10 +40,6 @@ export default function Tap({ style, scaleTo = 0.95, onPressIn, onPressOut, chil
     <AnimatedPressable
       {...rest}
       ref={qaRef as never}
-      onLayout={(e) => {
-        qaOnLayout?.();
-        rest.onLayout?.(e);
-      }}
       style={[resolved, animated]}
       onPressIn={(e) => {
         scale.value = withSpring(scaleTo, SPRING_PRESS_IN);

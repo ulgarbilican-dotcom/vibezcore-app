@@ -19,7 +19,7 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
-import { qaSnapshot } from '@/utils/qa-probe';
+import { qaSnapshotAsync } from '@/utils/qa-probe';
 import { QA_ENABLED } from '@/utils/qa';
 import BottomSystemScrim from '@/components/BottomSystemScrim';
 import { useWatchCatalogSync } from '@/services/watch-catalog';
@@ -311,12 +311,14 @@ function QaProbe() {
     if (!QA_ENABLED) return;
     let last = '';
     const id = setInterval(() => {
-      const s = JSON.stringify({ path, ...qaSnapshot() });
-      if (s !== last) {
-        last = s;
-        console.log('[QA] ' + s);
-      }
-    }, 300);
+      void qaSnapshotAsync().then((snap) => {
+        const s = JSON.stringify({ path, ...snap });
+        if (s !== last) {
+          last = s;
+          console.log('[QA] ' + s);
+        }
+      });
+    }, 400);
     return () => clearInterval(id);
   }, [path]);
   return null;
