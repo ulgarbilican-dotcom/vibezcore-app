@@ -10,7 +10,7 @@
    signed-out header (vervangt platte tekst "VIBEZCORE").
    ─────────────────────────────────────────────────────────────────────────── */
 
-import { SPRING_PRESS_OUT } from '@/constants/motion';
+import { SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import { friendlyError } from '@/utils/friendly-error';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel, resetRestingPulse } from '@/services/resting-pulse';
@@ -1553,11 +1553,11 @@ export default function AccountScreen() {
               is doorgevoerd. `screenTitle` blijft ongewijzigd: die haalt
               al `TypeScale.tabHeader` op, de ene bron voor de pagina-
               titel-rol op alle 4 tabs (operator, 11 september 2026). */}
-          <Text style={g.title}>Profile</Text>
-          <ProfileHeader email={email} />
-          <MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} />
-          <ProductsGroup />
-          <RhythmGroup />
+          <Animated.View entering={reveal(0)}><Text style={g.title}>Profile</Text></Animated.View>
+          <Animated.View entering={reveal(1)}><ProfileHeader email={email} /></Animated.View>
+          <Animated.View entering={reveal(2)}><MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} /></Animated.View>
+          <Animated.View entering={reveal(3)}><ProductsGroup /></Animated.View>
+          <Animated.View entering={reveal(4)}><RhythmGroup /></Animated.View>
           <Group title="Account">
             {/* Volledig adres onder de titel i.p.v. afgekapt rechts (operator 19 okt 2026). */}
             <Row icon={Mail} title="Email" subtitle={email} />
@@ -1565,8 +1565,8 @@ export default function AccountScreen() {
               <Row icon={KeyRound} title="Change password" onPress={onChangePassword} accessibilityLabel="Change your password" />
             )}
           </Group>
-          <SupportGroup />
-          <AboutLegalGroups />
+          <Animated.View entering={reveal(5)}><SupportGroup /></Animated.View>
+          <Animated.View entering={reveal(6)}><AboutLegalGroups /></Animated.View>
           {/* Afmelden en verwijderen onderaan, apart — zoals in Instellingen. */}
           <Group footer={`Deleting your account is permanent. It does not cancel an active subscription — do that in your ${Platform.OS === 'ios' ? 'Apple ID' : 'Google Play'} settings.`}>
             <Row icon={LogOut} title="Sign out" onPress={onSignOut} />

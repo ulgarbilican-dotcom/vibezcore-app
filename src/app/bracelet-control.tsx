@@ -175,6 +175,7 @@ import ReanimatedAnimated, {
   withSequence,
   cancelAnimation,
   interpolate,
+  interpolateColor,
   Extrapolation,
   Easing as ReanimatedEasing,
   runOnJS,
@@ -3967,16 +3968,16 @@ type IdleScreenProps = {
 
 /* Paginabolletje van de toestandskeuze: de gekozen toestand groeit met een veer (iOS page control) en
    neemt zijn kleur over; de rest krimpt terug. */
-function ModeDot({ active, color }: { active: boolean; color: string }) {
+function ModeDot({ active }: { active: boolean; color?: string }) {
   const k = useSharedValue(active ? 1 : 0);
   useEffect(() => {
     k.value = withSpring(active ? 1 : 0, SPRING_SETTLE);
   }, [active, k]);
   const st = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.6 + 0.4 * k.value }],
-    opacity: 0.25 + 0.75 * k.value,
+    transform: [{ scale: 0.7 + 0.3 * k.value }],
+    backgroundColor: interpolateColor(k.value, [0, 1], ['rgba(255,255,255,0.32)', '#ffffff']),
   }));
-  return <Animated.View style={[s.modeDot, { backgroundColor: active ? color : '#ffffff' }, st]} />;
+  return <Animated.View style={[s.modeDot, st]} />;
 }
 
 /* SCREEN 1: Idle — mode selection + duration + Start CTA.

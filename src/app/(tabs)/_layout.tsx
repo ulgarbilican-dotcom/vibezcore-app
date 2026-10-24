@@ -383,6 +383,8 @@ export default function TabLayout() {
         })}
         screenOptions={{
           headerShown: false,
+          /* Zachte crossfade tussen tabs i.p.v. een harde wissel (24 okt 2026). */
+          animation: 'fade',
           /* Operator, 25 september 2026: eerst een echte `BlurView`-Material
              geprobeerd, operator vond matglas niet mooi — "kunnen we het
              transparant maken". Daarna (derde ronde, toen de app nog licht
