@@ -31,6 +31,11 @@ verkeerde `Animated`.
 **R5 — Eén ronde = één onderwerp = één build, en de poort.** Pas als de **vloeiwandeling** (§3) op de build in Free én Premium
 volledig slaagt, en twee ronden achter elkaar schoon zijn, gaat een build naar de winkel.
 
+**R6 — Altijd vanaf het begin, als nieuwe gebruiker, en alle sporen.** Elke flow start op een schone eerste-gebruik-toestand (`qa?fresh=1`) en loopt vanaf het
+eerste scherm door. Heeft een onderdeel meer dan één spoor (bv. het Breathwork-protocol: **"Build it yourself"** én **"Let VIBEZCORE build it"**), dan wordt
+**elk spoor volledig** doorlopen en worden beide met elkaar vergeleken (zelfde eindresultaat). Tab voor tab: pas na volledig PASS van Free volgt Premium, en pas na
+volledig PASS van een onderdeel volgt het volgende. Per scherm: elke terugknop en elke CTA (tekst, actief/inactief, juiste doel). Lijsten: `docs/FLOWS_*.md`.
+
 ## 3. De vloeiwandeling (automatisch): `scripts/flow-walk.py`
 Loopt op de aangesloten telefoon alle hoofdroutes af en controleert per scherm R2:
 - elk tabblad: bereikbaar, en heeft tabbalk of uitweg;
