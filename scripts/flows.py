@@ -119,13 +119,13 @@ def act_expect(flow, desc, action, pred, timeout=9.0, **kw):
 def prepare():
     sh('shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS')
     sh('shell', 'am', 'force-stop', PKG)
-    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}&fresh=1', PKG); time.sleep(8)
+    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f"'vibezcoreapp://qa?tier={TIER}&fresh=1'", PKG); time.sleep(8)
     sh('shell', 'am', 'force-stop', PKG); sh('logcat', '-c')
     sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); time.sleep(12)
     tap_frac(0.5, 0.739, 4)                                    # welkom -> "Control Your State"
     # poort NU terugzetten, in dezelfde app-start, zonder het scherm te verlaten (stay=1): nieuwe gebruiker op het intro
-    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}&fresh=1&stay=1', PKG); time.sleep(4)
-    clear_overlays(); end_any_session()
+    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f"'vibezcoreapp://qa?tier={TIER}&fresh=1&stay=1'", PKG); time.sleep(4)
+    end_any_session()   # NIET clear_overlays(): 'Not now'/'Skip' op het intro zou zelf een uitstel tellen
 
 
 def clear_overlays():
