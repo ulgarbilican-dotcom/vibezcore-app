@@ -32,6 +32,7 @@
    Developer heeft een knop om 'm te resetten.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { useIsFocused } from '@react-navigation/native';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import { PopupView } from '@/components/PopupCard';
 import Tap from '@/components/Tap';
@@ -1763,15 +1764,20 @@ export function SlideIntro({
   const WORD_STAGGER_MS = 220;
   const WORD_RISE_MS = 620;
   const wordReveal = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
+  /* Speelt opnieuw af elke keer dat het scherm de focus krijgt (tab weg en terug). */
+  const wordFocused = useIsFocused();
   useEffect(() => {
     wordReveal.forEach((v, i) => {
+      cancelAnimation(v);
+      v.value = 0;
+      if (!wordFocused) return;
       v.value = withDelay(
         300 + i * WORD_STAGGER_MS,
         withTiming(1, { duration: WORD_RISE_MS, easing: Easing.out(Easing.cubic) }),
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [wordFocused]);
   /* Operator, 22 september 2026 ("breathe build become moet om de beurt
      even vergroten net zoals bij welcome breath pagina"): elk woord popt
      nu ook kort iets groter op tijdens zijn eigen reveal (overshoot naar

@@ -1665,15 +1665,14 @@ function AudioScreen({
               blijven op dezelfde plek — 34 + de balkhoogte. */}
           {/* Knop op dezelfde hoogte als bij Breath en State Control (die hebben nog een regel onder de knop). */}
           <View style={[s.introTextWrap, { paddingBottom: 34 + 54 + tabInset }]}>
-            <Animated.Text style={[s.introEyebrow, introEyebrowStyle]}>
+            <TabReveal i={0}><Text style={s.introEyebrow}>
               VIBEZCORE AUDIO LIBRARY
-            </Animated.Text>
-            <Animated.Text style={[s.introTitle, introTitleStyle]}>
+            </Text></TabReveal>
+            <TabReveal i={1}><Text style={s.introTitle}>
               Where insight becomes identity
-            </Animated.Text>
-            <Animated.View
-              style={[{ marginTop: 28, alignSelf: 'stretch' }, introCtaPressStyle]}
-            >
+            </Text></TabReveal>
+            <TabReveal i={2} style={{ marginTop: 28, alignSelf: 'stretch' }}>
+            <Animated.View style={introCtaPressStyle}>
               <Pressable
                 onPress={finishAudioIntro}
                 onPressIn={() => {
@@ -1702,6 +1701,7 @@ function AudioScreen({
 </View>
               </Pressable>
             </Animated.View>
+            </TabReveal>
           </View>
         </View>
       )}
@@ -1829,7 +1829,7 @@ function AudioScreen({
            helemaal geen titel op dit scherm — alleen de zoekbalk). */}
         {/* Ruimte voor de Premium-knop bovenaan (PremiumPill, 7 okt 2026):
            zonder deze extra marge zat de knop tegen de titel. */}
-        <View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingBottom: 34 }, { paddingTop: 7 }]}>
+        <TabReveal i={0}><View style={[s.libTitleRow, !sub.isLoading && !sub.isPro && { paddingBottom: 34 }, { paddingTop: 7 }]}>
           {/* 23 okt 2026 (operator): zelfde kop als State Control — kleine, gespatieerde hoofdletters, gecentreerd. */}
           <View style={{ width: 60 }} />
           <Text style={s.libHeaderTitle}>Audio Library</Text>
@@ -1841,7 +1841,7 @@ function AudioScreen({
           >
             <Search size={22} color="#ffffff" strokeWidth={2.2} />
           </CardBounce>
-        </View>
+        </View></TabReveal>
 
         {/* Operator, 26 september 2026 ("verwijder subheader"): de 4-fasen-
            regel (Understanding · Awareness · Regulation · Integration)
@@ -1860,7 +1860,7 @@ function AudioScreen({
         {/* Operator, 4 okt 2026 (smoothness-audit): deze 4 segmenten
            gebruikten kale `Pressable`s zonder tik-animatie/haptic — nu
            `CardBounce`, zelfde patroon als de rest van dit bestand. */}
-        <View style={s.libQuickLinksBar}>
+        <TabReveal i={1}><View style={s.libQuickLinksBar}>
           <CardBounce
             style={s.libQuickLinkSegment}
             onPress={() => navigateAway(() => router.push('/history'))}
@@ -1896,7 +1896,7 @@ function AudioScreen({
             <Heart size={15} color={C.text} strokeWidth={1.8} />
             <Text style={s.libQuickLinkText}>Favorites</Text>
           </CardBounce>
-        </View>
+        </View></TabReveal>
 
         {/* Operator, 15 september 2026: "BUILT ON + Emerson quote" hier
            verwijderd — sinds de nieuwe full-photo intro (foto + "Where
@@ -1979,7 +1979,7 @@ function AudioScreen({
             {/* 23 okt 2026 (operator): deze kaart blijft ALTIJD de Free Sessions-kaart; "Last Listened" opent enkel de
                 popup via het segment in de balk erboven. */}
             {!hasSub && (
-              <TabReveal i={0} style={s.featureWrap}>
+              <TabReveal i={2} style={s.featureWrap}>
                 <CardBounce
                   style={s.featureCard}
                   onPress={() => navigateAway(() => router.push('/library/free'))}
@@ -2008,7 +2008,7 @@ function AudioScreen({
                 pillarsYRef.current = e.nativeEvent.layout.y;
               }}
             >
-            <Text style={s.libSectionTitle}>Explore</Text>
+            <TabReveal i={2}><Text style={s.libSectionTitle}>Explore</Text></TabReveal>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -2030,7 +2030,7 @@ function AudioScreen({
                      was een platte opacity-fade (`FadeIn`), nu `FadeInUp`
                      met een spring-easing voor het "hoogwaardig, soepel"
                      gevoel dat gevraagd werd. */
-                  <TabReveal i={1 + pillarIdx} key={p.num} style={{ width: PILLAR_CARD_WIDTH }}>
+                  <TabReveal i={3 + pillarIdx} key={p.num} style={{ width: PILLAR_CARD_WIDTH }}>
                   <Animated.View renderToHardwareTextureAndroid style={breathStyles[pillarIdx]}>
                   {/* Operator, 26 september 2026 (Apple-redesign, definitief):
                      de "Unified Card" (tekst op de foto) is teruggedraaid —
@@ -3357,7 +3357,7 @@ function AudioScreen({
         {!searchActive && !activePillarFilter && (
           /* Zelfde opbouw als de pijler-tegels erboven: foto, daaronder
              label + titel (Content-Card-regel: tekst onder de foto). */
-          <Tap
+          <TabReveal i={7}><Tap
             style={({ pressed }) => [s.braceletCard, pressed && { opacity: 0.85 }]}
             onPress={() => void openBraceletWebsite()}
             accessibilityRole="button"
@@ -3378,7 +3378,7 @@ function AudioScreen({
               <Text style={s.braceletCardChev}>›</Text>
             </View>
             <BalancedText style={s.braceletCardSub}>Nature meets tech. Your rhythm, on your wrist.</BalancedText>
-          </Tap>
+          </Tap></TabReveal>
         )}
 
         {/* ── BRACELET-TEASER (cross-product upsell) ──────────────────
@@ -3424,7 +3424,7 @@ function AudioScreen({
             patroon (Spotify-stijl footer). Bracelet owners en PRO users
             zien dit niet (zij hebben al een ander pad). */}
         {!searchActive && isSignedIn === false && !hasSub && !isBraceletOwner && (
-          <Tap
+          <TabReveal i={8}><Tap
             style={s.signInFooterLink}
             onPress={() => {
               /* Iter 9dq v110 (2026-06-04): scroll-intent 'account-top'
@@ -3439,7 +3439,7 @@ function AudioScreen({
             <Text style={s.signInFooterText}>
               <Text style={s.signInFooterTextAccent}>Sign In</Text> or <Text style={s.signInFooterTextAccent}>Create Account</Text>
             </Text>
-          </Tap>
+          </Tap></TabReveal>
         )}
 
         {/* Juridische regel onderaan als afsluiter, niet meer midden in de

@@ -153,7 +153,7 @@ export default function ActivityScreen() {
            is weg — vervangen door een compact icoon-badge-kopje, zoals
            Apple's eigen systeemschermen (SF Symbol in een gekleurd
            afgerond vlak naast de titel) i.p.v. een fotografische banner. */}
-        <View style={s.headerRow}>
+        <TabReveal i={0}><View style={s.headerRow}>
           <View style={s.headerIconBadge}>
             <ActivityIcon size={22} color="#ffffff" strokeWidth={2.4} />
           </View>
@@ -161,7 +161,7 @@ export default function ActivityScreen() {
             <Text style={s.headerEyebrow}>YOUR PROGRESS</Text>
             <Text style={s.headerTitle}>Activity</Text>
           </View>
-        </View>
+        </View></TabReveal>
 
         <View style={s.headerSpacer} />
 
@@ -199,8 +199,8 @@ export default function ActivityScreen() {
             Control eerst, dan Breathwork. */}
         {/* Operator, 10 okt 2026: eigen ingang bovenaan — je ritme, wanneer
             gemeten, aanpassingen en een nieuwe meting (pagina Heart Rate). */}
-        <Text style={s.groupLabel}>HEART RATE</Text>
-        <View>
+        <TabReveal i={2}><Text style={s.groupLabel}>HEART RATE</Text></TabReveal>
+        <TabReveal i={2}><View>
           <Row
             large
             Icon={HeartPulse}
@@ -209,9 +209,9 @@ export default function ActivityScreen() {
             flashKey={flashFor('rhythm')}
             onPress={() => open('rhythm', '/heart-rate')}
           />
-        </View>
-        <Text style={[s.groupLabel, { marginTop: 16 }]}>STATE CONTROL</Text>
-        <View>
+        </View></TabReveal>
+        <TabReveal i={3}><Text style={[s.groupLabel, { marginTop: 16 }]}>STATE CONTROL</Text></TabReveal>
+        <TabReveal i={3}><View>
           {/* Operator, 29 september 2026 ("uw set your goal (bracelet) is
              eigenlijk niets momenteel, had evengoed go to bracelet kunnen
              heten"): terecht — die kaart zette niets vast, enkel een
@@ -260,10 +260,10 @@ export default function ActivityScreen() {
           />
           {/* Rusthartslag staat sinds 9 okt 2026 enkel nog op State Control
               (label bovenaan) en Profile → Resting Heart Rate. */}
-        </View>
+        </View></TabReveal>
 
-        <Text style={[s.groupLabel, { marginTop: 16 }]}>BREATHWORK</Text>
-        <View>
+        <TabReveal i={4}><Text style={[s.groupLabel, { marginTop: 16 }]}>BREATHWORK</Text></TabReveal>
+        <TabReveal i={4}><View>
           {/* Operator, 3 okt 2026 ("your daily plan breathwork en bracelet
              als eerste telkens"): "Your daily plan" verhuisd naar de
              eerste plek in deze groep (stond voorheen na "Set your
@@ -302,7 +302,7 @@ export default function ActivityScreen() {
             flashKey={flashFor('breathHistory')}
             onPress={() => open('breathHistory', '/breath-history')}
           />
-        </View>
+        </View></TabReveal>
       </ScrollView>
     </SafeAreaView>
   );
