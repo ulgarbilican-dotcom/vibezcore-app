@@ -44,6 +44,32 @@ def state():
     return last
 
 
+DISMISS = re.compile(r'^(Not now|Maybe later|Minimize|Skip|Got it)', re.I)
+
+
+def tap_exit(pattern, wait=3.0):
+    s = state() or {}
+    for label, xy in (s.get('xy') or {}).items():
+        if re.match(pattern, label, re.I):
+            tap(tuple(xy), wait)
+            return label
+    return None
+
+
+def dismiss_overlays():
+    """Eerste-gebruik-schermen, verkoopkaarten en een lopende sessie wegtikken via hun echte positie (uit de app zelf)."""
+    for _ in range(6):
+        s = state() or {}
+        hit = None
+        for label, xy in (s.get('xy') or {}).items():
+            if DISMISS.match(label):
+                hit = (label, xy); break
+        if not hit:
+            return
+        print('   (overlay gesloten:', hit[0], ')')
+        tap(tuple(hit[1]), 3.0)
+
+
 def check(name, ok, detail):
     results.append((name, ok, detail))
     print(('PASS' if ok else 'FAIL'), '-', name, '|', detail)
@@ -56,18 +82,23 @@ def at_tab(s, tab):
 def picker_flow(tab):
     """Free: tab -> intro -> Explore -> keuzescherm -> uitweg -> terug op DEZELFDE tab (intro).
        Premium: tab opent direct op het keuzescherm -> uitweg -> verlaat de tab naar het hoofdtabblad (Library)."""
+    dismiss_overlays()
     tap(TAB[tab], 3.5)
+    dismiss_overlays()
     s = state()
     if TIER == 'free':
         check(f'{tab}: tab opens with the tab bar', bool(s) and s.get('tabbar') is True and at_tab(s, tab), str(s))
         tap(EXPLORE, 4.5)
+        dismiss_overlays()
     s = state()
     ok = bool(s) and (s.get('tabbar') is True or len(s.get('exits', [])) > 0) and at_tab(s, tab)
     check(f'{tab} picker: has an exit (tab bar or back)', ok, str(s))
     if not (s and s.get('exits')):
         return
-    tap(BACK[tab], 3.5)
+    used = tap_exit(r'^Back', 3.5)
     s = state()
+    if not used:
+        check(f'{tab} picker: a Back exit exists', False, str(s)); return
     if TIER == 'free':
         check(f'{tab} picker: back lands on the same tab', at_tab(s, tab) and s.get('tabbar') is True, str(s))
     else:
@@ -85,6 +116,7 @@ def main():
     sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1')
     time.sleep(12)
     tap((540, 1729), 4)            # welcome -> "Control Your State"
+    dismiss_overlays()
     s = state()
     check('QA probe is running (build has EXPO_PUBLIC_QA=1)', s is not None, str(s))
     if s is None:

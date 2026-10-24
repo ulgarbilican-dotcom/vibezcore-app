@@ -10,11 +10,13 @@
    anders loopt Reanimated tegen een al afgebroken view aan (eerder de "Should not already be working"-crash).
    ───────────────────────────────────────────────────────────────────────── */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { PixelRatio, View } from 'react-native';
 import { Pressable, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
-import { qaExit } from '@/utils/qa-probe';
+import { QA_EXIT_RE, qaExit, qaPos } from '@/utils/qa-probe';
+import { QA_ENABLED } from '@/utils/qa';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -28,7 +30,17 @@ export default function Tap({ style, scaleTo = 0.95, onPressIn, onPressOut, chil
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   useEffect(() => () => cancelAnimation(scale), [scale]);
+  const qaRef = useRef<View>(null);
   const qaLabel = rest.accessibilityLabel;
+  const qaOnLayout =
+    QA_ENABLED && qaLabel && QA_EXIT_RE.test(qaLabel)
+      ? () => {
+          qaRef.current?.measureInWindow((x, y, w, h) => {
+            const r = PixelRatio.get();
+            qaPos(qaLabel, (x + w / 2) * r, (y + h / 2) * r);
+          });
+        }
+      : undefined;
   useEffect(() => {
     qaExit(qaLabel, 1);
     return () => qaExit(qaLabel, -1);
@@ -37,6 +49,11 @@ export default function Tap({ style, scaleTo = 0.95, onPressIn, onPressOut, chil
   return (
     <AnimatedPressable
       {...rest}
+      ref={qaRef as never}
+      onLayout={(e) => {
+        qaOnLayout?.();
+        rest.onLayout?.(e);
+      }}
       style={[resolved, animated]}
       onPressIn={(e) => {
         scale.value = withSpring(scaleTo, SPRING_PRESS_IN);
