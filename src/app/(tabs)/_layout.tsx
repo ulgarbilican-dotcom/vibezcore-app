@@ -22,6 +22,7 @@
    Uiterlijk: MERK_ANKER — Brand-palet, Inter via _layout.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { qaFlag } from '@/utils/qa-probe';
 import { isReduceMotion } from '@/constants/motion';
 import { isBreathPickerOpen, subscribeBreathPickerOpen } from '@/utils/breath-picker-ui';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
@@ -284,6 +285,7 @@ export default function TabLayout() {
   const [breathPicker, setBreathPicker] = useState(isBreathPickerOpen());
   useEffect(() => subscribeBreathPickerOpen(setBreathPicker), []);
   const hideStateControlBar = sessionVisible || (chooseVisible && !introVisible) || introFull;
+  qaFlag('tabbar', !(hideStateControlBar || breathPicker));
   /* Voor openStateControl: tab wisselen als de tabbladen bovenaan liggen,
      anders terugkeren naar de tabbladen (6 okt 2026). */
   useFocusEffect(

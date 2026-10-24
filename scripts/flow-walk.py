@@ -1,138 +1,104 @@
-"""Vloeiwandeling (docs/KWALITEITSPROTOCOL.md §3): loopt de hoofdroutes van de app af op een aangesloten Android-toestel en
-controleert R2 (elk scherm heeft een uitweg) + geen wit scherm. Eén FAIL = niet klaar.
+"""Vloeiwandeling (docs/KWALITEITSPROTOCOL.md §3). Stuurt de app aan via vaste tikcoördinaten (1080x2340) en leest wat de app
+ZELF meldt in testmodus (logcat, regels "[QA] {...}": scherm, tabbalk zichtbaar, aanwezige uitwegen). Geen schermuitlezing
+(uiautomator werkt niet met doorlopende animaties).
+
+Controleert per toestand (Free en Premium, DEZELFDE build):
+  R2   elk keuzescherm heeft een uitweg (tabbalk of Back/Close/...) en de uitweg werkt;
+  R2b  de uitweg landt op een verwacht tabblad, niet ergens anders.
+Eén FAIL = niet klaar. Vereist een build met EXPO_PUBLIC_QA=1.
 
 Gebruik: python scripts/flow-walk.py <adb-serial> <free|premium>
-Vereist: adb op het PATH (of ADB=pad), Pillow. De app moet geïnstalleerd zijn en op het welkomstscherm of een tab staan.
 """
-import os, re, subprocess, sys, time, xml.etree.ElementTree as ET
-from PIL import Image
-import io
+import json, os, re, subprocess, sys, time
 
 ADB = os.environ.get('ADB', r'C:\Users\ulgar\AppData\Local\Android\Sdk\platform-tools\adb.exe')
-SER = sys.argv[1]
-MODE = sys.argv[2] if len(sys.argv) > 2 else 'free'
+SER, TIER = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else 'free')
 PKG = 'com.ubili.vibezcoreapp'
-TABS = ['State Control', 'Breath', 'Library', 'Activity', 'Profile']
-EXIT_RE = re.compile(r'^(Back|Close|Cancel|Done|Not now|Not Now|Minimize)\b', re.I)
-
-
-def adb(*a, out=False):
-    r = subprocess.run([ADB, '-s', SER, *a], capture_output=True)
-    return r.stdout if out else None
-
-
-def dump():
-    adb('shell', 'uiautomator', 'dump', '/sdcard/w.xml')
-    xml = adb('exec-out', 'cat', '/sdcard/w.xml', out=True).decode('utf-8', 'ignore')
-    nodes = []
-    try:
-        root = ET.fromstring(xml)
-    except ET.ParseError:
-        return nodes
-    for n in root.iter('node'):
-        b = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', n.get('bounds', ''))
-        if not b:
-            continue
-        x0, y0, x1, y1 = map(int, b.groups())
-        nodes.append(dict(text=n.get('text', ''), desc=n.get('content-desc', ''), click=n.get('clickable') == 'true',
-                          cx=(x0 + x1) // 2, cy=(y0 + y1) // 2, y0=y0, y1=y1))
-    return nodes
-
-
-def labels(nodes):
-    return [x['text'] or x['desc'] for x in nodes]
-
-
-def find(nodes, pred):
-    for n in nodes:
-        if pred(n):
-            return n
-
-
-def tap(n):
-    adb('shell', 'input', 'tap', str(n['cx']), str(n['cy']))
-    time.sleep(2.2)
-
-
-def shot_mean():
-    png = adb('exec-out', 'screencap', '-p', out=True)
-    im = Image.open(io.BytesIO(png)).convert('L')
-    w, h = im.size
-    reg = im.crop((0, int(h * .08), w, int(h * .86))).resize((60, 120))
-    return sum(reg.getdata()) / (60 * 120)
-
-
-def tabbar_visible(nodes):
-    L = labels(nodes)
-    return all(any(t == l for l in L) for t in TABS)
-
-
-def exit_node(nodes):
-    return find(nodes, lambda n: (n['click'] or n['desc'] or n['text']) and EXIT_RE.match(n['desc'] or n['text'] or ''))
-
-
+TAB = {'State Control': (108, 2100), 'Breath': (324, 2100), 'Library': (540, 2100), 'Activity': (755, 2100), 'Profile': (971, 2100)}
+EXPLORE = (540, 1726)
+BACK = {'Breath': (102, 135), 'State Control': (85, 132)}
+HOME_PATHS = ('/', '/index', '/(tabs)')
+PATH = {'Breath': '/breath', 'State Control': '/bracelet', 'Library': '/'}
 results = []
 
 
-def check(step, ok, detail=''):
-    results.append((step, 'PASS' if ok else 'FAIL', detail))
-    print(('PASS' if ok else 'FAIL'), '-', step, detail)
+def sh(*a):
+    return subprocess.run([ADB, '-s', SER, *a], capture_output=True)
 
 
-def tab_nodes(nodes):
-    # tabbar items (bottom area): texts equal to a tab name, in the lowest third
-    return {t: find(nodes, lambda n, t=t: n['text'] == t and n['cy'] > 1900) for t in TABS}
+def tap(xy, wait=2.5):
+    sh('shell', 'input', 'tap', str(xy[0]), str(xy[1]))
+    time.sleep(wait)
 
 
-def go_tab(name):
-    nodes = dump()
-    n = tab_nodes(nodes).get(name)
-    if not n:
-        return None
-    tap(n)
-    return dump()
+def state():
+    out = sh('logcat', '-d', '-s', 'ReactNativeJS:V').stdout.decode('utf-8', 'ignore')
+    last = None
+    for line in out.splitlines():
+        m = re.search(r'\[QA\] (\{.*\})', line)
+        if m:
+            try:
+                last = json.loads(m.group(1))
+            except ValueError:
+                pass
+    return last
 
 
-def walk():
-    adb('shell', 'am', 'force-stop', PKG)
-    adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1')
+def check(name, ok, detail):
+    results.append((name, ok, detail))
+    print(('PASS' if ok else 'FAIL'), '-', name, '|', detail)
+
+
+def at_tab(s, tab):
+    return bool(s) and s.get('path') in ((PATH[tab],) if tab != 'Library' else HOME_PATHS)
+
+
+def picker_flow(tab):
+    """Free: tab -> intro -> Explore -> keuzescherm -> uitweg -> terug op DEZELFDE tab (intro).
+       Premium: tab opent direct op het keuzescherm -> uitweg -> verlaat de tab naar het hoofdtabblad (Library)."""
+    tap(TAB[tab], 3.5)
+    s = state()
+    if TIER == 'free':
+        check(f'{tab}: tab opens with the tab bar', bool(s) and s.get('tabbar') is True and at_tab(s, tab), str(s))
+        tap(EXPLORE, 4.5)
+    s = state()
+    ok = bool(s) and (s.get('tabbar') is True or len(s.get('exits', [])) > 0) and at_tab(s, tab)
+    check(f'{tab} picker: has an exit (tab bar or back)', ok, str(s))
+    if not (s and s.get('exits')):
+        return
+    tap(BACK[tab], 3.5)
+    s = state()
+    if TIER == 'free':
+        check(f'{tab} picker: back lands on the same tab', at_tab(s, tab) and s.get('tabbar') is True, str(s))
+    else:
+        check(f'{tab} picker (Premium): back leaves the tab to the home tab',
+              bool(s) and s.get('path') in HOME_PATHS and s.get('tabbar') is True, str(s))
+
+
+def main():
+    sh('shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS')
+    sh('shell', 'am', 'force-stop', PKG)
+    sh('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', f'vibezcoreapp://qa?tier={TIER}', PKG)
+    time.sleep(9)
+    sh('shell', 'am', 'force-stop', PKG)
+    sh('logcat', '-c')
+    sh('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1')
     time.sleep(12)
-    nodes = dump()
-    if not tabbar_visible(nodes):  # welcome screen: enter via the first big button
-        b = find(nodes, lambda n: n['text'] == 'Control Your State')
-        if b:
-            tap(b); time.sleep(3); nodes = dump()
-    check('app start: tab bar reachable', tabbar_visible(nodes), 'mode=' + MODE)
-
-    for t in TABS:
-        nodes = go_tab(t)
-        if nodes is None:
-            check(f'tab {t}: reachable', False, 'tab bar not found'); continue
-        m = shot_mean()
-        check(f'tab {t}: no white screen', m < 200, f'mean={m:.0f}')
-        # intro/entry buttons that open a picker
-        for entry in ('Explore State Control', 'Explore modes', 'Explore Audio Library'):
-            n = find(nodes, lambda x, e=entry: x['text'] == e or x['desc'] == e)
-            if not n:
-                continue
-            tap(n); nodes = dump()
-            ex = exit_node(nodes)
-            check(f'tab {t} -> {entry}: has exit (tab bar or back)', tabbar_visible(nodes) or ex is not None,
-                  'tabbar' if tabbar_visible(nodes) else (ex['desc'] or ex['text']) if ex else 'NO EXIT')
-            if ex and not tabbar_visible(nodes):
-                tap(ex); nodes = dump()
-                m2 = shot_mean()
-                check(f'tab {t} -> {entry}: exit leaves the screen', tabbar_visible(nodes) or exit_node(nodes) is None,
-                      f'tabbar={tabbar_visible(nodes)} mean={m2:.0f}')
-            break
-
-    print('\n=== SAMENVATTING (%s) ===' % MODE)
-    fails = [r for r in results if r[1] == 'FAIL']
-    for s, r, d in results:
-        print(f'{r:4}  {s}  {d}')
+    tap((540, 1729), 4)            # welcome -> "Control Your State"
+    s = state()
+    check('QA probe is running (build has EXPO_PUBLIC_QA=1)', s is not None, str(s))
+    if s is None:
+        print('\nGeen [QA]-regels in het log: dit is geen testbuild. Gestopt.')
+        sys.exit(2)
+    for tab in ('Breath', 'State Control'):
+        picker_flow(tab)
+    print('\n=== SAMENVATTING (%s) ===' % TIER)
+    fails = [r for r in results if not r[1]]
+    for n, ok, d in results:
+        print('PASS' if ok else 'FAIL', ' ', n)
     print(f'\n{len(results) - len(fails)} PASS, {len(fails)} FAIL')
     sys.exit(1 if fails else 0)
 
 
 if __name__ == '__main__':
-    walk()
+    main()

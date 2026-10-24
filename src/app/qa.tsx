@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { QA_ENABLED } from '@/utils/qa';
 import { setDevUserOverride, type DevUserOverride } from '@/utils/dev-user-override';
 
-const MAP: Record<string, DevUserOverride> = { free: 'guest', guest: 'guest', premium: 'pro', pro: 'pro', clear: null };
+/* premium = gewone abonnee (audio-override, geen armband); bundle = armband + audio (pro-override). */
+const MAP: Record<string, DevUserOverride> = { free: 'guest', guest: 'guest', premium: 'audio', audio: 'audio', bundle: 'pro', pro: 'pro', clear: null };
 
 export default function QaScreen() {
   const { tier } = useLocalSearchParams<{ tier?: string }>();

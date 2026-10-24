@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { Pressable, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { qaExit } from '@/utils/qa-probe';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -27,6 +28,11 @@ export default function Tap({ style, scaleTo = 0.95, onPressIn, onPressOut, chil
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   useEffect(() => () => cancelAnimation(scale), [scale]);
+  const qaLabel = rest.accessibilityLabel;
+  useEffect(() => {
+    qaExit(qaLabel, 1);
+    return () => qaExit(qaLabel, -1);
+  }, [qaLabel]);
   const resolved = typeof style === 'function' ? style({ pressed: false, hovered: false } as PressableStateCallbackType) : style;
   return (
     <AnimatedPressable

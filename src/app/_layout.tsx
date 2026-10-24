@@ -19,6 +19,8 @@
    beschikken over alle gewichten 400/500/600/700/800/900.
    ─────────────────────────────────────────────────────────────────────────── */
 
+import { qaSnapshot } from '@/utils/qa-probe';
+import { QA_ENABLED } from '@/utils/qa';
 import BottomSystemScrim from '@/components/BottomSystemScrim';
 import { useWatchCatalogSync } from '@/services/watch-catalog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -300,6 +302,24 @@ function useBrandFonts(): [boolean, Error | null] {
     };
   }, []);
   return [ready, error];
+}
+
+/* QA-meetpunt: meldt scherm + tabbalk + uitwegen in logcat (alleen testbuild). */
+function QaProbe() {
+  const path = usePathname();
+  useEffect(() => {
+    if (!QA_ENABLED) return;
+    let last = '';
+    const id = setInterval(() => {
+      const s = JSON.stringify({ path, ...qaSnapshot() });
+      if (s !== last) {
+        last = s;
+        console.log('[QA] ' + s);
+      }
+    }, 300);
+    return () => clearInterval(id);
+  }, [path]);
+  return null;
 }
 
 export default function RootLayout() {
@@ -847,6 +867,7 @@ export default function RootLayout() {
            scherm, zie daar verder. */}
         <StatusBar style="light" />
         <BottomSystemScrim />
+        <QaProbe />
         {/* De hele app in één BlurTargetView (7 okt 2026): het glas van de
             sheets in GlassSheetHost (onderaan, BUITEN deze target) vervaagt
             dit — zo is het ook op Android echt glas. */}
