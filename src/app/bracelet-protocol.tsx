@@ -11,6 +11,7 @@
    (/bracelet-set-day), zoals bij breathwork.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { reveal } from '@/constants/motion';
 import BalancedText from '@/components/BalancedText';
 import Tap from '@/components/Tap';
@@ -103,11 +104,9 @@ export default function BraceletProtocol() {
                 const stateKey = MODE_STATE_KEY[m.mode];
                 const Glyph = MODE_GLYPH_ICONS[m.mode];
                 return (
-                  <Animated.View
-                    key={m.mode}
-                    entering={reveal(i)}
-                    style={s.modeCard}
-                  >
+                  <Reveal i={i} key={m.mode}
+                    
+                    style={s.modeCard}>
                     <BlurView
                       intensity={40}
                       tint="dark"
@@ -123,7 +122,7 @@ export default function BraceletProtocol() {
                     />
                     <Glyph size={40} color="#ffffff" strokeWidth={1.8} />
                     <Text style={s.modeCardTxt}>{m.name}</Text>
-                  </Animated.View>
+                  </Reveal>
                 );
               })}
             </View>
@@ -135,14 +134,12 @@ export default function BraceletProtocol() {
                 { label: 'DAILY TIME', value: `${dailyMinutes} min` },
                 { label: 'PLAN LENGTH', value: HORIZON_LABEL[plan.horizon] ?? plan.horizon },
               ].map((m, i) => (
-                <Animated.View
-                  key={m.label}
-                  entering={reveal(modesUsed.length + i)}
-                  style={s.metaCard}
-                >
+                <Reveal i={modesUsed.length + i} key={m.label}
+                  
+                  style={s.metaCard}>
                   <Text style={s.metaLabel}>{m.label}</Text>
                   <Text style={s.metaValue}>{m.value}</Text>
-                </Animated.View>
+                </Reveal>
               ))}
             </View>
 

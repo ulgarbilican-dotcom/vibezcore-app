@@ -20,6 +20,7 @@
    webapp behouden, achterwaarts uitbreidbaar).
    ─────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { reveal } from '@/constants/motion';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
@@ -353,14 +354,14 @@ export default function HistoryScreen() {
                 {item.label.toUpperCase()}
               </Animated.Text>
             ) : (
-              <Animated.View entering={reveal(1)}>
+              <Reveal i={1}>
                 <EntryRow
                   entry={item.entry}
                   isFirst={item.isFirst}
                   isLast={item.isLast}
                   onPlay={() => playEntry(item.entry)}
                 />
-              </Animated.View>
+              </Reveal>
             )
           }
         />
@@ -420,10 +421,7 @@ function StreakCard({ streak }: { streak: number }) {
     ? 'Keep your momentum going.'
     : 'Play your first session to start a streak.';
   return (
-    <Animated.View
-      entering={reveal(0)}
-      style={s.streakCard}
-    >
+    <Reveal i={0} style={s.streakCard}>
       <View style={s.streakRow}>
         <View style={s.streakIcon}>
           {active ? (
@@ -440,7 +438,7 @@ function StreakCard({ streak }: { streak: number }) {
           <Text style={s.streakSub}>{sub}</Text>
         </View>
       </View>
-    </Animated.View>
+    </Reveal>
   );
 }
 

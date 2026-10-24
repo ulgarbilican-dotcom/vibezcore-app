@@ -27,6 +27,7 @@
    precies: utils/onboarding-gate.ts (19 okt 2026, punt 24).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { TabReveal } from '@/components/Reveal';
 import { SPRING_POP, SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
@@ -1441,7 +1442,7 @@ export default function BreathScreen() {
           gepruts, de rand is zichtbaarder geworden"). Volledig
           teruggedraaid — het ene bestaande vignet regelt dit al, geen
           tweede laag meer nodig. */}
-      <Animated.View entering={reveal(0)}>
+      <TabReveal i={0}>
       <Tap
         onPress={() => setInfoOpen(true)}
         hitSlop={10}
@@ -1452,8 +1453,8 @@ export default function BreathScreen() {
         <Text style={s.thumbNameSel}>{sentenceCase(st.eyebrow)}</Text>
         <Info size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.2} />
       </Tap>
-      </Animated.View>
-      <Animated.View entering={reveal(1)} style={s.thumbsPill}>
+      </TabReveal>
+      <TabReveal i={1} style={s.thumbsPill}>
         <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
         {ORDER.map((k, i) => (
           <StateThumb
@@ -1466,7 +1467,7 @@ export default function BreathScreen() {
             thumbPulseStyle={thumbPulseStyle}
           />
         ))}
-      </Animated.View>
+      </TabReveal>
 
       {/* ── De knop, nu ÉÉN vaste kleur — 3e ronde, operator 8 september
           2026: "wat is beter om 1 kleur voor alle knoppen?" Terecht — de
@@ -1491,7 +1492,7 @@ export default function BreathScreen() {
          met `st.accent` als zachte tint — zelfde `dimezisBlurViewSdk31Plus`-
          recept als de rest van de app, tekst wit voor contrast op de
          donkere blur i.p.v. het vorige zwart-op-wit. */}
-      <Animated.View entering={reveal(2)}>
+      <TabReveal i={2}>
       <Animated.View style={[fadeStyle, ctaPressStyle]}>
         <Pressable
           onPress={open}
@@ -1523,7 +1524,7 @@ export default function BreathScreen() {
           </Text>
         </Pressable>
       </Animated.View>
-      </Animated.View>
+      </TabReveal>
 
       {/* Operator, 2 okt 2026, vervolg ("terug uit een sessie land je hier
          zonder pad naar het intro-scherm, verwarrend"): i.p.v. een pad
@@ -1532,7 +1533,7 @@ export default function BreathScreen() {
          staat de instant-ingang nu OOK hier, zelfde plek/stijl als op de
          intro-overlay. Overal beschikbaar i.p.v. navigatie-acrobatiek om
          er te raken — zo zou Apple dit oplossen. */}
-      <Animated.View entering={reveal(3)}>
+      <TabReveal i={3}>
       <Tap
         onPress={() => router.push('/feel-now' as never)}
         hitSlop={8}
@@ -1543,7 +1544,7 @@ export default function BreathScreen() {
         <Text style={s.feelNowLinkTxt}>Instant Sessions</Text>
         <ChevronRight size={17} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
       </Tap>
-      </Animated.View>
+      </TabReveal>
 
       {/* Operator, 8 september 2026 (2e ronde): "verwijder more than
          breathwork" — sluitregel weer weg. */}

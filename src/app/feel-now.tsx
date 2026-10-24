@@ -26,7 +26,7 @@
    plaats van een harde cut, Premium/bracelet-eigenaars de volledige sessie
    zonder enige limiet. */
 
-import { reveal } from '@/constants/motion';
+import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
@@ -378,7 +378,7 @@ function SituationCard({
     ? (st.techniques.find((t) => t.key === situation.technique)?.name ?? '')
     : '';
   return (
-    <Animated.View entering={reveal(index)} style={s.cardSlot}>
+    <Reveal i={index} style={s.cardSlot}>
     <AnimatedPressable
       /* Operator, 2 okt 2026 ("voelt statisch aan, voeg de animatie volgens
          ons protocol toe" → vervolg: "nu te veel bounce, niet hoe de
@@ -441,7 +441,7 @@ function SituationCard({
         </>
       }
     </AnimatedPressable>
-    </Animated.View>
+    </Reveal>
   );
 }
 

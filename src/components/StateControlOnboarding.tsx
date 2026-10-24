@@ -34,6 +34,7 @@
    Woordkeuze: Science A tot Z §6.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { reveal } from '@/constants/motion';
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import Tap from '@/components/Tap';
@@ -568,7 +569,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         {step === 3 ? (
           <View style={s.footer}>
             {measured !== null ? (
-              <Animated.View entering={reveal(0)}>
+              <Reveal i={0}>
                 <PressScale
                   haptic
                   scaleTo={0.97}
@@ -602,7 +603,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
                 >
                   <Text style={s.secondaryTxt}>Measure Again</Text>
                 </PressScale>
-              </Animated.View>
+              </Reveal>
             ) : null}
           </View>
         ) : (

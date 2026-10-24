@@ -1,3 +1,4 @@
+import { TabReveal } from '@/components/Reveal';
 import { openStateControl } from '@/utils/state-control-ui';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import Tap from '@/components/Tap';
@@ -1978,7 +1979,7 @@ function AudioScreen({
             {/* 23 okt 2026 (operator): deze kaart blijft ALTIJD de Free Sessions-kaart; "Last Listened" opent enkel de
                 popup via het segment in de balk erboven. */}
             {!hasSub && (
-              <Animated.View entering={reveal(0)} style={s.featureWrap}>
+              <TabReveal i={0} style={s.featureWrap}>
                 <CardBounce
                   style={s.featureCard}
                   onPress={() => navigateAway(() => router.push('/library/free'))}
@@ -2000,7 +2001,7 @@ function AudioScreen({
                   <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
                   </View>
                 </CardBounce>
-              </Animated.View>
+              </TabReveal>
             )}
             <View
               onLayout={(e) => {
@@ -2029,22 +2030,8 @@ function AudioScreen({
                      was een platte opacity-fade (`FadeIn`), nu `FadeInUp`
                      met een spring-easing voor het "hoogwaardig, soepel"
                      gevoel dat gevraagd werd. */
-                  <Animated.View
-                    key={p.num}
-                    renderToHardwareTextureAndroid
-                    entering={reveal(1 + pillarIdx)}
-                    style={[
-                      {
-                        /* Operator, 14 okt 2026 ("bij premium moet de
-                           Soundscapes & Affirmations-kaart schermbreed,
-                           anders heel lelijk"): met een abonnement valt
-                           Free Picks weg en stond deze kaart alleen op een
-                           halve rij — dan over de volle breedte. */
-                        width: PILLAR_CARD_WIDTH,
-                      },
-                      breathStyles[pillarIdx],
-                    ]}
-                  >
+                  <TabReveal i={1 + pillarIdx} key={p.num} style={{ width: PILLAR_CARD_WIDTH }}>
+                  <Animated.View renderToHardwareTextureAndroid style={breathStyles[pillarIdx]}>
                   {/* Operator, 26 september 2026 (Apple-redesign, definitief):
                      de "Unified Card" (tekst op de foto) is teruggedraaid —
                      "een categorie-kaart mag nooit een andere opbouw hebben
@@ -2217,7 +2204,7 @@ function AudioScreen({
                       </Text>
                     </View>
                   </CardBounce>
-                  </Animated.View>
+                  </Animated.View></TabReveal>
                 );
               })}
 

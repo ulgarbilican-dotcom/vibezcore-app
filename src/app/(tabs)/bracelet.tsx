@@ -40,7 +40,8 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
-import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
+import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
+import { TabReveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -254,12 +255,12 @@ function StateControlIntro({
             setTextTop((prev) => (prev != null && Math.abs(prev - y) < 1 ? prev : y));
           }}
         >
-          <Animated.Text entering={reveal(0)} style={s.introEyebrow}>STATE CONTROL</Animated.Text>
+          <TabReveal i={0}><Text style={s.introEyebrow}>STATE CONTROL</Text></TabReveal>
           {/* Operator, 10 okt 2026: nieuwe titel (was "Guided by touch, on your wrist."). */}
           {/* Operator, 10 okt 2026: nieuwe kop (was "Feel different. Perform differently."). */}
-          <Animated.Text entering={reveal(1)} style={s.introTitle}>The Power to Shift.{'\n'}From Your Wrist.</Animated.Text>
+          <TabReveal i={1}><Text style={s.introTitle}>The Power to Shift.{'\n'}From Your Wrist.</Text></TabReveal>
         </View>
-        <Animated.View entering={reveal(2)} style={{ marginTop: 28, alignSelf: 'stretch' }}>
+        <TabReveal i={2} style={{ marginTop: 28, alignSelf: 'stretch' }}>
         <Animated.View style={ctaPressStyle}>
           <Pressable
             onPress={() => {
@@ -292,11 +293,11 @@ function StateControlIntro({
 </View>
           </Pressable>
         </Animated.View>
-        </Animated.View>
+        </TabReveal>
         {/* Operator, 7 okt 2026 ("weinig ingangen naar de bracelet"): de
             bracelet hoort bij State Control — één rustige regel onder de
             knop, voor iedereen (er zijn nog geen eigenaars). */}
-        <Animated.View entering={reveal(3)}>
+        <TabReveal i={3}>
         <Tap
           onPress={() => void openBraceletWebsite()}
           hitSlop={10}
@@ -308,7 +309,7 @@ function StateControlIntro({
             Early 2027 · <Text style={s.braceletLinkStrong}>Smart Bead Bracelet ›</Text>
           </Text>
         </Tap>
-        </Animated.View>
+        </TabReveal>
       </View>
     </View>
   );

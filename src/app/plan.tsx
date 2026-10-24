@@ -20,6 +20,7 @@
    iets gedaan hebt, is een tweede administratie naast de echte.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { Reveal } from '@/components/Reveal';
 import { reveal } from '@/constants/motion';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
@@ -551,11 +552,9 @@ export default function PlanScreen() {
              "te veel bounce"-klachten op een vergelijkbare kaarten-grid). */}
           <View style={[s.goalCardRow, chosen.length === 1 && s.goalCardRowCenter]}>
             {chosen.map((g, idx) => (
-              <Animated.View
-                key={g.key}
-                entering={reveal(idx)}
-                style={[s.goalCard, s.protoCardSelected]}
-              >
+              <Reveal i={idx} key={g.key}
+                
+                style={[s.goalCard, s.protoCardSelected]}>
                 <BlurView
                   intensity={40}
                   tint="dark"
@@ -583,7 +582,7 @@ export default function PlanScreen() {
                   <g.Icon size={34} color="#ffffff" strokeWidth={1.8} />
                 )}
                 <Text style={s.goalCardTxt}>{g.name}</Text>
-              </Animated.View>
+              </Reveal>
             ))}
           </View>
 
@@ -595,19 +594,13 @@ export default function PlanScreen() {
              doel-kaarten eindigden (`chosen.length`), zodat het hele blok
              als één doorlopende reveal voelt. */}
           <View style={s.goalCardRow}>
-            <Animated.View
-              entering={reveal(chosen.length)}
-              style={s.metaCard}
-            >
+            <Reveal i={chosen.length} style={s.metaCard}>
               <Text style={s.metaCardLabel}>LEVEL</Text>
               <Text style={s.metaCardTxt}>
                 {LEVEL_LABEL[experienceLevel ?? ''] ?? 'Not set'}
               </Text>
-            </Animated.View>
-            <Animated.View
-              entering={reveal(chosen.length + 1)}
-              style={s.metaCard}
-            >
+            </Reveal>
+            <Reveal i={chosen.length + 1} style={s.metaCard}>
               <Text style={s.metaCardLabel}>ROUTINE</Text>
               <Text style={s.metaCardTxt}>
                 {ROUTINE_LABEL[plan.intensity] ?? plan.intensity}
@@ -621,16 +614,13 @@ export default function PlanScreen() {
                  `momentsWord` hierboven) i.p.v. een los, mogelijk
                  verouderd getal. */}
               <Text style={s.metaCardHint}>{items.length} sessions a day</Text>
-            </Animated.View>
-            <Animated.View
-              entering={reveal(chosen.length + 2)}
-              style={s.metaCard}
-            >
+            </Reveal>
+            <Reveal i={chosen.length + 2} style={s.metaCard}>
               <Text style={s.metaCardLabel}>PLAN LENGTH</Text>
               <Text style={s.metaCardTxt}>
                 {HORIZON_LABEL[plan.horizon] ?? plan.horizon}
               </Text>
-            </Animated.View>
+            </Reveal>
           </View>
         </View>
       )}

@@ -17,6 +17,7 @@
    hij niet bezit.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { TabReveal } from '@/components/Reveal';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel } from '@/services/resting-pulse';
@@ -166,7 +167,7 @@ export default function ActivityScreen() {
 
         {/* Audit 12 okt 2026: eerst de samenvatting van de week (minuten,
             reeks, volgende sessie), dan de ingangen — zoals Apple Fitness. */}
-        <Animated.View entering={reveal(1)}><ThisWeekCard /></Animated.View>
+        <TabReveal i={1}><ThisWeekCard /></TabReveal>
 
         {/* Operator, 29 september 2026 ("zeer belangrijke elementen en
            eigenlijk de essentie van breathwork... bovenaan onder de foto
