@@ -3974,14 +3974,14 @@ function ModeDot({ active }: { active: boolean; color?: string }) {
   useEffect(() => {
     k.value = withSpring(active ? 1 : 0, SPRING_SETTLE);
   }, [active, k]);
-  /* Grijs = rust, wit = gekozen. Geen kleur-interpolatie (24 okt 2026: die liet de dots op het toestel verdwijnen):
+  /* Grijs = rust, wit = gekozen. LET OP: in dit bestand is `Animated` RN's eigen; Reanimated-stijlen horen op `ReanimatedAnimated.View` (24 okt 2026: anders worden ze genegeerd en blijven alle dots gelijk):
      een vaste grijze dot met daarover een witte laag waarvan enkel de doorzichtigheid verandert. */
   const sizeStyle = useAnimatedStyle(() => ({ transform: [{ scale: 0.7 + 0.3 * k.value }] }));
   const whiteStyle = useAnimatedStyle(() => ({ opacity: k.value }));
   return (
-    <Animated.View style={[s.modeDot, { backgroundColor: 'rgba(255,255,255,0.32)' }, sizeStyle]}>
-      <Animated.View style={[StyleSheet.absoluteFill, { borderRadius: 5, backgroundColor: '#ffffff' }, whiteStyle]} />
-    </Animated.View>
+    <ReanimatedAnimated.View style={[s.modeDot, { backgroundColor: 'rgba(255,255,255,0.32)' }, sizeStyle]}>
+      <ReanimatedAnimated.View style={[StyleSheet.absoluteFill, { borderRadius: 5, backgroundColor: '#ffffff' }, whiteStyle]} />
+    </ReanimatedAnimated.View>
   );
 }
 
