@@ -9,6 +9,7 @@
    plek in de app heeft (of definitief verworpen wordt).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { devOnly } from '@/utils/dev-only';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import BreathPacer from '@/components/BreathPacer';
 import { Reveal } from '@/components/Reveal';
@@ -166,7 +167,9 @@ const s = StyleSheet.create({
 });
 
 /* Prototype: enkel in ontwikkeling. In een echte build niet bereikbaar (ook niet via een link). */
-export default function BreathPacerPreview() {
+function BreathPacerPreview() {
   if (!__DEV__) return <Redirect href="/" />;
   return <BreathPacerPreviewInner />;
 }
+
+export default devOnly(BreathPacerPreview);

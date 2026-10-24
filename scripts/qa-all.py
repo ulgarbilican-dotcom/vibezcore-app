@@ -78,6 +78,16 @@ def layer1():
     except Exception as e:                                                      # noqa
         add(L, 'Icoon-controle', False, str(e))
 
+    # 1c2. Ontwikkel-/prototype-schermen zijn buiten __DEV__ onbereikbaar (devOnly) - route kopt zelf melden wat het is
+    unguarded = []
+    for f in glob.glob(os.path.join(ROOT, 'src', 'app', '*.tsx')):
+        head = ''.join(open(f, encoding='utf-8').readlines()[:25])
+        if re.search(r'PROTOTYPE|__DEV__ only|dev only|tijdelijk testscherm', head, re.I):
+            body = open(f, encoding='utf-8').read()
+            if 'devOnly(' not in body and '<Redirect' not in body:
+                unguarded.append(os.path.relpath(f, ROOT))
+    add(L, 'Prototype-/dev-schermen zijn niet bereikbaar in een winkelbuild', not unguarded, ', '.join(unguarded))
+
     # 1d. Merkregels: geen verboden termen in app-tekst (commentaar eerst weggehaald, regelnummers blijven kloppen)
     def strip_comments(src):
         def blank(m):
@@ -140,7 +150,7 @@ def app_routes():
     out = []
     for f in sorted(glob.glob(os.path.join(ROOT, 'src', 'app', '**', '*.tsx'), recursive=True)):
         rel = os.path.relpath(f, os.path.join(ROOT, 'src', 'app')).replace('\\', '/')[:-4]
-        if rel.startswith('_layout') or rel.startswith('(tabs)') or rel in ('qa', 'qa-haptics', 'auth-callback', 'test-tier'):
+        if rel.startswith('_layout') or rel.startswith('(tabs)') or rel in ('qa', 'qa-haptics', 'auth-callback', 'test-tier', 'breath-splat', 'breath-pacer-preview', 'breath-sample'):
             continue
         rel = rel.replace('legal/[doc]', 'legal/privacy-policy').replace('library/pillar/[key]', 'library/pillar/resilience')
         out.append('/' + rel)

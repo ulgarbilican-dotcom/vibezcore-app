@@ -22,6 +22,7 @@
    Na afloop: soft-paywall met "Continue with Premium" of "Not yet".
    ───────────────────────────────────────────────────────────────────────── */
 
+import { devOnly } from '@/utils/dev-only';
 import { stopPhaseHaptic, vibrateCompat } from '@/services/breath-haptics';
 import { PopupView } from '@/components/PopupCard';
 import { BREATH_SESSION_COUNT } from '@/data/breath-states';
@@ -124,7 +125,7 @@ const CALM_COLOR_SOFT = 'rgba(180,120,255,0.30)';
 type ModeKey = GuidanceMode;
 const MODES = GUIDANCE_MODES;
 
-export default function BreathSampleScreen() {
+function BreathSampleScreen() {
   const sub = useSubscription();
   /* Audit 8 okt 2026: de bracelet ontgrendelt geen Breathwork (operator, 9 aug); zo houdt een eigenaar zijn gratis kennismakingssessie. */
   const isPro = sub.isPro;
@@ -668,3 +669,5 @@ const s = StyleSheet.create({
     fontSize: 14,
   },
 });
+
+export default devOnly(BreathSampleScreen);

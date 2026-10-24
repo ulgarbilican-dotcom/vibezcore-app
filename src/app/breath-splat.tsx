@@ -19,6 +19,7 @@
    er niets.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { devOnly } from '@/utils/dev-only';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
@@ -387,7 +388,9 @@ const s = StyleSheet.create({
 });
 
 /* Prototype: enkel in ontwikkeling. In een echte build niet bereikbaar (ook niet via een link). */
-export default function BreathSplatScreen() {
+function BreathSplatScreen() {
   if (!__DEV__) return <Redirect href="/" />;
   return <BreathSplatScreenInner />;
 }
+
+export default devOnly(BreathSplatScreen);
