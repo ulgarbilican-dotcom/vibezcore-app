@@ -17,8 +17,8 @@
 
    Thinking 3,6 s + done ~1,4 s, daarna vanzelf onDone; een tik waar ook = meteen onDone.
    Reduce motion → geen draaiende boog en geen ademhaling.
-   `quick` slaat de thinking-fase over — showConfirmMoment() zet dat zelf
-   als de lange versie vandaag al getoond is voor dezelfde soort.
+   `quick` slaat de thinking-fase over — wordt niet meer automatisch gezet: de lange versie (draaiende
+   cirkel) is er ELKE keer (operator, 24 okt 2026).
    Aanroepen: showConfirmMoment({...}) — één ConfirmMomentHost in de
    root-layout toont het.
 
@@ -318,9 +318,12 @@ function todayKey(): string {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-/** Is de lange versie (met thinking) vandaag al getoond voor deze soort? */
-export function isConfirmQuick(kind: ConfirmMomentKind): boolean {
-  return lastLong[kind] === todayKey();
+/** Slaat de thinking-fase over? Nooit meer (zie hieronder). */
+export function isConfirmQuick(_kind: ConfirmMomentKind): boolean {
+  /* 24 okt 2026 (operator: "na Build My Session krijg ik direct All set — dat klopt niet, ik wil daar een draaiende
+     cirkel die aan het denken is"): het denken wordt ELKE keer getoond. De regel "de tweede keer dezelfde dag korter"
+     (19 okt) is vervallen; de opslag hieronder blijft ongebruikt staan. */
+  return false;
 }
 
 /** Onthoud dat de lange versie vandaag getoond is. */
