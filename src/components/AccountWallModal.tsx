@@ -13,6 +13,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { AudioAccent, Brand, BrandFonts, CTA_GLASS, CTA_GLOW } from '@/constants/theme';
+import VibezGlass from '@/components/VibezGlass';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getEffectiveTier } from '@/utils/access-tier';
 import { useIAP } from '@/hooks/useIAP';
@@ -194,6 +195,8 @@ export function AccountWallModal() {
 
       <View style={s.cardWrap} pointerEvents="box-none">
         <View style={s.card}>
+          {/* 24 okt 2026 (operator: alle popups in glas): was een effen paneel. */}
+          <VibezGlass radius={18} level="sheet" style={StyleSheet.absoluteFill} />
           {/* Iter v157 (2026-06-26): operator-correctie. Geen 'create free
               account' pad meer — account = altijd betalend of bracelet
               owner. Promo wall pusht direct naar subscribe ipv 'free
@@ -286,8 +289,8 @@ const s = StyleSheet.create({
     paddingBottom: 28,
   },
   card: {
-    backgroundColor: Brand.panel,
-    borderColor: 'rgba(110, 133, 196, 0.32)',
+    overflow: 'hidden',
+    borderColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
     borderRadius: 18,
     padding: 22,

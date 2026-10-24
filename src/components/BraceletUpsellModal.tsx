@@ -28,6 +28,7 @@
 
 import { goToTab } from '@/utils/state-control-ui';
 import Tap from '@/components/Tap';
+import VibezGlass from '@/components/VibezGlass';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -271,6 +272,8 @@ export function BraceletUpsellModal() {
         onPress={onTap}
         android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
       >
+        {/* 24 okt 2026 (operator: alle popups in glas): was een effen paneel. */}
+        <VibezGlass radius={16} level="sheet" style={StyleSheet.absoluteFill} />
         <View style={s.row}>
           <View style={s.imageWrap}>
             <Image
@@ -325,9 +328,9 @@ const s = StyleSheet.create({
      Overlay's alignItems:'center' + paddingHorizontal:24 handelen
      centering + margin af. Beide cards renderen identiek 360 wide. */
   bar: {
-    backgroundColor: C.bg,
+    overflow: 'hidden',
     borderRadius: 16,
-    borderColor: C.border,
+    borderColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingTop: 12,
