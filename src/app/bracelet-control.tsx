@@ -4338,7 +4338,7 @@ function IdleScreen({
           s.idleSingleScreen,
           /* Zonder tabbalk: de knop op dezelfde hoogte als "Start session"
              in de breathwork-setup (6 okt 2026). */
-          { paddingBottom: idleBarInset > 0 ? idleBarInset + 14 : Math.max(safeInsets.bottom, 12) + 26 },
+          { paddingBottom: idleBarInset > 0 ? idleBarInset : Math.max(safeInsets.bottom, 12) + 26 },
         ]}
       >
         {/* Iter 9bb (2026-05-31): preview-exit pill verwijderd. De native
@@ -4553,7 +4553,7 @@ function IdleScreen({
                     <VibezGlass radius={28} level="normal" style={StyleSheet.absoluteFill} />
                     <QIcon size={q.key === 'chill' ? 26 : 22} color={getModeMeta(q.mode).color} strokeWidth={2} />
                   </PressScale>
-                  <Text style={s.quickCaption}>{q.label}</Text>
+                  {/* Enkel het icoon (operator, 25 okt 2026); de naam staat bovenaan het blad dat opent en in het toegankelijkheidslabel. */}
                   </View>
                 );
               })}
@@ -4702,6 +4702,8 @@ function IdleScreen({
             ) : null}
           </View>
         ) : null}
+        {/* Vaste ruimte onder de knop/pil (zoals bij Breathwork onder zijn knop): de Start-knop, de pil van een lopende sessie en de preview-knoppen staan zo altijd op dezelfde hoogte als de knop van Breathwork. */}
+        <View style={{ height: 60 }} />
         <SwitchSessionConfirm
           visible={confirmSwitch}
           fromName={runSnap.modeName}
@@ -6661,6 +6663,7 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   quickIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginBottom: 16 },
+  /* 24 okt 2026: onder de Start-knop (de knop staat zo op dezelfde hoogte als bij Breathwork). */
   quickBlock: { alignSelf: 'stretch', marginBottom: 16, marginHorizontal: 10 },
   quickHead: {
     color: 'rgba(255,255,255,0.5)',
