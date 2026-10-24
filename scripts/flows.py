@@ -11,6 +11,14 @@ SER, TIER = sys.argv[1], sys.argv[2]
 ONLY = sys.argv[3] if len(sys.argv) > 3 else None
 PKG = 'com.ubili.vibezcoreapp'
 results = []
+blocked = False
+
+
+def section(title):
+    """Nieuw onderdeel van een flow: een eerdere FAIL blokkeert alleen de stappen binnen dezelfde sectie."""
+    global blocked
+    blocked = False
+    print('\n--', title)
 
 
 def sh(*a):
@@ -95,9 +103,16 @@ def step(flow, desc, ok, detail=''):
 
 def act_expect(flow, desc, action, pred, timeout=9.0, **kw):
     """Voer één actie uit en eis daarna het verwachte resultaat."""
+    global blocked
+    if blocked:
+        results.append((flow, desc, None, 'geblokkeerd door een eerdere FAIL in deze sectie'))
+        print('BLOCK -', flow, '|', desc)
+        return False
     what = action() if callable(action) else action
     ok, s = wait(pred, timeout)
-    return step(flow, desc + (f' [{what}]' if isinstance(what, str) else ''), ok, json.dumps({k: s.get(k) for k in ('path', 'tabbar', 'sc', 'exits')}, ensure_ascii=False)[:240])
+    if not ok:
+        blocked = True
+    return step(flow, desc + (f' [{what}]' if isinstance(what, str) else ''), ok, json.dumps({k: s.get(k) for k in ('path', 'tabbar', 'sc', 'sco', 'exits')}, ensure_ascii=False)[:300])
 
 
 # ───────────────────────── voorbereiding ─────────────────────────
@@ -148,6 +163,7 @@ def sco(s):
 
 
 def onboarding(F):
+    section('A. Eerste gebruik (onboarding)')
     """A2-A4: de State Control-onboarding vanaf het begin, stap voor stap, inclusief Back en de rusthartslag-keuze."""
     act_expect(F, 'A2 Explore -> onboarding stap 1', lambda: tap_frac(0.5, 0.738, 4.5), lambda s: s.get('path') == '/state-onboarding' and sco(s).get('step') == 0)
     act_expect(F, 'A3 CTA stap 1 -> stap 2', lambda: tap(r'^CTA'), lambda s: sco(s).get('step') == 1)
@@ -167,9 +183,11 @@ def statecontrol_free():
     F = 'SC/free'
     act_expect(F, 'A1 tab opent met tabbalk (intro)', lambda: go_tab('State Control'), lambda s: s.get('path') == '/bracelet' and s.get('tabbar') is True)
     onboarding(F)
+    section('B. Keuzescherm')
     act_expect(F, 'B1 keuzescherm zonder tabbalk, met Back', lambda: 'picker',
                lambda s: (s.get('sc') or {}).get('view') == 'picker' and s.get('tabbar') is False and any(e.startswith('Back') for e in s.get('exits', [])))
     modes_flow(F)
+    section('C. Voorproef')
     act_expect(F, 'preview-knop opent het voorproef-blad (niet meteen een sessie)', lambda: tap(r'^Start a 30-second preview'),
                lambda s: any(re.match(r'^(Cancel|Close|Done|Not now)', e) for e in s.get('exits', [])) or (s.get('sc') or {}).get('view') == 'preview')
     clear_overlays()
@@ -207,9 +225,10 @@ def main():
         if ONLY and ONLY != name:
             continue
         per[TIER]()
-    fails = [r for r in results if not r[2]]
-    print(f'\n=== FLOWS ({TIER}): {len(results) - len(fails)} PASS, {len(fails)} FAIL ===')
-    sys.exit(1 if fails else 0)
+    fails = [r for r in results if r[2] is False]
+    blk = [r for r in results if r[2] is None]
+    print(f'\n=== FLOWS ({TIER}): {len(results) - len(fails) - len(blk)} PASS, {len(fails)} FAIL, {len(blk)} GEBLOKKEERD ===')
+    sys.exit(1 if (fails or blk) else 0)
 
 
 if __name__ == '__main__':

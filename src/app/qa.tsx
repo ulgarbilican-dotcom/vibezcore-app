@@ -21,6 +21,8 @@ export default function QaScreen() {
       if (fresh === '1') {
         await setSetting('stateOnboardingCompletedAt', null);
         await setSetting('breathOnboardingCompletedAt', null);
+        await setSetting('stateOnboardingDeferredCount', 0);
+        await setSetting('breathOnboardingDeferredCount', 0);
         resetRestingPulse();
       }
       await setDevUserOverride(v);
