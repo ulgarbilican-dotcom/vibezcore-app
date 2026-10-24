@@ -40,6 +40,7 @@
    (`stackWord1/2/3`/`introSub`/`introCtaMatch`/shimmer-animatie) als
    breath.tsx, 1-op-1 gekopieerd — niet opnieuw verzonnen. */
 
+import { getSetting } from '@/utils/settings';
 import { qaFlag } from '@/utils/qa-probe';
 import { goToTab } from '@/utils/state-control-ui';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT } from '@/constants/motion';
@@ -431,7 +432,7 @@ export default function BraceletScreen() {
   }, []);
 
   const introIsOnboarding = needsOnboarding && mayAutoShowOnboarding('state');
-  qaFlag('scGate', { settingsLoaded, onboardedAt: String(onboardedAt), may: mayAutoShowOnboarding('state'), sessionRunning: isAnySessionRunning() });
+  qaFlag('scGate', { settingsLoaded, onboardedAt: String(onboardedAt), may: mayAutoShowOnboarding('state'), sessionRunning: isAnySessionRunning(), deferred: getSetting('stateOnboardingDeferredCount') });
   if (showIntro) {
     return (
       <StateControlIntro

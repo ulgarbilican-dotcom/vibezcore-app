@@ -4195,6 +4195,15 @@ function IdleScreen({
   };
 
   /* QA-meetpunt (docs/KWALITEITSPROTOCOL.md): wat State Control nu toont. */
+  qaFlag('scUi', {
+    trialSheet: trialSheetOpen,
+    av: hapticsOpen,
+    info: !!detailModeForModal,
+    rhythm: rhythmOpen,
+    quick: quickOpen,
+    confirmSwitch,
+    trial: trialRunning,
+  });
   qaFlag('sc', {
     view: viewingRunning ? 'session-open' : trialRunning ? 'preview' : 'picker',
     mode: selectedMode,

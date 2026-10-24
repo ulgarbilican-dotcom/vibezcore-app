@@ -112,7 +112,7 @@ def act_expect(flow, desc, action, pred, timeout=9.0, **kw):
     ok, s = wait(pred, timeout)
     if not ok:
         blocked = True
-    return step(flow, desc + (f' [{what}]' if isinstance(what, str) else ''), ok, json.dumps({k: s.get(k) for k in ('path', 'tabbar', 'sc', 'sco', 'scGate', 'exits')}, ensure_ascii=False)[:300])
+    return step(flow, desc + (f' [{what}]' if isinstance(what, str) else ''), ok, json.dumps({k: s.get(k) for k in ('path', 'tabbar', 'sc', 'sco', 'scGate', 'scUi', 'exits')}, ensure_ascii=False)[:300])
 
 
 # ───────────────────────── voorbereiding ─────────────────────────

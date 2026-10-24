@@ -3,7 +3,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { QA_ENABLED } from '@/utils/qa';
 import { setDevUserOverride, type DevUserOverride } from '@/utils/dev-user-override';
-import { setSetting } from '@/utils/settings';
+import { ensureSettingsLoaded, setSetting } from '@/utils/settings';
 import { resetRestingPulse } from '@/services/resting-pulse';
 
 /* premium = gewone abonnee (audio-override, geen armband); bundle = armband + audio (pro-override). */
@@ -19,6 +19,7 @@ export default function QaScreen() {
       /* fresh=1: alleen de eerste-gebruik-vlaggen terug (onboarding State Control + Breath, rusthartslag) zodat een flow écht bij het
          begin kan starten; favorieten, geschiedenis en plan blijven onaangeroerd. */
       if (fresh === '1') {
+        await ensureSettingsLoaded();      // eerst laden, anders overschrijft het laden onze reset
         await setSetting('stateOnboardingCompletedAt', null);
         await setSetting('breathOnboardingCompletedAt', null);
         await setSetting('stateOnboardingDeferredCount', 0);
