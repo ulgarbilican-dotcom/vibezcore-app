@@ -1505,7 +1505,7 @@ export default function BreathWelcomeScreen() {
           onPressIn={ctaBlocked ? undefined : onCtaPressIn}
           onPressOut={ctaBlocked ? undefined : onCtaPressOut}
           android_ripple={ctaBlocked ? undefined : { color: 'rgba(255,255,255,0.12)' }}
-          style={[s.ctaWrap, ctaBlocked ? CTA.disabled : { backgroundColor: CTA_GLASS, ...CTA_GLOW }]}
+          style={s.ctaWrap}
         >
           {ctaBlocked ? (
             /* Gedimde, inerte staat — geen keuze gemaakt op stap 2/3/4, of
@@ -1514,7 +1514,7 @@ export default function BreathWelcomeScreen() {
                witte tint en met gedempte tekst, zodat het verschil met de
                "klaar om te tikken"-witte knop hierboven meteen duidelijk
                is. */
-            <View style={[s.cta, s.ctaBlurWrap]}>
+            <View style={[s.cta, s.ctaBlurWrap, { backgroundColor: CTA.disabled.backgroundColor }]}>
               <Text style={s.ctaTxtBlocked}>{ctaLabel}</Text>
             </View>
           ) : (
@@ -1528,7 +1528,7 @@ export default function BreathWelcomeScreen() {
                want de knop staat altijd op een foto/donkere achtergrond,
                nooit op een effen vlak dat om een eigen kleur vraagt. */
             <View
-              style={[s.cta, s.ctaBlurWrap]}
+              style={[s.cta, s.ctaBlurWrap, { backgroundColor: CTA_GLASS }]}
               onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}
             >
               {/* 22 okt 2026 (operator): doorschijnend glas met witte lichtbron erachter, zoals de welkomst-knoppen — geen grijze tint meer. */}
