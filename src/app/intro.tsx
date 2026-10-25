@@ -2,9 +2,9 @@
    VIBEZCORE — algemene uitleg (vóór het welkomstscherm, enkel de eerste keer)
 
    Operator, 25 okt 2026: "een onboarding voor de algemene app zodat gebruikers begrijpen wat de app
-   en de onderdelen doen, en daarna naar het welkomstscherm". Vier korte schermen: State Control,
-   Breathwork, Audio Library, de belofte. Teksten zijn van de operator (letterlijk overgenomen).
-   Skip staat altijd boven; "Get started" opent het welkomstscherm. Geen poort: niets wordt gevraagd.
+   en de onderdelen doen, en daarna naar het welkomstscherm". Vier korte schermen (belofte, State Control,
+   Breathwork, Audio Library); het vijfde scherm is het welkomstscherm. Teksten zijn van de operator (letterlijk overgenomen).
+   Skip staat altijd boven; De laatste knop opent het welkomstscherm. Geen poort: niets wordt gevraagd.
 
    Regels: UI_EN_BEWEGINGSREGELS.md — cascade van onderen (`reveal(i)`), geen zijwaartse paginaschuif, ronde
    glazen knop van 52 dp. Eenmaal gezien = `appIntroSeenAt` (settings); de root-layout (_layout.tsx) beslist
@@ -31,41 +31,44 @@ type Step = {
   eyebrow: string;
   title: string;
   body: string;
+  note?: string;
   Icon?: typeof Radio;
 };
 
-/* [OPERATOR]-teksten, letterlijk (25 okt 2026). */
+/* [OPERATOR]-teksten, letterlijk (25 okt 2026, tweede versie). Scherm 5 ("Start") is het welkomstscherm zelf. */
 const STEPS: Step[] = [
+  {
+    key: 'promise',
+    eyebrow: 'WELCOME',
+    title: 'Stop being a passenger in your own life.',
+    body:
+      'Take an active role in how you feel, think and respond. VIBEZCORE brings together haptic State Control, Guided Breathwork and powerful ideas from history’s greatest minds to help you guide your state each day, find inner balance and grow over time.',
+  },
   {
     key: 'state',
     eyebrow: 'STATE CONTROL',
-    title: 'State Control',
+    title: 'Feel the pulse. Feel the shift.',
     body:
-      'State Control uses research-based, bottom-up haptic pulse patterns delivered through your phone, smartwatch or smart bead bracelet to guide your nervous system from stress toward calm or focus, or toward energy or sleep—by letting your body feel and follow the vibrations.',
+      'Choose the state you want to move toward. Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
+    note: 'Smart bead bracelet support coming soon.',
     Icon: Radio,
   },
   {
     key: 'breath',
-    eyebrow: 'BREATHWORK',
-    title: 'Guided Breathwork',
+    eyebrow: 'GUIDED BREATHWORK',
+    title: 'Follow the cues. Let your breathing lead.',
     body:
-      'Guided Breathwork combines established breathing techniques with clear spoken guidance and haptic cues, delivered through your phone or smartwatch—and, in the future, the VIBEZCORE bracelet—to help you follow each breath and guide your state toward calm, focus, energy or sleep.',
+      'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch. Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
+    note: 'Smart bead bracelet support coming soon.',
     Icon: Wind,
   },
   {
     key: 'audio',
     eyebrow: 'AUDIO LIBRARY',
-    title: 'Audio Library',
+    title: 'Learn from the minds that changed how we see the world.',
     body:
-      'Learn from history’s greatest minds—and turn their enduring ideas into lasting personal growth. We transform their ideas and teachings into clear, structured audio sessions you can understand, apply and return to as you grow.',
+      'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to—so insight can become lasting personal growth.',
     Icon: AudioLines,
-  },
-  {
-    key: 'promise',
-    eyebrow: 'VIBEZCORE',
-    title: 'Stop being a passenger in your own life.',
-    body:
-      'Feel in control of how you feel, think and respond—and build the clarity and habits to shape the life you want.',
   },
 ];
 
@@ -131,13 +134,14 @@ export default function IntroScreen() {
           </Animated.View>
           <Animated.View entering={enter(2)}>
             <BalancedText style={s.body}>{cur.body}</BalancedText>
+            {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
           </Animated.View>
         </ScrollView>
 
         <View style={s.footer}>
-          <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${last ? 'Get started' : 'Next'}`}>
+          <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${step === 0 ? 'Get started' : 'Next'}`}>
             <View style={s.cta}>
-              <Text style={s.ctaTxt}>{last ? 'Get started' : 'Next'}</Text>
+              <Text style={s.ctaTxt}>{step === 0 ? 'Get started' : 'Next'}</Text>
             </View>
           </PressScale>
         </View>
@@ -164,6 +168,7 @@ const s = StyleSheet.create({
   eyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
   title: { ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
   titleBig: { fontSize: 32, lineHeight: 38 },
+  note: { marginTop: 14, fontFamily: BrandFonts.medium, fontSize: 13, letterSpacing: 0.2, color: 'rgba(255,255,255,0.5)' },
   body: { ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.7)', lineHeight: 25 },
   footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12 },
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
