@@ -2,9 +2,9 @@
    VIBEZCORE — algemene uitleg (vóór het welkomstscherm, enkel de eerste keer)
 
    Operator, 25 okt 2026: "een onboarding voor de algemene app zodat gebruikers begrijpen wat de app
-   en de onderdelen doen, en daarna naar het welkomstscherm". Vier korte schermen (belofte, State Control,
-   Breathwork, Audio Library); het vijfde scherm is het welkomstscherm. Teksten zijn van de operator (letterlijk overgenomen).
-   Skip staat altijd boven; De laatste knop opent het welkomstscherm. Geen poort: niets wordt gevraagd.
+   en de onderdelen doen, en daarna naar het welkomstscherm". Vijf korte schermen (belofte, State Control,
+   Breathwork, Audio Library, start). Teksten zijn van de operator (letterlijk overgenomen).
+   Skip staat altijd boven; De laatste knop ("Continue") opent het welkomstscherm. Geen poort: niets wordt gevraagd.
 
    Regels: UI_EN_BEWEGINGSREGELS.md — cascade van onderen (`reveal(i)`), geen zijwaartse paginaschuif, ronde
    glazen knop van 52 dp. Eenmaal gezien = `appIntroSeenAt` (settings); de root-layout (_layout.tsx) beslist
@@ -23,7 +23,9 @@ import { SafeAreaView } from '@/utils/safe-area';
 import { Stack, router } from 'expo-router';
 import { AudioLines, ChevronLeft, Radio, Wind } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { imageSource } from '@/utils/image-source';
 import Animated from 'react-native-reanimated';
 
 type Step = {
@@ -32,10 +34,14 @@ type Step = {
   title: string;
   body: string;
   note?: string;
+  /** Achtergrondfoto (dezelfde als de intro van het tabblad). */
+  photo?: string;
+  /** hoogte / breedte van de foto (gemeten). */
+  photoRatio?: number;
   Icon?: typeof Radio;
 };
 
-/* [OPERATOR]-teksten, letterlijk (25 okt 2026, tweede versie). Scherm 5 ("Start") is het welkomstscherm zelf. */
+/* [OPERATOR]-teksten, letterlijk (25 okt 2026, tweede versie). Scherm 5 ("Start") sluit de uitleg af. */
 const STEPS: Step[] = [
   {
     key: 'promise',
@@ -51,6 +57,8 @@ const STEPS: Step[] = [
     body:
       'Choose the state you want to move toward. Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
+    photo: 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20welcome%20state%20control%20app.png',
+    photoRatio: 1536 / 1024,
     Icon: Radio,
   },
   {
@@ -60,6 +68,8 @@ const STEPS: Step[] = [
     body:
       'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch. Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
+    photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20breathwork%20welcome%203.png',
+    photoRatio: 1402 / 1122,
     Icon: Wind,
   },
   {
@@ -68,7 +78,15 @@ const STEPS: Step[] = [
     title: 'Learn from the minds that changed how we see the world.',
     body:
       'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to—so insight can become lasting personal growth.',
+    photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20welcome%20audio%20library%20app.png',
+    photoRatio: 1672 / 941,
     Icon: AudioLines,
+  },
+  {
+    key: 'start',
+    eyebrow: 'START',
+    title: 'Your life.\nYour next move.',
+    body: 'Choose what you need right now: State Control, Guided Breathwork or the Audio Library.',
   },
 ];
 
@@ -88,10 +106,26 @@ export default function IntroScreen() {
   const next = () => (last ? finish() : setStep(step + 1));
   const back = () => setStep(Math.max(0, step - 1));
   const Icon = cur.Icon;
+  /* Foto op volle schermbreedte met een vaste breedte en hoogte (zoals de Audio Library-tab); de verhouding is per foto gemeten. */
+  const { width: winW } = useWindowDimensions();
+  const photoH = cur.photo ? Math.round(winW * (cur.photoRatio ?? 1.5)) : 0;
+  const ctaLabel = step === 0 ? 'Get started' : last ? 'Continue' : 'Next';
 
   return (
     <View style={s.root}>
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
+      {cur.photo ? (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* De foto op volle breedte in zijn eigen verhouding (2:3, 4:5, 9:16), onderaan zacht naar zwart waar de tekst staat. */}
+          <Image source={imageSource(cur.photo)} style={[s.photo, { width: winW, height: photoH }]} resizeMode="cover" />
+          <LinearGradient colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)']} locations={[0, 1]} style={s.topFade} />
+          <LinearGradient
+            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.7)', 'rgba(10,10,10,0.96)', '#0a0a0a']}
+            locations={[0, 0.45, 0.8, 1]}
+            style={{ position: 'absolute', left: 0, right: 0, top: Math.round(photoH * 0.3), height: Math.round(photoH * 0.7) + 2 }}
+          />
+        </View>
+      ) : null}
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <View style={s.topbar}>
           <View style={s.side}>
@@ -118,11 +152,11 @@ export default function IntroScreen() {
         <ScrollView
           key={step}
           style={{ flex: 1 }}
-          contentContainerStyle={s.content}
+          contentContainerStyle={[s.content, cur.photo && s.contentBottom]}
           alwaysBounceVertical={false}
           showsVerticalScrollIndicator={false}
         >
-          {Icon ? (
+          {Icon && !cur.photo ? (
             <Animated.View entering={enter(0)} style={s.iconWrap}>
               <VibezGlass radius={44} level="normal" style={StyleSheet.absoluteFill} />
               <Icon size={34} color="#ffffff" strokeWidth={1.8} />
@@ -139,9 +173,9 @@ export default function IntroScreen() {
         </ScrollView>
 
         <View style={s.footer}>
-          <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${step === 0 ? 'Get started' : 'Next'}`}>
+          <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
             <View style={s.cta}>
-              <Text style={s.ctaTxt}>{step === 0 ? 'Get started' : 'Next'}</Text>
+              <Text style={s.ctaTxt}>{ctaLabel}</Text>
             </View>
           </PressScale>
         </View>
@@ -164,6 +198,10 @@ const s = StyleSheet.create({
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: { color: 'rgba(255,255,255,0.92)', fontFamily: BrandFonts.semibold, fontSize: 15 },
   content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 24, gap: 18 },
+  photo: { position: 'absolute', top: 0, left: 0, right: 0 },
+  topFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
+  bottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '62%' },
+  contentBottom: { justifyContent: 'flex-end' },
   iconWrap: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 8 },
   eyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
   title: { ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
