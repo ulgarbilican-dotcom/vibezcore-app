@@ -476,6 +476,19 @@ export default function SettingsScreen() {
         <Reveal i={5}>
         <Text style={s.subLabel}>General</Text>
         <View style={s.card}>
+          {/* 25 okt 2026 (operator: "hoe kan ik de intro opnieuw zien"): de algemene uitleg van de app. */}
+          <PressFeedback
+            style={s.row}
+            onPress={() => router.push('/intro?replay=1' as never)}
+            accessibilityLabel="Watch the introduction to VIBEZCORE again"
+          >
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Introduction to VIBEZCORE</Text>
+              <BalancedText style={s.rowSub}>What the app and its three parts do.</BalancedText>
+            </View>
+            <Text style={s.versionText}>›</Text>
+          </PressFeedback>
+          <View style={s.divider} />
           <PressFeedback
             style={s.row}
             /* Operator, 4 okt 2026 (smoothness-audit): was `await

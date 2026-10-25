@@ -20,7 +20,7 @@ import { reveal } from '@/constants/motion';
 import { qaFlag } from '@/utils/qa-probe';
 import { setSetting } from '@/utils/settings';
 import { SafeAreaView } from '@/utils/safe-area';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { AudioLines, ChevronLeft, Radio, Wind } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -106,7 +106,14 @@ export default function IntroScreen() {
   qaFlag('intro', { step, last: STEPS.length - 1 });
 
   /* Gezien (ook bij Skip) → nooit meer vanzelf; daarna het welkomstscherm. */
+  /* replay=1 (Settings → Introduction): opnieuw bekijken en terug naar Settings, niet naar het welkomstscherm. */
+  const { replay } = useLocalSearchParams<{ replay?: string }>();
   const finish = () => {
+    if (replay === '1') {
+      if (router.canGoBack()) router.back();
+      else router.replace('/settings' as never);
+      return;
+    }
     void setSetting('appIntroSeenAt', Date.now());
     router.replace('/welcome' as never);
   };
