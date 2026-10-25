@@ -489,7 +489,7 @@ export default function IntroScreen() {
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */
   const insets = useSafeAreaInsets();
-  const phoneH = Math.round(winH * 0.31); // eindigt boven de tekst, loopt er niet onder door
+  const phoneH = Math.round(winH * 0.46); // groot; de onderste helft verdwijnt achter de tekstkaart (alleen de bovenste helft is zichtbaar)
   const phoneTop = Math.round(insets.top + 58); // onder de bovenbalk (Back / stap / Skip)
   const ctaLabel = step === 0 ? 'Get started' : last ? 'Start exploring' : 'Next'; // [TEKST] concept: slotknop belooft iets (was 'Continue')
 
@@ -502,11 +502,6 @@ export default function IntroScreen() {
           <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={{ position: 'absolute', top: phoneTop, left: 0, right: 0, alignItems: 'center' }}>
             <PhoneMockup mock={cur.mock} height={phoneH} />
           </Animated.View>
-          <LinearGradient
-            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.75)', 'rgba(10,10,10,0.97)', '#0a0a0a']}
-            locations={[0, 0.4, 0.75, 1]}
-            style={{ position: 'absolute', left: 0, right: 0, top: Math.round(phoneTop + phoneH * 0.45), height: Math.round(phoneH * 0.7) }}
-          />
         </View>
       ) : null}
       {cur.photo ? (
@@ -544,10 +539,14 @@ export default function IntroScreen() {
           </View>
         </View>
 
+        <View style={{ flex: 1 }} />
+        {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
+        <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.535) }] : undefined}>
+        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.6)', '#0a0a0a']} locations={[0, 0.55, 1]} style={{ position: 'absolute', left: 0, right: 0, top: -64, height: 64 }} /> : null}
         <ScrollView
           key={step}
-          style={{ flex: 1 }}
-          contentContainerStyle={[s.content, (cur.photo || cur.mock) && s.contentBottom]}
+          style={cur.mock ? { flex: 1 } : { flexGrow: 0, flexShrink: 1 }}
+          contentContainerStyle={[s.content, cur.mock ? { justifyContent: 'flex-start' } : cur.photo && s.contentBottom]}
           alwaysBounceVertical={false}
           showsVerticalScrollIndicator={false}
         >
@@ -584,6 +583,7 @@ export default function IntroScreen() {
               </PressScale>
             </Animated.View>
         </View>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -602,7 +602,7 @@ const s = StyleSheet.create({
   fill: { height: '100%', borderRadius: 0.75, backgroundColor: '#ffffff' },
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: { color: 'rgba(255,255,255,0.92)', fontFamily: BrandFonts.semibold, fontSize: 15 },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 24, gap: 18 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 18, gap: 12 },
   photo: { position: 'absolute', top: 0, left: 0, right: 0 },
   phone: { borderRadius: 34, backgroundColor: '#0c0c0e', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)', padding: 7, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 14 }, elevation: 12 },
   phoneBtn: { position: 'absolute', width: 3, borderRadius: 2, backgroundColor: '#55544e' },
@@ -617,6 +617,7 @@ const s = StyleSheet.create({
   note: { marginTop: 14, fontFamily: BrandFonts.medium, fontSize: 13, letterSpacing: 0.2, color: 'rgba(255,255,255,0.5)' },
   sub: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17, lineHeight: 24, textAlign: 'left', color: 'rgba(255,255,255,0.92)' },
   body: { marginTop: 10, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 21, textAlign: 'left', color: 'rgba(255,255,255,0.6)' },
+  card: { backgroundColor: '#0a0a0a', paddingTop: 22 },
   footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12 },
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, height: 52 },

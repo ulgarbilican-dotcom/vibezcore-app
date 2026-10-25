@@ -125,7 +125,7 @@ function photoFrame(w: number, h: number, textTop: number | null) {
   let height = Math.max(h * PHOTO_HEIGHT, w / BG_ASPECT);
   let top = h * PHOTO_TOP;
   if (textTop != null) {
-    const anchor = textTop - 12;
+    const anchor = textTop - 12 + 70; // 25 okt 2026 (operator): foto ±1,5 cm lager
     top = anchor - WATCH_Y * height;
     if (top > 0) {
       height = anchor / WATCH_Y;
@@ -154,9 +154,9 @@ function StateControlIntro({
 }) {
   const barInset = useTabBarInset();
   const insets = useSafeAreaInsets();
-  const tabInset = onboarding ? 0 : barInset;
+  const tabInset = barInset; // 25 okt 2026 (operator): de tabbalk blijft ook op het intro zichtbaar
   useEffect(() => {
-    setStateControlIntroFullScreen(onboarding);
+    setStateControlIntroFullScreen(false);
     return () => setStateControlIntroFullScreen(false);
   }, [onboarding]);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
@@ -251,7 +251,7 @@ function StateControlIntro({
           <Text style={s.notNowTxt}>Not Now</Text>
         </Tap>
       )}
-      <View style={[s.introWrap, { paddingBottom: onboarding ? insets.bottom + 24 : 34 + tabInset }]}>
+      <View style={[s.introWrap, { paddingBottom: 34 + tabInset }]}>
         <View
           style={s.stackTitle}
           onLayout={(e) => {
