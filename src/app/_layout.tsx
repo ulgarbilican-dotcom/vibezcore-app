@@ -749,7 +749,8 @@ export default function RootLayout() {
         params: { from: 'reminder', ...reminderParams(tapped) },
       } as never);
     } else if (showWelcome) {
-      router.replace('/welcome');
+      /* 25 okt 2026: de allereerste keer eerst de algemene uitleg (intro.tsx), daarna het welkomstscherm. */
+      void ensureSettingsLoaded().then(() => router.replace((getSetting('appIntroSeenAt') ? '/welcome' : '/intro') as never));
     } else if (!pendingAuthLink && signedIn) {
       router.replace(lastTabRoute as never);
       if (__DEV__) setTimeout(() => console.log('[boot] after replace, pathname =', pathnameRef.current), 500);
@@ -895,6 +896,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: Brand.bg },
         }}
       >
+        <Stack.Screen name="intro" options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
         <Stack.Screen name="qa" options={{ headerShown: false }} />
         <Stack.Screen name="qa-haptics" options={{ headerShown: false }} />

@@ -242,6 +242,8 @@ export type Settings = {
    *  onboarding (components/StateControlOnboarding.tsx) — null = nog nooit
    *  gezien → de State Control-tab toont ze na de foto-intro. Settings →
    *  "Watch the State Control intro again" toont ze opnieuw. */
+  /** Algemene uitleg vóór het welkomstscherm gezien (intro.tsx); null = nog niet. */
+  appIntroSeenAt: number | null;
   stateOnboardingCompletedAt: number | null;
   /** 19 okt 2026 (operator, punt 24: "Not Now = nog één keer, bij de
    *  volgende start, daarna nooit meer vanzelf"): hoe vaak iemand de
@@ -306,6 +308,7 @@ const defaults: Settings = {
   themeMode: 'dark',
   voiceGender: 'female',
   braceletOnboardingCompletedAt: null,
+  appIntroSeenAt: null,
   stateOnboardingCompletedAt: null,
   breathOnboardingDeferredCount: 0,
   stateOnboardingDeferredCount: 0,
@@ -489,6 +492,7 @@ async function loadOnce(): Promise<void> {
             ...(typeof obj.stateFreeSessionUsedAt === 'number' || obj.stateFreeSessionUsedAt === null
               ? { stateFreeSessionUsedAt: obj.stateFreeSessionUsedAt }
               : {}),
+            ...(typeof obj.appIntroSeenAt === 'number' ? { appIntroSeenAt: obj.appIntroSeenAt } : {}),
             ...(typeof obj.stateOnboardingCompletedAt === 'number' ||
             obj.stateOnboardingCompletedAt === null
               ? { stateOnboardingCompletedAt: obj.stateOnboardingCompletedAt }
