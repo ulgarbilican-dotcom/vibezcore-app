@@ -353,6 +353,12 @@ export function subscribeHapticPulse(listener: PulseListener): () => void {
   };
 }
 
+/** Alleen het BEELD van een slag (ringen, kloppende cirkel) aansturen, zonder trilling of geluid — voor de uitleg-intro (src/app/intro.tsx), die de echte
+    pulsgolf toont op het tempo van een toestand. */
+export function emitVisualPulse(pulse: HapticPulse): void {
+  emitPulse(pulse);
+}
+
 function emitPulse(pulse: HapticPulse): void {
   pulseListeners.forEach((l) => {
     try {

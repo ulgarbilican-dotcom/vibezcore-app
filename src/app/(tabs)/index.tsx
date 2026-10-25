@@ -297,6 +297,10 @@ const PILLAR_CARD_GAP = 16;
    twee kaarten in beeld, zodat je ziet dat er meer is. */
 const PILLAR_CARD_WIDTH = Math.round(Dimensions.get('window').width * 0.42);
 const PILLAR_CARD_HEIGHT = Math.round(PILLAR_CARD_WIDTH * 1.25);
+/* 25 okt 2026 (operator): de pijlers staan weer in een raster, twee per rij onder elkaar, zodat alle vier tegelijk in beeld zijn; rand rond foto EN tekst. */
+const PILLAR_GRID_GAP = 12;
+const PILLAR_GRID_W = Math.floor((Dimensions.get('window').width - 2 * PILLAR_SIDE_INSET - PILLAR_GRID_GAP) / 2);
+const PILLAR_GRID_IMG_H = Math.round(PILLAR_GRID_W * 0.96);
 /** Volle rij: twee kaarten + de tussenruimte. */
 const PILLAR_FULL_WIDTH = PILLAR_CARD_WIDTH * 2 + PILLAR_CARD_GAP;
 
@@ -2008,19 +2012,7 @@ function AudioScreen({
                 pillarsYRef.current = e.nativeEvent.layout.y;
               }}
             >
-            <TabReveal i={2}><Text style={s.libSectionTitle}>Explore</Text></TabReveal>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              decelerationRate="fast"
-              snapToInterval={PILLAR_CARD_WIDTH + PILLAR_CARD_GAP}
-              snapToAlignment="start"
-              /* 23 okt 2026 (operator: kaarten worden bij de uitadem-animatie boven afgesneden): een horizontale
-                 ScrollView knipt zijn inhoud af; de kaarten zetten tijdens het "ademen" iets uit. Ruimte erbij
-                 (paddingVertical) en weer weggehaald (marginVertical), zodat de lay-out niet verschuift. */
-              style={{ marginVertical: -10, flexGrow: 0 }}
-              contentContainerStyle={{ paddingHorizontal: PILLAR_SIDE_INSET, paddingVertical: 10, gap: PILLAR_CARD_GAP }}
-            >
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: PILLAR_SIDE_INSET, gap: PILLAR_GRID_GAP, marginTop: 4 }}>
               {PILLARS.map((p, pillarIdx) => {
                 const isActiveFilter = activePillarFilter === p.key;
                 return (
@@ -2030,7 +2022,7 @@ function AudioScreen({
                      was een platte opacity-fade (`FadeIn`), nu `FadeInUp`
                      met een spring-easing voor het "hoogwaardig, soepel"
                      gevoel dat gevraagd werd. */
-                  <TabReveal i={3 + pillarIdx} key={p.num} style={{ width: PILLAR_CARD_WIDTH }}>
+                  <TabReveal i={3 + pillarIdx} key={p.num} style={{ width: p.key === 'tools' ? '100%' : PILLAR_GRID_W }}>
                   <Animated.View renderToHardwareTextureAndroid style={breathStyles[pillarIdx]}>
                   {/* Operator, 26 september 2026 (Apple-redesign, definitief):
                      de "Unified Card" (tekst op de foto) is teruggedraaid —
@@ -2056,6 +2048,7 @@ function AudioScreen({
                     androidRipple={{ color: 'rgba(255,255,255,0.08)' }}
                     accessibilityLabel={`Open ${p.name}`}
                   >
+                    <View style={[s.pillarCard, isActiveFilter ? s.pillarCardOn : null]}>
                     <View
                       style={[
                         s.pillar,
@@ -2080,8 +2073,12 @@ function AudioScreen({
                              dan de 4 echte pijlers — staat als laatste
                              rij naast Free Picks, dus geen volgende rij
                              die erdoor scheeftrekt. */
-                          height: PILLAR_CARD_HEIGHT,
+                          height: p.key === 'tools' ? Math.round(PILLAR_GRID_W * 0.5) : PILLAR_GRID_IMG_H,
                           marginBottom: 0,
+                          borderWidth: 0,
+                          borderRadius: 0,
+                          backgroundColor: 'transparent',
+                          shadowOpacity: 0,
                         },
                         /* Operator, 26 september 2026 ("geen accentkleur bij
                            omlijning kaarten, enkel grijze of witte"):
@@ -2121,7 +2118,7 @@ function AudioScreen({
                         /* 22 okt 2026 (operator: Soundscapes-icoon ontbrak): wit icoon op doorzichtige achtergrond,
                            als gebundeld webp verdween het op Android; daarom weer van de server. */
                         source={p.key === 'tools' ? { uri: p.img } : imageSource(p.img)}
-                        style={
+                        style={[
                           p.key === 'resilience'
                             ? /* 20 okt 2026: deze kaart kreeg een eigen, 504 pt hoge
                                  absolute afbeelding (top-anchored, onderkant buiten
@@ -2139,8 +2136,10 @@ function AudioScreen({
                                    ander stuk van het transparante canvas
                                    uit i.p.v. het icoon zelf te verkleinen. */
                                 { ...StyleSheet.absoluteFillObject, margin: 20 }
-                              : s.pillarImg
-                        }
+                              : s.pillarImg,
+                          /* 25 okt 2026 (operator): de foto begint bovenaan en wordt ONDERaan afgesneden, niet bovenaan. */
+                          p.key === 'tools' ? null : p.key === 'drive' ? /* Pijler 4 (operator, 25 okt 2026): iets uitgezoomd, zodat het hoofd niet wordt afgesneden en het schaakbord wat lager staat. */ { height: Math.round(PILLAR_GRID_W * 1.2), width: Math.round(PILLAR_GRID_W * 0.9), left: Math.round(PILLAR_GRID_W * 0.05), top: -Math.round(PILLAR_GRID_W * 0.16) } : { height: Math.round(PILLAR_GRID_W * (p.key === 'sovereignty' ? 1.5 : 1.334)), top: 0 },
+                        ]}
                         resizeMode={p.key === 'tools' ? 'contain' : 'cover'}
                       />
                       {/* Operator ("pilaar 1 2 3 moeten onderaan buiten de
@@ -2166,7 +2165,7 @@ function AudioScreen({
                        (flexWrap legt een rij op de hoogte van z'n hoogste
                        kaart). Elke tekstblok reserveert nu ruimte voor het
                        langste geval, dus élke rij sluit strak aan. */}
-                    <View style={{ paddingTop: 10, minHeight: 68 }}>
+                    <View style={{ paddingTop: 10, paddingHorizontal: 10, paddingBottom: 12, height: p.key === 'tools' ? 50 : 78 }}>
                       {p.num !== '05' && (
                         /* Operator ("kickers schreeuwen om aandacht — Apple
                            maakt ze klein, flinterdun, midgrijs"): was
@@ -2190,25 +2189,24 @@ function AudioScreen({
                         style={[
                           s.pillarName,
                           {
-                            fontSize: 18,
-                            lineHeight: 21,
+                            fontSize: 14,
+                            lineHeight: 18,
                             color: C.text,
                             letterSpacing: -0.3,
                           },
                         ]}
                         numberOfLines={2}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.75}
                       >
                         {p.name}
                       </Text>
+                    </View>
                     </View>
                   </CardBounce>
                   </Animated.View></TabReveal>
                 );
               })}
 
-            </ScrollView>
+            </View>
             </View>
 
           </>
@@ -4542,6 +4540,8 @@ const s = StyleSheet.create({
     backgroundColor: C.surface,
     ...SOFT_SHADOW,
   },
+  pillarCard: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)' },
+  pillarCardOn: { borderColor: 'rgba(255,255,255,0.4)' },
   pillarImg: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   /* Iter 9aaa — Pillar detail bottom-sheet modal (Apple-style minimal) */
   pillarModalRoot: {
