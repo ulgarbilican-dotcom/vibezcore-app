@@ -118,7 +118,7 @@ function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height
   const w = width - 17;
   const h = height - 17;
   return (
-    <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width, height, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: mock.kind === 'state' ? -Math.round(width * 0.2) : 0 }] }}>
       <View style={[s.phone, { width, height }]}>
         <View style={s.phoneScreen}>
           {mock.kind === 'state' ? <StateScene w={w} h={h} accent={mock.accent} /> : null}
@@ -131,29 +131,57 @@ function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height
   );
 }
 
-/* Smartwatch bij "Feel the pulse": een generiek rond horloge (bewust geen Apple Watch-vorm) met dezelfde pulsgolf en kloppende cirkel als de telefoon,
-   op dezelfde slagen (alles komt uit dezelfde bron). */
+/* Smartwatch bij "Feel the pulse": een generiek rechthoekig horloge (metalen behuizing, kroon, siliconen bandje; bewust geen Apple Watch-ontwerp) met dezelfde
+   pulsgolf en kloppende cirkel als de telefoon, op dezelfde slagen (alles komt uit dezelfde bron). */
 function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) {
   const meta = getModeMeta(BraceletMode.Alpha);
   const color = breathWaveLook(meta.color).color;
-  const d = Math.round(phoneW * 0.42);
-  const inner = Math.round(d * 0.74);
+  const cw = Math.round(phoneW * 0.5); // behuizing: breedte
+  const ch = Math.round(cw * 1.2); // behuizing: hoogte
+  const pad = 3.5;
+  const screenW = cw - pad * 2 - 6;
+  const screenH = ch - pad * 2 - 6;
+  const inner = Math.round(screenW * 0.78);
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
-  const strapW = Math.round(d * 0.5);
-  const strapH = Math.round(d * 0.42);
+  const strapW = Math.round(cw * 0.74);
+  const strapH = Math.round(ch * 0.5);
+  const strap = (top: boolean) => (
+    <LinearGradient
+      colors={top ? ['#101114', '#26272d'] : ['#26272d', '#101114']}
+      style={{ width: strapW, height: strapH, borderTopLeftRadius: top ? 12 : 4, borderTopRightRadius: top ? 12 : 4, borderBottomLeftRadius: top ? 4 : 12, borderBottomRightRadius: top ? 4 : 12, justifyContent: top ? 'flex-start' : 'flex-end', alignItems: 'center', paddingVertical: 10, gap: 7 }}
+    >
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={{ width: strapW * 0.5, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.07)' }} />
+      ))}
+    </LinearGradient>
+  );
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.82, top: phoneH * 0.24, width: d, alignItems: 'center' }}>
-      <View style={{ width: strapW, height: strapH, borderTopLeftRadius: 10, borderTopRightRadius: 10, backgroundColor: '#17171c', marginBottom: -4 }} />
-      <View style={{ width: d, height: d, borderRadius: d / 2, backgroundColor: '#0a0a0d', borderWidth: 3, borderColor: 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <HapticPulseRings size={inner} color={color} beatSynced />
-        <HeartbeatScale size={inner}>
-          <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.27), letterSpacing: -0.5 }}>{mmss(left)}</Text>
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', left: phoneW * 0.9, top: phoneH * 0.18, width: cw + 8, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}
+    >
+      {strap(true)}
+      <View style={{ width: cw, height: ch, marginVertical: -6 }}>
+        {/* één neutrale zijknop (geen kroon, niets dat op een Apple Watch lijkt) */}
+        <View style={{ position: 'absolute', right: -3, top: ch * 0.38, width: 4, height: ch * 0.16, borderRadius: 2, backgroundColor: '#8a8e96' }} />
+        {/* metalen rand */}
+        <LinearGradient colors={['#e4e6ea', '#8c9098', '#cfd2d7', '#6b6f77']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: cw * 0.27, padding: pad }}>
+          <View style={{ flex: 1, borderRadius: cw * 0.24, backgroundColor: '#030304', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <View style={{ width: screenW, height: screenH, borderRadius: cw * 0.2, backgroundColor: '#07060b', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <HapticPulseRings size={inner} color={color} beatSynced />
+              <HeartbeatScale size={inner}>
+                <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.28), letterSpacing: -0.5 }}>{mmss(left)}</Text>
+                </View>
+              </HeartbeatScale>
+              {/* glans over het glas */}
+              <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+            </View>
           </View>
-        </HeartbeatScale>
+        </LinearGradient>
       </View>
-      <View style={{ width: strapW, height: strapH, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, backgroundColor: '#17171c', marginTop: -4 }} />
+      {strap(false)}
     </View>
   );
 }
