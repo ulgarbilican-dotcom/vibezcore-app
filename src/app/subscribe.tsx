@@ -1044,11 +1044,27 @@ export default function SubscribeScreen() {
     const result = await restorePurchases();
     if (result.ok) {
       if (result.restoredCount > 0) {
-        void showVibezAlert({
-          title: 'Subscription restored',
-          message: `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`,
-          buttons: [{ text: 'OK', onPress: () => goToTab('/') }],
-        });
+        const restoredMsg = `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`;
+        if (signedIn === false) {
+          /* 25 okt 2026 (operator: account-uitnodiging bij aankoop én herstel): zelfde optionele, zachte uitnodiging als op het
+             bedankscherm na een aankoop — Premium staat al aan, een account is enkel om het op al je toestellen te houden. */
+          void showVibezAlert({
+            title: 'Subscription restored',
+            message: `${restoredMsg}
+
+Create a free account to keep Premium on all your devices.`,
+            buttons: [
+              { text: 'Create free account', style: 'primary', onPress: () => { setLinkingAccount(true); setPhase('form'); } },
+              { text: 'Not now', style: 'cancel', onPress: () => goToTab('/') },
+            ],
+          });
+        } else {
+          void showVibezAlert({
+            title: 'Subscription restored',
+            message: restoredMsg,
+            buttons: [{ text: 'OK', onPress: () => goToTab('/') }],
+          });
+        }
       } else if (result.accountMismatch) {
         /* Iter v168 (2026-06-28): account-mismatch — VIBEZCORE-side weet
            dat user PRO is, maar de Play Store / Apple ID op dit toestel
