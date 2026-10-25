@@ -156,10 +156,10 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
   const strapW = Math.round(cw * 0.7);
-  const strapH = Math.round(ch * 0.55);
+  const strapH = Math.round(ch * 0.4);
   return (
     <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.9, top: phoneH * 0.02, width: cw + 8, alignItems: 'center' }}>
-      <LinearGradient colors={['rgba(30,30,34,0)', '#1c1c21']} style={{ width: strapW, height: strapH, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, borderBottomWidth: 0, borderColor: 'rgba(255,255,255,0.05)' }} />
+      <LinearGradient colors={['rgba(28,28,33,0.35)', '#1c1c21']} style={{ width: strapW, height: strapH, borderTopLeftRadius: 16, borderTopRightRadius: 16 }} />
       <View style={{ width: cw, height: ch, marginVertical: -8, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
         {/* één neutrale zijknop */}
         <View style={{ position: 'absolute', right: -3, top: ch * 0.4, width: 4, height: ch * 0.14, borderRadius: 2, backgroundColor: '#4a4a46' }} />
@@ -498,7 +498,7 @@ export default function IntroScreen() {
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
       {cur.mock ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          {<LinearGradient colors={[cur.mock.accent + '30', 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round(winH * 0.7) }} />}
+          {<LinearGradient colors={[cur.mock.accent + (cur.mock.kind === 'audio' ? '12' : '30'), 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round(winH * 0.7) }} />}
           <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={{ position: 'absolute', top: phoneTop, left: 0, right: 0, alignItems: 'center' }}>
             <PhoneMockup mock={cur.mock} height={phoneH} />
           </Animated.View>
@@ -542,7 +542,7 @@ export default function IntroScreen() {
         <View style={{ flex: 1 }} />
         {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
         <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.535) }] : undefined}>
-        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.1)', 'rgba(10,10,10,0.38)', 'rgba(10,10,10,0.74)', 'rgba(10,10,10,0.94)', '#0a0a0a']} locations={[0, 0.2, 0.45, 0.7, 0.9, 1]} style={{ position: 'absolute', left: 0, right: 0, top: -Math.round(winH * 0.125), height: Math.round(winH * 0.125) }} /> : null}
+        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.1)', 'rgba(10,10,10,0.38)', 'rgba(10,10,10,0.74)', 'rgba(10,10,10,0.94)', '#0a0a0a']} locations={[0, 0.2, 0.45, 0.7, 0.9, 1]} style={{ position: 'absolute', left: 0, right: 0, top: -Math.round(winH * (cur.mock.kind === 'state' ? 0.125 : 0.04)), height: Math.round(winH * (cur.mock.kind === 'state' ? 0.125 : 0.04)) }} /> : null}
         <ScrollView
           key={step}
           style={cur.mock ? { flex: 1 } : { flexGrow: 0, flexShrink: 1 }}
