@@ -380,6 +380,10 @@ export default function BraceletScreen() {
      rusthartslag, eerst de pagina "Your Resting Heart Rate" (eigen volledig
      scherm). Pas tonen als de opgeslagen keuze geladen is — anders flitst
      hij bij wie al koos. */
+  /* 25 okt 2026: op de keuzepagina (titel bovenaan, tabbalk onderaan) staat de Premium-pil ONDER de titel; enkel op de intro-foto bovenaan. */
+  useEffect(() => {
+    if (focused) setPremiumPillLow(!showIntro);
+  }, [focused, showIntro]);
   const pulse = useRestingPulse();
   const [pulseLoaded, setPulseLoaded] = useState(false);
   useEffect(() => {

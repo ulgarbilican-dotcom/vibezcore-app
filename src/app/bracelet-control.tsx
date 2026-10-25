@@ -4680,6 +4680,8 @@ function IdleScreen({
             )}
           </PrimaryCtaButton></Reveal>
         )}
+        {/* Vaste ruimte onder de knop/pil (zoals bij Breathwork onder zijn knop). De uitleg-regels staan IN die ruimte: ze duwen de knop niet omhoog, dus de Start-knop staat op dezelfde hoogte als de knop van Breathwork. */}
+        <View style={{ height: 83 }}>
         {/* Free (operator, 19 okt 2026): vóór de start altijd zeggen wat er
             volgt — de ene gratis volledige sessie, of de preview van 30 s. */}
         {freeSession && !sessionRunning ? (
@@ -4702,8 +4704,7 @@ function IdleScreen({
             ) : null}
           </View>
         ) : null}
-        {/* Vaste ruimte onder de knop/pil (zoals bij Breathwork onder zijn knop): de Start-knop, de pil van een lopende sessie en de preview-knoppen staan zo altijd op dezelfde hoogte als de knop van Breathwork. */}
-        <View style={{ height: 83 }} />
+        </View>
         <SwitchSessionConfirm
           visible={confirmSwitch}
           fromName={runSnap.modeName}
