@@ -71,7 +71,8 @@ export default function StateOnboardingScreen() {
   return (
     <>
       {/* Terugvegen doet de onboarding zelf (stap per stap), niet de stack. */}
-      <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
+      {/* 25 okt 2026: in en uit met een zachte crossfade (zoals de tabwissel), geen zijwaartse schuif naar State Control. */}
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
       <StateControlOnboarding
         includeRestingHr={hrNext}
         finalLabel={isFirst ? 'Continue' : 'Done'}

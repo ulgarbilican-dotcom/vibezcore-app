@@ -36,7 +36,7 @@
 
 import { qaFlag } from '@/utils/qa-probe';
 import { Reveal } from '@/components/Reveal';
-import { reveal } from '@/constants/motion';
+import { reveal, SPRING_POP } from '@/constants/motion';
 import LiquidWave, { breathWaveLook } from '@/components/LiquidWave';
 import Tap from '@/components/Tap';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
@@ -93,8 +93,6 @@ import Animated, {
   withDelay,
   withRepeat,
   FadeIn,
-  FadeInLeft,
-  FadeInRight,
   type SharedValue,
   useAnimatedScrollHandler,
   useAnimatedProps,
@@ -161,17 +159,9 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
   const [step, setStepRaw] = useState<StepIdx>(0);
   /* Richting van de paginawissel: Next schuift van rechts in, Back van
      links (iOS-gevoel, operator: "bij veranderen pagina"). */
-  const [dir, setDir] = useState<1 | -1>(1);
-  const setStep = useCallback(
-    (next: StepIdx) => {
-      setStepRaw((cur) => {
-        setDir(next >= cur ? 1 : -1);
-        return next;
-      });
-    },
-    [],
-  );
-  const pageIn = dir > 0 ? FadeInRight.springify().damping(22).stiffness(190) : FadeInLeft.springify().damping(22).stiffness(190);
+  const setStep = useCallback((next: StepIdx) => setStepRaw(next), []);
+  /* 25 okt 2026 (operator: één regel voor alle stappen): geen zijwaartse paginaschuif meer — elke stap, vooruit én terug,
+     bouwt op met dezelfde cascade van onderen (`enter(i)`), zoals de Breathwork-onboarding. */
   /* Met hartslag: 4 stappen — 3 kiezen, 4 meten (operator: "stap 3 en 4").
      Kies je niet "meten", dan eindigt de onboarding na stap 3. */
   const lastStep = includeRestingHr ? 2 : 1;
@@ -265,9 +255,13 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
      wie hier echt een hartslag kiest (meten, invullen, gemiddelde), krijgt
      eerst het korte bevestigingsmoment; de navigatie (onDone) volgt erna.
      Skip blijft zonder moment. */
+  const [leaving, setLeaving] = useState(false);
   const finishConfirmed = (m: BraceletMode) => {
     stopHeartbeatSound('page');
     stopHeartbeatSound('measure');
+    /* 25 okt 2026: zodra "All set!" start, ligt er een effen scherm onder — zo verschijnt de meetpagina niet nog eens kort
+       als het moment sluit, en volgt de rustige overgang naar State Control. */
+    setLeaving(true);
     confirmRhythmSet(() => onDone(m));
   };
 
@@ -422,7 +416,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
           onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}
         >
           {step === 0 ? (
-            <Animated.View key="s0" entering={pageIn} style={s.slide}>
+            <Animated.View key="s0" style={s.slide}>
               <Animated.View entering={enter(0)} style={s.pad}>
                 {/* Wat dit is (operator, 16 okt 2026) — zelfde eyebrow als de
                     State Control-tab. */}
@@ -477,7 +471,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               ) : null}
             </Animated.View>
           ) : step === 1 ? (
-            <Animated.View key="s1" entering={pageIn} style={s.slide}>
+            <Animated.View key="s1" style={s.slide}>
               <Animated.View entering={enter(0)} style={s.pad}>
                 <Text style={s.header}>Choose your state</Text>
                 <Text style={s.lead}>Swipe, then tap to feel it</Text>
@@ -500,7 +494,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               <View style={{ flex: 0.6 }} />
             </Animated.View>
           ) : step === 3 ? (
-            <Animated.View key="s3" entering={pageIn} style={[s.slide, s.pad]}>
+            <Animated.View key="s3" style={[s.slide, s.pad]}>
               <Animated.View entering={enter(0)}>
                 <Text style={s.header}>Measure</Text>
                 <Text style={s.lead}>Stay still for 20 seconds</Text>
@@ -524,7 +518,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
               <BalancedText style={s.footnote}>For wellness only, not a medical measurement.</BalancedText>
             </Animated.View>
           ) : (
-            <Animated.View key="s2" entering={pageIn} style={[s.slide, s.pad]}>
+            <Animated.View key="s2" style={[s.slide, s.pad]}>
               <Animated.View entering={enter(0)}>
                 <Text style={s.header}>Your heart rate</Text>
                 <Text style={s.lead}>Your starting point</Text>
@@ -640,6 +634,7 @@ export default function StateControlOnboarding({ onDone, onBack, includeRestingH
         </View>
         )}
       </SafeAreaView>
+      {leaving ? <View pointerEvents="auto" style={[StyleSheet.absoluteFill, { backgroundColor: Brand.bg }]} /> : null}
       {Platform.OS === 'ios' && <View style={s.edgeSwipe} {...edgeSwipe.panHandlers} />}
       {includeRestingHr && (
         <RhythmSheet
@@ -933,7 +928,7 @@ function ModeBarIcon({ mode, on, onPress }: { mode: BraceletMode; on: boolean; o
       accessibilityLabel={getModeMeta(mode).name}
       accessibilityState={{ selected: on }}
     >
-      <Icon size={22} color={on ? color : 'rgba(255,255,255,0.6)'} strokeWidth={on ? 2 : 1.7} />
+      <Icon size={22} color={on ? '#ffffff' : 'rgba(255,255,255,0.5)'} strokeWidth={on ? 2 : 1.7} />
     </PressScale>
   );
 }
@@ -946,7 +941,7 @@ function GlassChip({ mode, label, on, onPress }: { mode: BraceletMode; label: st
   const k = useSharedValue(on ? 1 : 0);
   useEffect(() => {
     k.value = withTiming(on ? 1 : 0, { duration: 220 });
-    if (on) pop.value = withSequence(withTiming(1.07, { duration: 120 }), withSpring(1, { duration: 360, dampingRatio: 0.55 }));
+    if (on) pop.value = withSequence(withTiming(1.04, { duration: 110 }), withSpring(1, SPRING_POP));
   }, [on, k, pop]);
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: pop.value }],
@@ -958,7 +953,7 @@ function GlassChip({ mode, label, on, onPress }: { mode: BraceletMode; label: st
   return (
     <PressScale onPress={onPress} scaleTo={0.92} accessibilityRole="button" accessibilityState={{ selected: on }}>
       <Animated.View style={[s.chip, style]}>
-        <Icon size={17} color={on ? getModeMeta(mode).color : 'rgba(255,255,255,0.7)'} />
+        <Icon size={17} color={on ? '#ffffff' : 'rgba(255,255,255,0.6)'} />
         <Text style={[s.chipTxt, on && { color: '#ffffff' }]}>{label}</Text>
       </Animated.View>
     </PressScale>
