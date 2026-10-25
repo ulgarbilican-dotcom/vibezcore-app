@@ -22,11 +22,11 @@ import { setSetting } from '@/utils/settings';
 import { SafeAreaView } from '@/utils/safe-area';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { AudioLines, ChevronLeft, Radio, Wind } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { imageSource } from '@/utils/image-source';
-import Animated from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, interpolate, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
 type Step = {
   key: string;
@@ -94,6 +94,9 @@ const STEPS: Step[] = [
     title: 'Your life.\nYour next move.',
     sub: 'Choose what you need right now.',
     body: 'State Control, Guided Breathwork or the Audio Library.',
+    note: 'All in one app.', // [TEKST] concept — "alles inbegrepen": bewust niet "all included" (een gratis bezoeker krijgt per onderdeel één gratis sessie)
+    photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20your%20plan%20app.png',
+    photoRatio: 1670 / 942,
   },
 ];
 
@@ -120,10 +123,17 @@ export default function IntroScreen() {
   const next = () => (last ? finish() : setStep(step + 1));
   const back = () => setStep(Math.max(0, step - 1));
   const Icon = cur.Icon;
+  /* Lichtflits over de knop op het eerste scherm — hetzelfde recept als de onboardings (pauze 2,6 s, veeg 1,1 s, rust 1,2 s). */
+  const [ctaWidth, setCtaWidth] = useState(300);
+  const ctaShimmer = useSharedValue(-1);
+  useEffect(() => {
+    ctaShimmer.value = withRepeat(withSequence(withTiming(-1, { duration: 0 }), withDelay(2600, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })), withDelay(1200, withTiming(1, { duration: 0 }))), -1, false);
+  }, [ctaShimmer]);
+  const ctaShimmerStyle = useAnimatedStyle(() => ({ transform: [{ translateX: interpolate(ctaShimmer.value, [-1, 1], [-70, ctaWidth + 40]) }, { rotate: '18deg' }] }));
   /* Foto op volle schermbreedte met een vaste breedte en hoogte (zoals de Audio Library-tab); de verhouding is per foto gemeten. */
   const { width: winW } = useWindowDimensions();
   const photoH = cur.photo ? Math.round(winW * (cur.photoRatio ?? 1.5)) : 0;
-  const ctaLabel = step === 0 ? 'Get started' : last ? 'Continue' : 'Next';
+  const ctaLabel = step === 0 ? 'Get started' : last ? 'Start exploring' : 'Next'; // [TEKST] concept: slotknop belooft iets (was 'Continue')
 
   return (
     <View style={s.root}>
@@ -131,7 +141,7 @@ export default function IntroScreen() {
       {cur.photo ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* De foto op volle breedte in zijn eigen verhouding (2:3, 4:5, 9:16), onderaan zacht naar zwart waar de tekst staat. */}
-          <Image source={imageSource(cur.photo)} style={[s.photo, { width: winW, height: photoH }]} resizeMode="cover" />
+          <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={StyleSheet.absoluteFill}><Image source={imageSource(cur.photo)} style={[s.photo, { width: winW, height: photoH }]} resizeMode="cover" /></Animated.View>
           <LinearGradient colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)']} locations={[0, 1]} style={s.topFade} />
           <LinearGradient
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.7)', 'rgba(10,10,10,0.96)', '#0a0a0a']}
@@ -182,17 +192,22 @@ export default function IntroScreen() {
           </Animated.View>
           <Animated.View entering={enter(2)}>
             <BalancedText style={s.sub}>{cur.sub}</BalancedText>
+          </Animated.View>
+          <Animated.View entering={enter(3)}>
             <BalancedText style={s.body}>{cur.body}</BalancedText>
             {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
           </Animated.View>
         </ScrollView>
 
         <View style={s.footer}>
+          <Animated.View key={step} entering={enter(4)}>
           <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
-            <View style={s.cta}>
+            <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
               <Text style={s.ctaTxt}>{ctaLabel}</Text>
+              {step === 0 ? (<Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none"><LinearGradient colors={['#ffffff00', '#ffffff5c', '#ffffff00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} /></Animated.View>) : null}
             </View>
           </PressScale>
+          </Animated.View>
         </View>
       </SafeAreaView>
     </View>
@@ -219,13 +234,14 @@ const s = StyleSheet.create({
   contentBottom: { justifyContent: 'flex-end' },
   iconWrap: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 8 },
   eyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
-  title: { ...TypeScale.pageHeader, fontSize: 25, lineHeight: 31, textAlign: 'left', color: Brand.text },
-  titleBig: { fontSize: 27, lineHeight: 33 },
+  title: { ...TypeScale.pageHeader, fontFamily: BrandFonts.bold, fontSize: 25, lineHeight: 31, textAlign: 'left', color: Brand.text },
+  titleBig: { fontFamily: BrandFonts.bold, fontSize: 27, lineHeight: 33 },
   note: { marginTop: 14, fontFamily: BrandFonts.medium, fontSize: 13, letterSpacing: 0.2, color: 'rgba(255,255,255,0.5)' },
   sub: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17, lineHeight: 24, textAlign: 'left', color: 'rgba(255,255,255,0.92)' },
   body: { marginTop: 10, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 21, textAlign: 'left', color: 'rgba(255,255,255,0.6)' },
   footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12 },
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, height: 52 },
+  ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
   ctaTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
 });
