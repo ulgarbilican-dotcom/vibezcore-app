@@ -156,10 +156,10 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
   const strapW = Math.round(cw * 0.7);
-  const strapH = Math.round(ch * 0.62);
+  const strapH = Math.round(ch * 0.55);
   return (
     <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.9, top: phoneH * 0.02, width: cw + 8, alignItems: 'center' }}>
-      <LinearGradient colors={['rgba(24,24,27,0)', 'rgba(24,24,27,0.9)', '#18181b']} style={{ width: strapW, height: strapH, borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+      <LinearGradient colors={['rgba(30,30,34,0)', '#1c1c21']} style={{ width: strapW, height: strapH, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, borderBottomWidth: 0, borderColor: 'rgba(255,255,255,0.05)' }} />
       <View style={{ width: cw, height: ch, marginVertical: -8, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
         {/* één neutrale zijknop */}
         <View style={{ position: 'absolute', right: -3, top: ch * 0.4, width: 4, height: ch * 0.14, borderRadius: 2, backgroundColor: '#4a4a46' }} />
@@ -178,7 +178,7 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
           </View>
         </LinearGradient>
       </View>
-      <LinearGradient colors={['#18181b', 'rgba(24,24,27,0.9)', 'rgba(24,24,27,0)']} style={{ width: strapW, height: strapH, borderBottomLeftRadius: 14, borderBottomRightRadius: 14 }} />
+      <LinearGradient colors={['#1c1c21', 'rgba(30,30,34,0)']} style={{ width: strapW, height: strapH, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, borderWidth: 1, borderTopWidth: 0, borderColor: 'rgba(255,255,255,0.05)' }} />
     </View>
   );
 }
@@ -295,8 +295,8 @@ function BreathScene({ w, h }: { w: number; h: number }) {
   const k = w / 411;
   const boxH = Math.round(268 * k);
   const gR = boxH * 0.62;
-  const gOpacity = useDerivedValue(() => 0.2 + breath.value * 0.5);
-  const gScale = useDerivedValue(() => [{ scale: 0.72 + breath.value * 0.46 }]);
+  const gOpacity = useDerivedValue(() => 0.35 + breath.value * 0.55);
+  const gScale = useDerivedValue(() => [{ scale: 0.7 + breath.value * 0.5 }]);
   /* boog boven de teller: loopt van links over de bovenkant naar rechts naarmate de seconden aflopen */
   const ar = w * 0.34;
   const acx = w / 2;
@@ -315,14 +315,14 @@ function BreathScene({ w, h }: { w: number; h: number }) {
         <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(w * 0.07), letterSpacing: 1 }}>CLARITY &amp; RELAX</Text>
       </View>
       <View style={{ position: 'absolute', top: h * 0.15, left: 0, width: w, height: boxH, alignItems: 'center', justifyContent: 'center' }}>
-        <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Group origin={vec(w / 2, boxH / 2)} transform={gScale} opacity={gOpacity}>
-            <Circle cx={w / 2} cy={boxH / 2} r={gR}>
-              <RadialGradient c={vec(w / 2, boxH / 2)} r={gR} colors={[st.glow, st.glow, '#00000000']} positions={[0, 0.14, 1]} />
+        <Canvas style={{ position: 'absolute', left: 0, top: -boxH * 0.35, width: w, height: boxH * 1.7 }} pointerEvents="none">
+          <Group origin={vec(w / 2, boxH * 0.85)} transform={gScale} opacity={gOpacity}>
+            <Circle cx={w / 2} cy={boxH * 0.85} r={w * 0.62}>
+              <RadialGradient c={vec(w / 2, boxH * 0.85)} r={w * 0.62} colors={['#9db2d6', st.glow, '#00000000']} positions={[0, 0.3, 1]} />
             </Circle>
           </Group>
         </Canvas>
-        <SessionArt size={Math.round(w * 0.98 * (st.artScale ?? 1))} art={st.art} breath={breath} glow={st.glow} boxHeight={boxH} focusY={st.focusY} rings={false} glowBoost />
+        <SessionArt size={Math.round(w * 0.98 * (st.artScale ?? 1))} art={st.art} breath={breath} glow={'#00000000'} boxHeight={boxH} focusY={st.focusY} rings={false} />
       </View>
       <Canvas style={{ position: 'absolute', left: 0, top: 0, width: w, height: h }} pointerEvents="none">
         <Path path={track} style="stroke" strokeWidth={3} color="rgba(255,255,255,0.14)" strokeCap="round" />
@@ -490,7 +490,7 @@ export default function IntroScreen() {
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */
   const insets = useSafeAreaInsets();
   const phoneH = Math.round(winH * 0.46); // groot; de onderste helft verdwijnt achter de tekstkaart (alleen de bovenste helft is zichtbaar)
-  const phoneTop = Math.round(insets.top + 58); // onder de bovenbalk (Back / stap / Skip)
+  const phoneTop = Math.round(insets.top + 50); // onder de bovenbalk (Back / stap / Skip)
   const ctaLabel = step === 0 ? 'Get started' : last ? 'Start exploring' : 'Next'; // [TEKST] concept: slotknop belooft iets (was 'Continue')
 
   return (
@@ -498,7 +498,7 @@ export default function IntroScreen() {
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
       {cur.mock ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          {cur.mock.kind === 'audio' ? null : <LinearGradient colors={[cur.mock.accent + '30', 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round(winH * 0.7) }} />}
+          {<LinearGradient colors={[cur.mock.accent + '30', 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round(winH * 0.7) }} />}
           <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={{ position: 'absolute', top: phoneTop, left: 0, right: 0, alignItems: 'center' }}>
             <PhoneMockup mock={cur.mock} height={phoneH} />
           </Animated.View>
@@ -542,7 +542,7 @@ export default function IntroScreen() {
         <View style={{ flex: 1 }} />
         {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
         <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.535) }] : undefined}>
-        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.6)', '#0a0a0a']} locations={[0, 0.55, 1]} style={{ position: 'absolute', left: 0, right: 0, top: -64, height: 64 }} /> : null}
+        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.1)', 'rgba(10,10,10,0.38)', 'rgba(10,10,10,0.74)', 'rgba(10,10,10,0.94)', '#0a0a0a']} locations={[0, 0.2, 0.45, 0.7, 0.9, 1]} style={{ position: 'absolute', left: 0, right: 0, top: -Math.round(winH * 0.125), height: Math.round(winH * 0.125) }} /> : null}
         <ScrollView
           key={step}
           style={cur.mock ? { flex: 1 } : { flexGrow: 0, flexShrink: 1 }}
