@@ -19,9 +19,11 @@ import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW, TypeScale } from '@/constants/t
 import { isReduceMotion, reveal } from '@/constants/motion';
 import { qaFlag } from '@/utils/qa-probe';
 import { setSetting } from '@/utils/settings';
+import { getBreathHistory } from '@/utils/breath-history';
+import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { AudioLines, ChevronLeft, Radio, Wind } from 'lucide-react-native';
+import { AudioLines, ChevronLeft, ChevronRight, Radio, Wind } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Image, type ImageSourcePropType, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,7 +45,7 @@ type Step = {
   /** Liggende foto: vult 55% van de schermhoogte en glijdt traag van links naar rechts (drifting → directing). */
   pan?: boolean;
   /** Telefoon-mockup met echte schermen van de app (wisselt elke paar seconden) in plaats van een foto. */
-  mock?: { screens: ImageSourcePropType[]; accent: string; kind: 'pulse' | 'breath' | 'sound' };
+  mock?: { kind: 'state' | 'breath' | 'audio'; accent: string; steps?: { src: ImageSourcePropType; ms: number; tap?: { x: number; y: number } }[] };
   Icon?: typeof Radio;
 };
 
@@ -70,7 +72,7 @@ const STEPS: Step[] = [
     body:
       'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
-    mock: { screens: [require('../../assets/intro/state1.jpg'), require('../../assets/intro/state2.jpg')], accent: '#F5A524', kind: 'pulse' }, // State Control · Boost
+    mock: { kind: 'state', accent: '#F5A524' }, // State Control · Boost: tijd instellen, dan pulseren (levend)
     Icon: Radio,
   },
   {
@@ -80,7 +82,7 @@ const STEPS: Step[] = [
     sub: 'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch.',
     body: 'Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
-    mock: { screens: [require('../../assets/intro/breath1.jpg'), require('../../assets/intro/breath2.jpg')], accent: '#FFFFFF', kind: 'breath' }, // Breathwork · Clarity & Relax
+    mock: { kind: 'breath', accent: '#FFFFFF' }, // Breathwork · Clarity & Relax: ademt (levend)
     Icon: Wind,
   },
   {
@@ -89,7 +91,17 @@ const STEPS: Step[] = [
     title: 'Learn from the minds\nthat changed how we see the world.',
     sub: 'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to.',
     body: 'So insight can become lasting personal growth.',
-    mock: { screens: [require('../../assets/intro/audio1.jpg'), require('../../assets/intro/audio2.jpg'), require('../../assets/intro/audio3.jpg')], accent: '#00A3A3', kind: 'sound' }, // vier pilaren, dan The Inner Child (Carl Jung)
+    mock: {
+      kind: 'audio',
+      accent: '#00A3A3',
+      // pilaren -> pilaar 1 -> scrollen naar The Inner Child (Carl Jung) -> aantikken -> speler
+      steps: [
+        { src: require('../../assets/intro/audio1.jpg'), ms: 3000, tap: { x: 0.249, y: 0.4217 } },
+        { src: require('../../assets/intro/audio_p1.jpg'), ms: 2200 },
+        { src: require('../../assets/intro/audio_p2.jpg'), ms: 3200, tap: { x: 0.357, y: 0.8426 } },
+        { src: require('../../assets/intro/audio3.jpg'), ms: 3600 },
+      ],
+    },
     Icon: AudioLines,
   },
   {
@@ -104,32 +116,182 @@ const STEPS: Step[] = [
   },
 ];
 
-/* Telefoon met echte schermen van de app: staat stil en wisselt zacht tussen de schermen. Het frame is bewust neutraal (geen Dynamic Island of ander
-   Apple-ontwerp) en toont uitsluitend echte schermen van de app. Erachter een duidelijke maar rustige animatie (pulsen / ademhaling / geluid);
-   alles staat stil bij "beweging verminderen". */
-function PhoneMockup({ screens, accent, height, kind }: { screens: ImageSourcePropType[]; accent: string; height: number; kind: 'pulse' | 'breath' | 'sound' }) {
+/* Telefoon met schermen van de app: staat stil. State Control en Breathwork zijn LEVENDE nabootsingen van de echte schermen (tijd instellen, dan pulseren /
+   ademen); de Audio Library toont echte schermen met een tik op The Inner Child. Het frame is bewust neutraal (geen Dynamic Island of ander Apple-ontwerp) en er
+   staat niets in dat de app niet echt doet. Alles blijft onder 1 Hz en staat stil bij "beweging verminderen". */
+function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height: number }) {
   const width = Math.round(height * (540 / 1047) + 14);
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (isReduceMotion() || screens.length < 2) return undefined;
-    const id = setInterval(() => setIdx((i) => (i + 1) % screens.length), 3400);
-    return () => clearInterval(id);
-  }, [screens.length]);
+  const w = width - 17;
+  const h = height - 17;
   return (
     <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
-      {kind === 'sound' ? <SoundBars color={accent} width={width} /> : <PulseRings color={accent} size={width} period={kind === 'breath' ? 4600 : 1700} />}
+      {mock.kind === 'audio' ? <SoundBars color={mock.accent} width={width} /> : null}
+      {mock.kind === 'state' ? <PulseRings color={mock.accent} size={width} period={1700} /> : null}
       <View style={[s.phone, { width, height }]}>
         <View style={s.phoneScreen}>
-          {screens.map((src, i) => (
-            <PhoneLayer key={i} src={src} active={idx === i} w={width - 17} h={height - 17} />
-          ))}
+          {mock.kind === 'state' ? <StateScene w={w} h={h} accent={mock.accent} /> : null}
+          {mock.kind === 'breath' ? <BreathScene w={w} h={h} /> : null}
+          {mock.kind === 'audio' && mock.steps ? <AudioScene w={w} h={h} steps={mock.steps} /> : null}
         </View>
       </View>
     </View>
   );
 }
 
-/* Pulsen: drie ringen die uit de telefoon golven (State Control: ±0,6 Hz; Breathwork: traag, als een ademhaling). Nooit sneller dan 1 Hz. */
+function useTick(ms: number) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (isReduceMotion()) return undefined;
+    const id = setInterval(() => setN((x) => x + 1), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+  return n;
+}
+const mmss = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+
+/* State Control · Boost: eerst de tijd in de cirkel instellen (05:00 -> 10:00), dan Start: de cirkel klopt (hartslag-patroon) met ringen en de tijd telt af. */
+function StateScene({ w, h, accent }: { w: number; h: number; accent: string }) {
+  const n = useTick(100);
+  const t = (n * 0.1) % 12.5;
+  const running = t >= 3.6;
+  const left = running ? 600 - Math.floor(t - 3.6) : Math.min(10, 5 + Math.floor(t / 0.6)) * 60;
+  const beat = useSharedValue(1);
+  useEffect(() => {
+    if (!running || isReduceMotion()) {
+      beat.value = withTiming(1, { duration: 200 });
+      return;
+    }
+    beat.value = withRepeat(
+      withSequence(
+        withTiming(1.07, { duration: 110 }),
+        withTiming(1, { duration: 130 }),
+        withTiming(1.05, { duration: 110 }),
+        withTiming(1, { duration: 150 }),
+        withDelay(400, withTiming(1, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+  }, [running, beat]);
+  const beatStyle = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
+  const d = Math.round(w * 0.74);
+  return (
+    <View style={{ width: w, height: h, backgroundColor: '#120d04' }}>
+      <View style={{ position: 'absolute', top: h * 0.045, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: accent }} />
+        <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.075) }}>Boost</Text>
+      </View>
+      <View style={{ position: 'absolute', top: h * 0.14, left: (w - d) / 2, width: d, height: d }}>
+        {running ? <PulseRings color={accent} size={d * 0.9} period={900} /> : null}
+        <Animated.View
+          style={[{ width: d, height: d, borderRadius: d / 2, borderWidth: 2, borderColor: accent, backgroundColor: 'rgba(245,165,36,0.2)', alignItems: 'center', justifyContent: 'center' }, beatStyle]}
+        >
+          <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(d * 0.25), letterSpacing: -1 }}>{mmss(left)}</Text>
+          {!running ? <Text style={{ color: 'rgba(245,165,36,0.9)', fontFamily: BrandFonts.medium, fontSize: Math.round(w * 0.06), marginTop: 4 }}>Recommended</Text> : null}
+        </Animated.View>
+      </View>
+      {running ? (
+        <View style={{ position: 'absolute', bottom: h * 0.07, left: 0, right: 0, alignItems: 'center', gap: 10 }}>
+          <View style={{ width: h * 0.1, height: h * 0.1, borderRadius: h * 0.05, backgroundColor: 'rgba(245,165,36,0.6)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }}>
+            <View style={{ width: 4, height: h * 0.035, backgroundColor: '#fff', borderRadius: 2 }} />
+            <View style={{ width: 4, height: h * 0.035, backgroundColor: '#fff', borderRadius: 2 }} />
+          </View>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.05), letterSpacing: 1.5 }}>END SESSION</Text>
+        </View>
+      ) : (
+        <View style={{ position: 'absolute', bottom: h * 0.07, left: w * 0.08, right: w * 0.08, height: h * 0.075, borderRadius: 999, backgroundColor: 'rgba(245,165,36,0.28)', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.075) }}>Start Boost</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* Breathwork · Clarity & Relax: de figuur ademt in en uit (4 s / 4 s) met de teller en de tekst zoals in de sessie. */
+function BreathScene({ w, h }: { w: number; h: number }) {
+  const n = useTick(100);
+  const t = (n * 0.1) % 8;
+  const inhale = t < 4;
+  const value = Math.max(0, inhale ? 4 - t : 4 - (t - 4)).toFixed(1);
+  const k = useSharedValue(0.78);
+  useEffect(() => {
+    if (isReduceMotion()) {
+      k.value = 0.95;
+      return;
+    }
+    k.value = 0.78;
+    k.value = withRepeat(
+      withSequence(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }), withTiming(0.78, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
+      -1,
+      false,
+    );
+  }, [k]);
+  const figStyle = useAnimatedStyle(() => ({ transform: [{ scale: k.value }], opacity: 0.6 + (k.value - 0.78) * 1.8 }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: 0.1 + (k.value - 0.78) * 0.9, transform: [{ scale: 0.8 + (k.value - 0.78) * 1.1 }] }));
+  const fig = Math.round(w * 0.82);
+  return (
+    <View style={{ width: w, height: h, backgroundColor: '#08080a' }}>
+      <View style={{ position: 'absolute', top: h * 0.04, left: 0, right: 0, alignItems: 'center' }}>
+        <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(w * 0.07), letterSpacing: 1 }}>CLARITY &amp; RELAX</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.medium, fontSize: Math.round(w * 0.055), marginTop: 2 }}>Equal Breathing</Text>
+      </View>
+      <View style={{ position: 'absolute', top: h * 0.12, left: (w - fig) / 2, width: fig, height: fig, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View style={[{ position: 'absolute', width: fig, height: fig, borderRadius: fig / 2, backgroundColor: 'rgba(190,200,220,0.35)' }, glowStyle]} />
+        <Animated.Image
+          source={imageSource('https://vibezcore-audio.b-cdn.net/images/pic%20calm%20relax%202.png')}
+          style={[{ width: fig * 0.9, height: fig * 0.9 }, figStyle]}
+          resizeMode="contain"
+        />
+      </View>
+      <View style={{ position: 'absolute', top: h * 0.56, left: 0, right: 0, alignItems: 'center' }}>
+        <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(w * 0.2), letterSpacing: -1 }}>{value}</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: Math.round(w * 0.04) }}>SEC</Text>
+        <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.065), letterSpacing: 0.8, marginTop: 6 }}>{inhale ? 'INHALE · NOSE' : 'EXHALE · NOSE'}</Text>
+      </View>
+      <View style={{ position: 'absolute', bottom: h * 0.06, left: 0, right: 0, alignItems: 'center', gap: 8 }}>
+        <View style={{ width: h * 0.09, height: h * 0.09, borderRadius: h * 0.045, backgroundColor: 'rgba(120,135,160,0.7)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }}>
+          <View style={{ width: 4, height: h * 0.032, backgroundColor: '#fff', borderRadius: 2 }} />
+          <View style={{ width: 4, height: h * 0.032, backgroundColor: '#fff', borderRadius: 2 }} />
+        </View>
+        <Text style={{ color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.045), letterSpacing: 1.5 }}>END SESSION</Text>
+      </View>
+    </View>
+  );
+}
+
+/* Audio Library: pilaren -> pilaar -> scrollen naar The Inner Child -> aantikken -> de sessie speelt. Echte schermen, met een tik-aanwijzer. */
+function AudioScene({ w, h, steps }: { w: number; h: number; steps: NonNullable<Step['mock']>['steps'] }) {
+  const list = steps ?? [];
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (isReduceMotion() || list.length < 2) return undefined;
+    const id = setTimeout(() => setIdx((i) => (i + 1) % list.length), list[idx].ms);
+    return () => clearTimeout(id);
+  }, [idx, list]);
+  return (
+    <View style={{ width: w, height: h }}>
+      {list.map((st, i) => (
+        <PhoneLayer key={i} src={st.src} active={idx === i} w={w} h={h} />
+      ))}
+      {list[idx]?.tap ? <TapHint key={idx} x={list[idx].tap!.x * w} y={list[idx].tap!.y * h} /> : null}
+    </View>
+  );
+}
+function TapHint({ x, y }: { x: number; y: number }) {
+  const k = useSharedValue(0);
+  useEffect(() => {
+    k.value = withDelay(900, withTiming(1, { duration: 900, easing: Easing.out(Easing.quad) }));
+  }, [k]);
+  const style = useAnimatedStyle(() => ({ opacity: k.value === 0 ? 0 : 0.85 * (1 - k.value), transform: [{ scale: 0.5 + k.value * 1.1 }] }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: 'absolute', left: x - 17, top: y - 17, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 2, borderColor: '#fff' }, style]}
+    />
+  );
+}
+
+/* Pulsen: drie ringen die uit het midden golven. Nooit sneller dan 1 Hz per ring. */
 function PulseRings({ color, size, period }: { color: string; size: number; period: number }) {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -150,7 +312,11 @@ function PulseRing({ color, size, period, delay }: { color: string; size: number
   }, [k, period, delay]);
   const style = useAnimatedStyle(() => ({ opacity: (1 - k.value) * 0.55, transform: [{ scale: 0.85 + k.value * 0.95 }] }));
   const d = Math.round(size * 1.15);
-  return <Animated.View style={[{ position: 'absolute', alignSelf: 'center', top: '50%', marginTop: -d / 2, width: d, height: d, borderRadius: d / 2, borderWidth: 2, borderColor: color }, style]} />;
+  return (
+    <Animated.View
+      style={[{ position: 'absolute', alignSelf: 'center', top: '50%', marginTop: -d / 2, width: d, height: d, borderRadius: d / 2, borderWidth: 2, borderColor: color }, style]}
+    />
+  );
 }
 
 /* Geluidsfrequentie: staafjes die op en neer gaan, vanuit het midden, achter de telefoon. */
@@ -165,18 +331,28 @@ function SoundBars({ color, width }: { color: string; width: number }) {
   );
 }
 function SoundBar({ color, i, n, max }: { color: string; i: number; n: number; max: number }) {
-  const h = useSharedValue(0.25);
-  const mid = 1 - Math.abs(i - (n - 1) / 2) / ((n - 1) / 2); // hoogste in het midden
+  const hh = useSharedValue(0.25);
+  const mid = 1 - Math.abs(i - (n - 1) / 2) / ((n - 1) / 2);
   useEffect(() => {
     if (isReduceMotion()) {
-      h.value = 0.25 + mid * 0.4;
+      hh.value = 0.25 + mid * 0.4;
       return;
     }
     const lo = 0.12 + mid * 0.1;
     const hi = 0.35 + mid * 0.65;
-    h.value = withDelay((i * 97) % 600, withRepeat(withSequence(withTiming(hi, { duration: 380 + ((i * 53) % 320), easing: Easing.inOut(Easing.quad) }), withTiming(lo, { duration: 420 + ((i * 71) % 300), easing: Easing.inOut(Easing.quad) })), -1, false));
-  }, [h, i, mid]);
-  const style = useAnimatedStyle(() => ({ height: Math.max(6, h.value * max) }));
+    hh.value = withDelay(
+      (i * 97) % 600,
+      withRepeat(
+        withSequence(
+          withTiming(hi, { duration: 380 + ((i * 53) % 320), easing: Easing.inOut(Easing.quad) }),
+          withTiming(lo, { duration: 420 + ((i * 71) % 300), easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [hh, i, mid]);
+  const style = useAnimatedStyle(() => ({ height: Math.max(6, hh.value * max) }));
   return <Animated.View style={[{ width: 6, borderRadius: 3, backgroundColor: color, opacity: 0.55 }, style]} />;
 }
 
@@ -212,6 +388,17 @@ export default function IntroScreen() {
     }
     void setSetting('appIntroSeenAt', Date.now());
     router.replace('/welcome' as never);
+  };
+  /* Laatste scherm = de keuze (operator, 25 okt 2026): wie kiest komt meteen in het tabblad waar de onboarding van dat onderdeel begint
+     (dezelfde regels als het welkomstscherm). Bij opnieuw bekijken (Settings) gaat elke keuze gewoon terug. */
+  const choose = (key: 'state' | 'breath' | 'audio') => {
+    if (replay === '1') {
+      finish();
+      return;
+    }
+    void setSetting('appIntroSeenAt', Date.now());
+    const showBreathOnboarding = mayAutoShowOnboarding('breath') && getBreathHistory().length === 0;
+    router.replace((key === 'state' ? '/bracelet' : key === 'breath' ? (showBreathOnboarding ? '/breath-welcome' : '/breath') : '/') as never);
   };
   const next = () => (last ? finish() : setStep(step + 1));
   const back = () => setStep(Math.max(0, step - 1));
@@ -251,7 +438,7 @@ export default function IntroScreen() {
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <LinearGradient colors={[cur.mock.accent + '30', 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round(winH * 0.7) }} />
           <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={{ position: 'absolute', top: phoneTop, left: 0, right: 0, alignItems: 'center' }}>
-            <PhoneMockup screens={cur.mock.screens} accent={cur.mock.accent} height={phoneH} kind={cur.mock.kind} />
+            <PhoneMockup mock={cur.mock} height={phoneH} />
           </Animated.View>
           <LinearGradient
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.75)', 'rgba(10,10,10,0.97)', '#0a0a0a']}
@@ -322,14 +509,35 @@ export default function IntroScreen() {
         </ScrollView>
 
         <View style={s.footer}>
-          <Animated.View key={step} entering={enter(4)}>
-          <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
-            <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
-              <Text style={s.ctaTxt}>{ctaLabel}</Text>
-              {step === 0 ? (<Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none"><LinearGradient colors={['#ffffff00', '#ffffff5c', '#ffffff00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} /></Animated.View>) : null}
-            </View>
-          </PressScale>
-          </Animated.View>
+          {last ? (
+            <Animated.View key="choices" entering={enter(4)} style={{ gap: 10 }}>
+              {([
+                { key: 'state', label: 'State Control', Icon: Radio },
+                { key: 'breath', label: 'Guided Breathwork', Icon: Wind },
+                { key: 'audio', label: 'Audio Library', Icon: AudioLines },
+              ] as const).map((c) => (
+                <PressScale key={c.key} onPress={() => choose(c.key)} scaleTo={0.97} style={s.choice} accessibilityRole="button" accessibilityLabel={`CTA ${c.label}`}>
+                  <VibezGlass radius={999} level="normal" style={StyleSheet.absoluteFill} />
+                  <c.Icon size={20} color="#ffffff" strokeWidth={1.6} />
+                  <Text style={s.choiceTxt}>{c.label}</Text>
+                  <ChevronRight size={19} color="rgba(255,255,255,0.85)" strokeWidth={1.6} />
+                </PressScale>
+              ))}
+            </Animated.View>
+          ) : (
+            <Animated.View key={step} entering={enter(4)}>
+              <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
+                <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
+                  <Text style={s.ctaTxt}>{ctaLabel}</Text>
+                  {step === 0 ? (
+                    <Animated.View style={[s.ctaShimmer, ctaShimmerStyle]} pointerEvents="none">
+                      <LinearGradient colors={['#ffffff00', '#ffffff5c', '#ffffff00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+                    </Animated.View>
+                  ) : null}
+                </View>
+              </PressScale>
+            </Animated.View>
+          )}
         </View>
       </SafeAreaView>
     </View>
@@ -367,5 +575,7 @@ const s = StyleSheet.create({
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, height: 52 },
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 52, paddingHorizontal: 20, borderRadius: 999, overflow: 'hidden' },
+  choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
   ctaTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
 });
