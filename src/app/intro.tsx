@@ -32,6 +32,8 @@ type Step = {
   key: string;
   eyebrow: string;
   title: string;
+  /** Subkop: de eerste, lichtere regel onder de kop. */
+  sub: string;
   body: string;
   note?: string;
   /** Achtergrondfoto (dezelfde als de intro van het tabblad). */
@@ -41,21 +43,25 @@ type Step = {
   Icon?: typeof Radio;
 };
 
-/* [OPERATOR]-teksten, letterlijk (25 okt 2026, tweede versie). Scherm 5 ("Start") sluit de uitleg af. */
+/* [OPERATOR]-teksten (25 okt 2026, tweede versie), in drie niveaus: kop (twee regels), subkop, body. Scherm 5 sluit de uitleg af.
+   De verdeling in subkop/body is van de operator voor scherm 1 en 2; bij 3, 4 en 5 is ze een voorstel (tekst zelf ongewijzigd,
+   behalve het streepje op scherm 4). */
 const STEPS: Step[] = [
   {
     key: 'promise',
     eyebrow: 'WELCOME',
-    title: 'Stop being a passenger in your own life.',
+    title: 'Stop being a passenger\nin your own life.',
+    sub: 'Take an active role in how you feel, think and respond.',
     body:
-      'Take an active role in how you feel, think and respond. VIBEZCORE brings together haptic State Control, Guided Breathwork and powerful ideas from history’s greatest minds to help you guide your state each day, find inner balance and grow over time.',
+      'VIBEZCORE brings together haptic State Control, Guided Breathwork and powerful ideas from history’s greatest minds to help you guide your state each day, find inner balance and grow over time.',
   },
   {
     key: 'state',
     eyebrow: 'STATE CONTROL',
-    title: 'Feel the pulse. Feel the shift.',
+    title: 'Feel the pulse.\nFeel the shift.',
+    sub: 'Choose the state you want to move toward.',
     body:
-      'Choose the state you want to move toward. Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
+      'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
     photo: 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20welcome%20state%20control%20app.png',
     photoRatio: 1536 / 1024,
@@ -64,9 +70,9 @@ const STEPS: Step[] = [
   {
     key: 'breath',
     eyebrow: 'GUIDED BREATHWORK',
-    title: 'Follow the cues. Let your breathing lead.',
-    body:
-      'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch. Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
+    title: 'Follow the cues.\nLet your breathing lead.',
+    sub: 'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch.',
+    body: 'Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
     photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20hero%20breathwork%20welcome%203.png',
     photoRatio: 1402 / 1122,
@@ -75,9 +81,9 @@ const STEPS: Step[] = [
   {
     key: 'audio',
     eyebrow: 'AUDIO LIBRARY',
-    title: 'Learn from the minds that changed how we see the world.',
-    body:
-      'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to—so insight can become lasting personal growth.',
+    title: 'Learn from the minds\nthat changed how we see the world.',
+    sub: 'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to.',
+    body: 'So insight can become lasting personal growth.',
     photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20welcome%20audio%20library%20app.png',
     photoRatio: 1672 / 941,
     Icon: AudioLines,
@@ -86,7 +92,8 @@ const STEPS: Step[] = [
     key: 'start',
     eyebrow: 'START',
     title: 'Your life.\nYour next move.',
-    body: 'Choose what you need right now: State Control, Guided Breathwork or the Audio Library.',
+    sub: 'Choose what you need right now.',
+    body: 'State Control, Guided Breathwork or the Audio Library.',
   },
 ];
 
@@ -167,6 +174,7 @@ export default function IntroScreen() {
             <Text style={[s.title, !Icon && s.titleBig]}>{cur.title}</Text>
           </Animated.View>
           <Animated.View entering={enter(2)}>
+            <BalancedText style={s.sub}>{cur.sub}</BalancedText>
             <BalancedText style={s.body}>{cur.body}</BalancedText>
             {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
           </Animated.View>
@@ -204,10 +212,11 @@ const s = StyleSheet.create({
   contentBottom: { justifyContent: 'flex-end' },
   iconWrap: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 8 },
   eyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
-  title: { ...TypeScale.pageHeader, textAlign: 'left', color: Brand.text },
-  titleBig: { fontSize: 32, lineHeight: 38 },
+  title: { ...TypeScale.pageHeader, fontSize: 25, lineHeight: 31, textAlign: 'left', color: Brand.text },
+  titleBig: { fontSize: 27, lineHeight: 33 },
   note: { marginTop: 14, fontFamily: BrandFonts.medium, fontSize: 13, letterSpacing: 0.2, color: 'rgba(255,255,255,0.5)' },
-  body: { ...TypeScale.pageSubhead, textAlign: 'left', color: 'rgba(255,255,255,0.7)', lineHeight: 25 },
+  sub: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17, lineHeight: 24, textAlign: 'left', color: 'rgba(255,255,255,0.92)' },
+  body: { marginTop: 10, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 21, textAlign: 'left', color: 'rgba(255,255,255,0.6)' },
   footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12 },
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, height: 52 },

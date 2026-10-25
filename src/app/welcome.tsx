@@ -383,12 +383,6 @@ export default function WelcomeScreen() {
            foto's kleding heen i.p.v. over de gezichten. */}
         <View style={{ flex: 1 }} />
 
-        {/* 25 okt 2026 (operator, scherm 5 van de uitleg): de start — kies wat je nu nodig hebt. */}
-        <View style={s.startHead}>
-          <Text style={s.startTitle}>Your life. Your next move.</Text>
-          <Text style={s.startSub}>Choose what you need right now: State Control, Guided Breathwork or the Audio Library.</Text>
-        </View>
-
         <View style={s.pillars}>
           {PILLARS.map((p, i) => (
             <PillarButton key={p.key} p={p} index={i} progress={pillarProgress} />
@@ -500,9 +494,6 @@ const s = StyleSheet.create({
      (22px Bold) was voor een kaart-context gemaakt, niet voor deze
      compacte pil — semibold + 17px oogt rustiger zonder de leesbaarheid
      op te offeren. */
-  startHead: { marginBottom: 18, paddingHorizontal: 4 },
-  startTitle: { color: '#ffffff', fontFamily: BrandFonts.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.4 },
-  startSub: { marginTop: 8, color: 'rgba(255,255,255,0.78)', fontFamily: BrandFonts.regular, fontSize: 15, lineHeight: 21 },
   pillarTitle: {
     flex: 1,
     fontFamily: BrandFonts.medium,
