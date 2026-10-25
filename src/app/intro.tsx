@@ -32,7 +32,8 @@ import { useEffect, useState } from 'react';
 import { Image, type ImageSourcePropType, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { imageSource } from '@/utils/image-source';
-import Animated, { Easing, FadeIn, interpolate, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, interpolate, useAnimatedStyle, useDerivedValue, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { Canvas, Circle, Group, Path, RadialGradient, Skia, vec } from '@shopify/react-native-skia';
 
 type Step = {
   key: string;
@@ -119,69 +120,85 @@ function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height
   const h = height - 17;
   return (
     <View style={{ width, height, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: mock.kind === 'state' ? -Math.round(width * 0.2) : 0 }] }}>
-      <View style={[s.phone, { width, height }]}>
-        <View style={s.phoneScreen}>
-          {mock.kind === 'state' ? <StateScene w={w} h={h} accent={mock.accent} /> : null}
-          {mock.kind === 'breath' ? <BreathScene w={w} h={h} /> : null}
-          {mock.kind === 'audio' && mock.steps ? <AudioScene w={w} h={h} steps={mock.steps} /> : null}
-        </View>
+      <View style={{ width, height, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 20, shadowOffset: { width: 0, height: 12 }, elevation: 12 }}>
+        {/* zijknoppen zoals op de website: actieknop + twee volumeknoppen links, aan/uit rechts */}
+        <View style={[s.phoneBtn, { left: -2.5, top: height * 0.15, height: height * 0.04 }]} />
+        <View style={[s.phoneBtn, { left: -2.5, top: height * 0.23, height: height * 0.08 }]} />
+        <View style={[s.phoneBtn, { left: -2.5, top: height * 0.33, height: height * 0.08 }]} />
+        <View style={[s.phoneBtn, { right: -2.5, top: height * 0.27, height: height * 0.13 }]} />
+        <LinearGradient colors={['#a3a299', '#4d4c46', '#2c2b28', '#74736c']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 38, padding: 4.5 }}>
+          <View style={{ flex: 1, borderRadius: 34, backgroundColor: '#000', padding: 4, overflow: 'hidden' }}>
+            <View style={s.phoneScreen}>
+              {mock.kind === 'state' ? <StateScene w={w} h={h} accent={mock.accent} /> : null}
+              {mock.kind === 'breath' ? <BreathScene w={w} h={h} /> : null}
+              {mock.kind === 'audio' && mock.steps ? <AudioScene w={w} h={h} steps={mock.steps} /> : null}
+              <PhoneStatusBar w={w} />
+            </View>
+          </View>
+        </LinearGradient>
       </View>
       {mock.kind === 'state' ? <SmartWatchMock phoneW={width} phoneH={height} /> : null}
     </View>
   );
 }
 
-/* Smartwatch bij "Feel the pulse": een generiek rechthoekig horloge (metalen behuizing, kroon, siliconen bandje; bewust geen Apple Watch-ontwerp) met dezelfde
-   pulsgolf en kloppende cirkel als de telefoon, op dezelfde slagen (alles komt uit dezelfde bron). */
+/* Smartwatch bij "Feel the pulse", naar het voorbeeld van de website: grafiet behuizing met dunne metalen rand, zwart scherm, lange zwarte bandjes die uitlopen.
+   Generiek (geen Apple Watch-ontwerp, geen kroon). Pulsgolf en kloppende cirkel op dezelfde slagen als de telefoon (zelfde bron). */
 function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) {
   const meta = getModeMeta(BraceletMode.Alpha);
   const color = breathWaveLook(meta.color).color;
   const cw = Math.round(phoneW * 0.5); // behuizing: breedte
-  const ch = Math.round(cw * 1.2); // behuizing: hoogte
-  const pad = 3.5;
+  const ch = Math.round(cw * 1.3); // behuizing: hoogte
+  const pad = 3;
   const screenW = cw - pad * 2 - 6;
   const screenH = ch - pad * 2 - 6;
-  const inner = Math.round(screenW * 0.78);
+  const inner = Math.round(screenW * 0.8);
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
-  const strapW = Math.round(cw * 0.74);
-  const strapH = Math.round(ch * 0.5);
-  const strap = (top: boolean) => (
-    <LinearGradient
-      colors={top ? ['#101114', '#26272d'] : ['#26272d', '#101114']}
-      style={{ width: strapW, height: strapH, borderTopLeftRadius: top ? 12 : 4, borderTopRightRadius: top ? 12 : 4, borderBottomLeftRadius: top ? 4 : 12, borderBottomRightRadius: top ? 4 : 12, justifyContent: top ? 'flex-start' : 'flex-end', alignItems: 'center', paddingVertical: 10, gap: 7 }}
-    >
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={{ width: strapW * 0.5, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.07)' }} />
-      ))}
-    </LinearGradient>
-  );
+  const strapW = Math.round(cw * 0.7);
+  const strapH = Math.round(ch * 0.62);
   return (
-    <View
-      pointerEvents="none"
-      style={{ position: 'absolute', left: phoneW * 0.9, top: phoneH * 0.18, width: cw + 8, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}
-    >
-      {strap(true)}
-      <View style={{ width: cw, height: ch, marginVertical: -6 }}>
-        {/* één neutrale zijknop (geen kroon, niets dat op een Apple Watch lijkt) */}
-        <View style={{ position: 'absolute', right: -3, top: ch * 0.38, width: 4, height: ch * 0.16, borderRadius: 2, backgroundColor: '#8a8e96' }} />
-        {/* metalen rand */}
-        <LinearGradient colors={['#e4e6ea', '#8c9098', '#cfd2d7', '#6b6f77']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: cw * 0.27, padding: pad }}>
-          <View style={{ flex: 1, borderRadius: cw * 0.24, backgroundColor: '#030304', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <View style={{ width: screenW, height: screenH, borderRadius: cw * 0.2, backgroundColor: '#07060b', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.9, top: phoneH * 0.02, width: cw + 8, alignItems: 'center' }}>
+      <LinearGradient colors={['rgba(24,24,27,0)', 'rgba(24,24,27,0.9)', '#18181b']} style={{ width: strapW, height: strapH, borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
+      <View style={{ width: cw, height: ch, marginVertical: -8, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
+        {/* één neutrale zijknop */}
+        <View style={{ position: 'absolute', right: -3, top: ch * 0.4, width: 4, height: ch * 0.14, borderRadius: 2, backgroundColor: '#4a4a46' }} />
+        {/* metalen rand (grafiet) */}
+        <LinearGradient colors={['#8d8c85', '#46453f', '#2a2926', '#63625c']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: cw * 0.24, padding: pad }}>
+          <View style={{ flex: 1, borderRadius: cw * 0.21, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <View style={{ width: screenW, height: screenH, borderRadius: cw * 0.18, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               <HapticPulseRings size={inner} color={color} beatSynced />
               <HeartbeatScale size={inner}>
-                <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.28), letterSpacing: -0.5 }}>{mmss(left)}</Text>
                 </View>
               </HeartbeatScale>
-              {/* glans over het glas */}
-              <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+              <LinearGradient colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
             </View>
           </View>
         </LinearGradient>
       </View>
-      {strap(false)}
+      <LinearGradient colors={['#18181b', 'rgba(24,24,27,0.9)', 'rgba(24,24,27,0)']} style={{ width: strapW, height: strapH, borderBottomLeftRadius: 14, borderBottomRightRadius: 14 }} />
+    </View>
+  );
+}
+
+/* Statusbalk bovenin de telefoon, zoals op de website: tijd links, signaal en batterij rechts. */
+function PhoneStatusBar({ w }: { w: number }) {
+  const f = Math.round(w * 0.05);
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: Math.round(w * 0.045), left: Math.round(w * 0.09), right: Math.round(w * 0.09), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: f }}>9:41</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5 }}>
+          {[0.4, 0.6, 0.8, 1].map((k, i) => (
+            <View key={i} style={{ width: 2.5, height: f * k, borderRadius: 1, backgroundColor: '#fff' }} />
+          ))}
+        </View>
+        <View style={{ width: f * 1.9, height: f * 0.9, borderRadius: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)', padding: 1 }}>
+          <View style={{ flex: 1, borderRadius: 1.5, backgroundColor: '#fff' }} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -207,14 +224,12 @@ function StateScene({ w, h }: { w: number; h: number; accent: string }) {
   const left = 18 * 60 - Math.floor(n * 0.25);
   useEffect(() => {
     if (isReduceMotion()) return undefined;
-    const { startBpm, targetBpm } = rhythmFor(BraceletMode.Alpha, 70);
+    const { targetBpm } = rhythmFor(BraceletMode.Alpha, 70);
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const t0 = Date.now();
     const beat = () => {
       if (!alive) return;
-      const elapsed = (Date.now() - t0) / 1000;
-      const bpm = startBpm + (targetBpm - startBpm) * Math.min(1, elapsed / 120);
+      const bpm = targetBpm; // meteen het eindtempo (na de vertraging), niet de eerste seconden op rusthartslag
       const cycleMs = Math.round(60000 / bpm);
       emitVisualPulse({ kind: 'lub', mode: BraceletMode.Alpha, cycleMs, atMs: Date.now() });
       setTimeout(() => {
@@ -231,11 +246,11 @@ function StateScene({ w, h }: { w: number; h: number; accent: string }) {
   const d = Math.round(w * 0.74);
   return (
     <View style={{ width: w, height: h, backgroundColor: '#0e0a14' }}>
-      <View style={{ position: 'absolute', top: h * 0.045, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+      <View style={{ position: 'absolute', top: h * 0.075, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: meta.color }} />
         <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.075) }}>{meta.name}</Text>
       </View>
-      <View style={{ position: 'absolute', top: h * 0.14, left: (w - d) / 2, width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', top: h * 0.17, left: (w - d) / 2, width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>
         <HapticPulseRings size={d} color={color} beatSynced />
         <HeartbeatScale size={d}>
           <View style={{ width: d, height: d, borderRadius: d / 2, borderWidth: 2, borderColor: color, backgroundColor: 'rgba(180,120,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
@@ -256,12 +271,14 @@ function StateScene({ w, h }: { w: number; h: number; accent: string }) {
 
 /* Breathwork · Clarity & Relax: de figuur ademt in en uit (4 s / 4 s) met de teller en de tekst zoals in de sessie. */
 function BreathScene({ w, h }: { w: number; h: number }) {
-  /* Breathwork · Clarity & Relax, met de ECHTE ademfiguur en glow van de sessie (SessionArt, zelfde instellingen als de lopende sessie), 4 s in / 4 s uit. */
+  /* Breathwork · Clarity & Relax: de echte ademfiguur van de sessie (SessionArt), met de glow er zelf achter getekend (zelfde kleur en grootte als in de sessie),
+     de boog boven de teller en de tekst zoals in de lopende sessie. 4 s in / 4 s uit. */
   const st = BREATH_STATES.clarity;
   const n = useTick(100);
   const t = (n * 0.1) % 8;
   const inhale = t < 4;
-  const value = Math.max(0, inhale ? 4 - t : 4 - (t - 4)).toFixed(1);
+  const phaseT = inhale ? t : t - 4;
+  const value = Math.max(0, 4 - phaseT).toFixed(1);
   const breath = useSharedValue(0);
   useEffect(() => {
     if (isReduceMotion()) {
@@ -277,26 +294,45 @@ function BreathScene({ w, h }: { w: number; h: number }) {
   }, [breath]);
   const k = w / 411;
   const boxH = Math.round(268 * k);
+  const gR = boxH * 0.62;
+  const gOpacity = useDerivedValue(() => 0.2 + breath.value * 0.5);
+  const gScale = useDerivedValue(() => [{ scale: 0.72 + breath.value * 0.46 }]);
+  /* boog boven de teller: loopt van links over de bovenkant naar rechts naarmate de seconden aflopen */
+  const ar = w * 0.34;
+  const acx = w / 2;
+  const acy = h * 0.74;
+  const track = Skia.Path.Make();
+  track.addArc({ x: acx - ar, y: acy - ar, width: ar * 2, height: ar * 2 }, 180, 180);
+  const prog = Skia.Path.Make();
+  const sweep = Math.max(1, 180 * (phaseT / 4));
+  prog.addArc({ x: acx - ar, y: acy - ar, width: ar * 2, height: ar * 2 }, 180, sweep);
+  const ang = ((180 + sweep) * Math.PI) / 180;
+  const dx = acx + ar * Math.cos(ang);
+  const dy = acy + ar * Math.sin(ang);
   return (
     <View style={{ width: w, height: h, backgroundColor: '#08080a' }}>
-      <View style={{ position: 'absolute', top: h * 0.04, left: 0, right: 0, alignItems: 'center' }}>
+      <View style={{ position: 'absolute', top: h * 0.075, left: 0, right: 0, alignItems: 'center' }}>
         <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(w * 0.07), letterSpacing: 1 }}>CLARITY &amp; RELAX</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.medium, fontSize: Math.round(w * 0.055), marginTop: 2 }}>Equal Breathing</Text>
       </View>
-      <View style={{ position: 'absolute', top: h * 0.13, left: 0, width: w, height: boxH, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', top: h * 0.15, left: 0, width: w, height: boxH, alignItems: 'center', justifyContent: 'center' }}>
+        <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Group origin={vec(w / 2, boxH / 2)} transform={gScale} opacity={gOpacity}>
+            <Circle cx={w / 2} cy={boxH / 2} r={gR}>
+              <RadialGradient c={vec(w / 2, boxH / 2)} r={gR} colors={[st.glow, st.glow, '#00000000']} positions={[0, 0.14, 1]} />
+            </Circle>
+          </Group>
+        </Canvas>
         <SessionArt size={Math.round(w * 0.98 * (st.artScale ?? 1))} art={st.art} breath={breath} glow={st.glow} boxHeight={boxH} focusY={st.focusY} rings={false} glowBoost />
       </View>
-      <View style={{ position: 'absolute', top: h * 0.58, left: 0, right: 0, alignItems: 'center' }}>
+      <Canvas style={{ position: 'absolute', left: 0, top: 0, width: w, height: h }} pointerEvents="none">
+        <Path path={track} style="stroke" strokeWidth={3} color="rgba(255,255,255,0.14)" strokeCap="round" />
+        <Path path={prog} style="stroke" strokeWidth={3} color="#b9c6dc" strokeCap="round" />
+        <Circle cx={dx} cy={dy} r={4.5} color="#ffffff" />
+      </Canvas>
+      <View style={{ position: 'absolute', top: acy - ar * 0.62, left: 0, right: 0, alignItems: 'center' }}>
         <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(w * 0.2), letterSpacing: -1 }}>{value}</Text>
         <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: Math.round(w * 0.04) }}>SEC</Text>
         <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.065), letterSpacing: 0.8, marginTop: 6 }}>{inhale ? 'INHALE · NOSE' : 'EXHALE · NOSE'}</Text>
-      </View>
-      <View style={{ position: 'absolute', bottom: h * 0.06, left: 0, right: 0, alignItems: 'center', gap: 8 }}>
-        <View style={{ width: h * 0.09, height: h * 0.09, borderRadius: h * 0.045, backgroundColor: 'rgba(120,135,160,0.7)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }}>
-          <View style={{ width: 4, height: h * 0.032, backgroundColor: '#fff', borderRadius: 2 }} />
-          <View style={{ width: 4, height: h * 0.032, backgroundColor: '#fff', borderRadius: 2 }} />
-        </View>
-        <Text style={{ color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.045), letterSpacing: 1.5 }}>END SESSION</Text>
       </View>
     </View>
   );
@@ -573,6 +609,7 @@ const s = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 24, gap: 18 },
   photo: { position: 'absolute', top: 0, left: 0, right: 0 },
   phone: { borderRadius: 34, backgroundColor: '#0c0c0e', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)', padding: 7, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 14 }, elevation: 12 },
+  phoneBtn: { position: 'absolute', width: 3, borderRadius: 2, backgroundColor: '#55544e' },
   phoneScreen: { flex: 1, borderRadius: 27, overflow: 'hidden', backgroundColor: '#0a0a0a' },
   topFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
   bottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '62%' },
