@@ -458,11 +458,7 @@ export default function IntroScreen() {
   /* replay=1 (Settings → Introduction): opnieuw bekijken en terug naar Settings, niet naar het welkomstscherm. */
   const { replay } = useLocalSearchParams<{ replay?: string }>();
   const finish = () => {
-    if (replay === '1') {
-      if (router.canGoBack()) router.back();
-      else router.replace('/settings' as never);
-      return;
-    }
+    /* Ook bij opnieuw bekijken (Settings): het einde is het welkomstscherm met de drie keuzes (operator, 25 okt 2026), niet terug naar Settings. */
     void setSetting('appIntroSeenAt', Date.now());
     router.replace('/welcome' as never);
   };
@@ -493,7 +489,7 @@ export default function IntroScreen() {
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */
   const insets = useSafeAreaInsets();
-  const phoneH = Math.round(winH * 0.5);
+  const phoneH = Math.round(winH * 0.31); // eindigt boven de tekst, loopt er niet onder door
   const phoneTop = Math.round(insets.top + 58); // onder de bovenbalk (Back / stap / Skip)
   const ctaLabel = step === 0 ? 'Get started' : last ? 'Start exploring' : 'Next'; // [TEKST] concept: slotknop belooft iets (was 'Continue')
 

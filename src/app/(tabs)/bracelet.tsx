@@ -84,7 +84,7 @@ import { imageSource } from '@/utils/image-source';
 /* Operator, 5 okt 2026: terug naar de eerste foto. */
 /* Operator, 8 okt 2026: nieuwe versie met ruimte boven de hoofden, zodat de
    foto tot de bovenrand kan lopen zonder het hoofd onder de statusbalk. */
-const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/pics%20app/pic%20welcome%20state%20control%20app.png';
+const BG_IMG = 'https://vibezcore-audio.b-cdn.net/images/Pic%20hero%20state%20control%20app%20.png'; // 25 okt 2026: nieuwe foto (operator)
 
 /* Ken Burns-"ademing" + gefaseerde reveal — exact dezelfde recept als de
    oude bracelet-intro (smart-bead-bracelet.tsx se `introKenBurnsStyle`/
@@ -97,7 +97,7 @@ const INTRO_ZOOM = 1;
    (1122×1402); schermvullend (cover) sneed de zijkanten weg. Nu over de
    volle breedte bovenaan, onderaan zacht uitlopend in de achtergrond —
    titel en knop staan daaronder op het donker, niet over de foto. */
-const BG_ASPECT = 1024 / 1536;
+const BG_ASPECT = 940 / 1672;
 
 /* Operator, 5 okt 2026 ("de foto moet groter, full screen"): schermvullend
    op volle hoogte. De 2:3-foto is dan breder dan het scherm; de uitsnede
