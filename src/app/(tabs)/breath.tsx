@@ -62,6 +62,7 @@ import {
 } from '@/utils/breath-entry';
 import {
   consumeTabOpenedByUser,
+  deferOnboarding,
   mayAutoShowOnboarding,
   subscribeTabOpenedByUser,
 } from '@/utils/onboarding-gate';
@@ -1095,6 +1096,23 @@ export default function BreathScreen() {
             { paddingBottom: 34 + tabInset },
           ]}
         >
+          {/* 26 okt 2026 (operator: consistentie met State Control): zolang de onboarding aan de beurt is, heeft deze pagina
+             linksboven hetzelfde "Not Now" — uitstel (deze run niet meer, volgende start nog één keer) en gewoon verder naar de modi. */}
+          {mayAutoShowOnboarding('breath') && (
+            <Tap
+              onPress={() => {
+                deferOnboarding('breath');
+                setIntro(false);
+              }}
+              hitSlop={14}
+              style={[s.notNow, { top: 10 }]} /* de pagina begint al onder de veilige zone */
+              accessibilityRole="button"
+              accessibilityLabel="Not now, look around first"
+            >
+              <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
+              <Text style={s.notNowTxt}>Not Now</Text>
+            </Tap>
+          )}
           {/* Operator, 8 september 2026: "verwijder mandala... tekst breathe
              moet verschillende groottes en onder elkaar. al de rest welcome
              en voice weg" — `SlideIntro` (WELCOME-label, de morphende
@@ -1571,6 +1589,17 @@ export default function BreathScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  notNow: {
+    position: 'absolute',
+    left: 18,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  notNowTxt: { color: 'rgba(255,255,255,0.85)', fontFamily: BrandFonts.medium, fontSize: 14, textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 6 },
   /* Operator, 6 september 2026: intro-scherm licht i.p.v. donker — de
      achtergrondfoto zelf dekt bijna alles af, maar de rand/statusbalk-zone
      erboven moet ook al licht zijn, niet even opflitsen zwart. */
