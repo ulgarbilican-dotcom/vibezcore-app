@@ -113,12 +113,19 @@ const STEPS: Step[] = [
 /* Telefoon met schermen van de app: staat stil. State Control en Breathwork zijn LEVENDE nabootsingen van de echte schermen (tijd instellen, dan pulseren /
    ademen); de Audio Library toont echte schermen met een tik op The Inner Child. Het frame is bewust neutraal (geen Dynamic Island of ander Apple-ontwerp) en er
    staat niets in dat de app niet echt doet. Alles blijft onder 1 Hz en staat stil bij "beweging verminderen". */
-function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height: number }) {
+function PhoneMockup({ mock, height: heightIn }: { mock: NonNullable<Step['mock']>; height: number }) {
+  const { width: winW } = useWindowDimensions();
+  /* Telefoon + smartwatch vormen één groep die altijd binnen de veilige zone (28 dp links en rechts) past, op elk scherm. */
+  const SAFE = 28;
+  const groupRatio = mock.kind === 'state' ? 1.7 : 1;
+  const maxW = (winW - SAFE * 2) / groupRatio;
+  const height = Math.min(heightIn, Math.round((maxW - 14) * (1047 / 540)));
   const width = Math.round(height * (540 / 1047) + 14);
+  const groupW = mock.kind === 'state' ? Math.round(width * 1.66 + 8) : width;
   const w = width - 17;
   const h = height - 17;
   return (
-    <View style={{ width, height, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: mock.kind === 'state' ? -Math.round(width * 0.31) : 0 }] }}>
+    <View style={{ width, height, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: mock.kind === 'state' ? -Math.round((groupW - width) / 2) : 0 }] }}>
       <View style={{ width, height, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 20, shadowOffset: { width: 0, height: 12 }, elevation: 12 }}>
         {/* zijknoppen zoals op de website: actieknop + twee volumeknoppen links, aan/uit rechts */}
         <View style={[s.phoneBtn, { left: -2.5, top: height * 0.15, height: height * 0.04 }]} />
@@ -151,7 +158,7 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
   const rim = Math.max(4, Math.round(cw * 0.035));
   const screenW = cw - rim * 2;
   const screenH = ch - rim * 2;
-  const inner = Math.round(screenW * 0.5);
+  const inner = Math.round(screenW * 0.42);
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
   const strapW = Math.round(cw * 0.7);
@@ -171,7 +178,7 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
     </View>
   );
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.97, top: phoneH * 0.1, width: cw + 8, alignItems: 'center' }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 1.06, top: phoneH * 0.1, width: cw + 8, alignItems: 'center' }}>
       {strap(true)}
       <View style={{ width: cw, height: ch, zIndex: 3, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
         <View style={{ position: 'absolute', right: -3.5, top: ch * 0.34, width: 4, height: ch * 0.2, borderRadius: 2, backgroundColor: '#3b3b40' }} />
