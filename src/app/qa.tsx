@@ -11,7 +11,7 @@ import { resetRestingPulse } from '@/services/resting-pulse';
 const MAP: Record<string, DevUserOverride> = { free: 'guest', guest: 'guest', premium: 'audio', audio: 'audio', bundle: 'pro', pro: 'pro', clear: null };
 
 export default function QaScreen() {
-  const { tier, fresh, stay, intro } = useLocalSearchParams<{ tier?: string; fresh?: string; stay?: string; intro?: string }>();
+  const { tier, fresh, stay, intro, did } = useLocalSearchParams<{ tier?: string; fresh?: string; stay?: string; intro?: string; did?: string }>();
   const [done, setDone] = useState(false);
   useEffect(() => {
     if (!QA_ENABLED) return;
@@ -31,6 +31,8 @@ export default function QaScreen() {
         /* De algemene uitleg blijft 'gezien' (zodat flows op het welkomstscherm starten); intro=1 zet hem terug. */
         await setSetting('appIntroSeenAt', intro === '1' ? null : Date.now());
       }
+      /* did=1: doet alsof er al een gratis sessie is afgerond (voor de zachte accountuitnodiging op Activity). */
+      if (did === '1') await setSetting('stateFreeSessionUsedAt', Date.now());
       await setDevUserOverride(v);
       if (fresh === '1') qaResetGate();
       if (stay === '1') {

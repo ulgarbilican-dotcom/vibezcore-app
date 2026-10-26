@@ -22,6 +22,7 @@ import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import { healthAppName } from '@/services/health-sync';
 import { pulseSourceLabel } from '@/services/resting-pulse';
 import ThisWeekCard from '@/components/ThisWeekCard';
+import AccountInviteCard from '@/components/AccountInviteCard';
 import { startOfWeekMonday } from '@/utils/locale';
 import { BrandDark, BrandLight, BrandFonts, TypeScale } from '@/constants/theme';
 import {
@@ -168,6 +169,7 @@ export default function ActivityScreen() {
         {/* Audit 12 okt 2026: eerst de samenvatting van de week (minuten,
             reeks, volgende sessie), dan de ingangen — zoals Apple Fitness. */}
         <TabReveal i={1}><ThisWeekCard /></TabReveal>
+        <TabReveal i={1}><AccountInviteCard /></TabReveal>
 
         {/* Operator, 29 september 2026 ("zeer belangrijke elementen en
            eigenlijk de essentie van breathwork... bovenaan onder de foto
