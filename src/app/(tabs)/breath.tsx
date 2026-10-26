@@ -54,7 +54,7 @@ import {
   type BreathState,
   type BreathStateKey,
 } from '@/data/breath-states';
-import { ensureBreathHistoryLoaded, getBreathHistory, useBreathHistory } from '@/utils/breath-history';
+import { ensureBreathHistoryLoaded, useBreathHistory } from '@/utils/breath-history';
 import { ensureSettingsLoaded, useSetting } from '@/utils/settings';
 import {
   consumeBreathIntroSkip,
@@ -795,8 +795,7 @@ export default function BreathScreen() {
     onbWantRef.current = false;
     if (
       want &&
-      mayAutoShowOnboarding('breath') &&
-      getBreathHistory().length === 0
+      mayAutoShowOnboarding('breath')
     ) {
       goToOnboarding();
       return;

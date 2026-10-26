@@ -40,7 +40,6 @@ import Svg, { Polygon } from 'react-native-svg';
 import { router } from 'expo-router';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { useEffect, useState } from 'react';
-import { getBreathHistory } from '@/utils/breath-history';
 import { mayAutoShowOnboarding } from '@/utils/onboarding-gate';
 import * as Haptics from 'expo-haptics';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -104,8 +103,7 @@ const PILLARS: Pillar[] = [
          (utils/onboarding-gate.ts) — afgerond, geskipt of twee keer "Not
          Now" → meteen de Breath-tab. Wie al ademsessies heeft, is een
          bestaande gebruiker van vóór de onboarding-vlag. */
-      const show =
-        mayAutoShowOnboarding('breath') && getBreathHistory().length === 0;
+      const show = mayAutoShowOnboarding('breath');
       /* replace (audit 16 okt 2026): het welkomstscherm is een ingang, geen
          pagina om naar terug te keren — met navigate bleef het onder de
          tabbladen liggen en bracht terug/terugvegen je erop terug. */
