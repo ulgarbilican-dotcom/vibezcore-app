@@ -118,7 +118,7 @@ function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height
   const w = width - 17;
   const h = height - 17;
   return (
-    <View style={{ width, height, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: mock.kind === 'state' ? -Math.round(width * 0.2) : 0 }] }}>
+    <View style={{ width, height, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: mock.kind === 'state' ? -Math.round(width * 0.31) : 0 }] }}>
       <View style={{ width, height, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 20, shadowOffset: { width: 0, height: 12 }, elevation: 12 }}>
         {/* zijknoppen zoals op de website: actieknop + twee volumeknoppen links, aan/uit rechts */}
         <View style={[s.phoneBtn, { left: -2.5, top: height * 0.15, height: height * 0.04 }]} />
@@ -171,7 +171,7 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
     </View>
   );
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.82, top: phoneH * 0.1, width: cw + 8, alignItems: 'center' }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.97, top: phoneH * 0.1, width: cw + 8, alignItems: 'center' }}>
       {strap(true)}
       <View style={{ width: cw, height: ch, zIndex: 3, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
         <View style={{ position: 'absolute', right: -3.5, top: ch * 0.34, width: 4, height: ch * 0.2, borderRadius: 2, backgroundColor: '#3b3b40' }} />
