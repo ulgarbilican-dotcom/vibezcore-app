@@ -794,7 +794,14 @@ export default function BreathScreen() {
   const decideOnboarding = () => {
     /* 26 okt 2026 (operator: "consistent, niet 1 met tabblad en 1 zonder"): net als State Control opent deze tab EERST op zijn eigen
        pagina met tabbalk; de onboarding start pas vanuit de hoofdknop ("Explore modes") — zie `onExploreModes`. */
+    const want = onbWantRef.current;
     onbWantRef.current = false;
+    /* Premium heeft geen beginpagina (die is voor wie nog niet geabonneerd is): daar start de onboarding — doelen en niveau — dan
+       meteen bij het eerste bezoek dat de gebruiker zelf opent. */
+    if (want && isProRef.current && mayAutoShowOnboarding('breath')) {
+      goToOnboarding();
+      return;
+    }
     setOnbGate('show');
   };
   const decideRef = useRef(decideOnboarding);

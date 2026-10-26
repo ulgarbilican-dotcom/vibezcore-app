@@ -39,6 +39,7 @@ import { AudioLines, ChevronRight, Radio, Wind, type LucideIcon } from 'lucide-r
 import Svg, { Polygon } from 'react-native-svg';
 import { router } from 'expo-router';
 import { requestScrollTo } from '@/utils/scroll-intent';
+import { markTabOpenedByUser } from '@/utils/onboarding-gate';
 import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -107,6 +108,7 @@ const PILLARS: Pillar[] = [
          tabbladen liggen en bracht terug/terugvegen je erop terug. */
       /* 26 okt 2026 (operator: consistent): ook Breathwork opent eerst op zijn eigen pagina met tabbalk (zoals State Control); de
          onboarding start vanuit de hoofdknop daar. */
+      markTabOpenedByUser('breath'); // "zelf geopend" voor de onboarding-poort (Premium heeft geen beginpagina)
       router.replace('/breath' as never);
     },
   },
