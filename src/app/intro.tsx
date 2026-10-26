@@ -61,7 +61,7 @@ const STEPS: Step[] = [
   {
     key: 'promise',
     eyebrow: 'WELCOME',
-    title: 'Stop being a passenger\nin your own life.',
+    title: 'Stop being a passenger\nin your own life',
     sub: 'Take an active role in how you feel, think and respond.',
     photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20origin%20stop%20drifting%20start%20directing.png',
     photoRatio: 819 / 1920,
@@ -72,7 +72,7 @@ const STEPS: Step[] = [
   {
     key: 'state',
     eyebrow: 'STATE CONTROL',
-    title: 'Feel the pulse.\nFeel the shift.',
+    title: 'Feel the pulse.\nFeel the shift',
     sub: 'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
     body: '', // (26 okt, operator) "Choose the state you want to move toward." weg: de tekst moet kunnen ademen en niet scrollen
     note: 'Smart bead bracelet support coming soon.',
@@ -82,7 +82,7 @@ const STEPS: Step[] = [
   {
     key: 'breath',
     eyebrow: 'GUIDED BREATHWORK',
-    title: 'Follow the cues.\nLet your breathing lead.',
+    title: 'Follow the cues.\nLet your breathing lead',
     sub: 'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch.',
     body: 'Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
     note: 'Smart bead bracelet support coming soon.',
@@ -92,7 +92,7 @@ const STEPS: Step[] = [
   {
     key: 'audio',
     eyebrow: 'AUDIO LIBRARY',
-    title: 'Learn from the minds\nthat changed how we see the world.',
+    title: 'Learn from the minds\nthat changed how we see the world',
     sub: 'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to.',
     body: 'So insight can become lasting personal growth.',
     mock: { kind: 'audio', accent: '#00A3A3', steps: [{ src: require('../../assets/intro/audio3.jpg'), ms: 1 }] }, // The Inner Child (Carl Jung) met audio & haptics
@@ -101,7 +101,7 @@ const STEPS: Step[] = [
   {
     key: 'start',
     eyebrow: 'START',
-    title: 'Your life.\nYour next move.',
+    title: 'Your life.\nYour next move',
     sub: 'Choose what you need right now.',
     body: 'State Control, Guided Breathwork or the Audio Library.',
     note: 'All in one app.', // [TEKST] concept — "alles inbegrepen": bewust niet "all included" (een gratis bezoeker krijgt per onderdeel één gratis sessie)

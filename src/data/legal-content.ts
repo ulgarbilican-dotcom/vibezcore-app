@@ -416,7 +416,7 @@ export const PRIVACY: LegalDoc = {
     { kind: 'h3', text: 'Mobile App Data' },
     {
       kind: 'p',
-      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts, anonymous play counts (which audio session was played, linked to a random identifier — not to you or your account) and (if you allow it) crash reports are transmitted to our servers or processors.',
+      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts, anonymous play counts (which audio session was played, linked to a random identifier — not to you or your account), (if you allow it) crash reports and — only when you are signed in — the Backup & Sync data described below are transmitted to our servers or processors.',
     },
     {
       kind: 'tags',
@@ -434,7 +434,7 @@ export const PRIVACY: LegalDoc = {
     },
     {
       kind: 'highlight',
-      text: 'We do not collect your IMEI, MAC address or biometric identifiers, and no health information reaches our servers — not from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting heart rate for State Control, or read it with your phone\'s camera and flash on your fingertip, the number is used only to set the pace of your rhythm and never leaves your device. Camera frames are analysed live and are never recorded, saved or uploaded. Session history, reminders, your heart rate readings and smartwatch settings stay on your device. You can remove your heart rate readings anytime in Activity → Resting Heart Rate.',
+      text: 'We do not collect your IMEI, MAC address or biometric identifiers, and no health data is read from the Smart Bead Bracelet, your phone or your smartwatch. If you enter your resting heart rate for State Control, or read it with your phone\'s camera and flash on your fingertip, the number is used to set the pace of your rhythm. Without an account it stays on your device. If you are signed in, that single number is included in your Backup & Sync data, so it follows you to a new device. It is a wellness setting, not a medical measurement. Camera frames are analysed live and are never recorded, saved or uploaded. Reminders and smartwatch settings stay on your device. You can remove your heart rate readings anytime in Profile → Resting Heart Rate.',
     },
 
     { kind: 'h3', text: 'Cookies & Local Storage' },
@@ -1181,7 +1181,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. Breathwork and State Control session history is stored entirely on your device.',
+      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. Without an account, Breathwork and State Control session history is stored entirely on your device; with an account, part of it is backed up as described under Backup & Sync.',
     },
 
     /* ── 02. What We Store ── */
@@ -1251,7 +1251,12 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Breathwork and State Control session history is stored **entirely locally** and never leaves your device.',
+      text: 'Without an account, Breathwork and State Control session history is stored **entirely locally** and never leaves your device. If you are signed in, your Breathwork history is part of your Backup & Sync data (see below).',
+    },
+    { kind: 'h3', text: 'Backup & Sync (signed-in users only)' },
+    {
+      kind: 'p',
+      text: 'When you are signed in, VIBEZCORE keeps a backup of the following in your account so it follows you to a new phone or after a reinstall: your settings and goals (including voice and haptics choices, your experience level and which introductions you have finished), your resting heart rate, your Breathwork history and your active plan. It is stored with our database provider (Supabase), is only readable by your own account, and is deleted when you delete your account. Guests are never synced — without an account everything stays on your device. Reminders, listening progress and favourites are not part of this backup.',
     },
 
     /* ── 06. Do Not Track ── */
