@@ -73,9 +73,8 @@ const STEPS: Step[] = [
     key: 'state',
     eyebrow: 'STATE CONTROL',
     title: 'Feel the pulse.\nFeel the shift.',
-    sub: 'Choose the state you want to move toward.',
-    body:
-      'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
+    sub: 'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
+    body: '', // (26 okt, operator) "Choose the state you want to move toward." weg: de tekst moet kunnen ademen en niet scrollen
     note: 'Smart bead bracelet support coming soon.',
     mock: { kind: 'state', accent: '#B478FF' }, // State Control · Calm Control: pulseert meteen en stopt niet (Boost is hier te heftig)
     Icon: Radio,
@@ -142,43 +141,65 @@ function PhoneMockup({ mock, height }: { mock: NonNullable<Step['mock']>; height
   );
 }
 
-/* Smartwatch bij "Feel the pulse", naar het voorbeeld van de website: grafiet behuizing met dunne metalen rand, zwart scherm, lange zwarte bandjes die uitlopen.
-   Generiek (geen Apple Watch-ontwerp, geen kroon). Pulsgolf en kloppende cirkel op dezelfde slagen als de telefoon (zelfde bron). */
+/* Smartwatch bij "Feel the pulse", zoals op de website: grafiet vierkant-rond behuizing met dikke donkere rand, zwart scherm met modusnaam, cirkel + tijd,
+   pauzeknop en END, één zijknop, brede donkere bandjes met gaatjes die ONDER de behuizing doorlopen en uitlopen. Generiek (geen Apple Watch-ontwerp, geen kroon). */
 function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) {
   const meta = getModeMeta(BraceletMode.Alpha);
   const color = breathWaveLook(meta.color).color;
-  const cw = Math.round(phoneW * 0.5); // behuizing: breedte
-  const ch = Math.round(cw * 1.3); // behuizing: hoogte
-  const pad = 3;
-  const screenW = cw - pad * 2 - 6;
-  const screenH = ch - pad * 2 - 6;
-  const inner = Math.round(screenW * 0.8);
+  const cw = Math.round(phoneW * 0.6);
+  const ch = Math.round(cw * 1.2);
+  const rim = Math.max(4, Math.round(cw * 0.035));
+  const screenW = cw - rim * 2;
+  const screenH = ch - rim * 2;
+  const inner = Math.round(screenW * 0.5);
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
   const strapW = Math.round(cw * 0.7);
-  const strapH = Math.round(ch * 0.4);
+  const strapH = Math.round(ch * 0.62);
+  const tuck = Math.round(ch * 0.14); // bandje loopt onder de behuizing door
+  /* bandje: loopt onder de behuizing door en loopt zacht uit naar niets (alpha-verloop, geen harde rechthoek) */
+  const strap = (top: boolean) => (
+    <View style={{ width: strapW, height: strapH, marginTop: top ? 0 : -tuck, marginBottom: top ? -tuck : 0, alignItems: 'center' }}>
+      <LinearGradient colors={top ? ['rgba(58,58,66,0)', '#3a3a42', '#3a3a42'] : ['#3a3a42', '#3a3a42', 'rgba(58,58,66,0)']} locations={[0, 0.55, 1]} style={{ flex: 1, width: '100%', borderTopLeftRadius: top ? 12 : 0, borderTopRightRadius: top ? 12 : 0, borderBottomLeftRadius: top ? 0 : 16, borderBottomRightRadius: top ? 0 : 16 }} />
+      {!top ? (
+        <View style={{ position: 'absolute', top: tuck + 16, alignItems: 'center', gap: 20 }}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#060607', opacity: 1 - i * 0.3 }} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.9, top: phoneH * 0.02, width: cw + 8, alignItems: 'center' }}>
-      <LinearGradient colors={['rgba(28,28,33,0.35)', '#1c1c21']} style={{ width: strapW, height: strapH, borderTopLeftRadius: 16, borderTopRightRadius: 16 }} />
-      <View style={{ width: cw, height: ch, marginVertical: -8, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
-        {/* één neutrale zijknop */}
-        <View style={{ position: 'absolute', right: -3, top: ch * 0.4, width: 4, height: ch * 0.14, borderRadius: 2, backgroundColor: '#4a4a46' }} />
-        {/* metalen rand (grafiet) */}
-        <LinearGradient colors={['#8d8c85', '#46453f', '#2a2926', '#63625c']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: cw * 0.24, padding: pad }}>
-          <View style={{ flex: 1, borderRadius: cw * 0.21, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <View style={{ width: screenW, height: screenH, borderRadius: cw * 0.18, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 0.82, top: phoneH * 0.1, width: cw + 8, alignItems: 'center' }}>
+      {strap(true)}
+      <View style={{ width: cw, height: ch, zIndex: 3, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
+        <View style={{ position: 'absolute', right: -3.5, top: ch * 0.34, width: 4, height: ch * 0.2, borderRadius: 2, backgroundColor: '#3b3b40' }} />
+        <LinearGradient colors={['#4b4b50', '#17171a', '#0e0e10', '#3a3a3f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: cw * 0.25, padding: rim }}>
+          <View style={{ flex: 1, borderRadius: cw * 0.22, backgroundColor: '#000', alignItems: 'center', overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', top: screenH * 0.06, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: meta.color }} />
+              <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.085) }}>{meta.name}</Text>
+            </View>
+            <View style={{ position: 'absolute', top: screenH * 0.19, width: inner, height: inner, alignItems: 'center', justifyContent: 'center' }}>
               <HapticPulseRings size={inner} color={color} beatSynced />
               <HeartbeatScale size={inner}>
                 <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.28), letterSpacing: -0.5 }}>{mmss(left)}</Text>
+                  <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.3), letterSpacing: -0.5 }}>{mmss(left)}</Text>
                 </View>
               </HeartbeatScale>
-              <LinearGradient colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+            </View>
+            <View style={{ position: 'absolute', bottom: screenH * 0.05, alignItems: 'center', gap: 2 }}>
+              <View style={{ width: screenH * 0.15, height: screenH * 0.15, borderRadius: screenH * 0.075, backgroundColor: 'rgba(180,120,255,0.3)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3 }}>
+                <View style={{ width: 2.5, height: screenH * 0.06, backgroundColor: '#fff', borderRadius: 1 }} />
+                <View style={{ width: 2.5, height: screenH * 0.06, backgroundColor: '#fff', borderRadius: 1 }} />
+              </View>
+              <Text style={{ color: 'rgba(255,255,255,0.75)', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.06), letterSpacing: 1.2 }}>END</Text>
             </View>
           </View>
         </LinearGradient>
       </View>
-      <LinearGradient colors={['#1c1c21', 'rgba(30,30,34,0)']} style={{ width: strapW, height: strapH, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, borderWidth: 1, borderTopWidth: 0, borderColor: 'rgba(255,255,255,0.05)' }} />
+      {strap(false)}
     </View>
   );
 }
@@ -258,13 +279,6 @@ function StateScene({ w, h }: { w: number; h: number; accent: string }) {
           </View>
         </HeartbeatScale>
       </View>
-      <View style={{ position: 'absolute', bottom: h * 0.07, left: 0, right: 0, alignItems: 'center', gap: 10 }}>
-        <View style={{ width: h * 0.1, height: h * 0.1, borderRadius: h * 0.05, backgroundColor: 'rgba(180,120,255,0.55)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }}>
-          <View style={{ width: 4, height: h * 0.035, backgroundColor: '#fff', borderRadius: 2 }} />
-          <View style={{ width: 4, height: h * 0.035, backgroundColor: '#fff', borderRadius: 2 }} />
-        </View>
-        <Text style={{ color: 'rgba(255,255,255,0.7)', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.05), letterSpacing: 1.5 }}>END SESSION</Text>
-      </View>
     </View>
   );
 }
@@ -300,7 +314,7 @@ function BreathScene({ w, h }: { w: number; h: number }) {
   /* boog boven de teller: loopt van links over de bovenkant naar rechts naarmate de seconden aflopen */
   const ar = w * 0.34;
   const acx = w / 2;
-  const acy = h * 0.74;
+  const acy = h * 0.6;
   const track = Skia.Path.Make();
   track.addArc({ x: acx - ar, y: acy - ar, width: ar * 2, height: ar * 2 }, 180, 180);
   const prog = Skia.Path.Make();
@@ -484,7 +498,7 @@ export default function IntroScreen() {
   const zoomTo = Math.min(3, Math.max(1, (photoH / Math.max(1, stripH)) * 0.92));
   useEffect(() => {
     zoom.value = 1;
-    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(900, withTiming(zoomTo, { duration: 8000, easing: Easing.inOut(Easing.cubic) }));
+    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(300, withTiming(zoomTo, { duration: 4500, easing: Easing.inOut(Easing.cubic) }));
   }, [cur.pan, zoomTo, zoom]);
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */
@@ -541,8 +555,8 @@ export default function IntroScreen() {
 
         <View style={{ flex: 1 }} />
         {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
-        <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.535) }] : undefined}>
-        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.1)', 'rgba(10,10,10,0.38)', 'rgba(10,10,10,0.74)', 'rgba(10,10,10,0.94)', '#0a0a0a']} locations={[0, 0.2, 0.45, 0.7, 0.9, 1]} style={{ position: 'absolute', left: 0, right: 0, top: -Math.round(winH * (cur.mock.kind === 'state' ? 0.125 : 0.04)), height: Math.round(winH * (cur.mock.kind === 'state' ? 0.125 : 0.04)) }} /> : null}
+        <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.52) }] : undefined}>
+        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.35)', 'rgba(10,10,10,0.8)', '#0a0a0a']} locations={[0, 0.07, 0.13, 0.19]} style={StyleSheet.absoluteFill} /> : null}
         <ScrollView
           key={step}
           style={cur.mock ? { flex: 1 } : { flexGrow: 0, flexShrink: 1 }}
@@ -564,7 +578,7 @@ export default function IntroScreen() {
             <BalancedText style={s.sub}>{cur.sub}</BalancedText>
           </Animated.View>
           <Animated.View entering={enter(3)}>
-            <BalancedText style={s.body}>{cur.body}</BalancedText>
+            {cur.body ? <BalancedText style={s.body}>{cur.body}</BalancedText> : null}
             {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
           </Animated.View>
         </ScrollView>
@@ -602,7 +616,7 @@ const s = StyleSheet.create({
   fill: { height: '100%', borderRadius: 0.75, backgroundColor: '#ffffff' },
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: { color: 'rgba(255,255,255,0.92)', fontFamily: BrandFonts.semibold, fontSize: 15 },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 18, gap: 12 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 12, gap: 10 },
   photo: { position: 'absolute', top: 0, left: 0, right: 0 },
   phone: { borderRadius: 34, backgroundColor: '#0c0c0e', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)', padding: 7, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 14 }, elevation: 12 },
   phoneBtn: { position: 'absolute', width: 3, borderRadius: 2, backgroundColor: '#55544e' },
@@ -617,8 +631,8 @@ const s = StyleSheet.create({
   note: { marginTop: 14, fontFamily: BrandFonts.medium, fontSize: 13, letterSpacing: 0.2, color: 'rgba(255,255,255,0.5)' },
   sub: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17, lineHeight: 24, textAlign: 'left', color: 'rgba(255,255,255,0.92)' },
   body: { marginTop: 10, fontFamily: BrandFonts.regular, fontSize: 14.5, lineHeight: 21, textAlign: 'left', color: 'rgba(255,255,255,0.6)' },
-  card: { backgroundColor: '#0a0a0a', paddingTop: 22 },
-  footer: { paddingHorizontal: 26, paddingBottom: 32, paddingTop: 12 },
+  card: { paddingTop: 30 }, // geen effen vlak: het donker loopt zacht in via het verloop (operator: geen zwarte achtergrond achter de kop)
+  footer: { paddingHorizontal: 26, paddingBottom: 22, paddingTop: 8 },
   ctaWrap: { borderRadius: 999, backgroundColor: CTA_GLASS, ...CTA_GLOW },
   cta: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, height: 52 },
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
