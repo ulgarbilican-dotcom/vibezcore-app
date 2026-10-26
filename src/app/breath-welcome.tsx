@@ -484,14 +484,17 @@ export default function BreathWelcomeScreen() {
      die keten geeft nu `?resumeStep=4` mee, en een verse (of hergebruikte)
      instantie start dan altijd meteen op die stap — geen giswerk meer over
      wat React Navigation intern wel/niet hergebruikt. */
-  const { resumeStep, replay } = useLocalSearchParams<{ resumeStep?: string; replay?: string }>();
+  const { resumeStep, replay, fromTab } = useLocalSearchParams<{ resumeStep?: string; replay?: string; fromTab?: string }>();
+  /* 26 okt 2026 (operator: consistent met State Control): komt de gebruiker van de Breathwork-pagina met tabbalk (die is zelf het welkomstscherm), dan begint de
+     onboarding bij de eerste ECHTE stap, 'STEP 1 OF 4', en niet met een tweede identiek hero-scherm. Via Instellingen blijft het volledige verloop van 5 stappen. */
+  const first = fromTab === '1' ? 1 : 0;
   /* Opnieuw bekijken via Settings (8 okt 2026): expliciete vlag i.p.v.
      router.canGoBack() — na account aanmaken ligt er ook een scherm onder
      de onboarding, en dat werd ten onrechte als "via Settings" gelezen. */
   const isReplay = replay === '1';
   const [slide, setSlide] = useState(() => {
     const n = Number(resumeStep);
-    return Number.isInteger(n) && n >= 0 && n < TOTAL ? n : 0;
+    return Number.isInteger(n) && n >= first && n < TOTAL ? n : first;
   });
   const isLast = slide === TOTAL - 1;
 
@@ -818,7 +821,7 @@ export default function BreathWelcomeScreen() {
     ],
   }));
 
-  const goBack = () => setSlide((n) => Math.max(0, n - 1));
+  const goBack = () => setSlide((n) => Math.max(first, n - 1));
   /* Echte hoogte tussen de bovenbalk en de knop (19 okt 2026, punt 24) —
      stap 3/4 schalen daarop i.p.v. op een schatting van de schermhoogte. */
   const [areaH, setAreaH] = useState(0);
@@ -921,7 +924,7 @@ export default function BreathWelcomeScreen() {
      stap — kan dat per stap?"): de tekst zegt telkens eerlijk hoeveel er
      nog rest. Stap 1 = welkom, 2-4 = keuzes, 5 = de sessie zelf. */
   const skipCopy =
-    slide === 0
+    slide === first
       ? {
           title: 'Skip your personalized session?',
           body: 'It takes just 60 seconds. Your goal and your level decide which session we build for you, so it fits from the first breath.',
@@ -1021,7 +1024,7 @@ export default function BreathWelcomeScreen() {
   const edgeBackRef = useRef<() => void>(() => {});
   edgeBackRef.current = () => {
     if (skipAsk) setSkipAsk(false);
-    else if (slide > 0) goBack();
+    else if (slide > first) goBack();
     else notNow();
   };
   const edgeSwipe = useRef(
@@ -1039,7 +1042,7 @@ export default function BreathWelcomeScreen() {
         if (isGlassSheetOpen()) return false;
         if (skipAsk) {
           setSkipAsk(false);
-        } else if (slide > 0) {
+        } else if (slide > first) {
           goBack();
         } else {
           notNow();
@@ -1367,7 +1370,7 @@ export default function BreathWelcomeScreen() {
            opnieuw beginnen. Onzichtbaar (niet enkel disabled) op stap 1:
            er is nergens naartoe terug. */}
         <View style={s.backWrap}>
-          {slide > 0 ? (
+          {slide > first ? (
             <Tap onPress={goBack} hitSlop={14} style={s.backBtn}>
               <ChevronLeft size={18} color={Brand.textDim} strokeWidth={2.2} />
               <Text style={s.skipTxt}>Back</Text>
@@ -1381,7 +1384,7 @@ export default function BreathWelcomeScreen() {
         </View>
         <View style={s.stepCenter} pointerEvents="none">
           <Text style={s.stepEyebrow}>
-            {`STEP ${slide + 1} OF ${TOTAL}`}
+            {`STEP ${slide + 1 - first} OF ${TOTAL - first}`}
           </Text>
           {/* Operator, 22 september 2026 ("stippen vervangen door lijn
              zoals bij breathwork setting protocol"): vervangt de losse
@@ -1399,7 +1402,7 @@ export default function BreathWelcomeScreen() {
              wit, geen `light`-uitzondering meer nodig, ongeacht stap. */}
           <View style={s.stepTrack} pointerEvents="none">
             <View
-              style={[s.stepFill, { width: `${((slide + 1) / TOTAL) * 100}%` }]}
+              style={[s.stepFill, { width: `${((slide + 1 - first) / (TOTAL - first)) * 100}%` }]}
             />
           </View>
         </View>

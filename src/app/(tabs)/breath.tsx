@@ -776,7 +776,7 @@ export default function BreathScreen() {
     InteractionManager.runAfterInteractions(() => {
       requestAnimationFrame(() => {
         onbJumpRef.current = false;
-        router.replace('/breath-welcome');
+        router.replace({ pathname: '/breath-welcome', params: { fromTab: '1' } } as never);
       });
     });
   };
@@ -791,15 +791,9 @@ export default function BreathScreen() {
   const onbReadyRef = useRef(false);
   const onbFocusedRef = useRef(false);
   const decideOnboarding = () => {
-    const want = onbWantRef.current;
+    /* 26 okt 2026 (operator: "consistent, niet 1 met tabblad en 1 zonder"): net als State Control opent deze tab EERST op zijn eigen
+       pagina met tabbalk; de onboarding start pas vanuit de hoofdknop ("Explore modes") — zie `onExploreModes`. */
     onbWantRef.current = false;
-    if (
-      want &&
-      mayAutoShowOnboarding('breath')
-    ) {
-      goToOnboarding();
-      return;
-    }
     setOnbGate('show');
   };
   const decideRef = useRef(decideOnboarding);
@@ -1136,7 +1130,7 @@ export default function BreathScreen() {
              exact dezelfde afmetingen/kleuren/animatie als die twee. */}
           <Animated.View style={[{ marginTop: 28, alignSelf: 'stretch' }, ctaPressStyle]}>
             <Pressable
-              onPress={() => setIntro(false)}
+              onPress={() => (mayAutoShowOnboarding('breath') ? goToOnboarding() : setIntro(false))}
               onPressIn={() => {
                 ctaScale.value = withSpring(0.96, SPRING_PRESS_IN);
               }}
@@ -1147,7 +1141,7 @@ export default function BreathScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.12)' }}
             >
               <View style={s.introCtaGlass}>
-                <Text style={s.introCtaGlassTxt}>Explore modes</Text>
+                <Text style={s.introCtaGlassTxt}>{mayAutoShowOnboarding('breath') ? 'Personalize My First Session' : 'Explore modes'}</Text>
               </View>
               <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
 <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">

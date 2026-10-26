@@ -143,6 +143,9 @@ function photoFrame(w: number, h: number, textTop: number | null) {
  *  volle foto zonder tabbalk/Premium-pill, "Not Now" linksboven, en de
  *  doorzichtige matglazen knop met lichtflits. Anders: het gewone
  *  tab-intro zoals goedgekeurd. */
+/* 26 okt 2026 (operator): de hoofdknop heeft een eigen tekst zodra de onboarding de volgende stap is (hergebruikt de goedgekeurde tekst van de Breathwork-onboarding). */
+const FIRST_SESSION_CTA = 'Personalize My First Session';
+
 function StateControlIntro({
   onDone,
   onboarding = false,
@@ -267,7 +270,7 @@ function StateControlIntro({
         <TabReveal i={2} style={{ marginTop: 28, alignSelf: 'stretch' }}>
         <Animated.View style={ctaPressStyle}>
           <QaPressable
-            qaLabel="CTA Explore State Control"
+            qaLabel={`CTA ${onboarding ? FIRST_SESSION_CTA : 'Explore State Control'}`}
             onPress={() => {
               hapticPress();
               onDone();
@@ -284,7 +287,7 @@ function StateControlIntro({
             {/* 22 okt 2026 (operator): altijd het doorschijnende glas met witte lichtbron — ook voor wie de
                 onboarding al kent (was een effen witte knop). Geen blur/tint: die tekende grijs of verdween. */}
             <View style={s.introCtaGlass}>
-              <Text style={s.introCtaGlassTxt}>Explore State Control</Text>
+              <Text style={s.introCtaGlassTxt}>{onboarding ? FIRST_SESSION_CTA : 'Explore State Control'}</Text>
             </View>
             <View style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
 <Animated.View style={[s.ctaShimmer, shimmerStyle]} pointerEvents="none">
