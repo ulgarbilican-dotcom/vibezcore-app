@@ -658,12 +658,13 @@ function MembershipGroup({ onRestore, restoring }: { onRestore: () => void; rest
 
 /** "Your rhythm" (operator, 7 okt 2026): de rusthartslag waarop elke State
  *  Control-sessie start — bekijken en wijzigen. */
-function RhythmGroup() {
+/* 26 okt 2026: met Backup & Sync reist de rusthartslag mee met het account — de voetnoot moet eerlijk zijn voor wie is ingelogd. */
+function RhythmGroup({ signedIn = false }: { signedIn?: boolean }) {
   const pulse = useRestingPulse();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Group title="State Control" footer="Stays on this device. Not a medical device.">
+      <Group title="State Control" footer={signedIn ? "Saved to your account so it follows you to new devices. Not a medical device." : "Stays on this device. Not a medical device."}>
         <Row
           icon={HeartPulse}
           title="Resting Heart Rate"
@@ -1558,7 +1559,7 @@ export default function AccountScreen() {
           <TabReveal i={1}><ProfileHeader email={email} /></TabReveal>
           <TabReveal i={2}><MembershipGroup onRestore={() => void onRestorePurchases()} restoring={restoring} /></TabReveal>
           <TabReveal i={3}><ProductsGroup /></TabReveal>
-          <TabReveal i={4}><RhythmGroup /></TabReveal>
+          <TabReveal i={4}><RhythmGroup signedIn /></TabReveal>
           <TabReveal i={5}><Group title="Account">
             {/* Volledig adres onder de titel i.p.v. afgekapt rechts (operator 19 okt 2026). */}
             <Row icon={Mail} title="Email" subtitle={email} />

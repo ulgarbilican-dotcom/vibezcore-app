@@ -325,7 +325,7 @@ export default function BreathQuizScreen() {
                 voorwaardenpagina: dit is het moment waarop iemand het zich
                 afvraagt. Het antwoord is: nergens heen. */}
             <BalancedText style={s.privacy}>
-              Your answers stay on this device. No account, no upload.
+              Your answers stay on this device. If you sign in, they follow your account.
             </BalancedText>
             </Reveal>
             {MOMENTS.map((m, mi) => {

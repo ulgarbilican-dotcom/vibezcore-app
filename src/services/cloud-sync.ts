@@ -30,6 +30,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { SUPABASE_KEY, SUPABASE_URL } from '@/constants/supabase';
+import { QA_ENABLED } from '@/utils/qa';
 import { fetchWithTimeout, getToken } from '@/services/auth';
 import {
   SYNCED_SETTING_KEYS,
@@ -225,12 +226,27 @@ let lastForegroundAt = 0;
 
 export type SyncResult = 'ok' | 'skipped' | 'offline-or-no-table';
 
+/** Alleen in een testbuild: één regel per ronde in logcat, zodat de synchronisatie meetbaar is. */
+function qaLog(info: Record<string, unknown>): void {
+  if (QA_ENABLED) console.log(`[QA-SYNC] ${JSON.stringify(info)}`);
+}
+
 async function runOnce(force: boolean): Promise<SyncResult> {
-  if (tableMissing) return 'skipped';
+  if (tableMissing) {
+    qaLog({ result: 'skipped', why: 'table-missing' });
+    return 'skipped';
+  }
   const bucket = await resolveActiveBucket();
-  if (!bucket.startsWith('u-')) return 'skipped'; // gast of testbuild-override: blijft lokaal
+  if (!bucket.startsWith('u-')) {
+    qaLog({ result: 'skipped', why: 'not-a-real-user', bucket: bucket.slice(0, 6) });
+    return 'skipped'; // gast of testbuild-override: blijft lokaal
+  }
   const token = await getToken();
-  if (!token) return 'skipped';
+  if (!token) {
+    qaLog({ result: 'skipped', why: 'no-token' });
+    return 'skipped';
+  }
+  const actions: Record<string, string> = {};
 
   const meta = await loadMeta();
   const user = (meta.users[bucket] ??= { domains: {} });
@@ -254,12 +270,14 @@ async function runOnce(force: boolean): Promise<SyncResult> {
   }
   if (!force && !anyChanged && Date.now() - (user.checkedAt ?? 0) < CHECK_EVERY_MS) {
     await saveMeta(meta);
+    qaLog({ result: 'skipped', why: 'nothing-changed' });
     return 'skipped';
   }
 
   const rows = await fetchRows(token);
   if (!rows) {
     await saveMeta(meta);
+    qaLog({ result: 'offline-or-no-table', tableMissing });
     return 'offline-or-no-table';
   }
   const byKey = new Map(rows.map((r) => [r.key, r]));
@@ -272,6 +290,7 @@ async function runOnce(force: boolean): Promise<SyncResult> {
     const remote = row && h.valid(row.value) ? { value: row.value, updated_at: row.updated_at } : null;
     if (row && !remote) continue; // onbekende vorm op de server: nooit blind overschrijven
     const action = decide(dm, local.hash, hashValue(h.empty), remote);
+    actions[d] = `${action.type}${row ? '' : '(no-row)'}`;
 
     if (action.type === 'push') {
       const at = await upsertRow(token, d, local.value);
@@ -289,6 +308,7 @@ async function runOnce(force: boolean): Promise<SyncResult> {
   }
   user.checkedAt = Date.now();
   await saveMeta(meta);
+  qaLog({ result: 'ok', rows: rows.length, actions });
   return 'ok';
 }
 
