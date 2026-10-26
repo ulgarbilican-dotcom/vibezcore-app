@@ -188,7 +188,7 @@ function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) 
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: meta.color }} />
               <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.085) }}>{meta.name}</Text>
             </View>
-            <View style={{ position: 'absolute', top: screenH * 0.19, width: inner, height: inner, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ position: 'absolute', top: screenH * 0.27, width: inner, height: inner, alignItems: 'center', justifyContent: 'center' }}>
               <HapticPulseRings size={inner} color={color} beatSynced />
               <HeartbeatScale size={inner}>
                 <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
@@ -321,7 +321,7 @@ function BreathScene({ w, h }: { w: number; h: number }) {
   /* boog boven de teller: loopt van links over de bovenkant naar rechts naarmate de seconden aflopen */
   const ar = w * 0.34;
   const acx = w / 2;
-  const acy = h * 0.6;
+  const acy = h * 0.71;
   const track = Skia.Path.Make();
   track.addArc({ x: acx - ar, y: acy - ar, width: ar * 2, height: ar * 2 }, 180, 180);
   const prog = Skia.Path.Make();
@@ -353,7 +353,7 @@ function BreathScene({ w, h }: { w: number; h: number }) {
       <View style={{ position: 'absolute', top: acy - ar * 0.62, left: 0, right: 0, alignItems: 'center' }}>
         <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(w * 0.2), letterSpacing: -1 }}>{value}</Text>
         <Text style={{ color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.medium, fontSize: Math.round(w * 0.04) }}>SEC</Text>
-        <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.065), letterSpacing: 0.8, marginTop: 6 }}>{inhale ? 'INHALE · NOSE' : 'EXHALE · NOSE'}</Text>
+        
       </View>
     </View>
   );
