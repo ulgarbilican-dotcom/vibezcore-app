@@ -317,6 +317,8 @@ const defaults: Settings = {
   instantDurationBias: 0,
 };
 
+/** Voor Backup & Sync (services/cloud-sync.ts): de standaardwaarden, om "niets gewijzigd" te herkennen. */
+export const SETTING_DEFAULTS: Readonly<Settings> = defaults;
 let state: Settings = { ...defaults };
 let initialized = false;
 let loadPromise: Promise<void> | null = null;

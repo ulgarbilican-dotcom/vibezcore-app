@@ -189,6 +189,12 @@ export async function clearActivePlan(): Promise<void> {
   await persist();
 }
 
+/** Backup & Sync (services/cloud-sync.ts): het actieve plan, nadat het zeker ingelezen is. */
+export async function getActivePlanLoaded(): Promise<ActivePlan | null> {
+  await load();
+  return state;
+}
+
 /** Synchrone lezing — gebruik na loadOnce()/binnen een hook. */
 export function getActivePlan(): ActivePlan | null {
   return state;

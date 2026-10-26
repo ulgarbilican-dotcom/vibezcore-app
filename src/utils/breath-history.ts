@@ -173,6 +173,21 @@ export function ensureBreathHistoryLoaded(): Promise<void> {
   return load();
 }
 
+/** Backup & Sync (services/cloud-sync.ts): de volledige historiek van deze gebruiker. */
+export async function getBreathSyncSnapshot(): Promise<{ entries: BreathHistoryEntry[]; totals: BreathTotals }> {
+  await load();
+  return { entries: state, totals: { ...totals } };
+}
+
+/** Backup & Sync: vervang de lokale historiek door de samengevoegde versie. */
+export async function applyBreathSync(p: { entries: BreathHistoryEntry[]; totals: BreathTotals }): Promise<void> {
+  await load();
+  state = [...p.entries].sort((a, b) => b.ts - a.ts).slice(0, MAX_ENTRIES);
+  totals = { ...p.totals };
+  notify();
+  await persist();
+}
+
 /** Opnieuw inlezen na in- of uitloggen. De emmer verandert dan, en zonder
  *  dit blijft de vorige gebruiker in beeld tot de app herstart. */
 export async function reloadBreathHistory(): Promise<void> {

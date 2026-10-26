@@ -114,11 +114,15 @@ if (Platform.OS === 'android') {
   });
 }
 import { bootDecided, markBootDecided } from '@/utils/boot';
+import { startCloudSync } from '@/services/cloud-sync';
 import { launchedForHealthRationale, onHealthRationale } from '../../modules/state-haptics';
 import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
 import { AccessibilityInfo, AppState, Image, Platform, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/* Backup & Sync (26 okt 2026): ingelogde gebruikers houden hun gegevens op elk toestel; gasten blijven lokaal. Stil, nooit blokkerend. */
+startCloudSync();
 
 /* Iter 9dq v100 (2026-06-04): bracelet-mode foto-prefetch.
    Operator-feedback: "audio pro de bracelet korte pagina laadt soms

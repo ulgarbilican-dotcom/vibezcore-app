@@ -11,6 +11,8 @@ const sessions = { breathHost: null as unknown, braceletActive: false };
 
 jest.mock('@/services/breath-session-host', () => ({
   getBreathHost: () => (globalThis as any).__vzSessions.breathHost,
+  /* Sinds 22 okt 2026 telt een gepauzeerde sessie niet als lopend (onboarding-gate.ts). */
+  getRunningBreathStatus: () => ((globalThis as any).__vzSessions.breathHost ? { paused: false } : null),
 }));
 jest.mock('@/services/bracelet-session-state', () => ({
   getBraceletSessionSnapshot: () => ({ active: (globalThis as any).__vzSessions.braceletActive }),

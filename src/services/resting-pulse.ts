@@ -33,6 +33,16 @@ const SESSION_LOG_KEY = 'vz_session_pulse_log_v1';
 const SESSION_LOG_MAX = 50;
 let sessionLog: { bpm: number; at: number }[] = [];
 
+/** Backup & Sync (services/cloud-sync.ts): de bewaarde vorm van de rusthartslag. */
+export type RestingSyncStored = Stored;
+export async function getRestingSyncSnapshot(): Promise<RestingSyncStored> {
+  await loadRestingPulse();
+  return stored;
+}
+export function applyRestingSync(s: RestingSyncStored): void {
+  commit(s);
+}
+
 export type PulseSource = 'measured' | 'manual' | 'average' | 'health';
 
 /** `src: 'health'` = rusthartslag van je horloge/ring via Apple Health of
