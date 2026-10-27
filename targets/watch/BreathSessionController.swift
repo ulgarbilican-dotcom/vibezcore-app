@@ -215,11 +215,16 @@ final class BreathSessionController: NSObject, ObservableObject {
   private func playHaptics(for key: String, secs: Int) {
     tickTimer?.invalidate()
     let s = WatchSettings.shared
-    if key.hasPrefix("inhale") {
-      s.play(.inhale)
-      /* zolang je inademt: rustige tikken, de laatste ruim vóór de volgende fase */
+    /* 27 okt 2026 (operator, TestFlight: "de haptics bij inhale, exhale en hold lijken niet logisch opgebouwd; zonder kijken weet ik niet wat ik moet doen",
+       "bij uitademen amper iets, bij inademen niets"): drie texturen die je op je pols kunt onderscheiden, binnen wat watchOS toestaat
+       (geen Core Haptics, tikken minstens 0,5 s uit elkaar):
+         inademen   = DICHTE tikken, elke 0,5 s, zolang je inademt (het "opbouwen")
+         uitademen  = TRAGE tikken, elke 1,2 s, zolang je uitademt (het "wegstromen")
+         vasthouden = één tik bij de start, dan STILTE (je houdt stil)
+       Elke fase begint met haar eigen marker (.directionUp / .directionDown / .start). De toon die Apple bij die types meespeelt valt weg als het
+       horloge op stille modus staat — de trilling blijft dan volledig. De tikken ertussen zijn altijd het stille .click. */
+    func repeating(every interval: TimeInterval) {
       var elapsed: TimeInterval = 0
-      let interval: TimeInterval = 0.7
       let t = Timer(timeInterval: interval, repeats: true) { timer in
         elapsed += interval
         guard elapsed < TimeInterval(secs) - 0.6 else {
@@ -231,15 +236,13 @@ final class BreathSessionController: NSObject, ObservableObject {
       t.tolerance = 0
       RunLoop.main.add(t, forMode: .common)
       tickTimer = t
+    }
+    if key.hasPrefix("inhale") {
+      s.play(.inhale)
+      repeating(every: 0.5)
     } else if key.hasPrefix("exhale") {
       s.play(.exhale)
-      if s.strength == "soft" {
-        /* stil en zwak: uitademen = dubbele tik, ruim uit elkaar */
-        let t = Timer(timeInterval: 0.5, repeats: false) { _ in s.play(.tick) }
-        t.tolerance = 0
-        RunLoop.main.add(t, forMode: .common)
-        tickTimer = t
-      }
+      repeating(every: 1.2)
     } else {
       s.play(.hold)
     }

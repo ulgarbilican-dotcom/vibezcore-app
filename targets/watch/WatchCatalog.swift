@@ -223,7 +223,8 @@ final class WatchSettings: ObservableObject {
   private let key = "vz_watch_strength_v1"
 
   init() {
-    strength = UserDefaults.standard.string(forKey: key) ?? "medium"
+    /* 27 okt 2026 (operator: "altijd op max beginnen"): standaard het sterkste niveau. */
+    strength = UserDefaults.standard.string(forKey: key) ?? "strong"
   }
 
   func adoptFromPhone(_ s: String) {

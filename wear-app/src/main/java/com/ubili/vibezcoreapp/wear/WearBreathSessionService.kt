@@ -294,7 +294,8 @@ class WearBreathSessionService : Service() {
     }
     /* 13 okt 2026 (operator: "zacht blijft te hard"): met de gekozen kracht
        i.p.v. altijd de standaardkracht van het horloge. */
-    val onAmp = if (amp > 0 && ampControl) amp else VibrationEffect.DEFAULT_AMPLITUDE
+    /* 27 okt 2026 (operator: "altijd op max beginnen"): zonder gekozen kracht van de telefoon het MAXIMUM (255), niet de standaardkracht. */
+    val onAmp = if (ampControl) (if (amp > 0) amp else 255) else VibrationEffect.DEFAULT_AMPLITUDE
     val pieces = ArrayList<Seg>()
     val curMs = phases[idx].secs * 1000L
     pieces.add(

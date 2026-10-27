@@ -14,10 +14,10 @@ Gemeld door de operator na TestFlight (iPhone + Apple Watch / Galaxy Watch). Sta
 9. 🔎 (stil bij stilstand-schakelaar iPhone is bewust; eerst controleren) Geen ping te horen als het vinkje komt (bevestigingsmoment).
 
 ## Smartwatch
-10. ☐ De ping bij het horloge is storend (kan het anders?).
-11. ☐ Trillingen op het horloge moeten maximaal kunnen zijn, en moeten altijd op max beginnen — ook op Android.
+10. 🔎 (komt door Apple's toon bij de krachtige haptiek-types; alleen .click is stil maar zwak; stille modus van het horloge haalt de toon weg) De ping bij het horloge is storend (kan het anders?).
+11. 🛠 (gecodeerd; telefoon-standaard Strong, Wear OS zonder gekozen kracht = 255, Apple Watch standaard strong; wacht op builds) Trillingen op het horloge moeten maximaal kunnen zijn, en moeten altijd op max beginnen — ook op Android.
 12. ☐ Breathwork-animatie wekt niet goed op op het horloge: eerste keer geen boog, daarna wel.
-13. ☐ Haptics bij inhale / exhale / hold zijn niet logisch opgebouwd: zonder kijken kan de gebruiker niet voelen wat hij moet doen.
-14. ☐ Tijdens een actieve sessie (bv. Boost) bijna geen haptics op het horloge; alleen heel licht bij uitademen, niets bij inademen, wel steeds een ping.
+13. 🛠 (Apple Watch: dichte tikken in / trage tikken uit / stilte bij hold; wacht op iOS-build + voelen) Haptics bij inhale / exhale / hold zijn niet logisch opgebouwd: zonder kijken kan de gebruiker niet voelen wat hij moet doen.
+14. 🛠 (zelfde als 13; de toon bij .directionUp/Down/.start verdwijnt op stille modus van het horloge) Tijdens een actieve sessie (bv. Boost) bijna geen haptics op het horloge; alleen heel licht bij uitademen, niets bij inademen, wel steeds een ping.
 15. ☐ De gratis State Control-sessie op het horloge (apart spoor, zie WERKSTATUS).
 16. ☐ Op de iPhone-sessiepagina een hint tonen als de Apple Watch gekoppeld is maar niet bereikbaar: "Open VIBEZCORE on your watch to feel it on your wrist" (een iPhone-app kan een Watch-app niet zelf openen; Android kan dat wel via bringSessionToFront). Watch sluit bij openen aan op de juiste plek in het ritme.

@@ -39,14 +39,16 @@ export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1
 export const STATE_MS_FACTOR: Record<HapticStrength, number> = { ...MS_FACTOR, strong: 1.8 };
 export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR, strong: 3 };
 
-let strength: HapticStrength = 'medium';
+/* 27 okt 2026 (operator: "het moet altijd op MAX beginnen"): de standaard is het maximum (Strong); wie bewust Medium koos, houdt die keuze
+   (wordt voortaan opgeslagen, want Medium is niet meer de standaard). */
+let strength: HapticStrength = 'strong';
 const listeners = new Set<(v: HapticStrength) => void>();
 
 void AsyncStorage.getItem(KEY)
   .then((v) => {
     /* 22 okt 2026 (operator: "bij Soft voel ik niets"): Soft bestaat niet meer; een oude opgeslagen
        'soft' wordt Medium. */
-    if (v === 'strong' && v !== strength) {
+    if (v === 'medium' && v !== strength) {
       strength = v;
       listeners.forEach((l) => l(v));
     }
