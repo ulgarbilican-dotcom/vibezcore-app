@@ -15,6 +15,7 @@ export default function PremiumNote({
   preview,
   context = 'breathwork',
   interactive = true,
+  showPill = true,
   children,
 }: {
   style: StyleProp<TextStyle>;
@@ -23,6 +24,9 @@ export default function PremiumNote({
   context?: 'breathwork' | 'state-control' | 'audio';
   /** false = enkel tonen (bv. in een blad dat zelf al een koop-link heeft). */
   interactive?: boolean;
+  /** 27 okt 2026 (operator: "bovenaan een Premium-pil en onderaan nog een"): staat de Premium-pil al bovenaan de pagina, dan is dit gewone tikbare tekst
+   *  (het woord Premium vet), zonder tweede pil. */
+  showPill?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -47,6 +51,22 @@ export default function PremiumNote({
     flat as Record<string, unknown>;
   const rowStyle = { margin, marginTop, marginBottom, marginVertical, marginHorizontal, alignSelf, minHeight, paddingHorizontal, paddingVertical, padding } as object;
   void lineHeight;
+  if (!showPill) {
+    const plain = (
+      <Text style={[textStyle as TextStyle, rowStyle as TextStyle, { textAlign: 'center' }]}>
+        {m[1]} <Text style={{ fontFamily: BrandFonts.semibold, color: Brand.text }}>Premium</Text>
+      </Text>
+    );
+    if (!interactive) return plain;
+    return (
+      <>
+        <Tap onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="See Premium plans">
+          {plain}
+        </Tap>
+        <PremiumPaywallModal visible={open} onClose={() => setOpen(false)} context={context} />
+      </>
+    );
+  }
   const row = (
     <View style={[s.row, rowStyle]}>
       <Text style={[textStyle as TextStyle, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>

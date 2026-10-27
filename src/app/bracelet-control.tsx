@@ -4698,7 +4698,7 @@ function IdleScreen({
             {trialRunning && condensedMinutes !== null ? (
               <Text style={s.trialInfoTxt}>{'Sped up for the preview.\nA full session slows down gradually.'}</Text>
             ) : !trialRunning ? (
-              <PremiumNote style={s.trialInfoTxt} context="state-control" preview>
+              <PremiumNote style={s.trialInfoTxt} context="state-control" preview showPill={false}>
                 {FREE_COPY.previewLine}
               </PremiumNote>
             ) : null}
