@@ -21,9 +21,20 @@ import org.json.JSONObject
 class StateControlActivity : androidx.activity.ComponentActivity() {
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
+  /* 27 okt 2026: net als de lijst en het startscherm — komt de catalogus van de telefoon binnen terwijl dit scherm open staat
+     (bv. de ene gratis sessie is net vrijgegeven), dan toont het meteen "Start" i.p.v. te blijven staan op "Preview 30 s". */
+  private val catalogListener: () -> Unit = { runOnUiThread { render() } }
+
   override fun onResume() {
     super.onResume()
+    CatalogStore.addListener(catalogListener)
+    CatalogStore.refresh(this)
     render()
+  }
+
+  override fun onPause() {
+    CatalogStore.removeListener(catalogListener)
+    super.onPause()
   }
 
   private fun render() {
