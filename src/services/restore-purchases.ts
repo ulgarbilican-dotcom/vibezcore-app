@@ -29,6 +29,7 @@
         zonder backend round-trip te wachten.
    ─────────────────────────────────────────────────────────────────────── */
 
+import { Platform } from 'react-native';
 import { getCachedSubscription, refreshSubscription } from '@/hooks/useSubscription';
 import { getAuthUserIdFromToken, getToken, linkRevenueCatUser, markGuestPurchase } from './auth';
 import { getIAP } from './iap';
@@ -60,8 +61,12 @@ export function silentRestoreAfterLogin(): Promise<boolean> {
         }
       }
       try {
-        const purchases = await iap.restorePurchases();
-        restored = Array.isArray(purchases) && purchases.length > 0;
+        /* iOS: `restorePurchases` kan een Apple-ID-venster (wachtwoord) tonen — dat hoort niet onverwacht na het inloggen (Apple-review,
+           27 okt 2026). De kwitantie koppelt zich via RevenueCat zelf; de vraag "Already subscribed?" en de knop Restore Purchases blijven. */
+        if (Platform.OS !== 'ios') {
+          const purchases = await iap.restorePurchases();
+          restored = Array.isArray(purchases) && purchases.length > 0;
+        }
       } catch {
         /* swallow — 'Nothing to restore' throwt niet meer sinds v227,
            andere errors zijn niet fataal voor login flow */

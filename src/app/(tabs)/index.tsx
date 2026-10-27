@@ -1864,7 +1864,7 @@ function AudioScreen({
         {/* Operator, 4 okt 2026 (smoothness-audit): deze 4 segmenten
            gebruikten kale `Pressable`s zonder tik-animatie/haptic — nu
            `CardBounce`, zelfde patroon als de rest van dit bestand. */}
-        <TabReveal i={1}><View style={s.libQuickLinksBar}>
+        <TabReveal i={1}><View style={[s.libQuickLinksBar, !hasSub && { marginBottom: 12 }]}>
           <CardBounce
             style={s.libQuickLinkSegment}
             onPress={() => navigateAway(() => router.push('/history'))}
@@ -3772,7 +3772,8 @@ const s = StyleSheet.create({
     marginTop: 28,
     marginBottom: 14,
   },
-  featureWrap: { paddingHorizontal: PILLAR_SIDE_INSET, marginTop: 20 },
+  /* 27 okt 2026 (operator: kaart dichter bij de balk Your Journey): de ruimte tussen balk en gratis-kaart is nu 12 (balk-marge voor gasten 12, kaart zelf 0). */
+  featureWrap: { paddingHorizontal: PILLAR_SIDE_INSET, marginTop: 0 },
   featureCard: {
     paddingVertical: 16,
     paddingHorizontal: 16,
