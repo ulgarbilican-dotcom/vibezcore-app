@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 13 okt 2026: achtergrond van het adaptieve horloge-icoon — dezelfde
-     zwarte glas-look als ic_launcher_vz.png (lichter boven, dieper onder). 14 okt 2026: boven iets lichter zodat
-     de cirkel niet wegvalt tegen de donkere app-lijst. Vervolg (operator:
-     "de cirkel moet even groot als de andere"): gemeten even groot (104 px,
-     adaptief icoon = standaard), maar de donkere rand viel weg → grafiet. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient
-        android:angle="270"
-        android:startColor="#5A5A5E"
-        android:centerColor="#38383B"
-        android:endColor="#1E1E20" />
-</shape>
+<!-- 27 okt 2026 (operator, keuze A uit de mockup): achtergrond van het adaptieve horloge-icoon volledig ZWART, met een
+     dunne lichte rand (wit, ±22%) rond de cirkel — zo valt de cirkel niet weg tegen het zwarte horlogescherm, zoals bij X.
+     Eerder: grafiet-verloop (14 okt: "de cirkel moet even groot zijn als de andere"). De cirkel zelf snijdt Wear OS uit
+     (adaptief icoon 72 dp, zichtbaar 66 dp); de ring ligt dus op de rand van het zichtbare vlak. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#000000" />
+        </shape>
+    </item>
+    <item
+        android:left="3dp"
+        android:top="3dp"
+        android:right="3dp"
+        android:bottom="3dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="1.2dp"
+                android:color="#38FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

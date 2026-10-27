@@ -79,8 +79,11 @@ object CatalogStore {
     null
   }
 
-  /** Haal de bewaarde catalogus opnieuw op (bv. bij het openen van de app). */
+  /** Haal de bewaarde catalogus opnieuw op (bv. bij het openen van de app).
+   *  Twee wegen, zodat het nooit van één kanaal afhangt: het bewaarde data-item én een rechtstreekse vraag aan de telefoon
+   *  (die antwoordt met een bericht, zie BreathListenerService). */
   fun refresh(context: Context) {
+    PhoneLink.requestCatalog(context)
     try {
       Wearable.getDataClient(context.applicationContext)
         .getDataItems(Uri.parse("wear://*$PATH_CATALOG"))
@@ -245,8 +248,21 @@ object CatalogStore {
   /** State Control-toestanden uit de catalogus (13 okt 2026; leeg bij een
    *  oudere telefoon-app). */
   fun state(context: Context): List<JSONObject> {
-    val arr = load(context)?.optJSONArray("state") ?: return emptyList()
-    return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }
+    val cat = load(context) ?: return emptyList()
+    val arr = cat.optJSONArray("state") ?: return emptyList()
+    /* 27 okt 2026: net als bij Breathwork — de ene gratis volledige State Control-sessie geldt ook op de pols; na die
+       sessie weer op slot (voorproef van 30 s), ook zonder telefoon in de buurt. */
+    val freeUsedHere = cat.optBoolean("stateFreeOnce", false) &&
+      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("freeStateUsed", false)
+    return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.map { e ->
+      if (freeUsedHere && !e.optBoolean("locked")) JSONObject(e.toString()).put("locked", true) else e
+    }
+  }
+
+  /** Een gratis State Control-sessie is op het horloge gestart. */
+  fun markFreeStateUsed(context: Context) {
+    if (load(context)?.optBoolean("stateFreeOnce", false) != true) return
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("freeStateUsed", true).apply()
   }
 
   /** Gekozen duur voor deze State Control-toestand, anders de aanbevolen. */

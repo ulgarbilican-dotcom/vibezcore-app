@@ -33,6 +33,7 @@
             android:required="false" />
 
         <activity
+            android:screenOrientation="nosensor"
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/VzWearTheme">
@@ -44,31 +45,37 @@
 
         <!-- 13 okt 2026: een toestand kiezen en op het horloge zelf starten -->
         <activity
+            android:screenOrientation="nosensor"
             android:name=".TechniqueActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:screenOrientation="nosensor"
             android:name=".StateActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:screenOrientation="nosensor"
             android:name=".ModesActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:screenOrientation="nosensor"
             android:name=".StateControlActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:screenOrientation="nosensor"
             android:name=".StateDurationActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
 
         <activity
+            android:screenOrientation="nosensor"
             android:name=".DurationActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />
@@ -86,6 +93,10 @@
                     android:scheme="wear"
                     android:host="*"
                     android:pathPrefix="/vibezcore/state" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/vibezcore/catalog/reply" />
             </intent-filter>
             <!-- 13 okt 2026: catalogus van de telefoon (bewaard gegeven) -->
             <intent-filter>
