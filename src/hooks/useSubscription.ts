@@ -23,6 +23,7 @@
 import { GUEST_PURCHASE_RC_ID_KEY, getToken } from '@/services/auth';
 import { apiCall } from '@/utils/api';
 import { useDevUserOverride } from '@/utils/dev-user-override';
+import { subscriptionTierFromEntitlement } from '@/services/iap-contract';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
@@ -263,11 +264,11 @@ async function tryRevenueCatStatus(
       };
     }
     const productId: string | undefined = audioPro.productIdentifier;
-    const tier: 'monthly' | 'yearly' | undefined = productId?.includes('yearly')
-      ? 'yearly'
-      : productId?.includes('monthly')
-        ? 'monthly'
-        : undefined;
+    const tier: 'monthly' | 'yearly' | undefined = subscriptionTierFromEntitlement(
+      productId,
+      typeof audioPro.latestPurchaseDate === 'string' ? audioPro.latestPurchaseDate : undefined,
+      typeof audioPro.expirationDate === 'string' ? audioPro.expirationDate : undefined,
+    );
     return {
       active: true,
       tier,

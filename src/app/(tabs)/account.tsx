@@ -466,7 +466,10 @@ function useMembershipStatus() {
       ? willRenew
         ? `Renews on ${date}`
         : `Active until ${date}`
-      : null;
+      : /* Premium zonder bekende periode of einddatum (bv. een toegekend recht): toch zeggen wat het is, i.p.v. een kaartje met enkel "Premium". */
+        isPro
+        ? 'Full access to Breathwork, State Control and the Audio Library.'
+        : null;
   let label: string;
   if (isLoading) label = 'Checking…';
   else if (trial) label = 'Premium · Free Trial';

@@ -83,6 +83,31 @@ export function tierFromProductId(productId: string): AudioTier | null {
   return null;
 }
 
+/** Welk abonnement is dit recht? (27 okt 2026, operator: "Premium" zonder periode in Profiel.) Eerst de bekende product-ID's,
+ *  dan woorden in de naam, en als laatste de looptijd van de lopende periode (aankoop → einde): ~1 maand of ~1 jaar. Zo krijgt ook
+ *  een product met een onverwachte naam (andere base plan, later toegevoegd product) toch het juiste label. Anders `undefined`. */
+export function subscriptionTierFromEntitlement(
+  productId: string | undefined | null,
+  periodStartIso?: string | null,
+  periodEndIso?: string | null,
+): SubscriptionTier | undefined {
+  if (productId) {
+    const known = tierFromProductId(productId);
+    if (known === 'monthly' || known === 'yearly') return known;
+    const id = productId.toLowerCase();
+    if (/year|annual/.test(id)) return 'yearly';
+    if (/month/.test(id)) return 'monthly';
+  }
+  const start = periodStartIso ? Date.parse(periodStartIso) : NaN;
+  const end = periodEndIso ? Date.parse(periodEndIso) : NaN;
+  if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+    const days = (end - start) / 86_400_000;
+    if (days >= 25 && days <= 40) return 'monthly';
+    if (days >= 330 && days <= 400) return 'yearly';
+  }
+  return undefined;
+}
+
 /** Wat de UI nodig heeft om een pricing-card te renderen.
  *  `localizedPrice` is een al-opgemaakte string ("€10,99", "$9.99", "¥1.500")
  *  die we van StoreKit / Google Play Billing krijgen — eindgebruiker ziet

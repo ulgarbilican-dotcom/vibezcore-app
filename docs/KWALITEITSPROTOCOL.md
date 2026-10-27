@@ -42,6 +42,11 @@ hoog/groot (1080x2520 @ 440) · lettergrootte 1,3× · "weergavegrootte" groot �
 scherm** (niet onder de systeembalken of de tabbalk, niet afgekapt) en **tikken landen op de bedoelde knop** (posities komen uit de app zelf, geen vaste pixels). Echte toestellen: Firebase Test Lab (5).
 Tikken met vaste coördinaten zijn daarom verboden in flows; alleen via benoemde knoppen of verhoudingen van het scherm.
 
+**R8 — Het toestel van de operator is geen testbank (27 okt 2026).** Vóór elke tik op een toestel dat de operator gebruikt: `dumpsys activity activities | grep topResumedActivity`
+— staat de bedoelde app niet vooraan, dan niet tikken. Geen blinde reeksen tikken; na elke stap een screenshot. Testen kan in de aparte testbuild (`scripts/build-test-apk.sh`,
+pakket `.test`, naam "VZ TEST") naast de gewone app. QA-instellingen (`qa?tier=…`) in de echte app na afloop terugzetten én controleren (`guest`, dan `clear`). Een screenshot
+met privé-inhoud (galerij, bank) meteen wissen en er niets uit gebruiken. Schermtime-out, Bluetooth en dergelijke op het horloge terugzetten.
+
 ## 3. De vloeiwandeling (automatisch): `scripts/flow-walk.py`
 Loopt op de aangesloten telefoon alle hoofdroutes af en controleert per scherm R2:
 - elk tabblad: bereikbaar, en heeft tabbalk of uitweg;

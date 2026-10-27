@@ -4,6 +4,16 @@ Sinds Wear OS 3 installeert een horloge-app **niet** meer automatisch mee met de
 telefoon-app. Ze moet apart geüpload worden, in **dezelfde** app in de Play Console
 (zelfde pakketnaam `com.ubili.vibezcoreapp`, geen nieuwe app).
 
+
+## 0. VÓÓR elke horloge-build (bindend, 27 okt 2026)
+`android/wear/src` is een **kopie** van `wear-app/src` en wordt enkel door `expo prebuild` bijgewerkt. Een build zonder die stap bevat de laatste
+wijzigingen NIET (bundel 26102714 ging zo naar Play zonder de catalogus-fix).
+1. `diff -rq wear-app/src android/wear/src` — verschilt er iets: `cp -r wear-app/src/. android/wear/src/`.
+2. Bouw, en **controleer de inhoud** van het resultaat vóór je het doorgeeft: dex-strings van de nieuwe code (`catalog/request`, …) en het manifest
+   (`aapt2 dump xmltree`, bv. `screenOrientation`).
+3. Test de debug-build van dezelfde bron op het horloge (`-PwearVersionCode=1`, telefoon met dezelfde handtekening, anders komen berichten niet aan).
+4. Pas daarna het bundel aan de operator geven, met een nieuwe, hogere `-PwearVersionCode`.
+
 ## Eenmalig in de Play Console
 
 1. Open de app VIBEZCORE → **Geavanceerde instellingen** → **Form factors** →
