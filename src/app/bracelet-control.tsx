@@ -4446,7 +4446,7 @@ function IdleScreen({
               {/* 27 okt 2026 (operator: "bpm in de cirkel verwerken, het is heel druk op de pagina"): de hartslag staat nu IN de cirkel, onderin,
                   ruim onder "Recommended" (9 okt stond hij er direct onder en was dat verwarrend). Tik = hartslag-blad. */}
               {!trialRunning && !sessionRunning ? (
-                <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: RING_DIAL * 0.12, alignItems: 'center' }}>
+                <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, top: RING_DIAL * 0.105, alignItems: 'center' }}>
                   <PressScale
                     onPress={() => {
                       hapticTap();
@@ -6940,7 +6940,7 @@ const s = StyleSheet.create({
     /* Operator, 27 september 2026 ("geef alles voldoende ademruimte"):
        8→16. 5 okt 2026: 16→8 (paste anders niet boven de tabbalk). */
     marginBottom: 8,
-    marginTop: 14,
+    marginTop: 64, /* 27 okt 2026: +50 — de bpm-pil boven de cirkel is weg, de cirkel zakt zodat de Premium-pil lucht heeft */
   },
   /* Wrapper rond de DurationWheel, direct onder de ring — de ring zelf
      toont enkel het resultaat (operator: "dat moet meer in deze stijl,
