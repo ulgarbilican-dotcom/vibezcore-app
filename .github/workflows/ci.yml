@@ -1,0 +1,29 @@
+# Poort bij elke wijziging (27 okt 2026): typecontrole + alle tests. Rood = niet doorgaan (geen build, geen upload).
+# Draait bij elke push en elke pull request op de werkbranch en main.
+name: CI
+
+on:
+  push:
+    branches: [rollback-vc76-take2, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install (exact lockfile)
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit -p .
+      - name: Tests
+        run: npx jest --ci
