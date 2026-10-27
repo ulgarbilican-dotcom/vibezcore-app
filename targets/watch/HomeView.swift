@@ -346,7 +346,7 @@ struct ModesView: View {
       if isState {
         ForEach(catalog.states) { (st: CatalogState) in
           ModePage(
-            eyebrow: "State Control", name: st.name, use: st.use, color: vzColor(st.colorHex), locked: st.locked,
+            eyebrow: "State Control", name: st.name, use: st.use, color: vzColor(st.colorHex), locked: !catalog.stateAllowed(st),
             visual: AnyView(WaterBall(color: vzColor(st.colorHex), text: Self.minutesText(st), size: 104))
           )
           .tag("s\(st.mode)")
@@ -458,6 +458,7 @@ private func glow(_ c: Color) -> some View {
 struct StateSetupView: View {
   let entry: CatalogState
   @Binding var path: [WatchRoute]
+  @ObservedObject private var catalog = WatchCatalog.shared
 
   var body: some View {
     let c = vzColor(entry.colorHex)
@@ -476,7 +477,7 @@ struct StateSetupView: View {
           value: "\(minutes) min",
           tappable: true
         ) { path.append(.stateDuration(entry.mode)) }
-        if entry.locked {
+        if !catalog.stateAllowed(entry) {
           TryPill {
             path.removeAll()
             StateSessionController.shared.startLocal(entry, minutes: minutes, previewSec: 30)

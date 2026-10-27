@@ -169,6 +169,7 @@ internal fun startLocalStateSession(context: Context, e: JSONObject, minutesIn: 
   if (!preview) {
     CatalogStore.setStateMinutes(context, e.optString("key"), minutes)
     CatalogStore.setRecent(context, "state", e.optString("key"), minutes)
+    CatalogStore.markFreeStateUsed(context)
   }
   val json = JSONObject(p.toString()).apply {
     put("title", e.optString("name"))

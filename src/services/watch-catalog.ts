@@ -84,7 +84,10 @@ function techForWatch(key: BreathStateKey, base: BreathState['techniques'][numbe
 /** `breathFreeOnce`: de gratis Breathwork-sessie is nog niet gebruikt (niet-
  *  Premium). Het horloge zet zelf het slot zodra die ene sessie op de pols
  *  gedaan is — ook zonder telefoon (audit 14 okt 2026). */
-export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFreeOnce = false): string {
+/** `stateFreeOnce` (27 okt 2026, operator: gratis sessies kloppen niet op het horloge): de ene gratis volledige State Control-sessie
+ *  (na de State Control-onboarding, zie useStateFreeStart) is nog niet gebruikt — dan is State Control op het horloge niet op slot,
+ *  tot die ene sessie gestart is; daarna weer de voorproef van 30 s. Zelfde regel als op de telefoon. */
+export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFreeOnce = false, stateFreeOnce = false): string {
   const breath = ORDER.map((key) => {
     const st = BREATH_STATES[key];
     /* 13 okt 2026 (operator: "gebruiker moet eerst de techniek kunnen
@@ -128,10 +131,10 @@ export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFr
     minMinutes: m.minMinutes,
     maxMinutes: m.maxMinutes,
     defaultMinutes: m.defaultMinutes,
-    locked: stateLocked,
+    locked: stateLocked && !stateFreeOnce,
     params: watchStateParams(m.mode),
   }));
-  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, strength: getHapticStrength() });
+  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, stateFreeOnce, strength: getHapticStrength() });
 }
 
 /** Een State Control-sessie die op het horloge zelf liep (13 okt 2026). */
@@ -211,6 +214,10 @@ async function importWatchRecords(items: string[]): Promise<void> {
           plannedMin: Math.max(1, Math.round(st.plannedSec / 60)),
           status: st.completed ? 'completed' : 'stopped',
         });
+        /* Een State Control-sessie op het horloge (geen voorproef: die wordt niet gelogd) telt als de ene gratis sessie. */
+        if (getSetting('stateFreeSessionUsedAt') === null && getSetting('stateFreeMode') !== null) {
+          setSetting('stateFreeSessionUsedAt', Date.now());
+        }
         continue;
       }
       const r = any as WatchSessionRecord;
@@ -250,6 +257,8 @@ export function useWatchCatalogSync(): void {
   const strength = useHapticStrength();
   const [experience] = useSetting('experienceLevel');
   const [freeUsedAt] = useSetting('breathFreeSessionUsedAt');
+  const [stateFreeUsedAt] = useSetting('stateFreeSessionUsedAt');
+  const [stateFreeMode] = useSetting('stateFreeMode');
   const [techByState] = useSetting('breathTechByState');
   const history = useBreathHistory();
   const ownsBracelet = useBraceletOwner();
@@ -275,10 +284,12 @@ export function useWatchCatalogSync(): void {
     const locked = !sub.isPro && !!freeUsedAt;
     /* zelfde regel als het State Control-scherm (bracelet-control.tsx) */
     const stateLocked = !sub.isPro && !ownsBracelet;
-    const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt);
+    /* de ene gratis State Control-sessie: zelfde regel als useStateFreeStart (na de onboarding, nog niet gebruikt) */
+    const stateFreeOnce = stateLocked && stateFreeUsedAt === null && stateFreeMode !== null;
+    const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt, stateFreeOnce);
     if (Platform.OS === 'android') syncWatchCatalog(json);
     else if (Platform.OS === 'ios') syncAppleWatchCatalog(json);
-  }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, strength, experience, history.length, techByState, restingBpm, resyncTick]);
+  }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, stateFreeUsedAt, stateFreeMode, strength, experience, history.length, techByState, restingBpm, resyncTick]);
 
   useEffect(() => {
     if (Platform.OS === 'ios') return onAppleWatchLog(importAppleWatchRecord);

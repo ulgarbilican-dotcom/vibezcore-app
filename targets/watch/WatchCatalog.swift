@@ -66,14 +66,20 @@ final class WatchCatalog: ObservableObject {
   @Published private(set) var states: [CatalogState] = []
   @Published private(set) var breath: [CatalogBreath] = []
   @Published private(set) var breathFreeOnce = false
+  /** De ene gratis State Control-sessie is nog niet gebruikt (niet-Premium, na de onboarding) — 27 okt 2026. */
+  @Published private(set) var stateFreeOnce = false
+  /** De gratis State Control-sessie is op dit horloge al gebruikt (ook zonder iPhone). */
+  @Published private(set) var stateFreeUsedHere: Bool
   /** De gratis ademsessie is op dit horloge al gebruikt (ook zonder iPhone). */
   @Published private(set) var freeUsedHere: Bool
 
   private let storeKey = "vz_watch_catalog_v1"
   private let freeKey = "vz_watch_free_used_v1"
+  private let stateFreeKey = "vz_watch_state_free_used_v1"
 
   init() {
     freeUsedHere = UserDefaults.standard.bool(forKey: freeKey)
+    stateFreeUsedHere = UserDefaults.standard.bool(forKey: stateFreeKey)
     if let json = UserDefaults.standard.string(forKey: storeKey) {
       parse(json)
     }
@@ -96,6 +102,18 @@ final class WatchCatalog: ObservableObject {
   func markFreeUsed() {
     freeUsedHere = true
     UserDefaults.standard.set(true, forKey: freeKey)
+  }
+
+  /** Mag deze State Control-toestand nu gestart worden? Op slot tenzij de ene gratis sessie nog beschikbaar is. */
+  func stateAllowed(_ s: CatalogState) -> Bool {
+    if !s.locked { return true }
+    return stateFreeOnce && !stateFreeUsedHere
+  }
+
+  func markStateFreeUsed() {
+    guard stateFreeOnce else { return }
+    stateFreeUsedHere = true
+    UserDefaults.standard.set(true, forKey: stateFreeKey)
   }
 
   @discardableResult
@@ -161,6 +179,7 @@ final class WatchCatalog: ObservableObject {
     states = parsedStates
     breath = parsedBreath
     breathFreeOnce = root["breathFreeOnce"] as? Bool ?? false
+    stateFreeOnce = root["stateFreeOnce"] as? Bool ?? false
     if let st = root["strength"] as? String { WatchSettings.shared.adoptFromPhone(st) }
     return true
   }

@@ -2012,7 +2012,9 @@ function AudioScreen({
                 pillarsYRef.current = e.nativeEvent.layout.y;
               }}
             >
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: PILLAR_SIDE_INSET, gap: PILLAR_GRID_GAP, marginTop: 4 }}>
+            {/* 27 okt 2026 (operator: "free session kaart staat te dicht tegen andere kaarten"): onder de gratis-kaart 16 i.p.v. 4,
+                ruimer dan de 12 tussen de pilaarkaarten. Wie de kaart niet ziet (abonnee) houdt de oude 4. */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: PILLAR_SIDE_INSET, gap: PILLAR_GRID_GAP, marginTop: !hasSub ? 16 : 4 }}>
               {PILLARS.map((p, pillarIdx) => {
                 const isActiveFilter = activePillarFilter === p.key;
                 return (
