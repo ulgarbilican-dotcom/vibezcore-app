@@ -72,6 +72,7 @@ import {
   pauseStateSessionOnWatch as pauseWearState,
   sendStateSessionToWatch as sendWearState,
   stopStateSessionOnWatch as stopWearState,
+  isWatchReachable as isWearWatchReachable,
   wakeWatch as wakeWear,
 } from '../../modules/wear-breath';
 import {
@@ -401,6 +402,21 @@ function releaseIosAudioIfIdle(): void {
  *  trager. 300 ms dekt ook trage toestellen; beeld, geluid en horloge
  *  rekenen vanaf hetzelfde moment. */
 const NATIVE_START_LEAD_MS = 300;
+/** Met een horloge verbonden (27 okt 2026, operator: "het horloge begint iets later"): gemeten doet het startbericht er 190–740 ms over
+ *  en het horloge heeft daarna nog ~110 ms nodig; met 300 ms miste het de eerste slag en begon het 0,86 s na de telefoon. Een
+ *  afgesproken, ruimer startmoment laat telefoon en horloge op dezelfde slag beginnen. Zonder horloge blijft het 300 ms. */
+const WATCH_START_LEAD_MS = 1000;
+let wearWatchLinked = false;
+function refreshWearWatchLink(): void {
+  if (Platform.OS !== 'android') return;
+  void isWearWatchReachable().then((ok) => { wearWatchLinked = ok; }).catch(() => { wearWatchLinked = false; });
+}
+refreshWearWatchLink();
+setInterval(refreshWearWatchLink, 20_000);
+AppState.addEventListener('change', (st) => { if (st === 'active') refreshWearWatchLink(); });
+function nativeStartLeadMs(): number {
+  return wearWatchLinked && getSetting('watchHaptics') ? WATCH_START_LEAD_MS : NATIVE_START_LEAD_MS;
+}
 /** Startmoment (wandklok) van de laatst gestarte curve op de telefoon —
  *  het horloge krijgt EXACT dit moment (17 okt 2026: het werd pas na het
  *  opbouwen van de golfvorm genoteerd, ~128 ms te laat → horloge ~150 ms
@@ -727,7 +743,7 @@ function play(
        moment dat de eerste tik ECHT voelbaar is — zo vallen cirkel,
        trilling, geluid en pols samen (operator: "horloge loopt een fractie
        vooruit"). */
-    const anchorWallMs = Date.now() + (clock ? NATIVE_START_LEAD_MS : 0);
+    const anchorWallMs = Date.now() + (clock ? nativeStartLeadMs() : 0);
     lastAnchorWallMs = anchorWallMs;
     lastAnchorCurveSec = offsetSec;
     if (clock) {

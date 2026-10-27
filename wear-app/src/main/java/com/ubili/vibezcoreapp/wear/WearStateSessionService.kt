@@ -419,13 +419,16 @@ class WearStateSessionService : Service() {
     val clockAhead = ClockSync.aheadMs(this)
     val nowWall = System.currentTimeMillis()
     val nowUp = SystemClock.uptimeMillis()
-    val phoneCurve = if (s.sentAtMs > 0L) {
-      origin + ((nowWall - clockAhead - s.sentAtMs).coerceIn(0L, 10 * 60_000L)) / 1000.0
+    /* 27 okt 2026: komt het bericht VÓÓR het afgesproken startmoment aan (de telefoon geeft een ruim startmoment mee), dan is de plek in
+       de curve negatief en speelt het horloge ook de allereerste slag, precies op dat moment. */
+    val rawCurve = if (s.sentAtMs > 0L) {
+      origin + ((nowWall - clockAhead - s.sentAtMs).coerceAtMost(10 * 60_000L)) / 1000.0
     } else {
       origin
     }
+    val phoneCurve = rawCurve.coerceAtLeast(origin)
     var gridT = origin
-    if (s.sentAtMs > 0L) while (gridT < phoneCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
+    if (s.sentAtMs > 0L) while (gridT < rawCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
     val targetWall = if (s.sentAtMs > 0L) {
       s.sentAtMs + clockAhead + ((gridT - origin) * 1000).roundToLong()
     } else {

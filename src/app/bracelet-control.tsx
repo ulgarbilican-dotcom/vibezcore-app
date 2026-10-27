@@ -4372,33 +4372,6 @@ function IdleScreen({
         {/* Operator, 9 okt 2026: cirkel lager — net boven het midden. */}
         <View style={{ height: 0 }} />
         <Reveal i={0}><View style={s.durationRingWrap}>
-          {/* Operator, 10 okt 2026: de bpm-pil BOVEN de cirkel (was erin).
-              Operator, 9 okt 2026: je hartslag als klein pilletje onder de
-              vaste tijden — enkel hart, bpm en pijltje (in de ring was het
-              verwarrend onder "Recommended"). Tik = hartslag-blad. */}
-          {!trialRunning && !sessionRunning ? (
-            <PressScale
-              onPress={() => {
-                hapticTap();
-                pendingAfterRhythm.current = null;
-                setRhythmOpen(true);
-              }}
-              hitSlop={12}
-              scaleTo={0.94}
-              /* 20 okt 2026 (Test Lab toegankelijkheid): aanraakdoel 48 dp, de
-                 zichtbare pil blijft 30 hoog (binnenste View). */
-              style={s.ringHrTouch}
-              accessibilityRole="button"
-              accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
-            >
-              <View style={s.ringHr}>
-                <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
-                <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
-                {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
-                <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
-              </View>
-            </PressScale>
-          ) : null}
           {/* Vage pijltjes links/rechts: er valt hier te vegen (verdwijnen
               aan het uiteinde). */}
           {/* Tijdens de preview niet vegen (operator, 18 okt 2026: "waarom is
@@ -4470,6 +4443,31 @@ function IdleScreen({
                   zone={ZONE_NAME[zoneFor(selectedMode, duration)]}
                 />
               </HeartbeatScale>
+              {/* 27 okt 2026 (operator: "bpm in de cirkel verwerken, het is heel druk op de pagina"): de hartslag staat nu IN de cirkel, onderin,
+                  ruim onder "Recommended" (9 okt stond hij er direct onder en was dat verwarrend). Tik = hartslag-blad. */}
+              {!trialRunning && !sessionRunning ? (
+                <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: RING_DIAL * 0.12, alignItems: 'center' }}>
+                  <PressScale
+                    onPress={() => {
+                      hapticTap();
+                      pendingAfterRhythm.current = null;
+                      setRhythmOpen(true);
+                    }}
+                    hitSlop={12}
+                    scaleTo={0.94}
+                    style={s.ringHrTouch}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Your heart rate, ${pulse.liveBpm ?? pulse.bpm} beats per minute. Tap to measure your heart right now.`}
+                  >
+                    <View style={s.ringHr}>
+                      <HeartPulse size={16} color="#ffffff" strokeWidth={2} />
+                      <Text style={s.ringHrTxt}>{pulse.liveBpm ?? pulse.bpm} bpm</Text>
+                      {shouldSuggestRemeasure(pulse) ? <View style={s.ringPulseDot} /> : null}
+                      <ChevronRight size={14} color="rgba(255,255,255,0.55)" strokeWidth={2.4} />
+                    </View>
+                  </PressScale>
+                </View>
+              ) : null}
             </View>
           </ModeSwipeRing>
         </View></Reveal>
@@ -4697,11 +4695,7 @@ function IdleScreen({
           <View style={s.trialInfo}>
             {trialRunning && condensedMinutes !== null ? (
               <Text style={s.trialInfoTxt}>{'Sped up for the preview.\nA full session slows down gradually.'}</Text>
-            ) : !trialRunning ? (
-              <PremiumNote style={s.trialInfoTxt} context="state-control" preview showPill={false}>
-                {FREE_COPY.previewLine}
-              </PremiumNote>
-            ) : null}
+            ) : null /* 27 okt 2026 (operator): "Full session with Premium" staat in het blad dat bij het aantikken opent, niet ook onder de knop. */}
           </View>
         ) : null}
         </View>
