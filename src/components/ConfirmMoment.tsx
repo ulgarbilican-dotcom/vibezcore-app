@@ -33,6 +33,7 @@ import { Check } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  FadeOut,
   cancelAnimation,
   Easing,
   useAnimatedProps,
@@ -76,6 +77,9 @@ export type ConfirmMomentProps = {
   thinking?: [string] | [string, string];
   /** Thinking-fase overslaan (2de keer dezelfde dag, of enkel "done"). */
   quick?: boolean;
+  /** 27 okt 2026 (operator, iOS: "na het vinkje zie ik heel kort de samenvatting opnieuw"): onDone wisselt enkel het scherm ONDER het moment
+   *  (geen navigatie) → meteen uitvoeren terwijl het moment nog dekt, en pas daarna sluiten. Zo verschijnt het oude scherm nooit meer. */
+  swapUnderneath?: boolean;
   onDone: () => void;
 };
 
@@ -85,6 +89,7 @@ export default function ConfirmMoment({
   subtitle,
   thinking,
   quick,
+  swapUnderneath,
   onDone,
 }: ConfirmMomentProps) {
   const reduced = useReducedMotion();
@@ -109,6 +114,12 @@ export default function ConfirmMoment({
     if (finished.current) return;
     finished.current = true;
     const cb = () => onDoneRef.current();
+    if (swapUnderneath) {
+      /* Eerst het scherm eronder wisselen, één beeld later pas het moment sluiten (de wissel is dan getekend). */
+      cb();
+      requestAnimationFrame(() => requestAnimationFrame(() => setShown(false)));
+      return;
+    }
     if (Platform.OS === 'ios') {
       pendingDone.current = cb;
       setShown(false);
@@ -122,7 +133,7 @@ export default function ConfirmMoment({
       setShown(false);
       cb();
     }
-  }, []);
+  }, [swapUnderneath]);
 
   const handleDismiss = useCallback(() => {
     const p = pendingDone.current;
@@ -340,6 +351,8 @@ export type ConfirmMomentRequest = {
   subtitle?: string;
   /** Zonder thinking-regels = enkel de done-fase. */
   thinking?: [string] | [string, string];
+  /** Zie ConfirmMomentProps.swapUnderneath. */
+  swapUnderneath?: boolean;
   onDone: () => void;
 };
 
@@ -385,8 +398,14 @@ export function isConfirmMomentOpen(): boolean {
   return current !== null;
 }
 
+/* 27 okt 2026 (operator, iOS: "na het vinkje zie ik heel kort de samenvatting opnieuw"): op iOS verdwijnt de Modal eerst, en daarna pas volgt de
+   navigatie van onDone — in die tussentijd was het oude scherm even te zien. Een effen scherm ONDER het moment (maar boven de navigatie) blijft nu staan
+   tot de navigatie klaar is en verdwijnt dan zacht. Begrensd in tijd: faalt de navigatie, dan is het scherm na COVER_HOLD_MS gewoon weer vrij. */
+const COVER_HOLD_MS = 700;
+
 export function ConfirmMomentHost() {
   const [req, setReq] = useState<ActiveRequest | null>(current);
+  const [cover, setCover] = useState(false);
   useEffect(() => {
     hostListeners.add(setReq);
     setReq(current);
@@ -394,8 +413,27 @@ export function ConfirmMomentHost() {
       hostListeners.delete(setReq);
     };
   }, []);
-  if (!req) return null;
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    if (req) {
+      setCover(true);
+      return undefined;
+    }
+    const t = setTimeout(() => setCover(false), COVER_HOLD_MS);
+    return () => clearTimeout(t);
+  }, [req]);
+  const coverView =
+    Platform.OS === 'ios' && cover ? (
+      <Animated.View
+        pointerEvents="none"
+        exiting={FadeOut.duration(260)}
+        style={[StyleSheet.absoluteFill, { backgroundColor: Brand.bg, zIndex: 998, elevation: 998 }]}
+      />
+    ) : null;
+  if (!req) return coverView;
   return (
+    <>
+    {coverView}
     <ConfirmMoment
       key={req.id}
       visible
@@ -403,6 +441,7 @@ export function ConfirmMomentHost() {
       subtitle={req.subtitle}
       thinking={req.thinking}
       quick={req.quick}
+      swapUnderneath={req.swapUnderneath}
       onDone={() => {
         if (current?.id !== req.id) return;
         const cb = req.onDone;
@@ -411,6 +450,7 @@ export function ConfirmMomentHost() {
         cb();
       }}
     />
+    </>
   );
 }
 

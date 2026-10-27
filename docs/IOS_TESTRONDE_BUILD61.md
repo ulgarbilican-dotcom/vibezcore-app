@@ -3,15 +3,15 @@
 Gemeld door de operator na TestFlight (iPhone + Apple Watch / Galaxy Watch). Status per punt: ☐ open · 🔎 onderzoeken · ✅ opgelost.
 
 ## Telefoon (iOS) — Android-build is klaar (27 okt)
-1. ☐ Intro stap 1: foto begint niet uitgezoomd; de beginpose van de mensen aan de buitenkant is niet te zien; inzoomen moet vlot en snel (en mooi).
+1. 🛠 (gecodeerd, wacht op iOS-build) Intro stap 1: foto begint niet uitgezoomd; de beginpose van de mensen aan de buitenkant is niet te zien; inzoomen moet vlot en snel (en mooi).
 2. ☐ Na de intro zie ik geen onboardings (zou moeten volgens de nieuwe flow: welkom → onderdeel → eerst eigen pagina met tabbalk → onboarding).
 3. ☐ Geminimaliseerde sessie-balk (mini-player) is te krap: iets hoger/groter.
 4. ☐ Audio heeft ruis.
 5. ☐ Max haptics op de telefoon zijn niet goed voelbaar (controleren hoe de sterkte werkt).
 6. ☐ Na aankoop van de dagpas → Profiel → zwart scherm; weg en terug is het goed.
 7. ☐ Na een aankoop hoort Profiel een knop te tonen om het abonnement te beheren; geldt dat ook voor de dagpas?
-8. ☐ Na de cirkel met vink en vóór "Your protocol is live" verschijnt heel kort de samenvatting opnieuw (terwijl ik al op volgende had gedrukt).
-9. ☐ Geen ping te horen als het vinkje komt (bevestigingsmoment).
+8. 🛠 (gecodeerd, wacht op iOS-build: effen dek onder het vinkje tot de navigatie klaar is + Breathwork wisselt eronder) Na de cirkel met vink en vóór "Your protocol is live" verschijnt heel kort de samenvatting opnieuw (terwijl ik al op volgende had gedrukt).
+9. 🔎 (stil bij stilstand-schakelaar iPhone is bewust; eerst controleren) Geen ping te horen als het vinkje komt (bevestigingsmoment).
 
 ## Smartwatch
 10. ☐ De ping bij het horloge is storend (kan het anders?).
@@ -20,3 +20,4 @@ Gemeld door de operator na TestFlight (iPhone + Apple Watch / Galaxy Watch). Sta
 13. ☐ Haptics bij inhale / exhale / hold zijn niet logisch opgebouwd: zonder kijken kan de gebruiker niet voelen wat hij moet doen.
 14. ☐ Tijdens een actieve sessie (bv. Boost) bijna geen haptics op het horloge; alleen heel licht bij uitademen, niets bij inademen, wel steeds een ping.
 15. ☐ De gratis State Control-sessie op het horloge (apart spoor, zie WERKSTATUS).
+16. ☐ Op de iPhone-sessiepagina een hint tonen als de Apple Watch gekoppeld is maar niet bereikbaar: "Open VIBEZCORE on your watch to feel it on your wrist" (een iPhone-app kan een Watch-app niet zelf openen; Android kan dat wel via bringSessionToFront). Watch sluit bij openen aan op de juiste plek in het ritme.

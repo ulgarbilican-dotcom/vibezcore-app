@@ -837,6 +837,7 @@ export default function BreathWelcomeScreen() {
         thinking: ['Building your session…', 'Matching your level…'],
         title: 'All set!',
         subtitle: 'Your session is ready',
+        swapUnderneath: true, // enkel de slide eronder wisselt: geen flits van de samenvatting na het vinkje (iOS)
         onDone: () => setSlide(TOTAL - 1),
       });
       return;
