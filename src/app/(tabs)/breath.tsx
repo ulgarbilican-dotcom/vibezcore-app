@@ -47,7 +47,7 @@ import StateGlyph from '@/components/StateGlyph';
 import { usePlayerState } from '@/services/audio-player';
 import { LinearGradient } from 'expo-linear-gradient';
 import { STATE_PHOTOS } from '@/services/offline-assets';
-import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW, stateGlass } from '@/constants/theme';
+import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW, CTA_BOTTOM_LIFT, stateGlass } from '@/constants/theme';
 import {
   BREATH_STATES,
   cycleSeconds,
@@ -1578,7 +1578,7 @@ export default function BreathScreen() {
       {/* Operator, 7 september 2026: "staat te laag nu, plakt tegen balk
          onderaan" — dit scherm gebruikt bewust `edges={['top']}` (geen
          automatische safe-area onderaan). */}
-      <View style={{ height: 24 }} />
+      <View style={{ height: 24 - CTA_BOTTOM_LIFT }} />
 
       </View>
         </>
@@ -2021,7 +2021,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     marginHorizontal: 19,
-    marginTop: 56,
+    marginTop: 56 + CTA_BOTTOM_LIFT,
     height: 52,
     /* Operator, zelfde dag: "vorm van de cta is anders dan onboarding, is
        dat professioneel?" — was een volle pil (25 = height/2), onboarding

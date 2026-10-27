@@ -87,7 +87,7 @@ import {
 } from '@/services/bracelet-session-monitor';
 import * as Haptics from 'expo-haptics';
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HeartPulse, Info, Lock, MoonStar, Pause, Play, SlidersHorizontal, Sparkles, Target, Vibrate, Volume2, Waves, Zap } from 'lucide-react-native';
-import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE, CTA_GLASS, CTA_GLOW, stateGlass } from '@/constants/theme';
+import { BrandDark, BrandLight, BrandFonts, TypeScale, AudioAccent, DIAL_SIZE, CTA_GLASS, CTA_GLOW, CTA_BOTTOM_LIFT, stateGlass } from '@/constants/theme';
 /* Operator, 16 september 2026 ("bracelet-control naar light mode"): dit
    bestand gebruikte overal de vaste donkere `Brand`-alias (nooit een
    light/dark-toggle gehad, in tegenstelling tot de rest van de app sinds
@@ -4681,7 +4681,7 @@ function IdleScreen({
           </PrimaryCtaButton></Reveal>
         )}
         {/* Vaste ruimte onder de knop/pil (zoals bij Breathwork onder zijn knop). De uitleg-regels staan IN die ruimte: ze duwen de knop niet omhoog, dus de Start-knop staat op dezelfde hoogte als de knop van Breathwork. */}
-        <View style={{ height: 83 }}>
+        <View style={{ minHeight: 83 - CTA_BOTTOM_LIFT }}>
         {/* Free (operator, 19 okt 2026): vóór de start altijd zeggen wat er
             volgt — de ene gratis volledige sessie, of de preview van 30 s. */}
         {freeSession && !sessionRunning ? (

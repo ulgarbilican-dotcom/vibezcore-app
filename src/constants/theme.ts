@@ -348,6 +348,10 @@ export function stateGlass(hex: string) {
   };
 }
 
+/** 27 okt 2026 (operator: de Start-knop van State Control stond te hoog): zoveel dp zakt de hoofdknop van State Control EN
+ *  Breathwork onder de tabbalk-ruimte. Eén waarde voor beide tabs, zodat de knop bij het wisselen niet verspringt. */
+export const CTA_BOTTOM_LIFT = 24;
+
 export const CTA = {
   /* Doorgaan-knop in de flows (Continue / Next / Build…): glazen pil, niet fel
      (21 okt 2026, operator: "die witte ctas storen"). De ene beslissende actie
