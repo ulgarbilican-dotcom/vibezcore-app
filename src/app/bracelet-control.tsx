@@ -67,6 +67,7 @@ import {
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
+import { setPremiumPillSuppressed } from '@/utils/premium-pill-slot';
 import {
   startSessionKeepAlive,
   stopSessionKeepAlive,
@@ -4162,6 +4163,11 @@ function IdleScreen({
   const pendingAfterRhythm = useRef<(() => void) | null>(null);
   const [quickOpen, setQuickOpen] = useState<'chill' | 'boost' | null>(null);
   const [trialSheetOpen, setTrialSheetOpen] = useState(false);
+  /* Premium-pil bovenaan weg zolang de voorproef loopt (operator, 27 okt 2026: op de actieve pagina is het te veel). */
+  useEffect(() => {
+    setPremiumPillSuppressed(trialRunning);
+    return () => setPremiumPillSuppressed(false);
+  }, [trialRunning]);
   /* Operator, 16 okt 2026 ("een apart in te stellen knop, niet bij het
      starten van de sessie — anders is dat storend"): trilsterkte e.d. via
      een eigen knop rechtsboven, hetzelfde blad als in de lopende sessie. */
@@ -4651,7 +4657,8 @@ function IdleScreen({
           <Reveal i={3}><PrimaryCtaButton
             style={[s.primaryBtn, s.chooseCta, stateGlass(meta.color), (busy || criticalBattery) && s.btnDisabled]}
             onPress={
-              startLocked ? (trialRunning ? () => stopTrial(false) : () => setTrialSheetOpen(true)) : withRhythm(onStart)
+              /* 27 okt 2026 (operator): de voorproef start meteen, geen blad ertussen. */
+              startLocked ? (trialRunning ? () => stopTrial(false) : withRhythm(startTrial)) : withRhythm(onStart)
             }
             disabled={busy || criticalBattery}
             accessibilityLabel={

@@ -20,7 +20,12 @@ import { getBreathHost, subscribeBreathHost } from '@/services/breath-session-ho
 import { router, usePathname } from 'expo-router';
 import { Crown } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { getPremiumPillLow, subscribePremiumPillLow } from '@/utils/premium-pill-slot';
+import {
+  getPremiumPillLow,
+  getPremiumPillSuppressed,
+  subscribePremiumPillLow,
+  subscribePremiumPillSuppressed,
+} from '@/utils/premium-pill-slot';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedAnimated, {
   useAnimatedStyle,
@@ -44,13 +49,15 @@ export function PremiumPill({ hidden }: { hidden: boolean }) {
   useEffect(() => subscribeBraceletSession(setBracelet), []);
   const [low, setLow] = useState(getPremiumPillLow());
   useEffect(() => subscribePremiumPillLow(setLow), []);
+  const [suppressed, setSuppressed] = useState(getPremiumPillSuppressed());
+  useEffect(() => subscribePremiumPillSuppressed(setSuppressed), []);
   const [breathHost, setBreathHost] = useState(getBreathHost());
   useEffect(() => subscribeBreathHost(() => setBreathHost(getBreathHost())), []);
 
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  if (hidden || isLoading || isPro) return null;
+  if (hidden || suppressed || isLoading || isPro) return null;
   if (!TAB_PATHS.has(pathname)) return null;
   /* De sessie-pil (State Control of ademsessie) staat op dezelfde plek. */
   if (bracelet.active || breathHost?.minimized) return null;
