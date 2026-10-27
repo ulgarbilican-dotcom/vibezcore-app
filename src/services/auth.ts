@@ -30,6 +30,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QA_ENABLED } from '@/utils/qa';
 
 /* Backend base — zelfde als utils/api.ts en utils/audio-url.ts.
    Hardcoded omdat we provider-agnostisch zijn (CLAUDE.md §1). */
@@ -135,6 +136,11 @@ type SessionPayload = {
    react-native-purchases native module niet ready is (bv. bij koude start
    vóór RealIAP.init). De auth flow mag NOOIT blokkeren op IAP-state. */
 
+/** Alleen in een testbuild: één regel in logcat over de RevenueCat-koppeling (zie [QA-RC]). */
+function qaRcLog(info: Record<string, unknown>): void {
+  if (QA_ENABLED) console.log(`[QA-RC] ${JSON.stringify(info)}`);
+}
+
 export async function linkRevenueCatUser(userId: string | null | undefined): Promise<void> {
   if (!userId) return;
   try {
@@ -180,7 +186,9 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
       } catch {
         /* swallow */
       }
+      qaRcLog({ step: 'link-check', anon: isCurrentlyAnonymous, sameUser: isSameUser, hasActive: !!hasActiveEntitlement, ownGuestPurchase: isOwnGuestPurchase, current: currentId.slice(0, 12) });
       if (hasActiveEntitlement && isCurrentlyAnonymous && !isSameUser && !isOwnGuestPurchase) {
+        qaRcLog({ step: 'BLOCKED', why: 'anonymous customer has an active entitlement that is not the own guest purchase of this device' });
         if (__DEV__) {
           console.warn(
             '[auth] v237c BLOCKED linkRevenueCatUser: anonymous RC customer has active entitlement — skip logIn to prevent TRANSFER leak. User can tap "Restore purchases" if this is their sub.',
@@ -196,7 +204,13 @@ export async function linkRevenueCatUser(userId: string | null | undefined): Pro
       return;
     }
 
-    await Purchases.logIn(userId);
+    const loginResult = await Purchases.logIn(userId);
+    qaRcLog({
+      step: 'logged-in',
+      created: loginResult?.created,
+      active: Object.keys(loginResult?.customerInfo?.entitlements?.active ?? {}),
+      id: String(loginResult?.customerInfo?.originalAppUserId ?? '').slice(0, 12),
+    });
     /* Iter v230 (2026-07-08): success → clear pending marker. De gast-
        aankoop is nu aan het account gekoppeld: marker ook weg. */
     try {

@@ -938,6 +938,29 @@ export default function AccountScreen() {
      Voorheen: Google/Apple altijd naar `/` → bracelet-only user landde op
      Audio ipv Bracelet-tab. Nu: zelfde entitlement-check als email/password
      flow. Delegeert naar routeByEntitlement() na state-updates. */
+  /* 26 okt 2026 (operator: na een aankoop stond de app op Free tot Restore): automatisch herstellen blijft UIT (v237c, beveiliging),
+     maar wie na het inloggen geen Premium heeft krijgt een vriendelijke vraag met de Restore-knop erbij, zodat hij niet hoeft te zoeken.
+     De gebruiker bevestigt zelf: precies de expliciete actie die v237c vraagt. [TEKST] concept. */
+  /* Heeft het stille herstel na het inloggen een aankoop teruggevonden? Dan is de vraag "Already subscribed?" overbodig. */
+  const restoredRef = useRef(false);
+  const restoreQuestion = () =>
+    `If you have VIBEZCORE Premium on this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google Play account'}, restore it now to use it on this account.`;
+  const offerRestoreIfFree = (isPro: boolean) => {
+    if (isPro || restoredRef.current) return;
+    setTimeout(() => {
+      void (async () => {
+        const choice = await showVibezAlert({
+          title: 'Already subscribed?',
+          message: restoreQuestion(),
+          buttons: [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Restore Purchases', style: 'primary' },
+          ],
+        });
+        if (choice === 1) void onRestorePurchases();
+      })();
+    }, 1200);
+  };
   const routeByEntitlement = async () => {
     let isBraceletPro = false;
     let isAudioPro = false;
@@ -967,6 +990,7 @@ export default function AccountScreen() {
       const target = await getLastContentTabRoute();
       setTimeout(() => router.replace(target as never), 50);
     }
+    offerRestoreIfFree(isAudioPro || isBraceletPro);
   };
 
   const onGoogleSignIn = async () => {
@@ -1003,7 +1027,7 @@ export default function AccountScreen() {
          Nu: user moet expliciet Restore Purchases tikken via Account tab
          als hij zijn bestaande sub wil hertrekken. Trade-off: post-
          reinstall UX minder soepel (extra tap), maar security lek dicht. */
-      // silentRestoreAfterLogin();  // <-- disabled voor launch
+      restoredRef.current = await silentRestoreAfterLogin(); // 27 okt 2026: weer aan, nu veilig (RevenueCat: Keep with original App User ID)
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -1044,7 +1068,7 @@ export default function AccountScreen() {
          Nu: user moet expliciet Restore Purchases tikken via Account tab
          als hij zijn bestaande sub wil hertrekken. Trade-off: post-
          reinstall UX minder soepel (extra tap), maar security lek dicht. */
-      // silentRestoreAfterLogin();  // <-- disabled voor launch
+      restoredRef.current = await silentRestoreAfterLogin(); // 27 okt 2026: weer aan, nu veilig (RevenueCat: Keep with original App User ID)
       await refreshUserBucket();
       await clearLastPlayed();
       clearSignedUrlCache();
@@ -1197,7 +1221,7 @@ export default function AccountScreen() {
          Nu: user moet expliciet Restore Purchases tikken via Account tab
          als hij zijn bestaande sub wil hertrekken. Trade-off: post-
          reinstall UX minder soepel (extra tap), maar security lek dicht. */
-      // silentRestoreAfterLogin();  // <-- disabled voor launch
+      restoredRef.current = await silentRestoreAfterLogin(); // 27 okt 2026: weer aan, nu veilig (RevenueCat: Keep with original App User ID)
         }
         /* Iter 9dn (2026-05-31): history-bucket re-evalueren — nieuwe
            token = potentieel nieuwe user = andere local-storage key.
@@ -1279,10 +1303,24 @@ export default function AccountScreen() {
           /* no redirect — gewoon de huidige view re-renderen. Wel een korte
              bevestiging (audit 18 okt 2026: de view wisselde zonder iets te
              zeggen). */
-          void showVibezAlert({
-            title: 'Account created',
-            message: "You're signed in. Your progress and purchases are now linked to your account.",
-          });
+          if (isAudioPro || isBraceletPro || restoredRef.current) {
+            void showVibezAlert({
+              title: 'Account created',
+              message: "You're signed in. Your progress and purchases are now linked to your account.",
+            });
+          } else {
+            void (async () => {
+              const choice = await showVibezAlert({
+                title: 'Account created',
+                message: `You're signed in. ${restoreQuestion()}`,
+                buttons: [
+                  { text: 'Not now', style: 'cancel' },
+                  { text: 'Restore Purchases', style: 'primary' },
+                ],
+              });
+              if (choice === 1) void onRestorePurchases();
+            })();
+          }
         } else if (isBraceletPro && !isAudioPro) {
           /* Bracelet-only owner → direct naar Bracelet tab. */
           setTimeout(() => router.replace('/bracelet' as never), 50);
@@ -1291,6 +1329,7 @@ export default function AccountScreen() {
              laatst gebruikte tabblad buiten Profile, anders Breath. */
           const target = await getLastContentTabRoute();
           setTimeout(() => router.replace(target as never), 50);
+          offerRestoreIfFree(isAudioPro || isBraceletPro);
         }
       } else if (r.needsConfirm) {
         /* Account bestaat, e-mail nog te bevestigen: geen fout. Het

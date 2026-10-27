@@ -42,8 +42,9 @@ import type { IapPurchase } from './iap-contract';
  *  forget. Fouten worden geswallowed — geen UI-modal, geen "Nothing to
  *  restore" alert. Als de restore lukt updaten cachedSubscription +
  *  customerInfo listeners de UI automatisch. */
-export function silentRestoreAfterLogin(): void {
-  void (async () => {
+export function silentRestoreAfterLogin(): Promise<boolean> {
+  return (async () => {
+    let restored = false;
     try {
       const iap = getIAP();
       await iap.init();
@@ -59,7 +60,8 @@ export function silentRestoreAfterLogin(): void {
         }
       }
       try {
-        await iap.restorePurchases();
+        const purchases = await iap.restorePurchases();
+        restored = Array.isArray(purchases) && purchases.length > 0;
       } catch {
         /* swallow — 'Nothing to restore' throwt niet meer sinds v227,
            andere errors zijn niet fataal voor login flow */
@@ -72,6 +74,7 @@ export function silentRestoreAfterLogin(): void {
     } catch {
       /* swallow — helemaal silent */
     }
+    return restored;
   })();
 }
 
