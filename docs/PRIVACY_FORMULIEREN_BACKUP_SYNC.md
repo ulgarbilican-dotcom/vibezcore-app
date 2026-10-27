@@ -21,7 +21,7 @@ Algemeen: "Verzamelt de app gebruikersgegevens?" **Ja** (was al ja: e-mail, aank
 
 Beveiligingssectie:
 - **Gegevens versleuteld tijdens verzending:** Ja (HTTPS).
-- **Gebruikers kunnen verwijdering aanvragen:** Ja — in de app (Profiel → account verwijderen, backend `/api/delete-account`). De tabel `user_data` verwijst met ON DELETE CASCADE naar de gebruiker, dus de rijen verdwijnen mee. **Nog te bevestigen met een echte test** (de backend staat niet in deze repo): account verwijderen en kijken of de rijen weg zijn.
+- **Gebruikers kunnen verwijdering aanvragen:** Ja — in de app (Profiel → account verwijderen, backend `/api/delete-account`). De tabel `user_data` verwijst met ON DELETE CASCADE naar de gebruiker, dus de rijen verdwijnen mee. **Bevestigd op 27 okt 2026 met een echte test**: testaccount verwijderd in de app; daarna `select … from public.user_data` gaf 0 rijen en er waren 0 achtergebleven rijen zonder bijbehorende gebruiker.
 - Camerabeelden worden niet opgeslagen of verstuurd (blijft zoals het was).
 
 ## Apple App Store: App Privacy ("voedingslabel")
