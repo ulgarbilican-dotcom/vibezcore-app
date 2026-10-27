@@ -66,6 +66,8 @@ class BreathListenerService : WearableListenerService() {
     ClockSync.refresh(this)
     try {
       when (event.path) {
+        /* 27 okt 2026: de telefoon antwoordt op onze vraag met de catalogus zelf — meteen bewaard (vervangt het wachten op een data-item). */
+        PhoneLink.PATH_CATALOG_REPLY -> CatalogStore.save(this, String(event.data, Charsets.UTF_8))
         PATH_WAKE -> Unit
         PATH_START -> {
           val json = String(event.data, Charsets.UTF_8)

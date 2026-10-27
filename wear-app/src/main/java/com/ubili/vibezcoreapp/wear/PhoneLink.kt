@@ -11,6 +11,9 @@ import org.json.JSONObject
 object PhoneLink {
   const val PATH_STATE_ACK = "/vibezcore/state/ack"
   const val PATH_WATCH_ACTION = "/vibezcore/watch/action"
+  /** 27 okt 2026: het horloge vraagt de catalogus ACTIEF op (een bewaard data-item wordt soms niet afgeleverd als de app niet draait). */
+  const val PATH_CATALOG_REQUEST = "/vibezcore/catalog/request"
+  const val PATH_CATALOG_REPLY = "/vibezcore/catalog/reply"
 
   fun send(context: Context, path: String, payload: ByteArray) {
     try {
@@ -28,6 +31,10 @@ object PhoneLink {
     } catch (_: Exception) {
       /* stil */
     }
+  }
+
+  fun requestCatalog(context: Context) {
+    send(context, PATH_CATALOG_REQUEST, ByteArray(0))
   }
 
   /** `action` = "pause" | "resume" | "stop", `kind` = "bracelet" | "breath". */

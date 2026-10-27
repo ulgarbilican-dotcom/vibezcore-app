@@ -79,8 +79,11 @@ object CatalogStore {
     null
   }
 
-  /** Haal de bewaarde catalogus opnieuw op (bv. bij het openen van de app). */
+  /** Haal de bewaarde catalogus opnieuw op (bv. bij het openen van de app).
+   *  Twee wegen, zodat het nooit van één kanaal afhangt: het bewaarde data-item én een rechtstreekse vraag aan de telefoon
+   *  (die antwoordt met een bericht, zie BreathListenerService). */
   fun refresh(context: Context) {
+    PhoneLink.requestCatalog(context)
     try {
       Wearable.getDataClient(context.applicationContext)
         .getDataItems(Uri.parse("wear://*$PATH_CATALOG"))

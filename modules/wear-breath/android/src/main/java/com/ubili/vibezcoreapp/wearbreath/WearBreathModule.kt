@@ -112,6 +112,11 @@ private const val WATCH_CAPABILITY = "vibezcore_watch_app"
    die op het horloge zelf gedaan zijn, laat het horloge achter onder
    /vibezcore/watchlog/… — de telefoon haalt ze op en wist ze. */
 private const val PATH_CATALOG = "/vibezcore/catalog"
+/** 27 okt 2026: het horloge vraagt de catalogus ACTIEF op; de telefoon antwoordt met een bericht (data-items worden soms niet afgeleverd als de horloge-app niet draait). */
+private const val PATH_CATALOG_REQUEST = "/vibezcore/catalog/request"
+private const val PATH_CATALOG_REPLY = "/vibezcore/catalog/reply"
+/** De laatst door JS gestuurde catalogus, om op een verzoek meteen te kunnen antwoorden. */
+@Volatile private var lastCatalogJson: String? = null
 private const val PATH_WATCHLOG = "/vibezcore/watchlog"
 
 class WearBreathModule : Module() {
@@ -121,6 +126,11 @@ class WearBreathModule : Module() {
   private val messageListener = MessageClient.OnMessageReceivedListener { event: MessageEvent ->
     try {
       when (event.path) {
+        PATH_CATALOG_REQUEST -> {
+          lastCatalogJson?.let { json ->
+            Wearable.getMessageClient(context).sendMessage(event.sourceNodeId, PATH_CATALOG_REPLY, json.toByteArray(Charsets.UTF_8))
+          }
+        }
         PATH_CLOCK_PING -> {
           val phoneNow = System.currentTimeMillis()
           val reply = "${String(event.data, Charsets.UTF_8)},$phoneNow".toByteArray(Charsets.UTF_8)
@@ -212,6 +222,7 @@ class WearBreathModule : Module() {
     }
 
     Function("syncCatalog") { json: String ->
+      lastCatalogJson = json
       try {
         val req = PutDataRequest.create(PATH_CATALOG)
           .setData(json.toByteArray(Charsets.UTF_8))

@@ -86,6 +86,10 @@
                     android:scheme="wear"
                     android:host="*"
                     android:pathPrefix="/vibezcore/state" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/vibezcore/catalog/reply" />
             </intent-filter>
             <!-- 13 okt 2026: catalogus van de telefoon (bewaard gegeven) -->
             <intent-filter>
