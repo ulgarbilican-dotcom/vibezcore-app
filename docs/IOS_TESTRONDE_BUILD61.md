@@ -2,7 +2,7 @@
 
 Gemeld door de operator na TestFlight (iPhone + Apple Watch / Galaxy Watch). Status per punt: ☐ open · 🔎 onderzoeken · ✅ opgelost.
 
-## Telefoon (iOS)
+## Telefoon (iOS) — Android-build is klaar (27 okt)
 1. ☐ Intro stap 1: foto begint niet uitgezoomd; de beginpose van de mensen aan de buitenkant is niet te zien; inzoomen moet vlot en snel (en mooi).
 2. ☐ Na de intro zie ik geen onboardings (zou moeten volgens de nieuwe flow: welkom → onderdeel → eerst eigen pagina met tabbalk → onboarding).
 3. ☐ Geminimaliseerde sessie-balk (mini-player) is te krap: iets hoger/groter.

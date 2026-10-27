@@ -32,7 +32,7 @@ import { useEffect, useState } from 'react';
 import { Image, type ImageSourcePropType, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { imageSource } from '@/utils/image-source';
-import Animated, { Easing, FadeIn, interpolate, useAnimatedStyle, useDerivedValue, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, FadeIn, interpolate, useAnimatedStyle, useDerivedValue, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { Canvas, Circle, Group, Path, RadialGradient, Skia, vec } from '@shopify/react-native-skia';
 
 type Step = {
@@ -503,9 +503,14 @@ export default function IntroScreen() {
   const zoom = useSharedValue(1);
   const stripH = Math.round(winW * (cur.photoRatio ?? 0.43));
   const zoomTo = Math.min(3, Math.max(1, (photoH / Math.max(1, stripH)) * 0.92));
+  /* 27 okt 2026 (operator, iOS): "foto begint niet uitgezoomd; de beginpose van de mensen aan de buitenkant zie ik niet; inzoomen moet vlot en snel".
+     De beginwaarde 1 staat nu vóór de eerste tekenbeurt vast (cancelAnimation + set), en de zoom start na korte rust (450 ms, zodat de beginpose
+     zichtbaar is) met een vlotte, sneller uitlopende curve van 2,6 s i.p.v. 4,5 s inOut. */
   useEffect(() => {
+    cancelAnimation(zoom);
     zoom.value = 1;
-    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(300, withTiming(zoomTo, { duration: 4500, easing: Easing.inOut(Easing.cubic) }));
+    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(450, withTiming(zoomTo, { duration: 2600, easing: Easing.out(Easing.cubic) }));
+    return () => cancelAnimation(zoom);
   }, [cur.pan, zoomTo, zoom]);
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */
