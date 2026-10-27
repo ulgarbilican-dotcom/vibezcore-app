@@ -12,6 +12,7 @@
    geschiedenis (en zo in Apple Health / Health Connect).
    ───────────────────────────────────────────────────────────────────────── */
 
+import { QA_ENABLED } from '@/utils/qa';
 import { BREATH_STATES, roundsFor, type BreathState, type BreathStateKey } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import { phaseHapticPattern, watchBreathAmplitude } from '@/services/breath-haptics';
@@ -287,6 +288,7 @@ export function useWatchCatalogSync(): void {
     /* de ene gratis State Control-sessie: zelfde regel als useStateFreeStart (na de onboarding, nog niet gebruikt) */
     const stateFreeOnce = stateLocked && stateFreeUsedAt === null && stateFreeMode !== null;
     const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt, stateFreeOnce);
+    if (QA_ENABLED) console.log(`[QA-WATCH] ${JSON.stringify({ isPro: sub.isPro, stateLocked, stateFreeOnce, stateFreeUsedAt, stateFreeMode, breathFree: !sub.isPro && !freeUsedAt, platform: Platform.OS })}`);
     if (Platform.OS === 'android') syncWatchCatalog(json);
     else if (Platform.OS === 'ios') syncAppleWatchCatalog(json);
   }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, stateFreeUsedAt, stateFreeMode, strength, experience, history.length, techByState, restingBpm, resyncTick]);
