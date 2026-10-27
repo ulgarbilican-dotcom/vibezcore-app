@@ -249,14 +249,21 @@ object CatalogStore {
    *  oudere telefoon-app). */
   fun state(context: Context): List<JSONObject> {
     val cat = load(context) ?: return emptyList()
+    val expired = premiumExpired(cat) && !cat.optBoolean("ownsBracelet", false)
     val arr = cat.optJSONArray("state") ?: return emptyList()
     /* 27 okt 2026: net als bij Breathwork — de ene gratis volledige State Control-sessie geldt ook op de pols; na die
        sessie weer op slot (voorproef van 30 s), ook zonder telefoon in de buurt. */
     val freeUsedHere = cat.optBoolean("stateFreeOnce", false) &&
       context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("freeStateUsed", false)
     return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.map { e ->
-      if (freeUsedHere && !e.optBoolean("locked")) JSONObject(e.toString()).put("locked", true) else e
+      if ((freeUsedHere || expired) && !e.optBoolean("locked")) JSONObject(e.toString()).put("locked", true) else e
     }
+  }
+
+  /** Is het Premium-recht dat de telefoon meegaf voorbij? (27 okt 2026: ook zonder telefoon in de buurt.) 0 = geen einddatum. */
+  private fun premiumExpired(cat: JSONObject): Boolean {
+    val until = cat.optLong("entitledUntil", 0L)
+    return until > 0L && System.currentTimeMillis() > until
   }
 
   /** Een gratis State Control-sessie is op het horloge gestart. */
@@ -280,13 +287,14 @@ object CatalogStore {
 
   fun breath(context: Context): List<JSONObject> {
     val cat = load(context) ?: return emptyList()
+    val expired = premiumExpired(cat)
     val arr = cat.optJSONArray("breath") ?: return emptyList()
     /* 14 okt 2026 (audit): de ene gratis Breathwork-sessie geldt ook op de
        pols — na die sessie op slot, ook zonder telefoon in de buurt. */
     val freeUsedHere = cat.optBoolean("breathFreeOnce", false) &&
       context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("freeBreathUsed", false)
     return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.map { e ->
-      if (freeUsedHere && !e.optBoolean("locked")) JSONObject(e.toString()).put("locked", true) else e
+      if ((freeUsedHere || expired) && !e.optBoolean("locked")) JSONObject(e.toString()).put("locked", true) else e
     }
   }
 

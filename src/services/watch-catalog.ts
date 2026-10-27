@@ -88,7 +88,17 @@ function techForWatch(key: BreathStateKey, base: BreathState['techniques'][numbe
 /** `stateFreeOnce` (27 okt 2026, operator: gratis sessies kloppen niet op het horloge): de ene gratis volledige State Control-sessie
  *  (na de State Control-onboarding, zie useStateFreeStart) is nog niet gebruikt — dan is State Control op het horloge niet op slot,
  *  tot die ene sessie gestart is; daarna weer de voorproef van 30 s. Zelfde regel als op de telefoon. */
-export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFreeOnce = false, stateFreeOnce = false): string {
+/** `entitledUntilMs` (27 okt 2026, operator: bij een verlopen abonnement moet Premium op telefoon ÉN horloge eindigen): het einde van het
+ *  Premium-recht (0 = geen einddatum bekend/niet van toepassing). Het horloge werkt zelfstandig met deze bewaarde catalogus en zet zichzelf
+ *  daarmee op slot zodra die tijd voorbij is, ook als de telefoon-app niet meer geopend wordt. `ownsBracelet`: State Control blijft dan open. */
+export function buildWatchCatalog(
+  locked: boolean,
+  stateLocked = false,
+  breathFreeOnce = false,
+  stateFreeOnce = false,
+  entitledUntilMs = 0,
+  ownsBracelet = false,
+): string {
   const breath = ORDER.map((key) => {
     const st = BREATH_STATES[key];
     /* 13 okt 2026 (operator: "gebruiker moet eerst de techniek kunnen
@@ -135,7 +145,7 @@ export function buildWatchCatalog(locked: boolean, stateLocked = false, breathFr
     locked: stateLocked && !stateFreeOnce,
     params: watchStateParams(m.mode),
   }));
-  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, stateFreeOnce, strength: getHapticStrength() });
+  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, stateFreeOnce, entitledUntil: entitledUntilMs, ownsBracelet, strength: getHapticStrength() });
 }
 
 /** Een State Control-sessie die op het horloge zelf liep (13 okt 2026). */
@@ -250,6 +260,16 @@ async function importWatchRecords(items: string[]): Promise<void> {
   }
 }
 
+/** Tot wanneer het horloge Premium mag tonen zonder de telefoon te horen. Verlengt het abonnement automatisch, dan komt de nieuwe
+ *  einddatum pas bij het volgende openen van de app bij het horloge: daarom 48 uur speling (de winkel verlengt rond de einddatum).
+ *  Verlengt het niet meer (opgezegd) of is het een dagpas, dan stopt het precies op de einddatum. 0 = geen einddatum bekend. */
+export function watchEntitledUntil(isPro: boolean, validUntil?: string | null, willRenew?: boolean | null): number {
+  if (!isPro || !validUntil) return 0;
+  const end = Date.parse(validUntil);
+  if (!Number.isFinite(end)) return 0;
+  return end + (willRenew ? 48 * 3600 * 1000 : 0);
+}
+
 /** Eén keer in de root-layout: houdt de catalogus op het horloge actueel en
  *  haalt horloge-sessies op als de app opent of terugkomt. Android (Wear OS);
  *  de Apple Watch volgt apart. */
@@ -287,11 +307,12 @@ export function useWatchCatalogSync(): void {
     const stateLocked = !sub.isPro && !ownsBracelet;
     /* de ene gratis State Control-sessie: zelfde regel als useStateFreeStart (na de onboarding, nog niet gebruikt) */
     const stateFreeOnce = stateLocked && stateFreeUsedAt === null && stateFreeMode !== null;
-    const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt, stateFreeOnce);
+    const entitledUntil = watchEntitledUntil(sub.isPro, sub.validUntil, sub.willRenew);
+    const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt, stateFreeOnce, entitledUntil, ownsBracelet);
     if (QA_ENABLED) console.log(`[QA-WATCH] ${JSON.stringify({ isPro: sub.isPro, stateLocked, stateFreeOnce, stateFreeUsedAt, stateFreeMode, breathFree: !sub.isPro && !freeUsedAt, platform: Platform.OS })}`);
     if (Platform.OS === 'android') syncWatchCatalog(json);
     else if (Platform.OS === 'ios') syncAppleWatchCatalog(json);
-  }, [sub.isPro, sub.isLoading, ownsBracelet, freeUsedAt, stateFreeUsedAt, stateFreeMode, strength, experience, history.length, techByState, restingBpm, resyncTick]);
+  }, [sub.isPro, sub.validUntil, sub.willRenew, sub.isLoading, ownsBracelet, freeUsedAt, stateFreeUsedAt, stateFreeMode, strength, experience, history.length, techByState, restingBpm, resyncTick]);
 
   useEffect(() => {
     if (Platform.OS === 'ios') return onAppleWatchLog(importAppleWatchRecord);

@@ -68,6 +68,10 @@ final class WatchCatalog: ObservableObject {
   @Published private(set) var breathFreeOnce = false
   /** De ene gratis State Control-sessie is nog niet gebruikt (niet-Premium, na de onboarding) — 27 okt 2026. */
   @Published private(set) var stateFreeOnce = false
+  /** Einde van het Premium-recht dat de iPhone meegaf (ms sinds 1970, 0 = geen einddatum) — 27 okt 2026: het horloge sluit zichzelf zodra
+      die tijd voorbij is, ook zonder iPhone. `ownsBracelet`: State Control blijft dan open. */
+  private(set) var entitledUntilMs: Double = 0
+  private(set) var ownsBracelet = false
   /** De gratis State Control-sessie is op dit horloge al gebruikt (ook zonder iPhone). */
   @Published private(set) var stateFreeUsedHere: Bool
   /** De gratis ademsessie is op dit horloge al gebruikt (ook zonder iPhone). */
@@ -93,9 +97,12 @@ final class WatchCatalog: ObservableObject {
     UserDefaults.standard.set(json, forKey: storeKey)
   }
 
+  /** Is het Premium-recht van de iPhone voorbij? */
+  var premiumExpired: Bool { entitledUntilMs > 0 && Date().timeIntervalSince1970 * 1000 > entitledUntilMs }
+
   /** Mag deze ademtoestand nu gestart worden? */
   func breathAllowed(_ b: CatalogBreath) -> Bool {
-    if !b.locked { return true }
+    if !b.locked { return !premiumExpired }
     return breathFreeOnce && !freeUsedHere
   }
 
@@ -106,7 +113,7 @@ final class WatchCatalog: ObservableObject {
 
   /** Mag deze State Control-toestand nu gestart worden? Op slot tenzij de ene gratis sessie nog beschikbaar is. */
   func stateAllowed(_ s: CatalogState) -> Bool {
-    if !s.locked { return true }
+    if !s.locked { return !premiumExpired || ownsBracelet }
     return stateFreeOnce && !stateFreeUsedHere
   }
 
@@ -180,6 +187,8 @@ final class WatchCatalog: ObservableObject {
     breath = parsedBreath
     breathFreeOnce = root["breathFreeOnce"] as? Bool ?? false
     stateFreeOnce = root["stateFreeOnce"] as? Bool ?? false
+    entitledUntilMs = (root["entitledUntil"] as? NSNumber)?.doubleValue ?? 0
+    ownsBracelet = root["ownsBracelet"] as? Bool ?? false
     if let st = root["strength"] as? String { WatchSettings.shared.adoptFromPhone(st) }
     return true
   }
