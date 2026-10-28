@@ -48,6 +48,8 @@ type Step = {
   photo?: string;
   /** hoogte / breedte van de foto (gemeten). */
   photoRatio?: number;
+  /** Foto lager zetten: afstand vanaf de bovenkant als deel van de schermhoogte (de bovenrand vloeit over in zwart). */
+  photoTop?: number;
   /** Liggende foto: vult 55% van de schermhoogte en glijdt traag van links naar rechts (drifting → directing). */
   pan?: boolean;
   /** Telefoon-mockup met echte schermen van de app (wisselt elke paar seconden) in plaats van een foto. */
@@ -109,6 +111,7 @@ const STEPS: Step[] = [
     body: '',
     photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20your%20move%20.png',
     photoRatio: 1,
+    photoTop: 0.07, // operator 28 okt: "foto mag lager" — het hoofd viel achter "5 OF 5"
   },
 ];
 
@@ -501,6 +504,7 @@ export default function IntroScreen() {
   /* Liggende foto (pan): 55% van de schermhoogte, breedte volgt de verhouding; glijdt één keer van links naar rechts. */
   const photoH = cur.photo ? (cur.pan ? Math.round(winH * 0.55) : Math.round(winW * (cur.photoRatio ?? 1.5))) : 0;
   const photoW = winW;
+  const photoTopPx = cur.photo && !cur.pan ? Math.round(winH * (cur.photoTop ?? 0)) : 0;
   /* Eerste scherm: de brede foto begint volledig (de buitenste mensen = het begin: drifting) en zoomt langzaam naar binnen op de twee in het midden (directing). */
   /* 28 okt 2026 (operator, iPhone): 'de foto gaat te snel, de mensen mogen even zichtbaar zijn (niet te traag, niet te snel)': rust 450 → 650 ms,
      zoom 2,6 → 3,4 s (was 4,5 s inOut, toen te traag bevonden). */
@@ -548,12 +552,16 @@ export default function IntroScreen() {
       {cur.photo ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* De foto op volle breedte in zijn eigen verhouding (2:3, 4:5, 9:16), onderaan zacht naar zwart waar de tekst staat. */}
-          <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={StyleSheet.absoluteFill}><Animated.View style={cur.pan ? [panStyle, { position: 'absolute', top: Math.round((photoH - stripH) / 2), left: 0, width: winW, height: stripH }] : undefined}><Image source={imageSource(cur.photo)} style={[cur.pan ? undefined : s.photo, { width: photoW, height: cur.pan ? stripH : photoH }]} resizeMode="cover" /></Animated.View></Animated.View>
+          <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={StyleSheet.absoluteFill}><Animated.View style={cur.pan ? [panStyle, { position: 'absolute', top: Math.round((photoH - stripH) / 2), left: 0, width: winW, height: stripH }] : undefined}><Image source={imageSource(cur.photo)} style={[cur.pan ? undefined : s.photo, { width: photoW, height: cur.pan ? stripH : photoH }, !cur.pan && photoTopPx ? { top: photoTopPx } : null]} resizeMode="cover" /></Animated.View></Animated.View>
+          {/* Lager gezette foto: de bovenrand vloeit zacht over in de zwarte achtergrond (geen harde lijn). */}
+          {!cur.pan && photoTopPx ? (
+            <LinearGradient colors={['#0a0a0a', 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', left: 0, right: 0, top: photoTopPx, height: Math.round(photoH * 0.18) }} />
+          ) : null}
           <LinearGradient colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)']} locations={[0, 1]} style={s.topFade} />
           <LinearGradient
             colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.7)', 'rgba(10,10,10,0.96)', '#0a0a0a']}
             locations={[0, 0.45, 0.8, 1]}
-            style={{ position: 'absolute', left: 0, right: 0, top: Math.round(photoH * 0.3), height: Math.round(photoH * 0.7) + 2 }}
+            style={{ position: 'absolute', left: 0, right: 0, top: photoTopPx + Math.round(photoH * 0.3), height: Math.round(photoH * 0.7) + 2 }}
           />
         </View>
       ) : null}
