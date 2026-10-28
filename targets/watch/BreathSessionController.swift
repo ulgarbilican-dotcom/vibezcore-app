@@ -153,6 +153,9 @@ final class BreathSessionController: NSObject, ObservableObject {
       joinSilent = false
     }
     let joinElapsedInPhase = joinDur - joinRemaining
+    /* Meer dan de gewone bezorgvertraging (1,5 s) al in de fase: de beginmarker ("hold" = één tik, "exhale" = richtingstik) zou nu midden
+       in de fase klinken en je op het verkeerde been zetten. Dan wacht de pols stil tot de volgende fase (zoals bij hervatten). */
+    if joinElapsedInPhase > 1.5 { joinSilent = true }
     generation += 1
     runPhase(
       gen: generation, round: joinRound, idx: joinIdx,
