@@ -6,7 +6,7 @@
      · State Control: na de rusthartslag-keuze → "Set your plan" → ja = /bracelet-set-day
      · Breathwork:    zodra de keuzepagina open is → "Set your goal" → ja = /build-choice (stap 1 van 5)
    Eén keer per tabblad en per toestel; alleen na een échte nieuwe aankoop (niet bij herstel of een bestaand abonnement — behalve in een
-   testbuild, zodat het testaccount het kan zien); niet als er al een plan is. [TEKST] concept: de definitieve tekst is aan de operator.
+   testbuild, zodat het testaccount het kan zien); niet als er al een plan is. Teksten (PlanOfferHost.tsx) goedgekeurd door de operator, 28 okt 2026.
    ───────────────────────────────────────────────────────────────────────── */
 
 import { reloadActiveBraceletPlan, getActiveBraceletPlan } from '@/utils/bracelet-plan-store';

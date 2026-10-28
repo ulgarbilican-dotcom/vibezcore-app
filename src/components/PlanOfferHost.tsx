@@ -4,7 +4,7 @@
    Zelfde protocol als het Day Pass-blad (SalesNudgeHost): echt glas (GlassSheet + blurTarget), grijpstreepje, klein label, titel, één
    zin, witte hoofdknop, "Not now" als rustige tekstregel, onderdelen na elkaar in beeld, naar beneden vegen = sluiten. Eigen
    iconenstijl: de vijf toestanden als StateGlyph in een glazen cirkel met de toestandskleur (zoals op "Set your plan"), en de drie
-   regels met een wit lijn-icoon in een glazen cirkel. Wanneer het blad verschijnt beslist utils/plan-offer.ts. [TEKST] concept.
+   regels met een wit lijn-icoon in een glazen cirkel. Wanneer het blad verschijnt beslist utils/plan-offer.ts. Teksten goedgekeurd door de operator (28 okt 2026).
    ───────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';

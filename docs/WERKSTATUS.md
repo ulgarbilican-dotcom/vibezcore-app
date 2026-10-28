@@ -62,6 +62,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
   - **Open, beslist door operator:**
     - Popups "Set your plan" / "Set your goal" (ENKEL die twee, niet alle popups): echt glas (blur) + icoon. Plan: deze twee via de glas-laag (zoals GlassSheetHost) i.p.v. de Modal, met een icoon; andere popups NIET aanraken.
     - Moet een Premium-gebruiker de Breathwork-onboarding later nog zien, of nooit meer? (vraag gesteld, nog geen antwoord)
+  - **Teksten van het plan-blad goedgekeurd (28 okt).** Operator: alles BUITEN de app (Play Console, App Store Connect, Data safety, privacylabel, SHA-1, website) pas als de app volledig in orde is.
   - **Open, operator-taken:** Play Console abonnementsnamen → gedaan 28 okt ("VIBEZCORE Premium — Monthly/Yearly", nieuwe voordelen); controleer "Vertalingen beheren". Play Data safety + App Store-privacylabel (docs/PRIVACY_FORMULIEREN_BACKUP_SYNC.md). Google-inloggen: Play-app-ondertekenings-SHA-1 in Google Cloud. Website-privacy: Wix-embedhoogte.
   - **Testen met het testaccount:** dat Play-account HEEFT al een abonnement → "Je bent al geabonneerd" komt van Google; gebruik Restore. Echt nieuw kopen kan alleen met een tweede Google-account (Play-ronde).
   - **Lessen van vandaag (werkwijze):** eerst het log/de code lezen, dan pas uitleggen of bouwen; elke nieuwe regel nagaan tegen bestaande regels (de Premium-onboardingregel van 26 okt botste met de plan-vraag); WERKSTATUS na ELKE wijziging bijwerken.
