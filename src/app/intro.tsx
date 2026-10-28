@@ -100,14 +100,15 @@ const STEPS: Step[] = [
     Icon: AudioLines,
   },
   {
+    /* 28 okt 2026 (operator): nieuwe tekst en foto voor het slotscherm. Kop zonder punt op het einde (regel voor koppen). De foto is
+       liggend (1536 x 1024); hier vierkant getoond (cover) zodat beide personen in beeld blijven en de tekst eronder ademt. */
     key: 'start',
-    eyebrow: 'START',
-    title: 'Your life.\nYour next move',
-    sub: 'Choose what you need right now.',
-    body: 'State Control, Guided Breathwork or the Audio Library.',
-    note: 'All in one app.', // [TEKST] concept — "alles inbegrepen": bewust niet "all included" (een gratis bezoeker krijgt per onderdeel één gratis sessie)
-    photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20your%20plan%20app.png',
-    photoRatio: 1670 / 942,
+    eyebrow: 'YOUR LIFE. YOUR NEXT MOVE',
+    title: 'Growth starts\nwith one moment',
+    sub: 'Take a breath. Find your balance. Understand yourself. Begin where you are.',
+    body: '',
+    photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20your%20move%20.png',
+    photoRatio: 1,
   },
 ];
 
@@ -531,7 +532,7 @@ export default function IntroScreen() {
   const insets = useSafeAreaInsets();
   const phoneH = Math.round(winH * 0.46); // groot; de onderste helft verdwijnt achter de tekstkaart (alleen de bovenste helft is zichtbaar)
   const phoneTop = Math.round(insets.top + 50); // onder de bovenbalk (Back / stap / Skip)
-  const ctaLabel = step === 0 ? 'Get started' : last ? 'Start exploring' : 'Next'; // [TEKST] concept: slotknop belooft iets (was 'Continue')
+  const ctaLabel = step === 0 ? 'Get started' : last ? 'Take your first step' : 'Next'; // slotknop: operator-tekst 28 okt 2026
 
   return (
     <View style={s.root}>
