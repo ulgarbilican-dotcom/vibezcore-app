@@ -129,15 +129,6 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
           </Tap>
         ) : null}
       </View>
-      {/* 28 okt 2026 (operator akkoord): een app kan niet harder trillen dan de motor en de trilsterkte van het
-          horloge zelf toelaten — een rustige hint, zonder claim. */}
-      {w.status === 'ready' && on ? (
-        <Text style={s.hint}>
-          {Platform.OS === 'ios'
-            ? 'Does the vibration feel soft? Raise Haptic Strength in the Watch app, under Sounds & Haptics.'
-            : 'Does the vibration feel soft? Raise the vibration strength in your watch settings.'}
-        </Text>
-      ) : null}
     </>
   );
 }
@@ -146,7 +137,6 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   title: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16 },
   sub: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.regular, fontSize: 13, marginTop: 2 },
-  hint: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, paddingBottom: 8 },
   btn: { backgroundColor: '#ffffff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   btnTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 13 },
 });
