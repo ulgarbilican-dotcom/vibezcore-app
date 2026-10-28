@@ -24,6 +24,19 @@ const SEEN_KEY = 'vz_plan_offer_seen_v1';
 
 type Flags = { state?: boolean; breath?: boolean };
 
+/* Synchrone kopie van de openstaande vragen, voor beslissingen die niet kunnen wachten (Breath-tab: onboarding of de vraag). */
+let pendingCache: Flags = {};
+void AsyncStorage.getItem(PENDING_KEY)
+  .then((raw) => {
+    if (raw) pendingCache = { ...(JSON.parse(raw) as Flags), ...pendingCache };
+  })
+  .catch(() => {});
+
+/** Staat de vraag voor dit tabblad nog open (nieuwe abonnee, nog niet getoond)? */
+export function isPlanOfferPending(kind: PlanOfferKind): boolean {
+  return pendingCache[kind] === true;
+}
+
 async function read(key: string): Promise<Flags> {
   try {
     const raw = await AsyncStorage.getItem(key);
@@ -44,15 +57,18 @@ async function write(key: string, v: Flags): Promise<void> {
 export async function markPlanOfferPending(): Promise<void> {
   const seen = await read(SEEN_KEY);
   const pending = await read(PENDING_KEY);
-  await write(PENDING_KEY, {
+  const next = {
     state: pending.state || QA_ENABLED || !seen.state,
     breath: pending.breath || QA_ENABLED || !seen.breath,
-  });
+  };
+  pendingCache = next;
+  await write(PENDING_KEY, next);
 }
 
 async function consume(kind: PlanOfferKind): Promise<void> {
   const pending = await read(PENDING_KEY);
   const seen = await read(SEEN_KEY);
+  pendingCache = { ...pendingCache, [kind]: false };
   await write(PENDING_KEY, { ...pending, [kind]: false });
   await write(SEEN_KEY, { ...seen, [kind]: true });
 }
