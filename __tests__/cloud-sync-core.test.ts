@@ -1,4 +1,6 @@
 import {
+  mergeAudio,
+  mergeStateHistory,
   decide,
   hashValue,
   mergeHistory,
@@ -98,5 +100,34 @@ describe('pickPulse / pickPlan', () => {
     expect(pickPlan({ id: 'a', createdAt: 1 }, { id: 'b', createdAt: 2 })?.id).toBe('b');
     expect(pickPlan(null, { id: 'b', createdAt: 2 })?.id).toBe('b');
     expect(pickPlan({ id: 'a', createdAt: 1 }, null)?.id).toBe('a');
+  });
+});
+
+describe('mergeStateHistory', () => {
+  const rec = (id: string, end: string, updatedAt?: string) => ({ id, mode: 0, startedAt: end, endedAt: end, durationMin: 5, plannedMin: 5, status: 'completed', ...(updatedAt ? { updatedAt } : {}) });
+  it('unites by id, newest first, never loses a session', () => {
+    const a = { sessions: [rec('1', '2026-10-01T10:00:00Z'), rec('2', '2026-10-02T10:00:00Z')] };
+    const b = { sessions: [rec('2', '2026-10-02T10:00:00Z'), rec('3', '2026-10-03T10:00:00Z')] };
+    expect(mergeStateHistory(a, b).sessions.map((r) => r.id)).toEqual(['3', '2', '1']);
+  });
+  it('the last modified version of the same session wins', () => {
+    const a = { sessions: [rec('1', '2026-10-01T10:00:00Z', '2026-10-01T10:00:05Z')] };
+    const b = { sessions: [{ ...rec('1', '2026-10-01T10:00:00Z', '2026-10-01T11:00:00Z'), durationMin: 9 }] };
+    expect(mergeStateHistory(a, b).sessions[0].durationMin).toBe(9);
+    expect(mergeStateHistory(b, a).sessions[0].durationMin).toBe(9);
+  });
+});
+
+describe('mergeAudio', () => {
+  const f = (n: number, ts: number) => ({ url: `u${n}`, title: `T${n}`, series: 'S', ts });
+  const h = (n: number, ts: number) => ({ url: `u${n}`, title: `T${n}`, series: 'S', ts, dur: 10, full: true, fc: 1 });
+  it('unites favorites and listens, and keeps the furthest resume position per session', () => {
+    const a = { favorites: [f(1, 5)], history: [h(1, 100)], positions: { u1: 30, u2: 10 } };
+    const b = { favorites: [f(1, 9), f(2, 7)], history: [h(1, 100), h(2, 200)], positions: { u1: 20, u3: 5 } };
+    const m = mergeAudio(a, b);
+    expect(m.favorites.map((x) => x.url).sort()).toEqual(['u1', 'u2']);
+    expect(m.favorites.find((x) => x.url === 'u1')!.ts).toBe(9);
+    expect(m.history.map((x) => x.ts)).toEqual([200, 100]);
+    expect(m.positions).toEqual({ u1: 30, u2: 10, u3: 5 });
   });
 });

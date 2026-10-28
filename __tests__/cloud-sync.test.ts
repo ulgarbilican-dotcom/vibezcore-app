@@ -3,15 +3,26 @@
    een nieuw account, en dat een ontbrekende tabel stil genegeerd wordt. */
 
 type Row = { key: string; value: any; updated_at: string };
-const server: { rows: Row[]; tableExists: boolean; clock: number; calls: number } = { rows: [], tableExists: true, clock: 0, calls: 0 };
+const server: { rows: Row[]; tableExists: boolean; clock: number; calls: number; reject: string[]; rejected: number } = { rows: [], tableExists: true, clock: 0, calls: 0, reject: [], rejected: 0 };
 
+/* Een token met een `sub` (zoals Supabase), zodat de State Control-geschiedenis dezelfde emmer kiest als de rest. Gast = geen herkenbare sub. */
+const fakeJwt = () => {
+  const b = (globalThis as any).__bucket as string;
+  if (!b || !b.startsWith('u-')) return 'token';
+  const payload = Buffer.from(JSON.stringify({ sub: b.slice(2) })).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return `h.${payload}.s`;
+};
 jest.mock('@/services/auth', () => ({
-  getToken: async () => 'token',
+  getToken: async () => fakeJwt(),
   fetchWithTimeout: async (url: string, init: any = {}) => {
     server.calls++;
     if (!server.tableExists) return { status: 404, ok: false, json: async () => ({}) };
     if (init.method === 'POST') {
       const [{ key, value }] = JSON.parse(init.body);
+      if (server.reject.includes(key)) {
+        server.rejected++;
+        return { status: 400, ok: false, json: async () => ({}) };
+      }
       server.clock++;
       const row = { key, value, updated_at: `2026-10-26T10:00:${String(server.clock).padStart(2, '0')}Z` };
       server.rows = [...server.rows.filter((r) => r.key !== key), row];
@@ -22,6 +33,8 @@ jest.mock('@/services/auth', () => ({
 }));
 jest.mock('@/utils/user-bucket', () => ({
   resolveActiveBucket: async () => (globalThis as any).__bucket,
+  ensureBucketLoaded: async () => (globalThis as any).__bucket,
+  getCurrentBucket: () => (globalThis as any).__bucket,
   subscribeUserBucket: () => () => {},
 }));
 
@@ -31,6 +44,10 @@ type Device = {
   history: typeof import('../src/utils/breath-history');
   pulse: typeof import('../src/services/resting-pulse');
   plan: typeof import('../src/utils/plan-store');
+  state: typeof import('../src/utils/bracelet-history');
+  fav: typeof import('../src/hooks/useFavorites');
+  listen: typeof import('../src/utils/history');
+  vzp: typeof import('../src/utils/vzp');
   storage: Record<string, string>;
 };
 
@@ -47,6 +64,10 @@ function newDevice(bucket: string, storage: Record<string, string> = {}): Device
       history: require('../src/utils/breath-history'),
       pulse: require('../src/services/resting-pulse'),
       plan: require('../src/utils/plan-store'),
+      state: require('../src/utils/bracelet-history'),
+      fav: require('../src/hooks/useFavorites'),
+      listen: require('../src/utils/history'),
+      vzp: require('../src/utils/vzp'),
       storage,
     };
   });
@@ -58,6 +79,8 @@ beforeEach(() => {
   server.tableExists = true;
   server.clock = 0;
   server.calls = 0;
+  server.reject = [];
+  server.rejected = 0;
 });
 
 const session = (ts: number) => ({ key: 'calm', name: 'Calm Control', ts, durSec: 600, rounds: 5, completed: true });
@@ -151,5 +174,89 @@ describe('Backup & Sync', () => {
     const calls = server.calls;
     expect(await a.sync.syncNow(false)).toBe('skipped');
     expect(server.calls).toBe(calls);
+  });
+
+  /* ── 28 okt 2026: State Control-sessies en de Audio Library ───────────────────────────────────────────────────────────── */
+  const stateRec = (n: number) => ({
+    mode: n % 5,
+    startedAt: new Date(2026, 9, n, 8, 0).toISOString(),
+    endedAt: new Date(2026, 9, n, 8, 10).toISOString(),
+    durationMin: 10,
+    plannedMin: 10,
+    status: 'completed' as const,
+  });
+
+  it('State Control sessions travel to a second device (and a session is never counted twice)', async () => {
+    const a = newDevice('u-abc');
+    await a.state.recordSession(stateRec(1));
+    await a.state.recordSession(stateRec(2));
+    expect(await a.sync.syncNow(true)).toBe('ok');
+    expect(server.rows.map((r) => r.key)).toContain('state_history');
+
+    const b = newDevice('u-abc');
+    expect(await b.state.getStateSyncSnapshot()).toHaveLength(0);
+    expect(await b.sync.syncNow(true)).toBe('ok');
+    const onB = await b.state.getStateSyncSnapshot();
+    expect(onB).toHaveLength(2);
+    expect(onB.every((r) => !('syncedAt' in r))).toBe(true); // `syncedAt` hoort bij de oudere wachtrij en gaat niet mee
+
+    /* Beide toestellen doen daarna een sessie: samenvoegen geeft er 4, geen dubbele. */
+    await a.state.recordSession(stateRec(3));
+    await b.state.recordSession(stateRec(4));
+    await a.sync.syncNow(true);
+    await b.sync.syncNow(true);
+    await a.sync.syncNow(true);
+    expect((await a.state.getStateSyncSnapshot()).map((r) => r.startedAt).sort()).toEqual((await b.state.getStateSyncSnapshot()).map((r) => r.startedAt).sort());
+    expect(await a.state.getStateSyncSnapshot()).toHaveLength(4);
+  });
+
+  it('favorites, listening history and resume positions travel — and a removed favorite stays removed on the other device', async () => {
+    const fav = (n: number) => ({ url: `https://x/${n}.mp3`, title: `T${n}`, series: 'S', ts: 1000 + n });
+    const a = newDevice('u-abc');
+    await a.fav.applyFavoritesSync([fav(1), fav(2)]);
+    await a.listen.applyAudioHistorySync([{ url: fav(1).url, title: 'T1', series: 'S', ts: 5000, dur: 300, full: true, fc: 1 }]);
+    await a.vzp.applyPositionsSync({ [fav(2).url]: 123 });
+    expect(await a.sync.syncNow(true)).toBe('ok');
+    expect(server.rows.map((r) => r.key)).toContain('audio');
+
+    const b = newDevice('u-abc');
+    expect(await b.sync.syncNow(true)).toBe('ok');
+    expect((await b.fav.getFavoritesSyncSnapshot()).map((f) => f.url).sort()).toEqual([fav(1).url, fav(2).url]);
+    expect((await b.listen.getAudioHistorySyncSnapshot()).map((h) => h.ts)).toEqual([5000]);
+    expect(await b.vzp.getPositionsSyncSnapshot()).toEqual({ [fav(2).url]: 123 });
+
+    /* A haalt favoriet 2 weg: dat moet ook op B gebeuren (niet terugkomen). */
+    await a.fav.applyFavoritesSync([fav(1)]);
+    await a.sync.syncNow(true);
+    await b.sync.syncNow(true);
+    expect((await b.fav.getFavoritesSyncSnapshot()).map((f) => f.url)).toEqual([fav(1).url]);
+  });
+
+  it('a guest who creates an account keeps State Control sessions, favorites and listening history', async () => {
+    const guest = newDevice('anon');
+    await guest.state.recordSession(stateRec(5));
+    await guest.fav.applyFavoritesSync([{ url: 'https://x/g.mp3', title: 'G', series: 'S', ts: 1 }]);
+    await guest.listen.applyAudioHistorySync([{ url: 'https://x/g.mp3', title: 'G', series: 'S', ts: 9, dur: 60, full: false, fc: 0 }]);
+    const account = newDevice('u-new', guest.storage); // dezelfde opslag, nu met een account
+    expect(await account.sync.syncNow(true)).toBe('ok');
+    expect(await account.state.getStateSyncSnapshot()).toHaveLength(1);
+    expect((await account.fav.getFavoritesSyncSnapshot()).map((f) => f.url)).toEqual(['https://x/g.mp3']);
+    expect(await account.listen.getAudioHistorySyncSnapshot()).toHaveLength(1);
+  });
+
+  it('a server that rejects a new part (list of allowed parts not updated yet) does not stop the other parts, and is not retried in a loop', async () => {
+    const a = newDevice('u-abc');
+    await a.settings.setSetting('experienceLevel', 'advanced');
+    await a.state.recordSession(stateRec(6));
+    /* Nagebootst: de tabel weigert 'state_history' met een 400. */
+    server.reject = ['state_history'];
+    expect(await a.sync.syncNow(true)).toBe('ok');
+    expect(server.rows.map((r) => r.key)).toContain('settings'); // de rest werkt gewoon
+    expect(server.rows.map((r) => r.key)).not.toContain('state_history');
+    const afterFirst = server.rejected;
+    expect(afterFirst).toBeGreaterThan(0);
+    await a.sync.syncNow(true);
+    await a.sync.syncNow(true);
+    expect(server.rejected).toBe(afterFirst); // niet opnieuw geprobeerd
   });
 });

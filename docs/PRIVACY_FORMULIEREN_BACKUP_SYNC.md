@@ -1,8 +1,8 @@
 # Privacyformulieren na Backup & Sync (26 okt 2026)
 
 Wat verandert er? Ingelogde gebruikers sturen een back-up naar het eigen account (Supabase, tabel `user_data`, beveiligd met RLS):
-instellingen en doelen, ervaringsniveau, stem/trilkeuzes, "introductie afgerond"-vlaggen, **rusthartslag (één getal, welzijn)**, ademhistoriek en actief plan.
-Gasten sturen niets. Herinneringen, luistervoortgang en favorieten worden NIET gesynct. Account verwijderen verwijdert de rijen (ON DELETE CASCADE).
+instellingen en doelen, ervaringsniveau, stem/trilkeuzes, "introductie afgerond"-vlaggen, **rusthartslag (één getal, welzijn)**, ademhistoriek, actief plan, **State Control-sessies, favorieten, beluisterde sessies en hervatposities (Audio Library)** (laatste drie toegevoegd 28 okt 2026).
+Gasten sturen niets. Herinneringen worden NIET gesynct. Account verwijderen verwijdert de rijen (ON DELETE CASCADE).
 
 > Dit is een voorstel op basis van de code. Jij (operator) bent verantwoordelijk voor de definitieve antwoorden; controleer ze tegen de actuele vragen in de consoles.
 
@@ -16,6 +16,8 @@ Algemeen: "Verzamelt de app gebruikersgegevens?" **Ja** (was al ja: e-mail, aank
 | **Gezondheid en fitness → Gezondheidsgegevens** (rusthartslag, een getal dat de gebruiker invult of meet) | **Ja, nieuw** — alleen voor ingelogde gebruikers | Nee | **App-functionaliteit** (instellen van het ritme; meereizen naar een nieuw toestel) | **Ja** (de gebruiker mag het overslaan; gemiddelde 70 bpm) |
 | **Gezondheid en fitness → Fitnessgegevens** (afgeronde ademsessies: toestand, duur) | **Ja, nieuw** — alleen voor ingelogde gebruikers | Nee | App-functionaliteit (geschiedenis op elk toestel) | Ja (alleen met account) |
 | App-activiteit → App-interacties (doelen, niveau, keuzes) | Ja, nieuw (ingelogd) | Nee | App-functionaliteit | Ja |
+| **Gezondheid en fitness → Fitnessgegevens** (ook: afgeronde State Control-sessies: toestand, duur) | **Ja, nieuw** (28 okt 2026) — alleen ingelogd | Nee | App-functionaliteit | Ja |
+| **App-activiteit → App-interacties** (favorieten, beluisterde sessies, hervatpositie in audio) | **Ja, nieuw** (28 okt 2026) — alleen ingelogd | Nee | App-functionaliteit (op elk toestel) | Ja |
 | Aankopen → Aankoopgeschiedenis | Ja (al zo, via RevenueCat) | Ja, met RevenueCat (betalingsverwerker) | App-functionaliteit | Nee |
 | App-informatie en -prestaties → Crashlogs | Ja (al zo, met toestemming, Sentry) | Ja (Sentry) | Analyse | Ja |
 
@@ -34,9 +36,9 @@ Beveiligingssectie:
 |---|---|---|
 | Contact Info | E-mailadres | App Functionality |
 | **Health & Fitness** | **Health** (rusthartslag, één getal) | **App Functionality** |
-| **Health & Fitness** | **Fitness** (ademsessies: duur en toestand) | App Functionality |
+| **Health & Fitness** | **Fitness** (ademsessies en State Control-sessies: duur en toestand) | App Functionality |
 | Purchases | Purchase History | App Functionality |
-| Usage Data | Product Interaction (doelen, niveau, keuzes) | App Functionality |
+| Usage Data | Product Interaction (doelen, niveau, keuzes; favorieten, beluisterde sessies, hervatpositie in audio) | App Functionality |
 | Identifiers | User ID | App Functionality |
 
 "Data Not Linked to You": Diagnostics (Crash Data, met toestemming), anonieme play-events (Product Interaction, willekeurige ID — niet aan de gebruiker gekoppeld).
@@ -49,7 +51,7 @@ Let op bij Apple:
 
 De in-app tekst (`src/data/legal-content.ts`) is bijgewerkt: nieuwe sectie "Backup & Sync (signed-in users only)", en de zinnen "stays on your device" zijn aangepast. **De webversie op vibezcore.com / app.vibezcore.com staat niet in deze repo** — daar moet dezelfde wijziging worden doorgevoerd (anders spreken app en website elkaar tegen).
 
-## Na akkoord
+## Na akkoord (aangevuld 28 okt 2026: State Control-sessies + Audio Library zitten nu ook in de back-up)
 
 1. Play Console → App-inhoud → Gegevensbeveiliging: bovenstaande invullen en publiceren.
 2. App Store Connect → App Privacy: bovenstaande invullen vóór de volgende indiening.

@@ -1181,7 +1181,7 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. Without an account, Breathwork and State Control session history is stored entirely on your device; with an account, part of it is backed up as described under Backup & Sync.',
+      text: 'VIBEZCORE relies primarily on **local storage** for most functionality across both products. Without an account, your session history, favourites and listening history are stored entirely on your device; with an account, they are backed up as described under Backup & Sync.',
     },
 
     /* ── 02. What We Store ── */
@@ -1251,12 +1251,12 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'Without an account, Breathwork and State Control session history is stored **entirely locally** and never leaves your device. If you are signed in, your Breathwork history is part of your Backup & Sync data (see below).',
+      text: 'Without an account, Breathwork and State Control session history is stored **entirely locally** and never leaves your device. If you are signed in, your Breathwork history and your State Control session history are part of your Backup & Sync data (see below).',
     },
     { kind: 'h3', text: 'Backup & Sync (signed-in users only)' },
     {
       kind: 'p',
-      text: 'When you are signed in, VIBEZCORE keeps a backup of the following in your account so it follows you to a new phone or after a reinstall: your settings and goals (including voice and haptics choices, your experience level and which introductions you have finished), your resting heart rate, your Breathwork history and your active plan. It is stored with our database provider (Supabase), is only readable by your own account, and is deleted when you delete your account. Guests are never synced — without an account everything stays on your device. Reminders, listening progress and favourites are not part of this backup.',
+      text: 'When you are signed in, VIBEZCORE keeps a backup of the following in your account so it follows you to a new phone or after a reinstall: your settings and goals (including voice and haptics choices, your experience level and which introductions you have finished), your resting heart rate, your Breathwork history, your State Control session history, your active plan, and your Audio Library data (your favourites, the sessions you listened to, and where you stopped listening). It is stored with our database provider (Supabase), is only readable by your own account, and is deleted when you delete your account. Guests are never synced — without an account everything stays on your device. Reminders are not part of this backup.',
     },
 
     /* ── 06. Do Not Track ── */

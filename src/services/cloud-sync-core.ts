@@ -7,8 +7,9 @@
    aan de echte opslag en aan Supabase.
 
    MODEL
-   Vier onderdelen ("domeinen"), elk één JSON-waarde per gebruiker op de server:
-     settings · resting_pulse · breath_history · plan
+   Zes onderdelen ("domeinen"), elk één JSON-waarde per gebruiker op de server:
+     settings · resting_pulse · breath_history · plan · state_history · audio
+   (state_history = State Control-sessies; audio = favorieten, beluisterde sessies en hervatposities — 28 okt 2026)
    Per domein houdt het toestel bij: de hash van wat het laatst gesynct is
    (`syncedHash`) en de serverstempel van de laatste keer dat het de server zag
    (`remoteAt`). Daaruit volgt de beslissing:
@@ -27,8 +28,8 @@
    "gratis sessie gebruikt") = ooit gezet blijft gezet; de rest = de nieuwste.
    ─────────────────────────────────────────────────────────────────────────── */
 
-export type SyncDomain = 'settings' | 'resting_pulse' | 'breath_history' | 'plan';
-export const SYNC_DOMAINS: SyncDomain[] = ['settings', 'resting_pulse', 'breath_history', 'plan'];
+export type SyncDomain = 'settings' | 'resting_pulse' | 'breath_history' | 'plan' | 'state_history' | 'audio';
+export const SYNC_DOMAINS: SyncDomain[] = ['settings', 'resting_pulse', 'breath_history', 'plan', 'state_history', 'audio'];
 
 /** Instellingen die mee reizen met het account. Bewust NIET: herinneringen en
  *  meldingen (per toestel), thema, audiokwaliteit, introductie-gezien (een nieuw
@@ -153,6 +154,67 @@ export function mergeHistory(a: HistoryPayload, b: HistoryPayload): HistoryPaylo
       sec: Math.max(a.totals.sec, b.totals.sec),
       bestStreak: Math.max(a.totals.bestStreak, b.totals.bestStreak),
     },
+  };
+}
+
+/* ── State Control-sessies (28 okt 2026) ──────────────────────────────────────────────────────────────────────────────────── */
+
+export type StateSessionRecord = {
+  id: string;
+  mode: number;
+  startedAt: string;
+  endedAt: string;
+  durationMin: number;
+  plannedMin: number;
+  status: string;
+  updatedAt?: string;
+} & Record<string, Json | undefined>;
+export type StatePayload = { sessions: StateSessionRecord[] };
+export const MAX_STATE_SESSIONS = 500;
+
+const recStamp = (r: StateSessionRecord): number => {
+  const t = Date.parse(r.updatedAt ?? r.endedAt);
+  return Number.isFinite(t) ? t : 0;
+};
+
+/** Vereniging op id; bij twee versies van dezelfde sessie wint de laatst gewijzigde. Nooit een sessie kwijt. */
+export function mergeStateHistory(a: StatePayload, b: StatePayload): StatePayload {
+  const byId = new Map<string, StateSessionRecord>();
+  for (const r of [...a.sessions, ...b.sessions]) {
+    const have = byId.get(r.id);
+    if (!have || recStamp(r) > recStamp(have)) byId.set(r.id, r);
+  }
+  const sessions = [...byId.values()]
+    .sort((x, y) => (Date.parse(y.endedAt) || 0) - (Date.parse(x.endedAt) || 0))
+    .slice(0, MAX_STATE_SESSIONS);
+  return { sessions };
+}
+
+/* ── Audio Library (28 okt 2026): favorieten, beluisterde sessies, hervatposities ─────────────────────────────────────────── */
+
+export type AudioFavorite = { url: string; title: string; series: string; ts: number };
+export type AudioListen = { url: string; title: string; series: string; ts: number; dur: number; full?: boolean; fc?: number };
+export type AudioPayload = { favorites: AudioFavorite[]; history: AudioListen[]; positions: Record<string, number> };
+export const MAX_AUDIO_HISTORY = 1000;
+
+/** Favorieten: vereniging op url (de nieuwste telt). Beluisterd: vereniging op url + tijdstip. Hervatpositie: per sessie de verste. */
+export function mergeAudio(a: AudioPayload, b: AudioPayload): AudioPayload {
+  const favs = new Map<string, AudioFavorite>();
+  for (const f of [...a.favorites, ...b.favorites]) {
+    const have = favs.get(f.url);
+    if (!have || f.ts > have.ts) favs.set(f.url, f);
+  }
+  const listens = new Map<string, AudioListen>();
+  for (const h of [...a.history, ...b.history]) {
+    const id = `${h.url}|${h.ts}`;
+    if (!listens.has(id)) listens.set(id, h);
+  }
+  const positions: Record<string, number> = { ...a.positions };
+  for (const [url, pos] of Object.entries(b.positions)) positions[url] = Math.max(positions[url] ?? 0, pos);
+  return {
+    favorites: [...favs.values()].sort((x, y) => y.ts - x.ts),
+    history: [...listens.values()].sort((x, y) => y.ts - x.ts).slice(0, MAX_AUDIO_HISTORY),
+    positions,
   };
 }
 

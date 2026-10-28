@@ -312,6 +312,53 @@ export function getAllSessions(): SessionRecord[] {
   return [...cache];
 }
 
+/* ── Backup & Sync (28 okt 2026): State Control-sessies reizen mee met het account ───────────────────────────────────────────
+   `syncedAt` hoort bij de oudere, aparte wachtrij (bracelet-history-sync) en blijft dus buiten de back-up. Wat via de back-up
+   binnenkomt telt voor die oudere wachtrij als "al verwerkt" (syncedAt gevuld), zodat ze niets dubbel naar de backend duwt. */
+function isSessionRecord(r: unknown): r is SessionRecord {
+  const x = r as SessionRecord;
+  return (
+    !!x &&
+    typeof x.id === 'string' &&
+    typeof x.mode === 'number' &&
+    typeof x.startedAt === 'string' &&
+    typeof x.endedAt === 'string' &&
+    typeof x.durationMin === 'number' &&
+    typeof x.plannedMin === 'number' &&
+    (x.status === 'completed' || x.status === 'stopped')
+  );
+}
+
+export async function getStateSyncSnapshot(): Promise<SessionRecord[]> {
+  await loadOnce();
+  return cache.map((r) => {
+    const { syncedAt: _local, ...rest } = r;
+    return rest as SessionRecord;
+  });
+}
+
+/** Vervang de lokale sessies door de samengevoegde versie. */
+export async function applyStateSync(records: SessionRecord[]): Promise<void> {
+  await loadOnce();
+  cache = records
+    .filter(isSessionRecord)
+    .map((r) => ({ ...r, syncedAt: r.syncedAt ?? r.updatedAt ?? r.endedAt }))
+    .sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime())
+    .slice(0, MAX_RECORDS);
+  notify();
+  await persist();
+}
+
+/** Opnieuw inlezen (na het overnemen van gastgegevens in een account). */
+export async function reloadStateHistory(): Promise<void> {
+  loaded = false;
+  loadPromise = null;
+  activeBucket = null;
+  cache = [];
+  await loadOnce();
+  notify();
+}
+
 /** Wis alle records van de huidige user. */
 export async function clearHistory(): Promise<void> {
   if (!activeBucket) {

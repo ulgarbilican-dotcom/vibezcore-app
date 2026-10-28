@@ -193,6 +193,32 @@ subscribeUserBucket(() => {
   });
 });
 
+/* ── Backup & Sync (28 okt 2026): favorieten reizen mee met het account ─────────────────────────────────────────────── */
+const isFav = (e: unknown): e is FavEntry =>
+  !!e && typeof (e as FavEntry).url === 'string' && typeof (e as FavEntry).title === 'string' && typeof (e as FavEntry).series === 'string' && typeof (e as FavEntry).ts === 'number';
+
+export async function getFavoritesSyncSnapshot(): Promise<FavEntry[]> {
+  await loadOnce();
+  return [...favoritesState.values()].sort((a, b) => b.ts - a.ts);
+}
+
+/** Vervang de lokale favorieten door de samengevoegde versie (zo komt ook een verwijderde favoriet op het andere toestel aan). */
+export async function applyFavoritesSync(list: FavEntry[]): Promise<void> {
+  await loadOnce();
+  const next = new Map<string, FavEntry>();
+  for (const e of list) if (isFav(e)) next.set(e.url, e);
+  favoritesState = next;
+  notify();
+  await save();
+}
+
+export async function reloadFavorites(): Promise<void> {
+  initialized = false;
+  loadPromise = null;
+  favoritesState = new Map();
+  await loadOnce();
+}
+
 export function useFavorites() {
   const [snapshot, setSnapshot] = useState<Map<string, FavEntry>>(favoritesState);
 

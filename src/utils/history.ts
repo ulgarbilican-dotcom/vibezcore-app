@@ -141,6 +141,30 @@ subscribeUserBucket(() => {
 
 /* ── Tracking API ───────────────────────────────────────────────────────── */
 
+/* ── Backup & Sync (28 okt 2026): beluisterde sessies reizen mee met het account ────────────────────────────────────── */
+const MAX_SYNC_LISTENS = 1000;
+const isListen = (e: unknown): e is HistoryEntry =>
+  !!e && typeof (e as HistoryEntry).url === 'string' && typeof (e as HistoryEntry).title === 'string' && typeof (e as HistoryEntry).series === 'string' && typeof (e as HistoryEntry).ts === 'number' && typeof (e as HistoryEntry).dur === 'number';
+
+export async function getAudioHistorySyncSnapshot(): Promise<HistoryEntry[]> {
+  await loadOnce();
+  return [...historyState];
+}
+
+export async function applyAudioHistorySync(list: HistoryEntry[]): Promise<void> {
+  await loadOnce();
+  historyState = list.filter(isListen).sort((a, b) => b.ts - a.ts).slice(0, MAX_SYNC_LISTENS);
+  notify();
+  await persist();
+}
+
+export async function reloadAudioHistory(): Promise<void> {
+  initialized = false;
+  loadPromise = null;
+  historyState = [];
+  await loadOnce();
+}
+
 export function startListen(url: string, title: string, series: string): void {
   if (!url) return;
   /* Settings → Privacy → "Track listening history" (audit 8 okt 2026: de

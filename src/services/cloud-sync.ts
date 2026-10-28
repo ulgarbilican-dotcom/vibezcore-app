@@ -3,7 +3,8 @@
 
    Wat een ingelogde gebruiker op dit toestel doet, reist mee met zijn account:
    instellingen (doelen, niveau, stem/trilling, onboarding-vlaggen), rusthartslag,
-   ademhistoriek en het actieve plan. Een gast blijft volledig lokaal — niets
+   ademhistoriek, het actieve plan, State Control-sessies en de Audio Library
+   (favorieten, beluisterde sessies, hervatposities — 28 okt 2026). Een gast blijft volledig lokaal — niets
    verlaat het toestel zonder account (en niets staat achter een login).
 
    HOE
@@ -17,7 +18,7 @@
      niets gebeurt, de app werkt gewoon lokaal en probeert later opnieuw.
 
    GAST → ACCOUNT: de eerste keer dat een account op dit toestel synct, nemen we
-   de lokale gastgegevens (ademhistoriek, plan) over naar dat account, zodat
+   de lokale gastgegevens (ademhistoriek, plan, State Control-sessies, favorieten, beluisterd) over naar dat account, zodat
    "account maken" niets kwijtmaakt.
 
    WANNEER: kort na het opstarten, bij terugkeren naar de app, bij het verlaten
@@ -37,23 +38,34 @@ import {
   SYNC_DOMAINS,
   decide,
   hashValue,
+  mergeAudio,
   mergeHistory,
   mergeSettings,
+  mergeStateHistory,
   pickPlan,
   pickPulse,
+  type AudioPayload,
   type DomainMeta,
   type HistoryPayload,
   type PlanPayload,
   type PulsePayload,
   type SettingsPayload,
+  type StatePayload,
+  type StateSessionRecord,
   type SyncDomain,
 } from '@/services/cloud-sync-core';
 import { applyRestingSync, getRestingSyncSnapshot, type RestingSyncStored } from '@/services/resting-pulse';
 import { applyBreathSync, getBreathSyncSnapshot, reloadBreathHistory } from '@/utils/breath-history';
+import { applyFavoritesSync, getFavoritesSyncSnapshot, reloadFavorites } from '@/hooks/useFavorites';
+import { applyStateSync, getStateSyncSnapshot, reloadStateHistory } from '@/utils/bracelet-history';
+import { applyAudioHistorySync, getAudioHistorySyncSnapshot, reloadAudioHistory } from '@/utils/history';
+import { applyPositionsSync, getPositionsSyncSnapshot, reloadPositions } from '@/utils/vzp';
 import { getActivePlanLoaded, clearActivePlan, reloadActivePlan, saveActivePlan, type ActivePlan } from '@/utils/plan-store';
 import { SETTING_DEFAULTS, ensureSettingsLoaded, getSetting, setSetting } from '@/utils/settings';
 import { resolveActiveBucket, subscribeUserBucket } from '@/utils/user-bucket';
 
+/** Onderdelen die de server afwees; tot de volgende start niet opnieuw proberen. */
+const rejectedDomains = new Set<SyncDomain>();
 const META_KEY = 'vz_cloud_sync_meta_v1';
 const CHECK_EVERY_MS = 10 * 60_000;
 const POLL_MS = 2 * 60_000;
@@ -127,11 +139,39 @@ const planHandler: Handler<PlanWrap> = {
   valid: (v): v is PlanWrap => isObj(v) && 'plan' in v,
 };
 
+const EMPTY_STATE: StatePayload = { sessions: [] };
+const stateHandler: Handler<StatePayload> = {
+  empty: EMPTY_STATE,
+  read: async () => ({ sessions: (await getStateSyncSnapshot()) as unknown as StateSessionRecord[] }),
+  apply: async (v) => applyStateSync(v.sessions as never),
+  merge: mergeStateHistory,
+  valid: (v): v is StatePayload => isObj(v) && Array.isArray(v.sessions),
+};
+
+const EMPTY_AUDIO: AudioPayload = { favorites: [], history: [], positions: {} };
+const audioHandler: Handler<AudioPayload> = {
+  empty: EMPTY_AUDIO,
+  read: async () => ({
+    favorites: await getFavoritesSyncSnapshot(),
+    history: await getAudioHistorySyncSnapshot(),
+    positions: await getPositionsSyncSnapshot(),
+  }),
+  apply: async (v) => {
+    await applyFavoritesSync(v.favorites);
+    await applyAudioHistorySync(v.history as never);
+    await applyPositionsSync(v.positions);
+  },
+  merge: mergeAudio,
+  valid: (v): v is AudioPayload => isObj(v) && Array.isArray(v.favorites) && Array.isArray(v.history) && isObj(v.positions),
+};
+
 const HANDLERS: Record<SyncDomain, Handler<any>> = {
   settings: settingsHandler,
   resting_pulse: pulseHandler,
   breath_history: historyHandler,
   plan: planHandler,
+  state_history: stateHandler,
+  audio: audioHandler,
 };
 
 /* ── Netwerk ───────────────────────────────────────────────────────────── */
@@ -166,6 +206,9 @@ async function upsertRow(token: string, key: SyncDomain, value: unknown): Promis
       body: JSON.stringify([{ key, value }]),
     });
     if (res.status === 404) tableMissing = true;
+    /* De server wijst dit onderdeel af (bv. de lijst toegestane onderdelen kent het nog niet): niet bij elke ronde opnieuw proberen, enkel
+       tot de volgende start van de app. De andere onderdelen synchroniseren gewoon door. */
+    if (res.status >= 400 && res.status < 500 && ![401, 404, 408, 429].includes(res.status)) rejectedDomains.add(key);
     if (!res.ok) return null;
     const rows = (await res.json()) as Row[];
     return rows?.[0]?.updated_at ?? null;
@@ -202,6 +245,11 @@ async function adoptGuestData(bucket: string): Promise<boolean> {
     [`vbh_anon_v2`, `vbh_${bucket}_v2`],
     [`vbh_totals_anon_v2`, `vbh_totals_${bucket}_v2`],
     [`vzpc_anon_v1`, `vzpc_${bucket}_v1`],
+    /* 28 okt 2026: State Control-sessies en de Audio Library gaan ook mee. */
+    [`vzbc_sessions_anon_v1`, `vzbc_sessions_${bucket}_v1`],
+    [`vzf_anon_v1`, `vzf_${bucket}_v1`],
+    [`vzh_anon_v1`, `vzh_${bucket}_v1`],
+    [`vzp_anon_v1`, `vzp_${bucket}_v1`],
   ];
   let copied = false;
   for (const [from, to] of pairs) {
@@ -219,6 +267,7 @@ async function adoptGuestData(bucket: string): Promise<boolean> {
 }
 
 /* ── De synchronisatie zelf ────────────────────────────────────────────── */
+
 
 let inflight: Promise<void> | null = null;
 let tableMissing = false;
@@ -253,7 +302,7 @@ async function runOnce(force: boolean): Promise<SyncResult> {
 
   if (!user.adopted) {
     if (await adoptGuestData(bucket)) {
-      await Promise.all([reloadBreathHistory(), reloadActivePlan()]);
+      await Promise.all([reloadBreathHistory(), reloadActivePlan(), reloadStateHistory(), reloadFavorites(), reloadAudioHistory(), reloadPositions()]);
     }
     user.adopted = true;
   }
@@ -283,6 +332,10 @@ async function runOnce(force: boolean): Promise<SyncResult> {
   const byKey = new Map(rows.map((r) => [r.key, r]));
 
   for (const d of SYNC_DOMAINS) {
+    if (rejectedDomains.has(d)) {
+      actions[d] = 'rejected-by-server';
+      continue;
+    }
     const h = HANDLERS[d];
     const local = locals[d]!;
     const row = byKey.get(d) ?? null;
@@ -352,6 +405,7 @@ export function startCloudSync(): void {
 export function __resetCloudSyncForTests(): void {
   inflight = null;
   tableMissing = false;
+  rejectedDomains.clear();
   lastForegroundAt = 0;
 }
 

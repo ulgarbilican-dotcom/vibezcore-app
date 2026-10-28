@@ -6,7 +6,7 @@
    zacht aan om een gratis account te maken — met als eerlijke reden dat voortgang, plan en instellingen dan op elk
    toestel meekomen (Backup & Sync). Apple 5.1.1: de lokale functies blijven voor iedereen werken.
 
-   Regels: enkel voor gasten · enkel na een echte sessie · "Not now" verbergt de kaart minstens 7 dagen · hoogstens
+   Regels: enkel voor gasten · enkel na een echte sessie · "Maybe later" verbergt de kaart minstens 7 dagen · hoogstens
    twee keer; daarna nooit meer vanzelf. Na inloggen verdwijnt de kaart vanzelf.
    ───────────────────────────────────────────────────────────────────────────── */
 

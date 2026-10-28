@@ -117,6 +117,28 @@ subscribeUserBucket(() => {
 
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
+/* ── Backup & Sync (28 okt 2026): waar je bent gebleven reist mee met het account ───────────────────────────────────── */
+export async function getPositionsSyncSnapshot(): Promise<Record<string, number>> {
+  await loadOnce();
+  return { ...state };
+}
+
+export async function applyPositionsSync(p: Record<string, number>): Promise<void> {
+  await loadOnce();
+  const cleaned: Positions = {};
+  for (const [k, v] of Object.entries(p ?? {})) if (typeof v === 'number' && Number.isFinite(v) && v > 0) cleaned[k] = v;
+  state = cleaned;
+  notify();
+  await persist();
+}
+
+export async function reloadPositions(): Promise<void> {
+  initialized = false;
+  loadPromise = null;
+  state = {};
+  await loadOnce();
+}
+
 export function getSavedPosition(url: string): number {
   return state[url] ?? 0;
 }
