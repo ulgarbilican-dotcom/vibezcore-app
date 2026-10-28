@@ -68,6 +68,7 @@ import {
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
+import { useAppleWatchOpenHint, WATCH_OPEN_HINT } from '@/hooks/useWatchOpenHint';
 import { setPremiumPillSuppressed } from '@/utils/premium-pill-slot';
 import {
   startSessionKeepAlive,
@@ -3786,7 +3787,7 @@ function ActiveSessionScreen({
               haptiek op de achtergrond toe). Eerlijk zeggen, tenzij een
               Apple Watch het ritme al overneemt (6 okt 2026). */}
           {Platform.OS === 'ios' && !isWatchPlayingRhythm() && (
-            <Text style={s.iosKeepOpen}>Keep VIBEZCORE open to feel the rhythm</Text>
+            <IosRhythmNote />
           )}
         </View>
 
@@ -4874,6 +4875,12 @@ const handledLinkTokens = new Set<string>();
    parameters blijven op de route staan; `lastLinkTokenRef` hoort bij één
    instantie). Elk startlink-token werkt nu precies één keer, app-breed. */
 const startedLinkTokens = new Set<string>();
+
+/** iPhone-regel onder END SESSION: de iPhone trilt enkel in beeld; en kan de Watch-app niet zelf openen (28 okt 2026, zie useWatchOpenHint). */
+function IosRhythmNote() {
+  const hint = useAppleWatchOpenHint(true);
+  return <Text style={s.iosKeepOpen}>{hint ? WATCH_OPEN_HINT : 'Keep VIBEZCORE open to feel the rhythm'}</Text>;
+}
 
 export default function BraceletControl(props: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
   const pathname = usePathname();

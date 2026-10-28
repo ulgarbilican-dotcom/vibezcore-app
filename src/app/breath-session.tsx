@@ -39,6 +39,7 @@
    Daarom staat de exacte tijd erbij.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { useAppleWatchOpenHint, WATCH_OPEN_HINT } from '@/hooks/useWatchOpenHint';
 import { QaAnimatedPressable } from '@/components/QaPressable';
 import { Reveal } from '@/components/Reveal';
 import { SPRING_PRESS_OUT } from '@/constants/motion';
@@ -1004,6 +1005,7 @@ export function BreathSession() {
   }, []);
   const [infoIdx, setInfoIdx] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  const watchOpenHint = useAppleWatchOpenHint(running);
   /* 23 okt 2026 (operator): een sessie is pas ACTIEF na de eerste Play. Zolang het scherm nog op Play wacht (startPaused),
      is het geen lopende sessie: geen minimaliseer-chevron, geen pil, en terug = gewoon de vorige pagina. */
   const [hasPlayed, setHasPlayed] = useState(false);
@@ -3309,6 +3311,7 @@ export function BreathSession() {
               <Text style={s.sessionMeta}>
                 ROUND {round}/{rounds} · {fmt(leftSec)} left
               </Text>
+              {watchOpenHint ? <Text style={s.sessionWatchHint}>{WATCH_OPEN_HINT}</Text> : null}
             </View>
           </View>
         )}
@@ -4880,6 +4883,15 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     fontSize: 12,
     color: 'rgba(255,255,255,0.6)',
     marginTop: 14,
+  },
+  sessionWatchHint: {
+    marginTop: 8,
+    paddingHorizontal: 28,
+    textAlign: 'center',
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: BrandFonts.regular,
   },
 
   /* ── Ademritme vooraf ── */

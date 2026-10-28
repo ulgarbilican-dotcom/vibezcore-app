@@ -123,21 +123,42 @@ final class BreathSessionController: NSObject, ObservableObject {
     let midPhase = remainingMs >= 0 && remainingMs < phases[startPhase].secs * 1000
 
     /* 13 okt 2026: de iPhone zegt wanneer hij dit verstuurde; die vertraging
-       gaat van de eerste fase af (max 1,5 s), zodat de pols tegelijk met de
-       iPhone overgaat. */
-    var lag: TimeInterval = 0
+       gaat van de eerste fase af, zodat de pols tegelijk met de iPhone overgaat.
+       28 okt 2026: NIET meer afgekapt op 1,5 s. Opent de gebruiker de Watch-app pas later (de iPhone kan hem niet openen, het bericht
+       wacht in applicationContext), dan sprong de Watch terug naar het begin van de fase en liep hij scheef. Nu loopt hij de verstreken tijd
+       door fasen en rondes heen, precies naar de plek waar de iPhone nu is; is de sessie al voorbij, dan start er niets. */
+    var elapsed: TimeInterval = 0
     if let sentAt = message["sentAtMs"] as? Double, sentAt > 0 {
       /* iPhone-klok → Watch-klok (20 okt 2026, PhoneConnector.measureClock) */
       let sentAtWatch = sentAt + PhoneConnector.shared.clockAheadMs()
-      lag = min(1.5, max(0, Date().timeIntervalSince1970 - sentAtWatch / 1000))
+      elapsed = max(0, Date().timeIntervalSince1970 - sentAtWatch / 1000)
+      /* Tot 4 s = gewone bezorgvertraging: zoals voorheen maximaal 1,5 s (een kleine klokafwijking mag geen fasen laten springen). Pas een
+         duidelijk late start (Watch-app later geopend) haalt volledig in. */
+      if elapsed <= 4 { elapsed = min(1.5, elapsed) }
     }
-    let firstDur = midPhase ? TimeInterval(remainingMs) / 1000 : TimeInterval(phases[startPhase].secs)
+    var joinRound = startRound
+    var joinIdx = startPhase
+    var joinDur = midPhase ? TimeInterval(remainingMs) / 1000 : TimeInterval(phases[startPhase].secs)
+    var joinSilent = midPhase
+    var joinRemaining = joinDur - elapsed
+    while joinRemaining <= 0.15 {
+      joinIdx = (joinIdx + 1) % phases.count
+      if joinIdx == 0 { joinRound += 1 }
+      if joinRound > totalRounds {
+        stop()
+        return
+      }
+      joinDur = TimeInterval(phases[joinIdx].secs)
+      joinRemaining += joinDur
+      joinSilent = false
+    }
+    let joinElapsedInPhase = joinDur - joinRemaining
     generation += 1
     runPhase(
-      gen: generation, round: startRound, idx: startPhase,
-      start: Date().addingTimeInterval(-lag),
-      duration: max(0.2, firstDur - lag) + lag,
-      silentStart: midPhase
+      gen: generation, round: joinRound, idx: joinIdx,
+      start: Date().addingTimeInterval(-joinElapsedInPhase),
+      duration: joinDur,
+      silentStart: joinSilent
     )
   }
 
@@ -158,7 +179,8 @@ final class BreathSessionController: NSObject, ObservableObject {
     via = phase.via
     self.round = round
     if !silentStart {
-      WatchTiming.shared.record(planned: start)
+      /* Een inhaalstart (ver in het verleden) hoort niet in de timingstatistiek. */
+      if abs(Date().timeIntervalSince(start)) < 2 { WatchTiming.shared.record(planned: start) }
       playHaptics(for: phase.key, secs: phase.secs)
       beats.send(true)
     }
