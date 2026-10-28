@@ -1242,35 +1242,55 @@ ${
               else if (router.canGoBack()) router.back();
               else goToTab('/bracelet');
             };
-            /* Zelfde namen als op Activity: State Control = "Set your plan" (eigen planbouwer), Breathwork = "Set your goal". Enkel met een
-               duidelijke herkomst; wie zonder context kwam (Profile, Audio Library) krijgt geen vraag met een willekeurige bestemming.
-               Niet als er al een plan van dat onderdeel is (of net automatisch een gebouwd werd). */
+            /* Zelfde namen als op Activity: State Control = "Set your plan" (eigen planbouwer), Breathwork = "Set your goal". Komt de
+               gebruiker niet vanuit één van die twee (Profile, Audio Library), dan wijst de vraag naar Activity, waar beide staan. Alleen als
+               er van het gevraagde nog geen plan is, ook voor wie al lid was (bv. herinstallatie zonder plan). */
+            const noBreathPlan = !planJustBuilt && getActivePlan() === null;
+            const noStatePlan = getActiveBraceletPlan() === null;
             const offerFor =
               params.returnTo === 'state-control'
-                ? getActiveBraceletPlan() === null
+                ? noStatePlan
                   ? ('state' as const)
                   : null
                 : params.returnTo === 'breathwork'
-                  ? !planJustBuilt && getActivePlan() === null
+                  ? noBreathPlan
                     ? ('breath' as const)
                     : null
-                  : null;
-            if (!alreadyMember && !planOfferedRef.current && offerFor) {
+                  : noBreathPlan && noStatePlan
+                    ? ('any' as const)
+                    : null;
+            if (!planOfferedRef.current && offerFor) {
               planOfferedRef.current = true;
               /* [TEKST] concept — de definitieve tekst is aan de operator. */
+              const copy = {
+                state: {
+                  title: 'Set your plan',
+                  message: "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
+                  yes: 'Set my plan',
+                },
+                breath: {
+                  title: 'Set your goal',
+                  message: "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
+                  yes: 'Set my goal',
+                },
+                any: {
+                  title: 'Set your daily plan',
+                  message: "Choose State Control or Breathwork, then your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
+                  yes: 'Set my plan',
+                },
+              }[offerFor];
               void showVibezAlert({
-                title: offerFor === 'state' ? 'Set your plan' : 'Set your goal',
-                message:
-                  offerFor === 'state'
-                    ? "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time."
-                    : "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
+                title: copy.title,
+                message: copy.message,
                 buttons: [
-                  { text: offerFor === 'state' ? 'Set my plan' : 'Set my goal', style: 'primary' },
+                  { text: copy.yes, style: 'primary' },
                   { text: 'Not now', style: 'cancel' },
                 ],
               }).then((choice) => {
-                if (choice === 0) router.replace((offerFor === 'state' ? '/bracelet-set-day' : '/build-choice') as never);
-                else goOn();
+                if (choice === 0) {
+                  if (offerFor === 'any') goToTab('/activity');
+                  else router.replace((offerFor === 'state' ? '/bracelet-set-day' : '/build-choice') as never);
+                } else goOn();
               });
               return;
             }
