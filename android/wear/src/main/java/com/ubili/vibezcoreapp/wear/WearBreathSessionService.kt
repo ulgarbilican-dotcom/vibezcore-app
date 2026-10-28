@@ -165,14 +165,14 @@ class WearBreathSessionService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
-      ACTION_START -> startSession(intent.getStringExtra(EXTRA_SESSION_JSON) ?: return START_NOT_STICKY)
+      ACTION_START -> startSession(intent.getStringExtra(EXTRA_SESSION_JSON) ?: return START_NOT_STICKY, intent.getLongExtra(EXTRA_RECV_UP, 0L))
       ACTION_STOP -> stopSession()
       ACTION_PAUSE -> pauseSession()
     }
     return START_NOT_STICKY
   }
 
-  private fun startSession(sessionJson: String) {
+  private fun startSession(sessionJson: String, recvUp: Long = 0L) {
     /* 14 okt 2026 (audit): startForeground meteen, vóór het lezen van de
        sessie — anders crasht het proces na startForegroundService als de
        inhoud onbruikbaar is. */
@@ -242,8 +242,18 @@ class WearBreathSessionService : Service() {
        is de vertraging langer dan de lopende fase, dan springt het horloge
        door naar de fase waar de telefoon nu is (en speelt van die fase het
        stuk dat de telefoon nu voelt, zie startVibration). */
-    val lag = if (sentAt > 0L) (System.currentTimeMillis() - sentAt - MARGIN_AFTER_CLOCK_MS - ClockSync.aheadMs(this)).coerceIn(0L, MAX_LAG_MS) else 0L
-    VzLog.d("breath start sentAt=$sentAt now=${System.currentTimeMillis()} lag=${lag}ms")
+    /* 28 okt 2026: ZONDER klokken (zie WearStateSessionService.start): de wandklok van sommige horloges springt (Galaxy Watch4: seconden), dus
+       het verschil tussen twee kloktijden is onbruikbaar. De telefoon meldt `leadMs` (sentAtMs − zijn klok op het verzendmoment, hier ≈ −enkele
+       ms); het horloge meet op zijn EIGEN teller hoe lang het bericht onderweg was (de helft van de snelste rondreis) en hoe lang het daarna
+       bleef liggen (nu − ontvangst). Oudere telefoon-app (geen leadMs): de klok-methode. */
+    val leadMs = if (json.has("leadMs")) json.optLong("leadMs") else Long.MIN_VALUE
+    val relative = sentAt > 0L && leadMs != Long.MIN_VALUE && recvUp > 0L
+    val lag = when {
+      relative -> (ClockSync.oneWayMs(this) + (SystemClock.uptimeMillis() - recvUp) - leadMs - MARGIN_AFTER_CLOCK_MS).coerceIn(0L, MAX_LAG_MS)
+      sentAt > 0L -> (System.currentTimeMillis() - sentAt - MARGIN_AFTER_CLOCK_MS - ClockSync.aheadMs(this)).coerceIn(0L, MAX_LAG_MS)
+      else -> 0L
+    }
+    VzLog.d("breath start ${if (relative) "rel" else "clk"} sentAt=$sentAt lead=$leadMs oneWay=${ClockSync.oneWayMs(this)} now=${System.currentTimeMillis()} lag=${lag}ms")
     val now = SystemClock.uptimeMillis()
     var round = startRound
     var idx = startPhase
@@ -592,6 +602,7 @@ class WearBreathSessionService : Service() {
     /** De lopende service, of null — dan is er niets te pauzeren/stoppen. */
     @Volatile
     var instance: WearBreathSessionService? = null
+    const val EXTRA_RECV_UP = "recvUptimeMs"
     const val EXTRA_SESSION_JSON = "sessionJson"
 
     /** Gepauzeerde horloge-sessie (JSON met de plek erin) — hervatten doet

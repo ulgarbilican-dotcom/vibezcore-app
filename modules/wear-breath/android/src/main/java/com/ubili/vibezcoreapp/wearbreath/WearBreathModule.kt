@@ -96,6 +96,17 @@ private const val PATH_STATE_START = "/vibezcore/state/start"
 private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 private const val PATH_STATE_ACK = "/vibezcore/state/ack"
+/* 28 okt 2026 — samen starten, voor ELK horloge (operator: "telefoon start en wacht op smartwatch, beiden beginnen samen"): het (grote) sessiebericht
+   gaat vooruit als PREPARE; het horloge maakt zich klaar en antwoordt READY; pas dan stuurt de telefoon het kleine GO ("begin over X ms") op een
+   warme verbinding, en start zelf op hetzelfde moment. Geen kloktijden tussen de toestellen. */
+private const val PATH_STATE_PREPARE = "/vibezcore/state/prepare"
+private const val PATH_STATE_READY = "/vibezcore/state/ready"
+private const val PATH_STATE_GO = "/vibezcore/state/go"
+/* Gemeten: het PREPARE-bericht deed er soms 1,27 s over (trage Bluetooth-verbinding). Het GO-pad is nauwkeuriger dan het oude startbericht (klein
+   bericht op een warme verbinding, ~0,03 s), dus liever langer wachten dan te vroeg terugvallen. Enkel een horloge dat helemaal zwijgt valt terug. */
+private const val HANDSHAKE_TIMEOUT_MS = 3000L
+private const val PREFS_HS = "vz_wear_handshake"
+private const val KEY_HS_CAPABLE = "capable"
 /** Wekt de horloge-app vooraf (17 okt 2026: een slapende app op de Watch4
  *  kreeg de voorproef pas ~20 s later). Het horloge doet er verder niets mee. */
 private const val PATH_WAKE = "/vibezcore/state/wake"
@@ -120,13 +131,35 @@ private const val PATH_CATALOG_REPLY = "/vibezcore/catalog/reply"
 private const val PATH_WATCHLOG = "/vibezcore/watchlog"
 
 class WearBreathModule : Module() {
+  companion object {
+    /** Een horloge-app die PREPARE/READY/GO kent (meldt zich met "hs1" in het catalogus-verzoek). */
+    @Volatile var handshakeCapable = false
+  }
+
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+  private class Pending(val id: Long, val anchorWallMs: Long)
+  @Volatile private var pending: Pending? = null
+  private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+  @Volatile private var warmOn = false
+  private val warmTick = object : Runnable {
+    override fun run() {
+      if (!warmOn) return
+      broadcast(PATH_WAKE, ByteArray(0), quiet = true)
+      handler.postDelayed(this, 1000L)
+    }
+  }
 
   private val messageListener = MessageClient.OnMessageReceivedListener { event: MessageEvent ->
     try {
       when (event.path) {
         PATH_CATALOG_REQUEST -> {
+          /* Een horloge-app die de handdruk kent meldt dat in dit verzoek ("hs1"). */
+          if (String(event.data, Charsets.UTF_8) == "hs1") {
+            handshakeCapable = true
+            try { context.getSharedPreferences(PREFS_HS, Context.MODE_PRIVATE).edit().putBoolean(KEY_HS_CAPABLE, true).apply() } catch (_: Exception) {}
+          }
           lastCatalogJson?.let { json ->
             Wearable.getMessageClient(context).sendMessage(event.sourceNodeId, PATH_CATALOG_REPLY, json.toByteArray(Charsets.UTF_8))
           }
@@ -146,6 +179,18 @@ class WearBreathModule : Module() {
         /* Het horloge speelt State Control echt af → JS legt de eigen
            trilling op de telefoon stil (WATCH_PROTOCOL §3). */
         PATH_STATE_ACK -> sendEvent("onStateAck", emptyMap<String, Any>())
+        /* Het horloge staat klaar: nu het kleine GO, met hoeveel ms er nog te wachten is tot het startmoment van de telefoon. */
+        PATH_STATE_READY -> {
+          val id = String(event.data, Charsets.UTF_8).trim().toLongOrNull()
+          val p = pending
+          if (id != null && p != null && p.id == id) {
+            pending = null
+            val startInMs = p.anchorWallMs - System.currentTimeMillis()
+            val go = JSONObject().put("id", id).put("startInMs", startInMs).toString().toByteArray(Charsets.UTF_8)
+            Wearable.getMessageClient(context).sendMessage(event.sourceNodeId, PATH_STATE_GO, go)
+            android.util.Log.d("VZSend", "$PATH_STATE_GO sent=${System.currentTimeMillis()} startInMs=$startInMs")
+          }
+        }
       }
     } catch (_: Exception) {
       /* een kapot bericht van het horloge mag de telefoon-app niet raken */
@@ -158,6 +203,8 @@ class WearBreathModule : Module() {
     Events("onWatchAction", "onStateAck")
 
     OnCreate {
+      /* Een horloge-app die de handdruk ooit meldde blijft die kennen, ook na een herstart van de telefoon-app. */
+      try { if (context.getSharedPreferences(PREFS_HS, Context.MODE_PRIVATE).getBoolean(KEY_HS_CAPABLE, false)) handshakeCapable = true } catch (_: Exception) {}
       Wearable.getMessageClient(context).addListener(messageListener)
     }
 
@@ -290,15 +337,41 @@ class WearBreathModule : Module() {
         if (start.dubMs > 0) put("dubMs", start.dubMs)
         put("sentAtMs", if (start.sentAtMs > 0) start.sentAtMs.toLong() else System.currentTimeMillis())
       }
-      broadcast(PATH_STATE_START, payload.toString().toByteArray(Charsets.UTF_8))
+      val anchor = payload.optLong("sentAtMs", 0L)
+      if (handshakeCapable && anchor > 0L) {
+        val id = System.nanoTime()
+        pending = Pending(id, anchor)
+        broadcast(PATH_STATE_PREPARE, JSONObject(payload.toString()).put("hsId", id).toString().toByteArray(Charsets.UTF_8))
+        /* Antwoordt het horloge niet (uit het bereik, de app door het systeem gestopt), dan toch het gewone startbericht — het horloge sluit
+           dan aan op de plek waar de telefoon is, zoals vroeger. */
+        handler.postDelayed({
+          if (pending?.id == id) {
+            pending = null
+            broadcast(PATH_STATE_START, payload.toString().toByteArray(Charsets.UTF_8))
+          }
+        }, HANDSHAKE_TIMEOUT_MS)
+      } else {
+        broadcast(PATH_STATE_START, payload.toString().toByteArray(Charsets.UTF_8))
+      }
     }
 
     Function("pauseStateSession") {
+      pending = null
       broadcast(PATH_STATE_PAUSE, ByteArray(0))
     }
 
     Function("stopStateSession") {
+      pending = null
       broadcast(PATH_STATE_STOP, ByteArray(0))
+    }
+
+    /* 28 okt 2026: een eerste bericht over een slapende Bluetooth-verbinding doet er 0,4–0,6 s over (gemeten: PREPARE → READY ruim 1 s),
+       een bericht op een wakkere verbinding ~50 ms. Zolang het State Control-scherm open is sturen we daarom elke seconde een leeg tikje,
+       zodat de handdruk bij de start snel is. Gestopt zodra het scherm sluit. */
+    Function("keepLinkWarm") { on: Boolean ->
+      warmOn = on
+      handler.removeCallbacks(warmTick)
+      if (on) handler.post(warmTick)
     }
 
     Function("wakeWatch") {
@@ -335,15 +408,32 @@ class WearBreathModule : Module() {
      horloge. Geen enkele node mag de telefoon-sessie zelf kunnen breken,
      dus dit faalt altijd stil (`sendMessage` zelf gooit niet, en een lege
      nodes-lijst is gewoon "geen horloge gekoppeld", geen fout). */
-  private fun broadcast(path: String, payload: ByteArray) {
+  /* 28 okt 2026 (operator: het moet voor ELK horloge van elke abonnee kloppen): de wandklok van sommige horloges springt (gemeten op een
+     Galaxy Watch4: seconden heen en weer), dus een kloktijd van de telefoon is voor het horloge onbruikbaar. Bij een startbericht zet de
+     telefoon daarom op het ECHTE verzendmoment erbij hoeveel ms vóór (+) of na (−) het verzonden startmoment `sentAtMs` dat is: `leadMs`.
+     Het horloge rekent daarmee op zijn eigen teller, zonder de klok van de telefoon. */
+  private fun stampLead(path: String, payload: ByteArray): ByteArray {
+    if (path != PATH_STATE_START && path != PATH_BREATH_START) return payload
+    return try {
+      val j = JSONObject(String(payload, Charsets.UTF_8))
+      val sentAt = j.optLong("sentAtMs", 0L)
+      if (sentAt <= 0L) return payload
+      j.put("leadMs", sentAt - System.currentTimeMillis())
+      j.toString().toByteArray(Charsets.UTF_8)
+    } catch (_: Exception) {
+      payload
+    }
+  }
+
+  private fun broadcast(path: String, payload: ByteArray, quiet: Boolean = false) {
     try {
       val messageClient = Wearable.getMessageClient(context)
       Wearable.getNodeClient(context).connectedNodes
         .addOnSuccessListener { nodes ->
           nodes.forEach { node ->
-            messageClient.sendMessage(node.id, path, payload)
+            messageClient.sendMessage(node.id, path, stampLead(path, payload))
             /* Meting telefoon → horloge (17 okt 2026): verzendmoment. */
-            android.util.Log.d("VZSend", "$path sent=${System.currentTimeMillis()} node=${node.displayName}")
+            if (!quiet) android.util.Log.d("VZSend", "$path sent=${System.currentTimeMillis()} node=${node.displayName}")
           }
         }
     } catch (_: Exception) {

@@ -4,7 +4,11 @@
      Eerder: grafiet-verloop (14 okt: "de cirkel moet even groot zijn als de andere"). De cirkel zelf snijdt Wear OS uit
      (adaptief icoon 72 dp, zichtbaar 66 dp); de ring ligt dus op de rand van het zichtbare vlak. 
      27 okt 2026 (avond, operator: "weinig of geen omlijning, zwart op zwart"): ring 1,2 → 2 dp, 22% → 70% wit en 3 → 5 dp naar binnen — op 3 dp lag hij precies op
-     de rand die Wear OS wegsnijdt en viel de helft weg. -->
+     de rand die Wear OS wegsnijdt en viel de helft weg. 
+     28 okt 2026 (operator: "nog altijd een bijna onzichtbare rand"): het adaptieve icoon heeft een tekenvlak van 108 dp waarvan enkel de middelste cirkel van 72 dp
+     zichtbaar is; de ring lag op 5 dp van de rand, dus volledig in het weggesneden deel. Nu op 19 dp (binnen de zichtbare cirkel), 3 dp dik, 85% wit.
+     28 okt 2026 (2e ronde, operator: "te wit, de cirkel te klein"): de ring staat nu OP de rand van de zichtbare cirkel (stroke 16–20 dp, de rand
+     ligt op 18 dp → 2 dp ring zichtbaar), 60% wit: de cirkel is zo groot als bij de andere apps. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
@@ -12,14 +16,14 @@
         </shape>
     </item>
     <item
-        android:left="5dp"
-        android:top="5dp"
-        android:right="5dp"
-        android:bottom="5dp">
+        android:left="16dp"
+        android:top="16dp"
+        android:right="16dp"
+        android:bottom="16dp">
         <shape android:shape="oval">
             <stroke
-                android:width="2dp"
-                android:color="#B3FFFFFF" />
+                android:width="4dp"
+                android:color="#99FFFFFF" />
         </shape>
     </item>
 </layer-list>

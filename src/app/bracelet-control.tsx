@@ -62,6 +62,7 @@ import {
   isWatchPlayingRhythm,
   setWatchHapticsEnabled,
   wakeWatchForStateControl,
+  setWatchLinkWarm,
   warmUpBeatEngine,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
@@ -4178,6 +4179,9 @@ function IdleScreen({
     useCallback(() => {
       wakeWatchForStateControl();
       warmUpBeatEngine();
+      /* Verbinding wakker houden zolang dit scherm in beeld is: snelle handdruk bij de start. */
+      setWatchLinkWarm(true);
+      return () => setWatchLinkWarm(false);
     }, []),
   );
   useEffect(() => {

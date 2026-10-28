@@ -10,6 +10,7 @@ import org.json.JSONObject
 
 object PhoneLink {
   const val PATH_STATE_ACK = "/vibezcore/state/ack"
+  const val PATH_STATE_READY = "/vibezcore/state/ready"
   const val PATH_WATCH_ACTION = "/vibezcore/watch/action"
   /** 27 okt 2026: het horloge vraagt de catalogus ACTIEF op (een bewaard data-item wordt soms niet afgeleverd als de app niet draait). */
   const val PATH_CATALOG_REQUEST = "/vibezcore/catalog/request"
@@ -34,7 +35,8 @@ object PhoneLink {
   }
 
   fun requestCatalog(context: Context) {
-    send(context, PATH_CATALOG_REQUEST, ByteArray(0))
+    /* "hs1": deze horloge-app kent de handdruk PREPARE → READY → GO (28 okt 2026). */
+    send(context, PATH_CATALOG_REQUEST, "hs1".toByteArray(Charsets.UTF_8))
   }
 
   /** `action` = "pause" | "resume" | "stop", `kind` = "bracelet" | "breath". */

@@ -6,6 +6,7 @@ package com.ubili.vibezcoreapp.wear
    BreathSessionService op de telefoon-kant van deze module. */
 
 import android.content.Intent
+import android.os.SystemClock
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.MessageEvent
@@ -17,6 +18,8 @@ private const val PATH_PAUSE = "/vibezcore/breath/pause"
 /* State Control (docs/WATCH_PROTOCOL.md) — zelfde doorgeefluik, andere
    service: WearStateSessionService speelt het ritme lokaal af. */
 private const val PATH_STATE_START = "/vibezcore/state/start"
+private const val PATH_STATE_PREPARE = "/vibezcore/state/prepare"
+private const val PATH_STATE_GO = "/vibezcore/state/go"
 private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 /** Enkel wakker worden: de telefoon stuurt dit als State Control opent,
@@ -60,6 +63,9 @@ class BreathListenerService : WearableListenerService() {
   override fun onMessageReceived(event: MessageEvent) {
     /* Meting telefoon → horloge (17 okt 2026): ontvangstmoment. */
     android.util.Log.d("VZSync", "recv ${event.path} at=${System.currentTimeMillis()}")
+    /* 28 okt 2026: het ontvangstmoment op de EIGEN teller van het horloge (niet de wandklok, die kan springen) — de sessiediensten rekenen
+       hiermee de reistijd en de wachttijd uit, zie ClockSync.oneWayMs en `leadMs` in het bericht. */
+    val recvUp = SystemClock.uptimeMillis()
     /* 20 okt 2026: elk bericht van de telefoon = de telefoon-app draait →
        klokverschil (opnieuw) meten, voor deze en volgende sessies. Begrensd
        tot 1× per 20 s; de start zelf wacht er nooit op. */
@@ -74,6 +80,7 @@ class BreathListenerService : WearableListenerService() {
           val intent = Intent(this, WearBreathSessionService::class.java).apply {
             action = WearBreathSessionService.ACTION_START
             putExtra(WearBreathSessionService.EXTRA_SESSION_JSON, json)
+            putExtra(WearBreathSessionService.EXTRA_RECV_UP, recvUp)
           }
           startForegroundService(intent)
           bringSessionToFront()
@@ -111,8 +118,31 @@ class BreathListenerService : WearableListenerService() {
           val intent = Intent(this, WearStateSessionService::class.java).apply {
             action = WearStateSessionService.ACTION_START
             putExtra(WearStateSessionService.EXTRA_START_JSON, json)
+            putExtra(WearStateSessionService.EXTRA_RECV_UP, recvUp)
           }
           startForegroundService(intent)
+          bringSessionToFront()
+        }
+        /* Samen starten (28 okt 2026): PREPARE = klaarzetten en READY melden; GO = het kleine "begin over X ms". */
+        PATH_STATE_PREPARE -> {
+          val json = String(event.data, Charsets.UTF_8)
+          val intent = Intent(this, WearStateSessionService::class.java).apply {
+            action = WearStateSessionService.ACTION_ARM
+            putExtra(WearStateSessionService.EXTRA_START_JSON, json)
+            putExtra(WearStateSessionService.EXTRA_RECV_UP, recvUp)
+          }
+          /* Het scherm komt pas bij GO naar voren (de sessie loopt dan echt); bij PREPARE staat er nog niets te tonen. */
+          startForegroundService(intent)
+        }
+        PATH_STATE_GO -> {
+          if (WearStateSessionService.instance == null) return
+          startService(
+            Intent(this, WearStateSessionService::class.java).apply {
+              action = WearStateSessionService.ACTION_GO
+              putExtra(WearStateSessionService.EXTRA_START_JSON, String(event.data, Charsets.UTF_8))
+              putExtra(WearStateSessionService.EXTRA_RECV_UP, recvUp)
+            },
+          )
           bringSessionToFront()
         }
         PATH_STATE_PAUSE, PATH_STATE_STOP -> {

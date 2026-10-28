@@ -73,6 +73,7 @@ import {
   sendStateSessionToWatch as sendWearState,
   stopStateSessionOnWatch as stopWearState,
   isWatchReachable as isWearWatchReachable,
+  keepLinkWarm as keepWearLinkWarm,
   wakeWatch as wakeWear,
 } from '../../modules/wear-breath';
 import {
@@ -402,10 +403,12 @@ function releaseIosAudioIfIdle(): void {
  *  trager. 300 ms dekt ook trage toestellen; beeld, geluid en horloge
  *  rekenen vanaf hetzelfde moment. */
 const NATIVE_START_LEAD_MS = 300;
-/** Met een horloge verbonden (27 okt 2026, operator: "het horloge begint iets later"): gemeten doet het startbericht er 190–740 ms over
+/** 28 okt 2026: gemeten handdruk PREPARE → READY duurt ~1,0 s (het grote bericht ~0,56 s over Bluetooth, het kleine GO daarna 0,03 s); de
+ *  telefoon wacht daarom 1,5 s zodat GO altijd vóór het startmoment aankomt en beide op dezelfde slag beginnen.
+ *  Met een horloge verbonden (27 okt 2026, operator: "het horloge begint iets later"): gemeten doet het startbericht er 190–740 ms over
  *  en het horloge heeft daarna nog ~110 ms nodig; met 300 ms miste het de eerste slag en begon het 0,86 s na de telefoon. Een
  *  afgesproken, ruimer startmoment laat telefoon en horloge op dezelfde slag beginnen. Zonder horloge blijft het 300 ms. */
-const WATCH_START_LEAD_MS = 1000;
+const WATCH_START_LEAD_MS = 1500;
 let wearWatchLinked = false;
 function refreshWearWatchLink(): void {
   if (Platform.OS !== 'android') return;
@@ -1261,6 +1264,12 @@ let lastWakeAt = 0;
  *  Control opent, zodat ook de eerste slag van een sessie klinkt. */
 export function warmUpBeatEngine(): void {
   if (Platform.OS === 'ios') void prepareHeartbeatSounds();
+}
+
+/** Houdt de verbinding met het horloge wakker zolang het State Control-scherm in beeld is (snelle handdruk bij de start, 28 okt 2026). */
+export function setWatchLinkWarm(on: boolean): void {
+  if (Platform.OS !== 'android') return;
+  keepWearLinkWarm(on && !!getSetting('watchHaptics'));
 }
 
 export function wakeWatchForStateControl(): void {

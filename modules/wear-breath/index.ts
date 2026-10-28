@@ -90,6 +90,7 @@ type WearBreathNativeModule = {
   stopBreathSession(): void;
   sendStateSession(start: StateSessionStart): void;
   wakeWatch?(): void;
+  keepLinkWarm?(on: boolean): void;
   pauseStateSession(): void;
   stopStateSession(): void;
   syncCatalog?(json: string): void;
@@ -259,5 +260,15 @@ export async function takeWatchSessions(): Promise<string[]> {
     return (await native?.takeWatchSessions?.()) ?? [];
   } catch {
     return [];
+  }
+}
+
+/** Houdt de Bluetooth-verbinding met het horloge wakker (elke seconde een leeg tikje) zolang `on` — voor een snelle handdruk bij het starten
+ *  van State Control (28 okt 2026). Enkel Android; elders een no-op. */
+export function keepLinkWarm(on: boolean): void {
+  try {
+    native?.keepLinkWarm?.(on);
+  } catch {
+    /* stil */
   }
 }

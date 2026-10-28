@@ -15,6 +15,7 @@ package com.ubili.vibezcoreapp.wear
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
@@ -32,6 +33,9 @@ object ClockSync {
   private const val KEY_AHEAD = "aheadMs"
   private const val KEY_RTT = "rttMs"
   private const val KEY_AT = "measuredAt"
+  private const val KEY_ONEWAY = "oneWayMs"
+  /** Zonder meting: een gangbare enkele reis telefoon → horloge (Bluetooth). */
+  const val DEFAULT_ONEWAY_MS = 100L
   /* 27 okt 2026: 5 → 12 pings. Gemeten (A16 + Watch4): met 5 pings en de beste van de vijf schommelde de schatting tussen sessies met
      ±300 ms (−1015…−416 ms) terwijl het echte verschil stabiel was; een rondreis van 100–285 ms is nooit nauwkeurig (± rtt/2). Meer
      pings geven meer kans op een echt snelle rondreis, en enkel de snelste tellen mee (zie run()). */
@@ -56,6 +60,15 @@ object ClockSync {
     val at = p.getLong(KEY_AT, 0L)
     if (at <= 0L || System.currentTimeMillis() - at > MAX_AGE_MS) return LEGACY_AHEAD_MS
     return p.getLong(KEY_AHEAD, LEGACY_AHEAD_MS)
+  }
+
+  /** Enkele reis telefoon → horloge (ms), gemeten met de EIGEN teller van het horloge (geen wandklok, dus onafhankelijk van een klok die
+   *  springt): de helft van de snelste rondreis ping → pong. 28 okt 2026. */
+  fun oneWayMs(context: Context): Long {
+    val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val at = p.getLong(KEY_AT, 0L)
+    if (at <= 0L || System.currentTimeMillis() - at > MAX_AGE_MS) return DEFAULT_ONEWAY_MS
+    return p.getLong(KEY_ONEWAY, DEFAULT_ONEWAY_MS)
   }
 
   /** Meet opnieuw (op de achtergrond, faalt stil). */
@@ -83,7 +96,8 @@ object ClockSync {
 
   private fun run(app: Context, nodeId: String) {
     val client = Wearable.getMessageClient(app)
-    val samples = ArrayList<Pair<Long, Long>>() // (rtt, ahead)
+    val samples = ArrayList<Pair<Long, Long>>() // (rtt op de eigen teller, ahead)
+    val monoAt = HashMap<Long, Long>() // t0 (wandklok) → t0 op de eigen teller
     val listener = MessageClient.OnMessageReceivedListener { e: MessageEvent ->
       if (e.path != PATH_PONG) return@OnMessageReceivedListener
       val t1 = System.currentTimeMillis()
@@ -91,7 +105,10 @@ object ClockSync {
         val parts = String(e.data, Charsets.UTF_8).split(',')
         val t0 = parts[0].toLong()
         val phone = parts[1].toLong()
-        val rtt = t1 - t0
+        val m1 = SystemClock.elapsedRealtime()
+        val m0 = synchronized(monoAt) { monoAt[t0] }
+        /* De rondreis op de EIGEN teller: een wandklok die tussen versturen en ontvangen springt, vervalst anders ook de reistijd. */
+        val rtt = if (m0 != null) m1 - m0 else t1 - t0
         if (rtt in 0..MAX_RTT_MS) synchronized(samples) { samples.add(rtt to ((t0 + t1) / 2 - phone)) }
       } catch (_: Exception) {
       }
@@ -106,6 +123,7 @@ object ClockSync {
       main.postDelayed({
         try {
           val t0 = System.currentTimeMillis()
+          synchronized(monoAt) { monoAt[t0] = SystemClock.elapsedRealtime() }
           client.sendMessage(nodeId, PATH_PING, t0.toString().toByteArray(Charsets.UTF_8))
         } catch (_: Exception) {
         }
@@ -130,11 +148,12 @@ object ClockSync {
           prefs.edit()
             .putLong(KEY_AHEAD, ahead)
             .putLong(KEY_RTT, bestRtt)
+            .putLong(KEY_ONEWAY, (bestRtt / 2).coerceIn(10L, 400L))
             .putLong(KEY_AT, System.currentTimeMillis())
             .apply()
           VzLog.d("clock ahead=${ahead}ms rtt=${bestRtt}ms n=${close.size}/${picked.size}")
         } else {
-          VzLog.d("clock kept (new rtt=${bestRtt}ms not better than ${prevRtt}ms)")
+          VzLog.d("clock kept (new ahead=${ahead}ms rtt=${bestRtt}ms not better than ${prevRtt}ms)")
         }
       }
       measuring = false

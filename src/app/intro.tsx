@@ -500,6 +500,8 @@ export default function IntroScreen() {
   const photoH = cur.photo ? (cur.pan ? Math.round(winH * 0.55) : Math.round(winW * (cur.photoRatio ?? 1.5))) : 0;
   const photoW = winW;
   /* Eerste scherm: de brede foto begint volledig (de buitenste mensen = het begin: drifting) en zoomt langzaam naar binnen op de twee in het midden (directing). */
+  /* 28 okt 2026 (operator, iPhone): 'de foto gaat te snel, de mensen mogen even zichtbaar zijn (niet te traag, niet te snel)': rust 450 → 650 ms,
+     zoom 2,6 → 3,4 s (was 4,5 s inOut, toen te traag bevonden). */
   const zoom = useSharedValue(1);
   const stripH = Math.round(winW * (cur.photoRatio ?? 0.43));
   const zoomTo = Math.min(3, Math.max(1, (photoH / Math.max(1, stripH)) * 0.92));
@@ -509,7 +511,7 @@ export default function IntroScreen() {
   useEffect(() => {
     cancelAnimation(zoom);
     zoom.value = 1;
-    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(450, withTiming(zoomTo, { duration: 2600, easing: Easing.out(Easing.cubic) }));
+    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(650, withTiming(zoomTo, { duration: 3400, easing: Easing.out(Easing.cubic) }));
     return () => cancelAnimation(zoom);
   }, [cur.pan, zoomTo, zoom]);
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
@@ -567,11 +569,12 @@ export default function IntroScreen() {
 
         <View style={{ flex: 1 }} />
         {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
-        <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.52) }] : undefined}>
+        <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.57) }] : undefined}>
         {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.35)', 'rgba(10,10,10,0.8)', '#0a0a0a']} locations={[0, 0.07, 0.13, 0.19]} style={StyleSheet.absoluteFill} /> : null}
         <ScrollView
           key={step}
-          style={cur.mock ? { flex: 1 } : { flexGrow: 0, flexShrink: 1 }}
+          /* 28 okt 2026 (operator, iPhone): de zwarte overgang hoger (kaart 52 → 57%) zodat de onderkant van de telefoon niet zichtbaar is; de tekst blijft waar hij stond. */
+          style={cur.mock ? { flex: 1, marginTop: Math.round(winH * 0.05) } : { flexGrow: 0, flexShrink: 1 }}
           contentContainerStyle={[s.content, cur.mock ? { justifyContent: 'flex-start' } : cur.photo && s.contentBottom]}
           alwaysBounceVertical={false}
           showsVerticalScrollIndicator={false}

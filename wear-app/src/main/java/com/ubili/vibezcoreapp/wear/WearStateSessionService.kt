@@ -70,6 +70,11 @@ private data class StateStart(
   val gridOriginSec: Double = curveOffsetSec,
   /** Telefoonklok toen dit bericht vertrok (0 = onbekend). */
   val sentAtMs: Long = 0L,
+  /** Hoeveel ms vóór (+) of na (−) het verzonden startmoment `sentAtMs` de telefoon dit bericht echt verstuurde (Long.MIN_VALUE = oudere
+   *  telefoon-app). Samen met `recvUp` rekent het horloge op zijn EIGEN teller, onafhankelijk van een klok die springt (28 okt 2026). */
+  val leadMs: Long = Long.MIN_VALUE,
+  /** Ontvangstmoment op de eigen teller (uptime) van het horloge, gezet door BreathListenerService (0 = onbekend). */
+  val recvUp: Long = 0L,
   /** Op het horloge zelf gestart (geen telefoon die meespeelt). */
   val local: Boolean = false,
   /** Het oorspronkelijke bericht, om een horloge-sessie te kunnen hervatten. */
@@ -286,6 +291,9 @@ class WearStateSessionService : Service() {
   private var visualUptime = 0L
   /** Uptime waarop de sessietijd (remainingSec) op is. */
   private var sessionEndUptime = 0L
+  /** Klaargezette sessie die op het GO-bericht van de telefoon wacht (samen starten, 28 okt 2026). */
+  @Volatile private var armed: StateStart? = null
+  @Volatile private var armedId = 0L
   private var paused = false
   private var pausedRemainingMs = 0L
   /** Langste resterende tijd binnen deze sessie = de totale duur (voor het
@@ -349,11 +357,47 @@ class WearStateSessionService : Service() {
         /* startForeground MOET na startForegroundService volgen, ook als de
            inhoud onbruikbaar is — anders crasht het proces na 5–10 s. */
         goForeground(buildNotification("Starting…", "VIBEZCORE"))
-        val parsed = json?.let { parse(it) }
+        val recvUp = intent.getLongExtra(EXTRA_RECV_UP, 0L)
+        val parsed = json?.let { parse(it) }?.copy(recvUp = recvUp)
         if (parsed == null || parsed.remainingSec <= 0) {
           beatHandler.post { finish(startId) }
         } else {
           beatHandler.post { start(parsed, startId) }
+        }
+      }
+      ACTION_ARM -> {
+        val json = intent.getStringExtra(EXTRA_START_JSON)
+        goForeground(buildNotification("Starting…", "VIBEZCORE"))
+        val recvUp = intent.getLongExtra(EXTRA_RECV_UP, 0L)
+        val parsed = json?.let { parse(it) }?.copy(recvUp = recvUp)
+        val hsId = try { JSONObject(json ?: "{}").optLong("hsId", 0L) } catch (_: Exception) { 0L }
+        if (parsed == null || parsed.remainingSec <= 0 || hsId == 0L) {
+          beatHandler.post { finish(startId) }
+        } else {
+          beatHandler.post {
+            armed = parsed
+            armedId = hsId
+            /* Klaar: de dienst draait en de sessie is gelezen. De telefoon wacht hierop en stuurt dan GO. */
+            PhoneLink.send(this, PhoneLink.PATH_STATE_READY, hsId.toString().toByteArray(Charsets.UTF_8))
+            VzLog.d("armed id=$hsId → ready sent")
+          }
+        }
+      }
+      ACTION_GO -> {
+        val recvUp = intent.getLongExtra(EXTRA_RECV_UP, 0L)
+        val j = try { JSONObject(intent.getStringExtra(EXTRA_START_JSON) ?: "{}") } catch (_: Exception) { JSONObject() }
+        val id = j.optLong("id", 0L)
+        val startInMs = j.optLong("startInMs", 0L)
+        beatHandler.post {
+          val a = armed
+          if (a != null && armedId == id) {
+            armed = null
+            VzLog.d("go id=$id startInMs=$startInMs")
+            /* Het GO-bericht draagt de wachttijd (relatief, op de klok van de telefoon uitgerekend); `sentAtMs` > 0 zet de relatieve start aan. */
+            start(a.copy(leadMs = startInMs, recvUp = recvUp, sentAtMs = if (a.sentAtMs > 0L) a.sentAtMs else 1L), startId)
+          } else {
+            VzLog.d("go id=$id genegeerd (armed=${a != null}, armedId=$armedId)")
+          }
         }
       }
       ACTION_PAUSE -> beatHandler.post { pause(startId) }
@@ -379,7 +423,12 @@ class WearStateSessionService : Service() {
       dubMsNoAmp = j.optLong("dubMsNoAmp", 40L).coerceAtLeast(1L),
       lubMs = j.optLong("lubMs", LUB_MS).coerceIn(20L, 120L),
       dubMs = j.optLong("dubMs", DUB_MS).coerceIn(15L, 100L),
-    ).takeIf { it.targetBpm > 0 }?.copy(sentAtMs = j.optLong("sentAtMs", 0L), local = j.optBoolean("local", false), raw = raw)
+    ).takeIf { it.targetBpm > 0 }?.copy(
+      sentAtMs = j.optLong("sentAtMs", 0L),
+      leadMs = if (j.has("leadMs")) j.optLong("leadMs") else Long.MIN_VALUE,
+      local = j.optBoolean("local", false),
+      raw = raw,
+    )
   } catch (_: Exception) {
     null
   }
@@ -387,6 +436,7 @@ class WearStateSessionService : Service() {
   /* ── Op beatThread ───────────────────────────────────────────────────── */
 
   private fun start(s: StateStart, startId: Int) {
+    armed = null
     /* 14 okt 2026 (audit): een lopende horloge-sessie die door een
        telefoon-start vervangen wordt, eerst in de geschiedenis zetten. */
     session?.takeIf { it.local && !s.local }?.let { prev ->
@@ -419,9 +469,16 @@ class WearStateSessionService : Service() {
     val clockAhead = ClockSync.aheadMs(this)
     val nowWall = System.currentTimeMillis()
     val nowUp = SystemClock.uptimeMillis()
-    /* 27 okt 2026: komt het bericht VÓÓR het afgesproken startmoment aan (de telefoon geeft een ruim startmoment mee), dan is de plek in
-       de curve negatief en speelt het horloge ook de allereerste slag, precies op dat moment. */
-    val rawCurve = if (s.sentAtMs > 0L) {
+    /* 28 okt 2026: ZONDER klokken. De wandklok van een horloge kan springen (Galaxy Watch4: seconden heen en weer); wie op het verschil
+       tussen twee kloktijden rekent, loopt dan voor sommige abonnees nooit gelijk. De telefoon meldt daarom `leadMs` (hoeveel ms vóór zijn
+       startmoment hij verstuurde); het horloge neemt zijn ontvangstmoment op de eigen teller (`recvUp`) en trekt de reistijd af (de helft van
+       de snelste rondreis, ook op de eigen teller gemeten): het startmoment van de telefoon ligt dan op `recvUp + leadMs − reistijd`. Een
+       oudere telefoon-app (geen leadMs) valt terug op de klok-methode. */
+    val relative = s.sentAtMs > 0L && s.leadMs != Long.MIN_VALUE && s.recvUp > 0L
+    val anchorUp = if (relative) s.recvUp + s.leadMs - ClockSync.oneWayMs(this) else 0L
+    val rawCurve = if (relative) {
+      origin + (nowUp - anchorUp).coerceAtMost(10 * 60_000L) / 1000.0
+    } else if (s.sentAtMs > 0L) {
       origin + ((nowWall - clockAhead - s.sentAtMs).coerceAtMost(10 * 60_000L)) / 1000.0
     } else {
       origin
@@ -429,22 +486,23 @@ class WearStateSessionService : Service() {
     val phoneCurve = rawCurve.coerceAtLeast(origin)
     var gridT = origin
     if (s.sentAtMs > 0L) while (gridT < rawCurve + 0.08) gridT += beatAt(s, gridT).first / 1000.0
-    val targetWall = if (s.sentAtMs > 0L) {
-      s.sentAtMs + clockAhead + ((gridT - origin) * 1000).roundToLong()
-    } else {
-      /* horloge-sessie: meteen (na het opbouwen van het scherm) */
-      nowWall + 120L
+    /* Wanneer (op de eigen teller) valt die eerste slag? */
+    val targetUp = when {
+      relative -> anchorUp + ((gridT - origin) * 1000).roundToLong()
+      s.sentAtMs > 0L -> nowUp + (s.sentAtMs + clockAhead + ((gridT - origin) * 1000).roundToLong() - nowWall)
+      else -> nowUp + 120L /* horloge-sessie: meteen (na het opbouwen van het scherm) */
     }
+    val targetWall = nowWall + (targetUp - nowUp)
     val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - (gridT - origin))
     if (aligned.remainingSec <= 0.5) return finish(startId)
     localResumeJson = null
-    VzLog.d("start sentAt=${s.sentAtMs} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetWall - nowWall}ms")
+    VzLog.d("start ${if (relative) "rel" else "clk"} sentAt=${s.sentAtMs} lead=${s.leadMs} oneWay=${ClockSync.oneWayMs(this)} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetUp - nowUp}ms")
     session = aligned
     val waveform = buildWaveform(aligned, amplitudeControl)
     units = splitIntoUnits(waveform)
     nextUnit = 0
     val totalMs = waveform.timings.sum()
-    startUptime = nowUp + (targetWall - nowWall)
+    startUptime = targetUp
     visualUptime = startUptime + if (s.sentAtMs > 0L) VISUAL_AFTER_PHONE_MS else 0L
     val hapticUptime = startUptime + if (s.sentAtMs > 0L) HAPTIC_AFTER_PHONE_MS else 0L
     hapticStartUptime = hapticUptime
@@ -536,6 +594,7 @@ class WearStateSessionService : Service() {
   /** stopSelf(startId): stopt enkel als dit de laatste opdracht was — een
    *  START die intussen binnenkwam blijft dus gewoon spelen. */
   private fun finish(startId: Int) {
+    armed = null
     session?.takeIf { it.local }?.let { cur ->
       val remainingMs = if (paused) pausedRemainingMs else (sessionEndUptime - SystemClock.uptimeMillis()).coerceAtLeast(0L)
       logLocal(cur, remainingMs)
@@ -799,8 +858,11 @@ class WearStateSessionService : Service() {
 
   companion object {
     const val ACTION_START = "com.ubili.vibezcoreapp.wear.action.STATE_START"
+    const val ACTION_ARM = "com.ubili.vibezcoreapp.wear.action.STATE_ARM"
+    const val ACTION_GO = "com.ubili.vibezcoreapp.wear.action.STATE_GO"
     const val ACTION_PAUSE = "com.ubili.vibezcoreapp.wear.action.STATE_PAUSE"
     const val ACTION_STOP = "com.ubili.vibezcoreapp.wear.action.STATE_STOP"
+    const val EXTRA_RECV_UP = "recvUptimeMs"
     const val EXTRA_START_JSON = "stateStartJson"
 
     /** Gepauzeerde horloge-sessie: het bericht om te hervatten (null = geen). */
