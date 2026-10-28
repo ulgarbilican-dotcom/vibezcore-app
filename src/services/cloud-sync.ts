@@ -69,7 +69,10 @@ import { resolveActiveBucket, subscribeUserBucket } from '@/utils/user-bucket';
 const rejectedDomains = new Set<SyncDomain>();
 const META_KEY = 'vz_cloud_sync_meta_v1';
 const CHECK_EVERY_MS = 10 * 60_000;
-const POLL_MS = 2 * 60_000;
+/* 28 okt 2026 (operator akkoord): een wijziging (favoriet, beluisterde sessie, plan) gaat binnen ~15 s naar de server i.p.v. binnen 2 min —
+   een gebruiker die net luisterde en de app meteen verwijdert, verliest zo praktisch niets. Een poll zonder lokale wijziging raakt het
+   netwerk niet (enkel de hash wordt vergeleken; de server wordt hooguit elke CHECK_EVERY_MS bekeken), dus dit kost geen data. */
+const POLL_MS = 15_000;
 const FOREGROUND_THROTTLE_MS = 20_000;
 
 type Meta = { users: Record<string, { domains: Partial<Record<SyncDomain, DomainMeta>>; adopted?: boolean; checkedAt?: number }> };

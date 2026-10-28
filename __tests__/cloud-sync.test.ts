@@ -198,6 +198,16 @@ describe('Backup & Sync', () => {
     expect(server.calls).toBe(calls);
   });
 
+  it('a local change goes out on the next quiet poll (no forced sync needed)', async () => {
+    const a = newDevice('u-abc');
+    await a.settings.setSetting('experienceLevel', 'advanced');
+    await a.sync.syncNow(true);
+    await a.history.addBreathSession(session(4000)); // bv. net een sessie afgerond
+    expect(await a.sync.syncNow(false)).toBe('ok');
+    const row = server.rows.find((r) => r.key === 'breath_history');
+    expect(row?.value.entries.map((e: { ts: number }) => e.ts)).toContain(4000);
+  });
+
   /* ── 28 okt 2026: State Control-sessies en de Audio Library ───────────────────────────────────────────────────────────── */
   const stateRec = (n: number) => ({
     mode: n % 5,
