@@ -44,7 +44,7 @@ const COPY: Record<PlanOfferKind, { eyebrow: string; title: string; body: string
     body: 'Tell VIBEZCORE what you want to work on. You get a daily plan built around it.',
     rows: [
       [Target, 'Choose your goal'],
-      [SlidersHorizontal, 'Choose how intense, and when'],
+      [SlidersHorizontal, 'Set your level, routine and times'],
       [Bell, "Get a reminder when it's time"],
     ],
     yes: 'Set my goal',
