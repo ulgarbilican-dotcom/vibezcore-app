@@ -8,7 +8,8 @@
      28 okt 2026 (operator: "nog altijd een bijna onzichtbare rand"): het adaptieve icoon heeft een tekenvlak van 108 dp waarvan enkel de middelste cirkel van 72 dp
      zichtbaar is; de ring lag op 5 dp van de rand, dus volledig in het weggesneden deel. Nu op 19 dp (binnen de zichtbare cirkel), 3 dp dik, 85% wit.
      28 okt 2026 (2e ronde, operator: "te wit, de cirkel te klein"): de ring staat nu OP de rand van de zichtbare cirkel (stroke 16–20 dp, de rand
-     ligt op 18 dp → 2 dp ring zichtbaar), 60% wit: de cirkel is zo groot als bij de andere apps. -->
+     ligt op 18 dp → 2 dp ring zichtbaar), 60% wit: de cirkel is zo groot als bij de andere apps.
+     28 okt 2026 (3e ronde, operator: "de ring is te dik en te wit"): ring 4 → 2 dp en 60% → 33% wit, nog steeds op de rand van de zichtbare cirkel. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
@@ -16,14 +17,14 @@
         </shape>
     </item>
     <item
-        android:left="16dp"
-        android:top="16dp"
-        android:right="16dp"
-        android:bottom="16dp">
+        android:left="11.5dp"
+        android:top="11.5dp"
+        android:right="11.5dp"
+        android:bottom="11.5dp">
         <shape android:shape="oval">
             <stroke
-                android:width="4dp"
-                android:color="#99FFFFFF" />
+                android:width="2dp"
+                android:color="#55FFFFFF" />
         </shape>
     </item>
 </layer-list>
