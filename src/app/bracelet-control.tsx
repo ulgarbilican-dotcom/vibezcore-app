@@ -8307,8 +8307,10 @@ const s = StyleSheet.create({
   endTxtWrap: { marginTop: 22 },
   iosKeepOpen: {
     marginTop: 14,
+    paddingHorizontal: 28,
     fontFamily: BrandFonts.regular,
     fontSize: 12,
+    lineHeight: 17,
     color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
   },
