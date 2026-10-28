@@ -547,40 +547,59 @@ export async function getLastLoginEmail(): Promise<string | null> {
    Zonder timeout hangt de ActivityIndicator forever bij airplane-mode of
    captive-portal. Met timeout → duidelijke error message binnen 10 sec.
    AbortController is de standaard React Native / fetch-API manier. */
-const AUTH_TIMEOUT_MS = 10_000;
+/* 28 okt 2026 (operator): de backend kan na stilte een koude start hebben (gemeten: eerste verzoek ~18 s, daarna
+   1-3 s) — 10 s gaf een echte gebruiker "Request timed out" bij het aanmaken van een account.
+   - login/refresh zijn herhaalbaar: 12 s, bij time-out of netwerkfout één keer opnieuw (de tweede poging treft
+     een warme server).
+   - signup/google/apple zijn dat niet (een time-out betekent niet dat het niet gelukt is; een tweede poging zou
+     "bestaat al" geven): één poging, maar ruimer (25 s). */
+const AUTH_ATTEMPTS: Record<'login' | 'signup' | 'refresh' | 'google' | 'apple', { timeoutMs: number; attempts: number }> = {
+  login: { timeoutMs: 12_000, attempts: 2 },
+  refresh: { timeoutMs: 12_000, attempts: 2 },
+  signup: { timeoutMs: 25_000, attempts: 1 },
+  google: { timeoutMs: 25_000, attempts: 1 },
+  apple: { timeoutMs: 25_000, attempts: 1 },
+};
 
 async function postToAuthProxy(
   action: 'login' | 'signup' | 'refresh' | 'google' | 'apple',
   payload: Record<string, unknown>
 ): Promise<{ ok: boolean; status: number; data: SessionPayload & ErrorPayload }> {
-  const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+  const { timeoutMs, attempts } = AUTH_ATTEMPTS[action];
 
-  let res: Response;
-  try {
-    res = await fetch(
-      VZ_BACKEND_URL + '/api/auth-proxy?action=' + action,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      }
-    );
-  } catch (e) {
-    clearTimeout(timeoutHandle);
+  let res: Response | null = null;
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= attempts && !res; attempt++) {
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      res = await fetch(
+        VZ_BACKEND_URL + '/api/auth-proxy?action=' + action,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        }
+      );
+    } catch (e) {
+      lastError = e;
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
+  }
+  if (!res) {
     /* AbortError van onze eigen timeout → duidelijke offline message.
        Andere network errors (DNS, TCP reset) → generieke connection message. */
-    const isAbort = (e as Error)?.name === 'AbortError';
+    const isAbort = (lastError as Error)?.name === 'AbortError';
     const msg = isAbort
       ? 'Request timed out — check your internet connection.'
       : 'No internet connection — try again when you are online.';
     return { ok: false, status: 0, data: { error: msg } };
   }
-  clearTimeout(timeoutHandle);
 
   /* Body altijd als text lezen — bij upstream-errors kan het non-JSON zijn.
      Toleranter zo. */
