@@ -17,6 +17,7 @@ import Tap from '@/components/Tap';
 import VibezGlass from '@/components/VibezGlass';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW, TypeScale } from '@/constants/theme';
 import { isReduceMotion, reveal } from '@/constants/motion';
+import { whenAppVisible } from '@/components/LaunchReveal';
 import { qaFlag } from '@/utils/qa-probe';
 import { setSetting } from '@/utils/settings';
 import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
@@ -511,8 +512,19 @@ export default function IntroScreen() {
   useEffect(() => {
     cancelAnimation(zoom);
     zoom.value = 1;
-    if (cur.pan) zoom.value = isReduceMotion() ? zoomTo : withDelay(650, withTiming(zoomTo, { duration: 3400, easing: Easing.out(Easing.cubic) }));
-    return () => cancelAnimation(zoom);
+    if (!cur.pan) return () => cancelAnimation(zoom);
+    if (isReduceMotion()) {
+      zoom.value = zoomTo;
+      return () => cancelAnimation(zoom);
+    }
+    /* Pas inzoomen als de opstart-animatie de app vrijgeeft (zie whenAppVisible), anders speelt de zoom af achter het logo. */
+    const stop = whenAppVisible(() => {
+      zoom.value = withDelay(650, withTiming(zoomTo, { duration: 3400, easing: Easing.out(Easing.cubic) }));
+    });
+    return () => {
+      stop();
+      cancelAnimation(zoom);
+    };
   }, [cur.pan, zoomTo, zoom]);
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */

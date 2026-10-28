@@ -145,6 +145,41 @@ function Letter({ index, t }: { index: number; t: SharedValue<number> }) {
 let trigger: (() => void) | null = null;
 let pending = false;
 
+/* 28 okt 2026 (operator: "de eerste foto van de intro zoomt niet in", Android): het intro-scherm wordt onder de opstart-animatie
+   gemonteerd en zijn inzoom (650 ms + 3,4 s) liep al terwijl die animatie er nog overheen lag — bij het zichtbaar worden was de zoom bijna af.
+   Schermen die op de opening willen wachten melden zich hier; ze krijgen het sein zodra de app begint door te schemeren (O0). Bij een
+   warme navigatie (opnieuw bekijken via Instellingen) is de app al zichtbaar en gebeurt het meteen. Vangnet: na 5 s sowieso. */
+let appVisible = false;
+const visibleWaiters = new Set<() => void>();
+function markAppVisible(): void {
+  if (appVisible) return;
+  appVisible = true;
+  visibleWaiters.forEach((w) => w());
+  visibleWaiters.clear();
+}
+export function whenAppVisible(cb: () => void): () => void {
+  if (appVisible) {
+    cb();
+    return () => {};
+  }
+  let fired = false;
+  const fire = () => {
+    if (fired) return;
+    fired = true;
+    cb();
+  };
+  visibleWaiters.add(fire);
+  const safety = setTimeout(() => {
+    visibleWaiters.delete(fire);
+    fire();
+  }, 5000);
+  return () => {
+    visibleWaiters.delete(fire);
+    clearTimeout(safety);
+    fired = true;
+  };
+}
+
 /** In plaats van SplashScreen.hideAsync(): systeembeeld weg, animatie start. */
 export function revealApp(): void {
   if (trigger) trigger();
@@ -161,6 +196,7 @@ export default function LaunchReveal() {
       if (started) return;
       started = true;
       SplashScreen.hideAsync().catch(() => {});
+      setTimeout(markAppVisible, O0);
       t.value = withTiming(TOTAL, { duration: TOTAL, easing: Easing.linear }, (fin) => {
         if (fin) scheduleOnRN(setDone, true);
       });
