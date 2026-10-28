@@ -132,6 +132,10 @@ export function VibezAlertHost() {
     ? current.buttons
     : [{ text: 'OK', style: 'primary' as const }];
   const light = !!current.light;
+  /* Knoppen onder elkaar zodra er meer dan twee zijn of een tekst te lang is voor een halve breedte
+     (anders breekt hij over twee regels, zoals "Remove from favorites"). Bij een lijst eerst de
+     hoofdactie, annuleren onderaan. */
+  const stacked = buttons.length > 2 || buttons.some((b) => b.text.length > 11);
 
   return (
     <Modal
@@ -160,7 +164,7 @@ export function VibezAlertHost() {
           <View
             style={[
               s.buttonRow,
-              buttons.length > 2 && s.buttonColumn,
+              stacked && s.buttonColumn,
             ]}
           >
             {buttons.map((b, idx) => (
@@ -168,7 +172,7 @@ export function VibezAlertHost() {
                 key={idx}
                 button={b}
                 light={light}
-                multiline={buttons.length > 2}
+                multiline={stacked}
                 onPress={() => {
                   try {
                     b.onPress?.();
@@ -294,7 +298,8 @@ const s = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
+    minHeight: 52,
+    paddingHorizontal: 16,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
@@ -318,6 +323,7 @@ const s = StyleSheet.create({
     backgroundColor: Brand.error,
   },
   buttonText: {
+    textAlign: 'center',
     fontFamily: BrandFonts.bold,
     fontSize: 14,
     letterSpacing: 0.2,
