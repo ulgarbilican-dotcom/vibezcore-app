@@ -61,6 +61,7 @@ import { applyStateSync, getStateSyncSnapshot, reloadStateHistory } from '@/util
 import { applyAudioHistorySync, getAudioHistorySyncSnapshot, reloadAudioHistory } from '@/utils/history';
 import { applyPositionsSync, getPositionsSyncSnapshot, reloadPositions } from '@/utils/vzp';
 import { getActivePlanLoaded, clearActivePlan, reloadActivePlan, saveActivePlan, type ActivePlan } from '@/utils/plan-store';
+import { getActiveBraceletPlanLoaded, reloadActiveBraceletPlan, saveActiveBraceletPlan, type BraceletActivePlan } from '@/utils/bracelet-plan-store';
 import { SETTING_DEFAULTS, ensureSettingsLoaded, getSetting, setSetting } from '@/utils/settings';
 import { resolveActiveBucket, subscribeUserBucket } from '@/utils/user-bucket';
 
@@ -127,15 +128,22 @@ const historyHandler: Handler<HistoryPayload> = {
   valid: (v): v is HistoryPayload => isObj(v) && Array.isArray(v.entries) && isObj(v.totals),
 };
 
-type PlanWrap = { plan: PlanPayload | null };
+/* 28 okt 2026 (operator: "dat had standaard moeten gebeuren"): het State Control-plan reist mee in hetzelfde onderdeel als het
+   Breathwork-plan (`statePlan` naast `plan`) — geen nieuwe rij, dus geen databasewijziging. Een rij van een oudere app-versie heeft
+   geen `statePlan`: dan blijft het plan op dit toestel ongemoeid. */
+type PlanWrap = { plan: PlanPayload | null; statePlan?: PlanPayload | null };
 const planHandler: Handler<PlanWrap> = {
-  empty: { plan: null },
-  read: async () => ({ plan: (await getActivePlanLoaded()) as unknown as PlanPayload | null }),
+  empty: { plan: null, statePlan: null },
+  read: async () => ({
+    plan: (await getActivePlanLoaded()) as unknown as PlanPayload | null,
+    statePlan: (await getActiveBraceletPlanLoaded()) as unknown as PlanPayload | null,
+  }),
   apply: async (v) => {
     if (v.plan) await saveActivePlan(v.plan as unknown as ActivePlan);
     else await clearActivePlan();
+    if ('statePlan' in v) await saveActiveBraceletPlan((v.statePlan ?? null) as unknown as BraceletActivePlan | null);
   },
-  merge: (l, r) => ({ plan: pickPlan(l.plan, r.plan) }),
+  merge: (l, r) => ({ plan: pickPlan(l.plan, r.plan), statePlan: pickPlan(l.statePlan ?? null, r.statePlan ?? null) }),
   valid: (v): v is PlanWrap => isObj(v) && 'plan' in v,
 };
 
@@ -247,6 +255,7 @@ async function adoptGuestData(bucket: string): Promise<boolean> {
     [`vzpc_anon_v1`, `vzpc_${bucket}_v1`],
     /* 28 okt 2026: State Control-sessies en de Audio Library gaan ook mee. */
     [`vzbc_sessions_anon_v1`, `vzbc_sessions_${bucket}_v1`],
+    [`vzbpc_anon_v1`, `vzbpc_${bucket}_v1`],
     [`vzf_anon_v1`, `vzf_${bucket}_v1`],
     [`vzh_anon_v1`, `vzh_${bucket}_v1`],
     [`vzp_anon_v1`, `vzp_${bucket}_v1`],
@@ -302,7 +311,7 @@ async function runOnce(force: boolean): Promise<SyncResult> {
 
   if (!user.adopted) {
     if (await adoptGuestData(bucket)) {
-      await Promise.all([reloadBreathHistory(), reloadActivePlan(), reloadStateHistory(), reloadFavorites(), reloadAudioHistory(), reloadPositions()]);
+      await Promise.all([reloadBreathHistory(), reloadActivePlan(), reloadActiveBraceletPlan(), reloadStateHistory(), reloadFavorites(), reloadAudioHistory(), reloadPositions()]);
     }
     user.adopted = true;
   }

@@ -44,6 +44,7 @@ type Device = {
   history: typeof import('../src/utils/breath-history');
   pulse: typeof import('../src/services/resting-pulse');
   plan: typeof import('../src/utils/plan-store');
+  splan: typeof import('../src/utils/bracelet-plan-store');
   state: typeof import('../src/utils/bracelet-history');
   fav: typeof import('../src/hooks/useFavorites');
   listen: typeof import('../src/utils/history');
@@ -64,6 +65,7 @@ function newDevice(bucket: string, storage: Record<string, string> = {}): Device
       history: require('../src/utils/breath-history'),
       pulse: require('../src/services/resting-pulse'),
       plan: require('../src/utils/plan-store'),
+      splan: require('../src/utils/bracelet-plan-store'),
       state: require('../src/utils/bracelet-history'),
       fav: require('../src/hooks/useFavorites'),
       listen: require('../src/utils/history'),
@@ -86,6 +88,26 @@ beforeEach(() => {
 const session = (ts: number) => ({ key: 'calm', name: 'Calm Control', ts, durSec: 600, rounds: 5, completed: true });
 
 describe('Backup & Sync', () => {
+
+  it('the State Control plan travels to a second device; an old row without it leaves the local plan alone', async () => {
+    const a = newDevice('u-abc');
+    const plan = { id: 'sp1', createdAt: 5000, horizon: '1w', startDayKey: '2026-10-28', days: {} } as any;
+    await a.splan.saveActiveBraceletPlan(plan);
+    expect(await a.sync.syncNow(true)).toBe('ok');
+    const row = server.rows.find((r) => r.key === 'plan');
+    expect(row?.value.statePlan?.id).toBe('sp1');
+
+    const b = newDevice('u-abc');
+    expect(await b.sync.syncNow(true)).toBe('ok');
+    expect((await b.splan.getActiveBraceletPlanLoaded())?.id).toBe('sp1');
+
+    /* Een rij zoals een oudere app-versie hem schreef (enkel het Breathwork-plan): het State Control-plan op dit toestel blijft. */
+    server.rows = [{ key: 'plan', value: { plan: null }, updated_at: '2026-10-28T12:00:00Z' }];
+    const c = newDevice('u-abc');
+    await c.splan.saveActiveBraceletPlan({ ...plan, id: 'local' });
+    await c.sync.syncNow(true);
+    expect((await c.splan.getActiveBraceletPlanLoaded())?.id).toBe('local');
+  });
   it('a guest stays fully local: nothing is sent without an account', async () => {
     const a = newDevice('anon');
     await a.settings.setSetting('experienceLevel', 'advanced');

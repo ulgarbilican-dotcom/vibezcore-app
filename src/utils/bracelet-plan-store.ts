@@ -205,6 +205,12 @@ export function getActiveBraceletPlan(): BraceletActivePlan | null {
   return state;
 }
 
+/** Backup & Sync (28 okt 2026): het actieve plan, maar pas nadat de opslag gelezen is. */
+export async function getActiveBraceletPlanLoaded(): Promise<BraceletActivePlan | null> {
+  await load();
+  return state;
+}
+
 /** Operator, 30 september 2026 ("mag nooit aparte states en 2 zelfde
  *  momenten kunnen kiezen, ook rekening houden met de duur"): een sessie
  *  bezet `[start, start+duur)`, ongeacht modus — gedeeld tussen
