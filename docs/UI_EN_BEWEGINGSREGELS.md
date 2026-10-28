@@ -68,3 +68,11 @@ Geen haptiek op knoppen, keuzes of tabs: een tik die niet exact gelijk loopt met
 trilmotor verschilt per toestel (op Android ook afhankelijk van de systeeminstelling "Trillingen bij aanraking") en is niet te garanderen.
 `hapticTap()`/`hapticPress()` in `src/utils/haptics.ts` doen daarom niets (schakelaar `BUTTON_HAPTICS = false`). Blijft wel:
 `hapticTick` (slepen over een waarde), succes/fout en de sessie-haptiek (ademhaling, bracelet) — dat zijn geen knoppen.
+
+## Horloge-icoon (28 okt 2026, operator) — op elk horloge even groot als de andere apps
+- **Wear OS** is een ADAPTIEF icoon: tekenvlak **108 dp**, het systeem snijdt een **cirkel van 72 dp** uit (alles buiten is weg). Alle maten staan in dp, dus de verhouding is op elk Wear OS-horloge gelijk; het icoon moet die cirkel VOLLEDIG vullen, zoals de andere apps.
+- Wij: achtergrond **zwart** (`ic_launcher_bg.xml`) met een dunne lichte ring op de RAND van de zichtbare cirkel (2 dp, wit 33%, inset 11,5 dp binnen het 108-dp-vlak), V-merk als voorgrond. Zwart op zwart toont enkel de ring waar de rand ligt: ligt de ring te ver naar binnen, dan lijkt de cirkel kleiner dan de andere apps.
+- **Gemeten, niet gegokt**: Galaxy Watch4 (396 px): tegel Telefoon 102 px breed, onze ring eerst 86 px (te klein), nu 102 px. Meting: schermafdruk van de applijst + `scratchpad/measure.py`-aanpak (breedte van de tegel op dezelfde rij vergelijken).
+- Niet van toepassing: 48 dp (icoon op een opstartscherm) en 24 dp (UI-icoon in een app) zijn andere dingen.
+- **Apple Watch**: vierkant bronbestand (1024 px), watchOS maskert het tot een cirkel; essentie in het midden. De ring/maat is daar NOG NIET op een horloge gemeten.
+- Wijzigt het icoon: opnieuw meten naast de andere tegels, op een Wear OS-horloge én (voor iOS) op een Apple Watch.
