@@ -37,6 +37,7 @@ import { AUDIO_ENABLED } from '@/constants/features';
 import { BrandFonts, AudioAccent } from '@/constants/theme';
 import { requestLibraryReset } from '@/utils/library-reset-intent';
 import { markTabOpenedByUser } from '@/utils/onboarding-gate';
+import { notePlanOfferTabTap } from '@/utils/plan-offer';
 import {
   isActiveSessionVisible,
   isChooseScreenVisible,
@@ -117,6 +118,9 @@ function TabButton({
         if (path === '/breath') {
           markTabOpenedByUser('breath');
         }
+        /* 28 okt 2026: de plan-vraag voor een nieuwe abonnee komt enkel na een eigen tik op het tabblad. */
+        if (path === '/breath') notePlanOfferTabTap('breath');
+        if (path === '/bracelet') notePlanOfferTabTap('state');
         /* `as never`: expo-router genereert zijn routetypes uit de mappen,
            en een net toegevoegd scherm staat pas in dat bestand na de
            volgende build. De route bestaat wel — hij staat hieronder als

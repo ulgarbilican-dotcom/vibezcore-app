@@ -40,6 +40,7 @@ import Svg, { Polygon } from 'react-native-svg';
 import { router } from 'expo-router';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { markTabOpenedByUser } from '@/utils/onboarding-gate';
+import { notePlanOfferTabTap } from '@/utils/plan-offer';
 import PremiumNote from '@/components/PremiumNote';
 import { useSetting } from '@/utils/settings';
 import { useEffect, useState } from 'react';
@@ -111,6 +112,7 @@ const PILLARS: Pillar[] = [
       /* 26 okt 2026 (operator: consistent): ook Breathwork opent eerst op zijn eigen pagina met tabbalk (zoals State Control); de
          onboarding start vanuit de hoofdknop daar. */
       markTabOpenedByUser('breath'); // "zelf geopend" voor de onboarding-poort (Premium heeft geen beginpagina)
+      notePlanOfferTabTap('breath');
       router.replace('/breath' as never);
     },
   },
@@ -119,7 +121,10 @@ const PILLARS: Pillar[] = [
     Icon: Radio,
     product: 'Feel',
     title: 'Control Your State', // operator 7 okt 2026: zelfde ritme als Reset Yourself / Train Your Mind
-    onPress: () => router.replace('/bracelet'),
+    onPress: () => {
+      notePlanOfferTabTap('state');
+      router.replace('/bracelet');
+    },
   },
   {
     key: 'audio',
