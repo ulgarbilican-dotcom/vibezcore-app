@@ -129,6 +129,13 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
           </Tap>
         ) : null}
       </View>
+      {/* 28 okt 2026 (operator): algemene hint, bewust zonder instellingsnamen — die verschillen per horloge
+          (Apple: "Haptics", Pixel Watch 2+: trilintensiteit, sommige horloges hebben niets). */}
+      {w.status === 'ready' && on ? (
+        <Text style={s.hint}>
+          Feels too soft? If your watch has a vibration or haptics strength setting, turn it up.
+        </Text>
+      ) : null}
     </>
   );
 }
@@ -137,6 +144,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   title: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16 },
   sub: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.regular, fontSize: 13, marginTop: 2 },
+  hint: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, paddingBottom: 8 },
   btn: { backgroundColor: '#ffffff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   btnTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 13 },
 });
