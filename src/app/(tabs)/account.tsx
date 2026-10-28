@@ -47,6 +47,7 @@ import {
   setSignedOutStatus,
   setSigningInStatus,
   useSubscription,
+  getCachedSubscription,
 } from '@/hooks/useSubscription';
 import { refreshUserBucket as refreshBraceletBucket } from '@/utils/bracelet-history';
 import { refreshUserBucket as refreshAudioBucket } from '@/utils/user-bucket';
@@ -948,8 +949,11 @@ export default function AccountScreen() {
   const restoredRef = useRef(false);
   const restoreQuestion = () =>
     `If you have VIBEZCORE Premium on this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google Play account'}, restore it now to use it on this account.`;
+  /* 28 okt 2026 (operator): wie net voor het eerst kocht en daarna een account maakt, heeft Premium al (RevenueCat op dit toestel) — dan
+     is de vraag "restore it now" onzin. De backend-status kan door vertraging nog "niet actief" zeggen; de lokale status telt dus mee. */
+  const proOnThisDevice = () => !!getCachedSubscription()?.active;
   const offerRestoreIfFree = (isPro: boolean) => {
-    if (isPro || restoredRef.current) return;
+    if (isPro || restoredRef.current || proOnThisDevice()) return;
     setTimeout(() => {
       void (async () => {
         const choice = await showVibezAlert({
@@ -1306,7 +1310,7 @@ export default function AccountScreen() {
           /* no redirect — gewoon de huidige view re-renderen. Wel een korte
              bevestiging (audit 18 okt 2026: de view wisselde zonder iets te
              zeggen). */
-          if (isAudioPro || isBraceletPro || restoredRef.current) {
+          if (isAudioPro || isBraceletPro || restoredRef.current || proOnThisDevice()) {
             void showVibezAlert({
               title: 'Account created',
               message: "You're signed in. Your progress and purchases are now linked to your account.",
