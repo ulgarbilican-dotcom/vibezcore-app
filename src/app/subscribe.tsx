@@ -40,7 +40,9 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getSetting } from '@/utils/settings';
 import { getActivePlan, reloadActivePlan, saveActivePlan } from '@/utils/plan-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getActiveBraceletPlan } from '@/utils/bracelet-plan-store';
+import { QA_ENABLED } from '@/utils/qa';
 import { generateProtocol } from '@/utils/protocol';
 import { useIAP } from '@/hooks/useIAP';
 import { getCachedSubscription, refreshSubscription, setProSubscribedStatus, useSubscription } from '@/hooks/useSubscription';
@@ -139,6 +141,8 @@ const TOTAL_SESSION_COUNT = SESSIONS.length;
    Defensief: onbekende strings vallen terug op een veilige default ipv
    de raw error te tonen (kan tokens/IDs lekken). */
 const SUPPORT_URL = 'https://www.vibezcore.com/support';
+const PLAN_OFFER_SEEN_KEY = 'vz_plan_offer_seen_v1';
+
 export default function SubscribeScreen() {
   const params = useLocalSearchParams<{
     tier?: string;
@@ -1047,7 +1051,13 @@ export default function SubscribeScreen() {
   /* 28 okt 2026 (operator): na Premium (aankoop OF herstel) één keer vragen of de gebruiker zijn plan wil instellen — direct naar de pagina's
      zelf: State Control = "Set your plan" (/bracelet-set-day), Breathwork = "Set your goal" (/build-choice). Komt hij niet vanuit één van die
      twee (Profile, Library, herstel), dan kiest hij hier welke. Alleen als er van het gevraagde nog geen plan is. [TEKST] concept. */
-  const offerPlanThenGo = (goOn: () => void) => {
+  /* `fresh` = een écht nieuwe aankoop. Herstellen en "al lid" zijn geen nieuwe abonnee en krijgen de vraag NIET — behalve in een testbuild (QA_ENABLED),
+     omdat het testaccount daar al een abonnement heeft. */
+  const offerPlanThenGo = (goOn: () => void, fresh = true) => {
+    if (!fresh && !QA_ENABLED) {
+      goOn();
+      return;
+    }
     const noBreathPlan = !planJustBuilt && getActivePlan() === null;
     const noStatePlan = getActiveBraceletPlan() === null;
     const offerFor =
@@ -1067,6 +1077,27 @@ export default function SubscribeScreen() {
       return;
     }
     planOfferedRef.current = true;
+    /* Hoogstens één keer per toestel (ook niet opnieuw bij een latere upgrade, bv. dagpas → maand). In een testbuild telt dit niet mee. */
+    void (async () => {
+      let seen = false;
+      try {
+        seen = (await AsyncStorage.getItem(PLAN_OFFER_SEEN_KEY)) === '1';
+      } catch {
+        /* geen opslag = niet gezien */
+      }
+      if (seen && !QA_ENABLED) {
+        goOn();
+        return;
+      }
+      try {
+        await AsyncStorage.setItem(PLAN_OFFER_SEEN_KEY, '1');
+      } catch {
+        /* swallow */
+      }
+      showPlanOffer(offerFor, goOn);
+    })();
+  };
+  const showPlanOffer = (offerFor: 'state' | 'breath' | 'any', goOn: () => void) => {
     if (offerFor === 'any') {
       void showVibezAlert({
         title: 'Set your daily plan',
@@ -1113,14 +1144,14 @@ export default function SubscribeScreen() {
 Create a free account to keep Premium on all your devices.`,
             buttons: [
               { text: 'Create free account', style: 'primary', onPress: () => { setLinkingAccount(true); setPhase('form'); } },
-              { text: 'Not now', style: 'cancel', onPress: () => offerPlanThenGo(() => goToTab('/')) },
+              { text: 'Not now', style: 'cancel', onPress: () => offerPlanThenGo(() => goToTab('/'), false) },
             ],
           });
         } else {
           void showVibezAlert({
             title: 'Subscription restored',
             message: restoredMsg,
-            buttons: [{ text: 'OK', onPress: () => offerPlanThenGo(() => goToTab('/')) }],
+            buttons: [{ text: 'OK', onPress: () => offerPlanThenGo(() => goToTab('/'), false) }],
           });
         }
       } else if (result.accountMismatch) {
@@ -1296,7 +1327,7 @@ ${
               else if (router.canGoBack()) router.back();
               else goToTab('/bracelet');
             };
-            offerPlanThenGo(goOn);
+            offerPlanThenGo(goOn, !alreadyMember);
             return;
             goOn();
           }}
