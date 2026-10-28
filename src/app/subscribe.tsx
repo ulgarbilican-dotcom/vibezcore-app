@@ -40,6 +40,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getSetting } from '@/utils/settings';
 import { getActivePlan, reloadActivePlan, saveActivePlan } from '@/utils/plan-store';
+import { getActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { generateProtocol } from '@/utils/protocol';
 import { useIAP } from '@/hooks/useIAP';
 import { getCachedSubscription, refreshSubscription, setProSubscribedStatus, useSubscription } from '@/hooks/useSubscription';
@@ -1241,19 +1242,34 @@ ${
               else if (router.canGoBack()) router.back();
               else goToTab('/bracelet');
             };
-            if (!alreadyMember && !planOfferedRef.current && !planJustBuilt && !getActivePlan()) {
+            /* Zelfde namen als op Activity: State Control = "Set your plan" (eigen planbouwer), Breathwork = "Set your goal". Enkel met een
+               duidelijke herkomst; wie zonder context kwam (Profile, Audio Library) krijgt geen vraag met een willekeurige bestemming.
+               Niet als er al een plan van dat onderdeel is (of net automatisch een gebouwd werd). */
+            const offerFor =
+              params.returnTo === 'state-control'
+                ? getActiveBraceletPlan() === null
+                  ? ('state' as const)
+                  : null
+                : params.returnTo === 'breathwork'
+                  ? !planJustBuilt && getActivePlan() === null
+                    ? ('breath' as const)
+                    : null
+                  : null;
+            if (!alreadyMember && !planOfferedRef.current && offerFor) {
               planOfferedRef.current = true;
-              /* [TEKST] concept — de definitieve tekst is aan de operator. Hergebruikt de bestaande planflow (build-choice → goal → plan):
-                 doelen en niveau uit de onboarding staan daar al ingevuld. State Control vraagt zijn hartslagkeuze zelf zodra het tabblad opent. */
+              /* [TEKST] concept — de definitieve tekst is aan de operator. */
               void showVibezAlert({
-                title: 'Set your plan?',
-                message: 'Answer a few quick questions and VIBEZCORE builds a plan around your day.',
+                title: offerFor === 'state' ? 'Set your plan' : 'Set your goal',
+                message:
+                  offerFor === 'state'
+                    ? "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time."
+                    : "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
                 buttons: [
-                  { text: 'Set my plan', style: 'primary' },
+                  { text: offerFor === 'state' ? 'Set my plan' : 'Set my goal', style: 'primary' },
                   { text: 'Not now', style: 'cancel' },
                 ],
               }).then((choice) => {
-                if (choice === 0) router.replace('/build-choice' as never);
+                if (choice === 0) router.replace((offerFor === 'state' ? '/bracelet-set-day' : '/build-choice') as never);
                 else goOn();
               });
               return;
