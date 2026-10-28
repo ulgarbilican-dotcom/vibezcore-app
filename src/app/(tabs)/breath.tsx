@@ -33,6 +33,8 @@ import { SPRING_POP, SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constan
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePlanOffer } from '@/utils/plan-offer';
+import { isAnySessionRunning } from '@/utils/onboarding-gate';
 import { iosFont } from '@/utils/ios-text-scale';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
@@ -533,6 +535,8 @@ export default function BreathScreen() {
   useEffect(() => {
     if (proSub.isPro) setIntro(false);
   }, [proSub.isPro]);
+  /* 28 okt 2026 (operator): nieuwe Premium-abonnee → zodra de keuzepagina open is eenmalig "Set your goal?" (utils/plan-offer.ts). */
+  usePlanOffer('breath', tabFocused && proSub.isPro && !intro && !isAnySessionRunning());
   /* 21 okt 2026 (operator): na "Explore modes" geen tabbalk meer (zoals bij
      State Control) maar een terug-chevron naar het intro-scherm. */
   useEffect(() => {

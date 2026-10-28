@@ -74,6 +74,7 @@ import { useRestingPulse } from '@/components/RhythmSheet';
 import { loadRestingPulse, getRestingPulse, chooseAverageRestingPulse } from '@/services/resting-pulse';
 import { setStateControlIntroFullScreen, setStateControlIntroVisible } from '@/utils/state-control-ui';
 import { deferOnboarding, isAnySessionRunning, mayAutoShowOnboarding } from '@/utils/onboarding-gate';
+import { usePlanOffer } from '@/utils/plan-offer';
 import { setStateIntroSkip, useStateIntroSkip } from '@/utils/state-intro-skip';
 import { useSafeAreaInsets } from '@/utils/safe-area';
 import { hapticPress } from '@/utils/haptics';
@@ -441,6 +442,8 @@ export default function BraceletScreen() {
   }, []);
 
   const introIsOnboarding = needsOnboarding && mayAutoShowOnboarding('state');
+  /* 28 okt 2026 (operator): nieuwe Premium-abonnee → na de hartslagkeuze eenmalig "Set your plan?" (utils/plan-offer.ts). */
+  usePlanOffer('state', focused && proSub.isPro && !showIntro && !showHrPage && pulseLoaded && pulse.decided && !isAnySessionRunning());
   qaFlag('scGate', { settingsLoaded, onboardedAt: String(onboardedAt), may: mayAutoShowOnboarding('state'), sessionRunning: isAnySessionRunning(), deferred: getSetting('stateOnboardingDeferredCount') });
   if (showIntro) {
     return (

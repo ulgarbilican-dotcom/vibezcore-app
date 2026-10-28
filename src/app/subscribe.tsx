@@ -40,8 +40,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { SESSIONS } from '@/data/audio-library-data';
 import { getSetting } from '@/utils/settings';
 import { getActivePlan, reloadActivePlan, saveActivePlan } from '@/utils/plan-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getActiveBraceletPlan } from '@/utils/bracelet-plan-store';
+import { markPlanOfferPending } from '@/utils/plan-offer';
 import { QA_ENABLED } from '@/utils/qa';
 import { generateProtocol } from '@/utils/protocol';
 import { useIAP } from '@/hooks/useIAP';
@@ -141,8 +140,6 @@ const TOTAL_SESSION_COUNT = SESSIONS.length;
    Defensief: onbekende strings vallen terug op een veilige default ipv
    de raw error te tonen (kan tokens/IDs lekken). */
 const SUPPORT_URL = 'https://www.vibezcore.com/support';
-const PLAN_OFFER_SEEN_KEY = 'vz_plan_offer_seen_v1';
-
 export default function SubscribeScreen() {
   const params = useLocalSearchParams<{
     tier?: string;
@@ -239,9 +236,6 @@ export default function SubscribeScreen() {
      (Apple's continuïteitsprincipe: maak af waar iemand mee bezig was,
      stuur niet naar een los startpunt). */
   const [planJustBuilt, setPlanJustBuilt] = useState(false);
-  /* 28 okt 2026 (operator): na een echte aankoop één keer vragen of de gebruiker zijn plan wil instellen (met "Not now"). Eén keer per
-     aankoopscherm; niet als er al een plan is, niet als er net automatisch een gebouwd is, niet voor wie al lid was. */
-  const planOfferedRef = useRef(false);
   /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase state.
      IAP-entitlement leeft op RevenueCat's eigen (anonymous) customer-ID,
      niet op een VIBEZCORE-account — een account is dus NIET vereist om
@@ -678,6 +672,8 @@ export default function SubscribeScreen() {
           /* swallow — dit mag de betaalflow nooit breken */
         }
 
+        /* Nieuwe abonnee: de vraag "Set your plan/goal" komt later op het tabblad zelf (utils/plan-offer.ts). */
+        void markPlanOfferPending();
         setPhase('done');
         /* Iter v175 (2026-06-30): auto-redirect na 1.2s verwijderd. Post-
            purchase is een emotioneel moment — laat user zelf op "Start
@@ -1048,91 +1044,12 @@ export default function SubscribeScreen() {
   /* Iter 9dq v86 (2026-06-03): Restore-purchases link — Apple App Review
      Guideline 3.1.1 vereist deze knop. Onder de legal-line zodat 'ie
      beschikbaar is voor terugkerende users zonder de upsell te onderbreken. */
-  /* 28 okt 2026 (operator): na Premium (aankoop OF herstel) één keer vragen of de gebruiker zijn plan wil instellen — direct naar de pagina's
-     zelf: State Control = "Set your plan" (/bracelet-set-day), Breathwork = "Set your goal" (/build-choice). Komt hij niet vanuit één van die
-     twee (Profile, Library, herstel), dan kiest hij hier welke. Alleen als er van het gevraagde nog geen plan is. [TEKST] concept. */
-  /* `fresh` = een écht nieuwe aankoop. Herstellen en "al lid" zijn geen nieuwe abonnee en krijgen de vraag NIET — behalve in een testbuild (QA_ENABLED),
-     omdat het testaccount daar al een abonnement heeft. */
-  const offerPlanThenGo = (goOn: () => void, fresh = true) => {
-    if (!fresh && !QA_ENABLED) {
-      goOn();
-      return;
-    }
-    const noBreathPlan = !planJustBuilt && getActivePlan() === null;
-    const noStatePlan = getActiveBraceletPlan() === null;
-    const offerFor =
-      params.returnTo === 'state-control'
-        ? noStatePlan
-          ? ('state' as const)
-          : null
-        : params.returnTo === 'breathwork'
-          ? noBreathPlan
-            ? ('breath' as const)
-            : null
-          : noBreathPlan && noStatePlan
-            ? ('any' as const)
-            : null;
-    if (planOfferedRef.current || !offerFor) {
-      goOn();
-      return;
-    }
-    planOfferedRef.current = true;
-    /* Hoogstens één keer per toestel (ook niet opnieuw bij een latere upgrade, bv. dagpas → maand). In een testbuild telt dit niet mee. */
-    void (async () => {
-      let seen = false;
-      try {
-        seen = (await AsyncStorage.getItem(PLAN_OFFER_SEEN_KEY)) === '1';
-      } catch {
-        /* geen opslag = niet gezien */
-      }
-      if (seen && !QA_ENABLED) {
-        goOn();
-        return;
-      }
-      try {
-        await AsyncStorage.setItem(PLAN_OFFER_SEEN_KEY, '1');
-      } catch {
-        /* swallow */
-      }
-      showPlanOffer(offerFor, goOn);
-    })();
-  };
-  const showPlanOffer = (offerFor: 'state' | 'breath' | 'any', goOn: () => void) => {
-    if (offerFor === 'any') {
-      void showVibezAlert({
-        title: 'Set your daily plan',
-        message: "Choose where to start. VIBEZCORE builds your plan around your times and can remind you when it's time.",
-        buttons: [
-          { text: 'State Control plan', style: 'primary' },
-          { text: 'Breathwork goal', style: 'primary' },
-          { text: 'Not now', style: 'cancel' },
-        ],
-      }).then((choice) => {
-        if (choice === 0) router.replace('/bracelet-set-day' as never);
-        else if (choice === 1) router.replace('/build-choice' as never);
-        else goOn();
-      });
-      return;
-    }
-    const state = offerFor === 'state';
-    void showVibezAlert({
-      title: state ? 'Set your plan' : 'Set your goal',
-      message: state
-        ? "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time."
-        : "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
-      buttons: [
-        { text: state ? 'Set my plan' : 'Set my goal', style: 'primary' },
-        { text: 'Not now', style: 'cancel' },
-      ],
-    }).then((choice) => {
-      if (choice === 0) router.replace((state ? '/bracelet-set-day' : '/build-choice') as never);
-      else goOn();
-    });
-  };
   const handleRestore = async () => {
     const result = await restorePurchases();
     if (result.ok) {
       if (result.restoredCount > 0) {
+        /* Alleen in een testbuild: herstel telt als "nieuw", zodat het testaccount (dat al een abonnement heeft) de vraag kan zien. */
+        if (QA_ENABLED) void markPlanOfferPending();
         const restoredMsg = `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored — opening your library.`;
         if (signedIn === false) {
           /* 25 okt 2026 (operator: account-uitnodiging bij aankoop én herstel): zelfde optionele, zachte uitnodiging als op het
@@ -1144,14 +1061,14 @@ export default function SubscribeScreen() {
 Create a free account to keep Premium on all your devices.`,
             buttons: [
               { text: 'Create free account', style: 'primary', onPress: () => { setLinkingAccount(true); setPhase('form'); } },
-              { text: 'Not now', style: 'cancel', onPress: () => offerPlanThenGo(() => goToTab('/'), false) },
+              { text: 'Not now', style: 'cancel', onPress: () => goToTab('/') },
             ],
           });
         } else {
           void showVibezAlert({
             title: 'Subscription restored',
             message: restoredMsg,
-            buttons: [{ text: 'OK', onPress: () => offerPlanThenGo(() => goToTab('/'), false) }],
+            buttons: [{ text: 'OK', onPress: () => goToTab('/') }],
           });
         }
       } else if (result.accountMismatch) {
@@ -1321,15 +1238,10 @@ ${
           }`}
           ctaLabel={doneCtaLabel}
           onCta={() => {
-            const goOn = () => {
-              if (doneDestination === '/plan') router.replace('/plan' as never);
-              else if (doneDestination) goToTab(doneDestination);
-              else if (router.canGoBack()) router.back();
-              else goToTab('/bracelet');
-            };
-            offerPlanThenGo(goOn, !alreadyMember);
-            return;
-            goOn();
+            if (doneDestination === '/plan') router.replace('/plan' as never);
+            else if (doneDestination) goToTab(doneDestination);
+            else if (router.canGoBack()) router.back();
+            else goToTab('/bracelet');
           }}
           /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele
              post-purchase account-CTA — alleen zichtbaar als deze aankoop
