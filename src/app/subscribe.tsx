@@ -1044,6 +1044,60 @@ export default function SubscribeScreen() {
   /* Iter 9dq v86 (2026-06-03): Restore-purchases link — Apple App Review
      Guideline 3.1.1 vereist deze knop. Onder de legal-line zodat 'ie
      beschikbaar is voor terugkerende users zonder de upsell te onderbreken. */
+  /* 28 okt 2026 (operator): na Premium (aankoop OF herstel) één keer vragen of de gebruiker zijn plan wil instellen — direct naar de pagina's
+     zelf: State Control = "Set your plan" (/bracelet-set-day), Breathwork = "Set your goal" (/build-choice). Komt hij niet vanuit één van die
+     twee (Profile, Library, herstel), dan kiest hij hier welke. Alleen als er van het gevraagde nog geen plan is. [TEKST] concept. */
+  const offerPlanThenGo = (goOn: () => void) => {
+    const noBreathPlan = !planJustBuilt && getActivePlan() === null;
+    const noStatePlan = getActiveBraceletPlan() === null;
+    const offerFor =
+      params.returnTo === 'state-control'
+        ? noStatePlan
+          ? ('state' as const)
+          : null
+        : params.returnTo === 'breathwork'
+          ? noBreathPlan
+            ? ('breath' as const)
+            : null
+          : noBreathPlan && noStatePlan
+            ? ('any' as const)
+            : null;
+    if (planOfferedRef.current || !offerFor) {
+      goOn();
+      return;
+    }
+    planOfferedRef.current = true;
+    if (offerFor === 'any') {
+      void showVibezAlert({
+        title: 'Set your daily plan',
+        message: "Choose where to start. VIBEZCORE builds your plan around your times and can remind you when it's time.",
+        buttons: [
+          { text: 'State Control plan', style: 'primary' },
+          { text: 'Breathwork goal', style: 'primary' },
+          { text: 'Not now', style: 'cancel' },
+        ],
+      }).then((choice) => {
+        if (choice === 0) router.replace('/bracelet-set-day' as never);
+        else if (choice === 1) router.replace('/build-choice' as never);
+        else goOn();
+      });
+      return;
+    }
+    const state = offerFor === 'state';
+    void showVibezAlert({
+      title: state ? 'Set your plan' : 'Set your goal',
+      message: state
+        ? "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time."
+        : "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
+      buttons: [
+        { text: state ? 'Set my plan' : 'Set my goal', style: 'primary' },
+        { text: 'Not now', style: 'cancel' },
+      ],
+    }).then((choice) => {
+      if (choice === 0) router.replace((state ? '/bracelet-set-day' : '/build-choice') as never);
+      else goOn();
+    });
+  };
   const handleRestore = async () => {
     const result = await restorePurchases();
     if (result.ok) {
@@ -1059,14 +1113,14 @@ export default function SubscribeScreen() {
 Create a free account to keep Premium on all your devices.`,
             buttons: [
               { text: 'Create free account', style: 'primary', onPress: () => { setLinkingAccount(true); setPhase('form'); } },
-              { text: 'Not now', style: 'cancel', onPress: () => goToTab('/') },
+              { text: 'Not now', style: 'cancel', onPress: () => offerPlanThenGo(() => goToTab('/')) },
             ],
           });
         } else {
           void showVibezAlert({
             title: 'Subscription restored',
             message: restoredMsg,
-            buttons: [{ text: 'OK', onPress: () => goToTab('/') }],
+            buttons: [{ text: 'OK', onPress: () => offerPlanThenGo(() => goToTab('/')) }],
           });
         }
       } else if (result.accountMismatch) {
@@ -1242,58 +1296,8 @@ ${
               else if (router.canGoBack()) router.back();
               else goToTab('/bracelet');
             };
-            /* Zelfde namen als op Activity: State Control = "Set your plan" (eigen planbouwer), Breathwork = "Set your goal". Komt de
-               gebruiker niet vanuit één van die twee (Profile, Audio Library), dan wijst de vraag naar Activity, waar beide staan. Alleen als
-               er van het gevraagde nog geen plan is, ook voor wie al lid was (bv. herinstallatie zonder plan). */
-            const noBreathPlan = !planJustBuilt && getActivePlan() === null;
-            const noStatePlan = getActiveBraceletPlan() === null;
-            const offerFor =
-              params.returnTo === 'state-control'
-                ? noStatePlan
-                  ? ('state' as const)
-                  : null
-                : params.returnTo === 'breathwork'
-                  ? noBreathPlan
-                    ? ('breath' as const)
-                    : null
-                  : noBreathPlan && noStatePlan
-                    ? ('any' as const)
-                    : null;
-            if (!planOfferedRef.current && offerFor) {
-              planOfferedRef.current = true;
-              /* [TEKST] concept — de definitieve tekst is aan de operator. */
-              const copy = {
-                state: {
-                  title: 'Set your plan',
-                  message: "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
-                  yes: 'Set my plan',
-                },
-                breath: {
-                  title: 'Set your goal',
-                  message: "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
-                  yes: 'Set my goal',
-                },
-                any: {
-                  title: 'Set your daily plan',
-                  message: "Choose State Control or Breathwork, then your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
-                  yes: 'Set my plan',
-                },
-              }[offerFor];
-              void showVibezAlert({
-                title: copy.title,
-                message: copy.message,
-                buttons: [
-                  { text: copy.yes, style: 'primary' },
-                  { text: 'Not now', style: 'cancel' },
-                ],
-              }).then((choice) => {
-                if (choice === 0) {
-                  if (offerFor === 'any') goToTab('/activity');
-                  else router.replace((offerFor === 'state' ? '/bracelet-set-day' : '/build-choice') as never);
-                } else goOn();
-              });
-              return;
-            }
+            offerPlanThenGo(goOn);
+            return;
             goOn();
           }}
           /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele
