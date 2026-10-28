@@ -32,8 +32,13 @@ object ClockSync {
   private const val KEY_AHEAD = "aheadMs"
   private const val KEY_RTT = "rttMs"
   private const val KEY_AT = "measuredAt"
-  private const val PINGS = 5
-  private const val PING_GAP_MS = 120L
+  /* 27 okt 2026: 5 → 12 pings. Gemeten (A16 + Watch4): met 5 pings en de beste van de vijf schommelde de schatting tussen sessies met
+     ±300 ms (−1015…−416 ms) terwijl het echte verschil stabiel was; een rondreis van 100–285 ms is nooit nauwkeurig (± rtt/2). Meer
+     pings geven meer kans op een echt snelle rondreis, en enkel de snelste tellen mee (zie run()). */
+  private const val PINGS = 12
+  private const val PING_GAP_MS = 100L
+  /** Een meting is betrouwbaar (± ~30 ms) als de snelste rondreis hieronder blijft. */
+  private const val TRUSTED_RTT_MS = 90L
   private const val COLLECT_MS = 2500L
   /** Rondreizen langer dan dit zijn te onnauwkeurig (± rtt/2). */
   private const val MAX_RTT_MS = 400L
@@ -78,7 +83,7 @@ object ClockSync {
 
   private fun run(app: Context, nodeId: String) {
     val client = Wearable.getMessageClient(app)
-    var best: Pair<Long, Long>? = null // (rtt, ahead)
+    val samples = ArrayList<Pair<Long, Long>>() // (rtt, ahead)
     val listener = MessageClient.OnMessageReceivedListener { e: MessageEvent ->
       if (e.path != PATH_PONG) return@OnMessageReceivedListener
       val t1 = System.currentTimeMillis()
@@ -87,11 +92,7 @@ object ClockSync {
         val t0 = parts[0].toLong()
         val phone = parts[1].toLong()
         val rtt = t1 - t0
-        if (rtt in 0..MAX_RTT_MS) {
-          val ahead = (t0 + t1) / 2 - phone
-          val b = best
-          if (b == null || rtt < b.first) best = rtt to ahead
-        }
+        if (rtt in 0..MAX_RTT_MS) synchronized(samples) { samples.add(rtt to ((t0 + t1) / 2 - phone)) }
       } catch (_: Exception) {
       }
     }
@@ -115,13 +116,26 @@ object ClockSync {
         client.removeListener(listener)
       } catch (_: Exception) {
       }
-      best?.let { (rtt, ahead) ->
-        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-          .putLong(KEY_AHEAD, ahead)
-          .putLong(KEY_RTT, rtt)
-          .putLong(KEY_AT, System.currentTimeMillis())
-          .apply()
-        VzLog.d("clock ahead=${ahead}ms rtt=${rtt}ms")
+      val picked = synchronized(samples) { samples.sortedBy { it.first } }
+      if (picked.isNotEmpty()) {
+        /* Enkel de snelste rondreizen (binnen 20 ms van de beste), de MEDIAAN daarvan: één uitschieter telt niet. */
+        val bestRtt = picked[0].first
+        val close = picked.filter { it.first <= bestRtt + 20L }.take(5)
+        val ahead = close.map { it.second }.sorted()[close.size / 2]
+        val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val hadFresh = prefs.getLong(KEY_AT, 0L) > 0L && System.currentTimeMillis() - prefs.getLong(KEY_AT, 0L) <= MAX_AGE_MS
+        val prevRtt = prefs.getLong(KEY_RTT, Long.MAX_VALUE)
+        /* Een trage meting (alle rondreizen langzaam) vervangt een eerdere, betere niet: het klokverschil verandert maar traag. */
+        if (bestRtt <= TRUSTED_RTT_MS || !hadFresh || bestRtt <= prevRtt) {
+          prefs.edit()
+            .putLong(KEY_AHEAD, ahead)
+            .putLong(KEY_RTT, bestRtt)
+            .putLong(KEY_AT, System.currentTimeMillis())
+            .apply()
+          VzLog.d("clock ahead=${ahead}ms rtt=${bestRtt}ms n=${close.size}/${picked.size}")
+        } else {
+          VzLog.d("clock kept (new rtt=${bestRtt}ms not better than ${prevRtt}ms)")
+        }
       }
       measuring = false
     }, PINGS * PING_GAP_MS + COLLECT_MS)
