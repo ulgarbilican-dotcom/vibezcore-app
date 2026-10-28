@@ -234,6 +234,9 @@ export default function SubscribeScreen() {
      (Apple's continuïteitsprincipe: maak af waar iemand mee bezig was,
      stuur niet naar een los startpunt). */
   const [planJustBuilt, setPlanJustBuilt] = useState(false);
+  /* 28 okt 2026 (operator): na een echte aankoop één keer vragen of de gebruiker zijn plan wil instellen (met "Not now"). Eén keer per
+     aankoopscherm; niet als er al een plan is, niet als er net automatisch een gebouwd is, niet voor wie al lid was. */
+  const planOfferedRef = useRef(false);
   /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): guest-purchase state.
      IAP-entitlement leeft op RevenueCat's eigen (anonymous) customer-ID,
      niet op een VIBEZCORE-account — een account is dus NIET vereist om
@@ -1232,10 +1235,30 @@ ${
           }`}
           ctaLabel={doneCtaLabel}
           onCta={() => {
-            if (doneDestination === '/plan') router.replace('/plan' as never);
-            else if (doneDestination) goToTab(doneDestination);
-            else if (router.canGoBack()) router.back();
-            else goToTab('/bracelet');
+            const goOn = () => {
+              if (doneDestination === '/plan') router.replace('/plan' as never);
+              else if (doneDestination) goToTab(doneDestination);
+              else if (router.canGoBack()) router.back();
+              else goToTab('/bracelet');
+            };
+            if (!alreadyMember && !planOfferedRef.current && !planJustBuilt && !getActivePlan()) {
+              planOfferedRef.current = true;
+              /* [TEKST] concept — de definitieve tekst is aan de operator. Hergebruikt de bestaande planflow (build-choice → goal → plan):
+                 doelen en niveau uit de onboarding staan daar al ingevuld. State Control vraagt zijn hartslagkeuze zelf zodra het tabblad opent. */
+              void showVibezAlert({
+                title: 'Set your plan?',
+                message: 'Answer a few quick questions and VIBEZCORE builds a plan around your day.',
+                buttons: [
+                  { text: 'Set my plan', style: 'primary' },
+                  { text: 'Not now', style: 'cancel' },
+                ],
+              }).then((choice) => {
+                if (choice === 0) router.replace('/build-choice' as never);
+                else goOn();
+              });
+              return;
+            }
+            goOn();
           }}
           /* Iter (2026-07-30, Apple 5.1.1v rejection-fix): optionele
              post-purchase account-CTA — alleen zichtbaar als deze aankoop
