@@ -33,7 +33,7 @@ import { SPRING_POP, SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constan
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
 import { useSubscription } from '@/hooks/useSubscription';
-import { isPlanOfferPending, usePlanOffer } from '@/utils/plan-offer';
+import { usePlanOffer } from '@/utils/plan-offer';
 import { isAnySessionRunning } from '@/utils/onboarding-gate';
 import { iosFont } from '@/utils/ios-text-scale';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -802,12 +802,11 @@ export default function BreathScreen() {
     onbWantRef.current = false;
     /* Premium heeft geen beginpagina (die is voor wie nog niet geabonneerd is): daar start de onboarding — doelen en niveau — dan
        meteen bij het eerste bezoek dat de gebruiker zelf opent. */
-    /* 28 okt 2026 (operator): een NIEUWE abonnee krijgt hier niet de onboarding maar de keuzepagina met de vraag "Set your goal"
-       (utils/plan-offer.ts). */
-    if (want && isProRef.current && mayAutoShowOnboarding('breath') && !isPlanOfferPending('breath')) {
-      goToOnboarding();
-      return;
-    }
+    /* 28 okt 2026 (operator: "die oude onboarding voor Breathwork in Premium moet weg"): Premium krijgt de Breathwork-onboarding NOOIT
+       meer vanzelf — vervangt de regel van 26 okt hieronder. Een nieuwe abonnee krijgt op deze pagina de vraag "Set your goal"
+       (utils/plan-offer.ts). Wie geen Premium heeft: ongewijzigd (onboarding via "Explore modes"). */
+    /* [VERVANGEN 28 okt] if (want && isProRef.current && mayAutoShowOnboarding('breath')) goToOnboarding(); */
+    void want;
     setOnbGate('show');
   };
   const decideRef = useRef(decideOnboarding);

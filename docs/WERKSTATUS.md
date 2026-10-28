@@ -58,6 +58,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
     - Backup & Sync: het **State Control-plan** reist mee in de rij `plan` (`statePlan`), geen SQL nodig; oude rijen laten het plan op het toestel staan; test toegevoegd (490 groen). NOG NIET in een build op het toestel getest.
     - Wear-icoon: ring 2 dp / 33% wit op de rand → tegel even groot als andere apps (gemeten 102 px = 102 px op Watch4); regel in UI_EN_BEWEGINGSREGELS.md.
     - Inlog-timeouts (login/refresh 12 s + 1 herhaling; signup/Google/Apple 25 s), popup-knoppen 52 dp gecentreerd, algemene trilsterkte-hint onder Smartwatch.
+  - **Beslist 28 okt (laat):** (1) Premium krijgt de Breathwork-onboarding NOOIT meer vanzelf (ook niet via welkomstscherm "Reset Yourself", dat het Breath-tabblad als "zelf geopend" opent) — breath.tsx `decideOnboarding`. (2) De vragen "Set your plan" / "Set your goal" zijn een GLASBLAD volgens het actieblad-protocol (zoals de Day Pass-kaart): `components/PlanOfferHost.tsx` in de root-layout, vijf toestandsiconen (StateGlyph in glazen cirkel met toestandskleur) + drie regels met wit lijn-icoon in glazen cirkel; andere popups ongewijzigd.
   - **Open, beslist door operator:**
     - Popups "Set your plan" / "Set your goal" (ENKEL die twee, niet alle popups): echt glas (blur) + icoon. Plan: deze twee via de glas-laag (zoals GlassSheetHost) i.p.v. de Modal, met een icoon; andere popups NIET aanraken.
     - Moet een Premium-gebruiker de Breathwork-onboarding later nog zien, of nooit meer? (vraag gesteld, nog geen antwoord)

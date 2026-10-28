@@ -9,12 +9,10 @@
    testbuild, zodat het testaccount het kan zien); niet als er al een plan is. [TEKST] concept: de definitieve tekst is aan de operator.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { showVibezAlert } from '@/components/VibezAlert';
 import { reloadActiveBraceletPlan, getActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { getActivePlan, reloadActivePlan } from '@/utils/plan-store';
 import { QA_ENABLED } from '@/utils/qa';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
 export type PlanOfferKind = 'state' | 'breath';
@@ -51,6 +49,15 @@ async function write(key: string, v: Flags): Promise<void> {
   } catch {
     /* swallow */
   }
+}
+
+/* Het blad wordt getekend door PlanOfferHost (root-layout); deze module zegt enkel wanneer en welk. */
+const sheetListeners = new Set<(k: PlanOfferKind | null) => void>();
+export function subscribePlanOfferSheet(l: (k: PlanOfferKind | null) => void): () => void {
+  sheetListeners.add(l);
+  return () => {
+    sheetListeners.delete(l);
+  };
 }
 
 /** Een nieuwe Premium-aankoop is bevestigd: beide vragen staan klaar (voor wat nog niet eerder getoond is). */
@@ -98,18 +105,8 @@ export function usePlanOffer(kind: PlanOfferKind, ready: boolean): void {
       if (cancelled || shown.current) return;
       shown.current = true;
       await consume(kind);
-      const state = kind === 'state';
-      const choice = await showVibezAlert({
-        title: state ? 'Set your plan' : 'Set your goal',
-        message: state
-          ? "Choose your sessions and your times. VIBEZCORE builds your daily plan and can remind you when it's time."
-          : "Choose your goal and your times. VIBEZCORE builds your daily plan and can remind you when it's time.",
-        buttons: [
-          { text: state ? 'Set my plan' : 'Set my goal', style: 'primary' },
-          { text: 'Not now', style: 'cancel' },
-        ],
-      });
-      if (choice === 0) router.push((state ? '/bracelet-set-day' : '/build-choice') as never);
+      /* Het glasblad zelf: components/PlanOfferHost.tsx (root-layout). */
+      sheetListeners.forEach((l) => l(kind));
     })();
     return () => {
       cancelled = true;

@@ -43,6 +43,7 @@ initCrashReporting();
 import { VibezAlertHost } from '@/components/VibezAlert';
 import { ConfirmMomentHost } from '@/components/ConfirmMoment';
 import { SalesNudgeHost } from '@/components/SalesNudgeHost';
+import { PlanOfferHost } from '@/components/PlanOfferHost';
 import { WelcomeBackPopup } from '@/components/WelcomeBackPopup';
 import { Brand } from '@/constants/theme';
 import {
@@ -1053,6 +1054,8 @@ export default function RootLayout() {
       {/* Punten 22 + 23b (operator, 19 okt 2026): Day Pass-kaart en Welcome
           Back — tekent zelf niets, opent een GlassSheet op een rustig moment. */}
       <SalesNudgeHost />
+      {/* 28 okt 2026: "Set your plan" / "Set your goal" voor een nieuwe abonnee (glasblad). */}
+      <PlanOfferHost />
       <LaunchReveal />
       </View>
     </ErrorBoundary>
