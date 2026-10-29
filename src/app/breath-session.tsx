@@ -183,6 +183,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { levelForTechnique, personalRecommendedMinutes, recommendedForLevel, techniqueForLevel, type UserLevel } from '@/utils/breath-level';
 import {
   AppState,
@@ -515,6 +516,8 @@ const BRACELET_IMG =
 
 /* Dezelfde figuur die de bracelet-sessie afsluit. Eén beeld voor beide, want
    het is hetzelfde moment. */
+/** Keuze "Sound on/off" in de Ujjayi-uitleg — blijft gelden tot de gebruiker ze zelf wijzigt (29 okt 2026). */
+const UJJAYI_SOUND_KEY = 'vz_ujjayi_intro_sound_v1';
 const BUDDHA_IMG = 'https://vibezcore-audio.b-cdn.net/images/buddha%20.png';
 
 function fmt(sec: number) {
@@ -2481,8 +2484,21 @@ export function BreathSession() {
      was, want de popup onderbreekt het normale `preview`-argument. */
   const ujjayiPreviewRef = useRef(false);
   const [ujjayiIntroOpen, setUjjayiIntroOpen] = useState(false);
-  /* 29 okt 2026 (operator): de gesproken uitleg staat standaard aan, met een luidspreker-knop in de popup (stem = gekozen man/vrouw). */
+  /* 29 okt 2026 (operator): de gesproken uitleg staat standaard aan, met een altijd zichtbare knop "Sound on/off" in de popup
+     (stem = gekozen man/vrouw). Eén keer ingesteld blijft die keuze gelden tot de gebruiker ze zelf weer wijzigt. */
   const [ujjayiSound, setUjjayiSound] = useState(true);
+  const ujjayiSoundPrefRef = useRef<'on' | 'off' | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(UJJAYI_SOUND_KEY)
+      .then((v) => {
+        if (v === 'on' || v === 'off') ujjayiSoundPrefRef.current = v;
+      })
+      .catch(() => {});
+  }, []);
+  const setUjjayiSoundPref = (on: boolean) => {
+    ujjayiSoundPrefRef.current = on ? 'on' : 'off';
+    AsyncStorage.setItem(UJJAYI_SOUND_KEY, on ? 'on' : 'off').catch(() => {});
+  };
   const startWithBatteryCheck = useCallback(
     (preview = false) => {
       if (tech.key === 'ujjayi') {
@@ -2493,7 +2509,8 @@ export function BreathSession() {
            popup verschijnt (auto-play), niet pas als "Got it" ingedrukt
            wordt. */
         /* Standaard aan — behalve als de gebruiker de stem zelf bewust uitzette (bv. om in gezelschap stil te ademen). */
-        const speak = !getSetting('voiceCuesChosen') || voiceDefaultRef.current;
+        const pref = ujjayiSoundPrefRef.current;
+        const speak = pref ? pref === 'on' : !getSetting('voiceCuesChosen') || voiceDefaultRef.current;
         setUjjayiSound(speak);
         if (speak) playUjjayiStartCue(true);
         return;
@@ -3801,9 +3818,11 @@ export function BreathSession() {
                 onPress={() => {
                   if (ujjayiSound) {
                     setUjjayiSound(false);
+                    setUjjayiSoundPref(false);
                     stopVoice();
                   } else {
                     setUjjayiSound(true);
+                    setUjjayiSoundPref(true);
                     playUjjayiStartCue(true);
                   }
                 }}
