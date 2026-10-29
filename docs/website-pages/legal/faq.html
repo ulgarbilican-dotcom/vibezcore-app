@@ -633,18 +633,6 @@
   window.toggle = toggle; window.filterCat = filterCat; window.filterFAQ = filterFAQ;
 }());
 
-  function reportHeight() {
-    var h = Math.ceil(document.querySelector('.page-wrap').getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
-    try {
-      window.parent.postMessage({ height: h }, '*');
-      window.parent.postMessage({ type: 'hsize', height: h }, '*');
-      window.parent.postMessage(h + '', '*');
-    } catch (e) {}
-  }
-  if (document.readyState === 'complete') reportHeight();
-  else window.addEventListener('load', reportHeight);
-  window.addEventListener('resize', reportHeight);
-  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
   document.querySelectorAll('a[href^="https://www.vibezcore.com"]').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();

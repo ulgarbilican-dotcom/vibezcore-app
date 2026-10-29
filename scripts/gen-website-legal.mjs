@@ -274,20 +274,8 @@ const SCRIPT = `  const btns = document.querySelectorAll('.sidebar-link');
   window.addEventListener('scroll', setActive, { passive: true });
   setActive();
 
-  /* Wix HTML-embed: stuur de echte hoogte van de inhoud door (geen witruimte, geen scrollbalk). */
-  function reportHeight() {
-    var wrap = document.querySelector('.page-wrap');
-    var h = Math.ceil(wrap.getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
-    try {
-      window.parent.postMessage({ height: h }, '*');
-      window.parent.postMessage({ type: 'hsize', height: h }, '*');
-      window.parent.postMessage(h + '', '*');
-    } catch (e) {}
-  }
-  if (document.readyState === 'complete') reportHeight();
-  else window.addEventListener('load', reportHeight);
-  window.addEventListener('resize', reportHeight);
-  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+  /* 29 okt 2026: GEEN hoogte-melding meer naar Wix (operator: het blok "versprong" en kreeg witruimte zodra hij het tot onder de
+     Support-knop sleepte). Zoals refund.html van de operator: het blok heeft de hoogte die de operator in Wix instelt. */
 ${WIX_NAV}`;
 
 /* ── FAQ (src/data/faq-content.ts) ─────────────────────────────────────────
@@ -424,18 +412,6 @@ ${CONTACT_BTN}
   window.toggle = toggle; window.filterCat = filterCat; window.filterFAQ = filterFAQ;
 }());
 
-  function reportHeight() {
-    var h = Math.ceil(document.querySelector('.page-wrap').getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
-    try {
-      window.parent.postMessage({ height: h }, '*');
-      window.parent.postMessage({ type: 'hsize', height: h }, '*');
-      window.parent.postMessage(h + '', '*');
-    } catch (e) {}
-  }
-  if (document.readyState === 'complete') reportHeight();
-  else window.addEventListener('load', reportHeight);
-  window.addEventListener('resize', reportHeight);
-  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
 ${WIX_NAV}
 </script>
 

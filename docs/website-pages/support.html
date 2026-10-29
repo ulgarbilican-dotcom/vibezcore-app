@@ -560,28 +560,7 @@
     });
   })();
 
-  /* Wix HTML-embed auto-resize. */
-  function reportHeight() {
-    var h = Math.max(
-      document.body.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight
-    );
-    try {
-      window.parent.postMessage({ height: h }, '*');
-      window.parent.postMessage({ type: 'hsize', height: h }, '*');
-      window.parent.postMessage(h + '', '*');
-    } catch (e) {}
-  }
-  if (document.readyState === 'complete') reportHeight();
-  else window.addEventListener('load', reportHeight);
-  window.addEventListener('resize', reportHeight);
-  if (window.MutationObserver) {
-    new MutationObserver(reportHeight).observe(document.body, {
-      childList: true, subtree: true, attributes: true,
-    });
-  }
+  /* 29 okt 2026: geen hoogte-melding naar Wix meer (het blok verspringt anders); de hoogte stelt de operator in Wix in. */
 </script>
 
 </body>
