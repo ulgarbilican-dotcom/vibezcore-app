@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms and Conditions — VIBEZCORE</title>
+<!-- Gemaakt uit de app (src/data/legal-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  :root {
+    --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b;
+    --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 52px; }
+  .nav-tag { font-size: 12px; color: var(--gray-400); letter-spacing: 0.02em; }
+  .hero { text-align: center; padding: 100px 24px 72px; max-width: 800px; margin: 0 auto; }
+  .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
+  .hero-sub { font-size: 17px; color: var(--gray-400); line-height: 1.6; }
+  .page-wrap { max-width: 1080px; margin: 0 auto; padding: 0 48px 120px; display: grid; grid-template-columns: 220px 1fr; gap: 64px; align-items: start; }
+  .sidebar { position: sticky; top: 72px; }
+  .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px; padding-left: 12px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-link { display: block; width: 100%; padding: 8px 12px; font-size: 13px; color: var(--gray-600); text-decoration: none; border-radius: 6px; transition: background 0.15s, color 0.15s; line-height: 1.4; background: none; border: none; cursor: pointer; text-align: left; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .sidebar-link:hover { background: var(--gray-100); color: var(--black); }
+  .sidebar-link.active { background: var(--gray-100); color: var(--black); font-weight: 500; }
+  .content { min-width: 0; }
+  .date-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); margin-bottom: 48px; }
+  .date-badge::before { content: ''; display: inline-block; width: 7px; height: 7px; background: #34c759; border-radius: 50%; }
+  .section { border-bottom: 1px solid var(--gray-200); padding: 48px 0; opacity: 0; transform: translateY(16px); animation: fadeUp 0.5s forwards; }
+  .section:first-of-type { padding-top: 0; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .section-number { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .section h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--black); margin-bottom: 20px; line-height: 1.2; }
+  .section h3 { font-size: 15px; font-weight: 600; color: var(--black); margin: 28px 0 10px; }
+  .section p { font-size: 15px; color: var(--gray-600); line-height: 1.7; margin-bottom: 14px; }
+  .section p:last-child { margin-bottom: 0; }
+  .section a { color: var(--blue); text-decoration: none; }
+  .section a:hover { text-decoration: underline; }
+  .tag-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; margin-bottom: 14px; }
+  .tag { background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; margin-bottom: 14px; }
+  .card { background: var(--gray-100); border-radius: var(--radius); padding: 20px; }
+  .card h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 4px; }
+  .card p { font-size: 12px; color: var(--gray-400); margin: 0; line-height: 1.5; }
+  /* Lijstpunt als blok met het vinkje absoluut links (operator-fix op health.html): met display:flex werden <strong>/<a> in een
+     lijstpunt aparte flex-items en kregen ze op een smal scherm een eigen kolom. */
+  .rights-list { list-style: none; margin: 16px 0 14px; }
+  .rights-list li { position: relative; padding-left: 28px; margin-bottom: 10px; font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+  .rights-list li:last-child { margin-bottom: 0; }
+  .rights-list li::before { content: ''; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #e8f4fd; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-6' stroke='%230071e3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: cover; }
+  .highlight, .danger { border-radius: var(--radius); padding: 20px 24px; margin: 16px 0 14px; }
+  .highlight { background: #f0f7ff; border-left: 3px solid var(--blue); }
+  .danger { background: #fff2f2; border-left: 3px solid #d70015; }
+  .highlight h4, .danger h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 6px; }
+  .highlight p, .danger p { font-size: 14px; color: #1d1d1f; margin: 0; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none !important; margin-top: 28px; transition: background 0.15s, transform 0.15s; white-space: nowrap; max-width: 100%; }
+  .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
+  .contact-btn svg { color: #ffffff; flex-shrink: 0; }
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap { padding: 0 20px 16px; grid-template-columns: 1fr; gap: 0; }
+    .sidebar { display: block; position: static; margin-bottom: 8px; }
+    .sidebar-label { display: none; }
+    .sidebar-nav { display: none; background: var(--gray-100); border-radius: var(--radius); padding: 8px; margin-top: 0; }
+    .sidebar-nav.open { display: flex; }
+    .mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--gray-100); border: none; border-radius: var(--radius); padding: 12px 16px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: var(--black); cursor: pointer; margin-bottom: 4px; }
+    .mobile-toggle-icon { width: 16px; height: 16px; transition: transform 0.2s; color: var(--gray-400); }
+    .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  }
+  @media (max-width: 480px) {
+    .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
+  }
+  @media (min-width: 769px) { .mobile-toggle { display: none; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-tag">Terms and Conditions</span>
+</nav>
+
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Terms and Conditions</h1>
+  <p class="hero-sub">Please read these terms carefully before using the VIBEZCORE platform, services, or products.</p>
+</div>
+
+<div class="page-wrap">
+
+  <aside class="sidebar">
+    <p class="sidebar-label">Contents</p>
+    <button class="mobile-toggle" id="contentsToggle">
+      Contents
+      <svg class="mobile-toggle-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link" data-target="s1">Use of the Platform</button>
+      <button class="sidebar-link" data-target="s2">Eligibility</button>
+      <button class="sidebar-link" data-target="s3">Intellectual Property</button>
+      <button class="sidebar-link" data-target="s4">Educational &amp; Wellness Framework</button>
+      <button class="sidebar-link" data-target="s5">Personal Responsibility</button>
+      <button class="sidebar-link" data-target="s6">Medical &amp; Therapeutic Disclaimer</button>
+      <button class="sidebar-link" data-target="s7">Products</button>
+      <button class="sidebar-link" data-target="s8">Payments &amp; Purchases</button>
+      <button class="sidebar-link" data-target="s9">Right of Withdrawal (EU Consumers)</button>
+      <button class="sidebar-link" data-target="s10">Third-Party Services</button>
+      <button class="sidebar-link" data-target="s11">Platform Availability</button>
+      <button class="sidebar-link" data-target="s12">Disclaimer of Warranties</button>
+      <button class="sidebar-link" data-target="s13">Limitation of Liability</button>
+      <button class="sidebar-link" data-target="s14">Governing Law &amp; Jurisdiction</button>
+      <button class="sidebar-link" data-target="s15">Changes to These Terms</button>
+      <button class="sidebar-link" data-target="s16">Severability</button>
+      <button class="sidebar-link" data-target="s17">Contact</button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="date-badge">Last updated: October 2026</div>
+
+    <section class="section" id="s1">
+      <p class="section-number">01</p>
+      <h2>Use of the Platform</h2>
+      <p>The VIBEZCORE platform provides Breathwork (guided breathing sessions), State Control (guided haptic rhythm sessions on your phone, your smartwatch or the Smart Bead Bracelet) and the Audio Library (structured audio sessions), educational content, and physical tools designed to support personal reflection, awareness, and intentional living.</p>
+      <p>Users agree to access and use the platform only for lawful purposes and in a manner that does not infringe the rights of others or interfere with the operation of the platform.</p>
+      <h3>Users must not:</h3>
+      <ul class="rights-list">
+        <li>Violate applicable laws or regulations</li>
+        <li>Attempt unauthorized access to the platform or its systems</li>
+        <li>Interfere with security or technical infrastructure</li>
+        <li>Copy, distribute, or commercially exploit platform content without authorization</li>
+        <li>Use automated scraping or data extraction tools</li>
+      </ul>
+      <div class="highlight">
+        <p>VIBEZCORE reserves the right to restrict or terminate access to users who violate these Terms.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s2">
+      <p class="section-number">02</p>
+      <h2>Eligibility</h2>
+      <p>By using the VIBEZCORE app, website or services, you confirm that you are at least 13 years old. If you are under 18, you may use VIBEZCORE only with the permission of a parent or legal guardian, who is responsible for your use and any purchases.</p>
+      <p>VIBEZCORE is not intended for children under 13.</p>
+    </section>
+
+    <section class="section" id="s3">
+      <p class="section-number">03</p>
+      <h2>Intellectual Property</h2>
+      <p>All content and materials available on the VIBEZCORE platform are the intellectual property of VIBEZCORE or its licensors, protected under applicable copyright, trademark, and intellectual property laws.</p>
+      <div class="tag-grid">
+        <span class="tag">Text</span>
+        <span class="tag">Audio</span>
+        <span class="tag">Graphics</span>
+        <span class="tag">Logos</span>
+        <span class="tag">Design elements</span>
+        <span class="tag">Software</span>
+        <span class="tag">Educational materials</span>
+        <span class="tag">Digital products</span>
+      </div>
+      <p>Users may not reproduce, distribute, modify, publish, transmit, or commercially exploit any VIBEZCORE content without prior written permission.</p>
+    </section>
+
+    <section class="section" id="s4">
+      <p class="section-number">04</p>
+      <h2>Educational &amp; Wellness Framework</h2>
+      <p>VIBEZCORE is built on the understanding that meaningful personal change can emerge through both cognitive insight and bottom-up processes such as breathing and touch.</p>
+      <p>The platform provides Breathwork, State Control, the Audio Library, educational materials, and supportive physical tools designed to help individuals cultivate awareness, recognize behavioral patterns, and develop intentional responses in daily life.</p>
+      <p>Physical products — including bracelets and related accessories — are designed as supportive tools that may help reinforce focus, awareness, and intentional state shifts during everyday activities.</p>
+    </section>
+
+    <section class="section" id="s5">
+      <p class="section-number">05</p>
+      <h2>Personal Responsibility</h2>
+      <p>Users remain fully responsible for how they interpret and apply any information, tools, or materials provided through the VIBEZCORE platform.</p>
+      <p>Use of VIBEZCORE services and products is voluntary and based on personal responsibility.</p>
+    </section>
+
+    <section class="section" id="s6">
+      <p class="section-number">06</p>
+      <h2>Medical &amp; Therapeutic Disclaimer</h2>
+      <div class="highlight">
+        <p>VIBEZCORE does not provide medical, psychological, psychiatric, or therapeutic services. Nothing on this platform should be interpreted as medical advice.</p>
+      </div>
+      <p>The platform — including Breathwork, State Control, the Audio Library, educational materials, and physical products — is intended for educational, personal development, and general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any medical or mental health condition, and it does not monitor any body function. The optional fingertip pulse reading in State Control is a wellness estimate used only to set the pace of your rhythm — not a medical measurement.</p>
+      <p>Individuals experiencing medical or mental health concerns should seek guidance from licensed healthcare professionals.</p>
+    </section>
+
+    <section class="section" id="s7">
+      <p class="section-number">07</p>
+      <h2>Products</h2>
+      <p>VIBEZCORE may offer physical products such as bracelets and accessories designed to support awareness and intentional routines. These products are lifestyle and awareness-support tools and are not classified as medical devices.</p>
+      <p>They should not be used as a replacement for medical care, therapy, or professional treatment.</p>
+    </section>
+
+    <section class="section" id="s8">
+      <p class="section-number">08</p>
+      <h2>Payments &amp; Purchases</h2>
+      <p>For paid digital services, memberships, or products:</p>
+      <ul class="rights-list">
+        <li>Prices and payment conditions are clearly presented before purchase</li>
+        <li>Payment must be completed through approved payment providers</li>
+        <li>Access to digital content may be granted after successful payment</li>
+      </ul>
+      <p>Additional refund conditions are described in our <a href="https://www.vibezcore.com/refund-policy" target="_top" rel="noopener">Refund &amp; Returns Policy</a>.</p>
+      <h3>VIBEZCORE Premium (subscription)</h3>
+      <p>VIBEZCORE Premium unlocks Breathwork, State Control and the Audio Library in the app. It is offered as an auto-renewing subscription (monthly or yearly) and as a one-time Day Pass, purchased through the Apple App Store or Google Play.</p>
+      <ul class="rights-list">
+        <li>The price and billing period are shown before you confirm the purchase. Payment is charged to your Apple ID or Google Play account</li>
+        <li>The subscription renews automatically at the end of each period unless you cancel at least 24 hours before it ends</li>
+        <li>You can manage or cancel your subscription at any time in your Apple ID or Google Play account settings. Deleting the app or your VIBEZCORE account does not cancel it</li>
+        <li>Purchases can be restored on a new device with Restore Purchases in the app</li>
+        <li>No VIBEZCORE account is needed to purchase. An optional account lets you use Premium on your other devices</li>
+      </ul>
+      <h3>Day Pass (one-time purchase)</h3>
+      <ul class="rights-list">
+        <li>The Day Pass is a one-time purchase charged to your Apple ID or Google Play account when you confirm it. It is not a subscription and does not renew</li>
+        <li>It gives access to all VIBEZCORE Premium content in the app for 24 hours from the moment of purchase. Access ends automatically after that</li>
+        <li>Audio is streamed during the Day Pass (an internet connection is needed)</li>
+        <li>You can buy a new Day Pass at any time, or switch to a subscription</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s9">
+      <p class="section-number">09</p>
+      <h2>Right of Withdrawal (EU Consumers)</h2>
+      <p>If you are a consumer residing in the European Union, you generally have the right to withdraw from a purchase within 14 days without giving any reason.</p>
+      <div class="highlight">
+        <p>For digital content not supplied on a tangible medium — such as downloads, streaming, or digital courses — the right of withdrawal is lost once the performance has begun. By confirming the purchase in the Apple App Store or Google Play, you expressly consent to this and acknowledge that you waive your statutory right of withdrawal.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s10">
+      <p class="section-number">10</p>
+      <h2>Third-Party Services</h2>
+      <p>The VIBEZCORE app and website may contain links to external websites or services operated by third parties. VIBEZCORE does not control and is not responsible for the content, policies, or practices of third-party services.</p>
+      <p>Users access such services at their own risk.</p>
+    </section>
+
+    <section class="section" id="s11">
+      <p class="section-number">11</p>
+      <h2>Platform Availability</h2>
+      <p>While VIBEZCORE aims to maintain continuous availability of the platform, we do not guarantee uninterrupted access. The app, website or services may occasionally be unavailable due to maintenance, technical issues, or external circumstances.</p>
+      <p>VIBEZCORE reserves the right to modify, suspend, or discontinue services at any time.</p>
+    </section>
+
+    <section class="section" id="s12">
+      <p class="section-number">12</p>
+      <h2>Disclaimer of Warranties</h2>
+      <p>The VIBEZCORE platform and its content are provided <strong>&quot;as is&quot;</strong> and <strong>&quot;as available&quot;</strong>. To the maximum extent permitted by law, VIBEZCORE disclaims all warranties, including but not limited to:</p>
+      <ul class="rights-list">
+        <li>Accuracy or completeness of information</li>
+        <li>Uninterrupted or error-free operation</li>
+        <li>Fitness for a particular purpose</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s13">
+      <p class="section-number">13</p>
+      <h2>Limitation of Liability</h2>
+      <p>To the maximum extent permitted by applicable law, VIBEZCORE shall not be liable for any direct, indirect, incidental, or consequential damages arising from:</p>
+      <ul class="rights-list">
+        <li>The use or inability to use the platform</li>
+        <li>Reliance on content provided through the platform</li>
+        <li>Technical interruptions or errors</li>
+        <li>Actions of third-party services</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s14">
+      <p class="section-number">14</p>
+      <h2>Governing Law &amp; Jurisdiction</h2>
+      <p>These Terms and Conditions shall be governed by and interpreted in accordance with the laws of <strong>Belgium</strong>. Any disputes arising out of or relating to the use of the VIBEZCORE platform shall be subject to the exclusive jurisdiction of the competent courts of <strong>Antwerp, Belgium</strong>.</p>
+      <p>Nothing in these Terms limits mandatory consumer protection rights applicable under the laws of the user's country of residence.</p>
+    </section>
+
+    <section class="section" id="s15">
+      <p class="section-number">15</p>
+      <h2>Changes to These Terms</h2>
+      <p>VIBEZCORE may update these Terms periodically. Any updates will be published on this page with an updated &quot;Last updated&quot; date.</p>
+      <p>Continued use of the VIBEZCORE platform after such updates constitutes acceptance of the revised Terms.</p>
+    </section>
+
+    <section class="section" id="s16">
+      <p class="section-number">16</p>
+      <h2>Severability</h2>
+      <p>If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall remain in full force and effect.</p>
+    </section>
+
+    <section class="section" id="s17" style="border-bottom:none;padding-bottom:0;">
+      <p class="section-number">17</p>
+      <h2>Contact</h2>
+      <p>Questions about these terms, your order, or the VIBEZCORE platform? Our support team is here to help.</p>
+      <a href="https://www.vibezcore.com/support" target="_top" rel="noopener" class="contact-btn">
+        Support Center
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('.section[id^="s"]:not(#s0)');
+  const toggle = document.getElementById('contentsToggle');
+  const nav = document.getElementById('sidebarNav');
+  toggle.addEventListener('click', () => { nav.classList.toggle('open'); toggle.classList.toggle('open'); });
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      nav.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+  function setActive() {
+    let current = sections[0].id;
+    sections.forEach(s => { if (s.getBoundingClientRect().top <= 120) current = s.id; });
+    btns.forEach(b => b.classList.toggle('active', b.dataset.target === current));
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  /* Wix HTML-embed: stuur de echte hoogte van de inhoud door (geen witruimte, geen scrollbalk). */
+  function reportHeight() {
+    var wrap = document.querySelector('.page-wrap');
+    var h = Math.ceil(wrap.getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+</script>
+
+</body>
+</html>

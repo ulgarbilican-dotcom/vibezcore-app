@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consumer Health Notice — VIBEZCORE</title>
+<!-- Gemaakt uit de app (src/data/legal-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  :root {
+    --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b;
+    --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 52px; }
+  .nav-tag { font-size: 12px; color: var(--gray-400); letter-spacing: 0.02em; }
+  .hero { text-align: center; padding: 100px 24px 72px; max-width: 800px; margin: 0 auto; }
+  .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
+  .hero-sub { font-size: 17px; color: var(--gray-400); line-height: 1.6; }
+  .page-wrap { max-width: 1080px; margin: 0 auto; padding: 0 48px 120px; display: grid; grid-template-columns: 220px 1fr; gap: 64px; align-items: start; }
+  .sidebar { position: sticky; top: 72px; }
+  .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px; padding-left: 12px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-link { display: block; width: 100%; padding: 8px 12px; font-size: 13px; color: var(--gray-600); text-decoration: none; border-radius: 6px; transition: background 0.15s, color 0.15s; line-height: 1.4; background: none; border: none; cursor: pointer; text-align: left; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .sidebar-link:hover { background: var(--gray-100); color: var(--black); }
+  .sidebar-link.active { background: var(--gray-100); color: var(--black); font-weight: 500; }
+  .content { min-width: 0; }
+  .date-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); margin-bottom: 48px; }
+  .date-badge::before { content: ''; display: inline-block; width: 7px; height: 7px; background: #34c759; border-radius: 50%; }
+  .section { border-bottom: 1px solid var(--gray-200); padding: 48px 0; opacity: 0; transform: translateY(16px); animation: fadeUp 0.5s forwards; }
+  .section:first-of-type { padding-top: 0; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .section-number { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .section h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--black); margin-bottom: 20px; line-height: 1.2; }
+  .section h3 { font-size: 15px; font-weight: 600; color: var(--black); margin: 28px 0 10px; }
+  .section p { font-size: 15px; color: var(--gray-600); line-height: 1.7; margin-bottom: 14px; }
+  .section p:last-child { margin-bottom: 0; }
+  .section a { color: var(--blue); text-decoration: none; }
+  .section a:hover { text-decoration: underline; }
+  .tag-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; margin-bottom: 14px; }
+  .tag { background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; margin-bottom: 14px; }
+  .card { background: var(--gray-100); border-radius: var(--radius); padding: 20px; }
+  .card h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 4px; }
+  .card p { font-size: 12px; color: var(--gray-400); margin: 0; line-height: 1.5; }
+  /* Lijstpunt als blok met het vinkje absoluut links (operator-fix op health.html): met display:flex werden <strong>/<a> in een
+     lijstpunt aparte flex-items en kregen ze op een smal scherm een eigen kolom. */
+  .rights-list { list-style: none; margin: 16px 0 14px; }
+  .rights-list li { position: relative; padding-left: 28px; margin-bottom: 10px; font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+  .rights-list li:last-child { margin-bottom: 0; }
+  .rights-list li::before { content: ''; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #e8f4fd; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-6' stroke='%230071e3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: cover; }
+  .highlight, .danger { border-radius: var(--radius); padding: 20px 24px; margin: 16px 0 14px; }
+  .highlight { background: #f0f7ff; border-left: 3px solid var(--blue); }
+  .danger { background: #fff2f2; border-left: 3px solid #d70015; }
+  .highlight h4, .danger h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 6px; }
+  .highlight p, .danger p { font-size: 14px; color: #1d1d1f; margin: 0; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none !important; margin-top: 28px; transition: background 0.15s, transform 0.15s; white-space: nowrap; max-width: 100%; }
+  .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
+  .contact-btn svg { color: #ffffff; flex-shrink: 0; }
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap { padding: 0 20px 16px; grid-template-columns: 1fr; gap: 0; }
+    .sidebar { display: block; position: static; margin-bottom: 8px; }
+    .sidebar-label { display: none; }
+    .sidebar-nav { display: none; background: var(--gray-100); border-radius: var(--radius); padding: 8px; margin-top: 0; }
+    .sidebar-nav.open { display: flex; }
+    .mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--gray-100); border: none; border-radius: var(--radius); padding: 12px 16px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: var(--black); cursor: pointer; margin-bottom: 4px; }
+    .mobile-toggle-icon { width: 16px; height: 16px; transition: transform 0.2s; color: var(--gray-400); }
+    .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  }
+  @media (max-width: 480px) {
+    .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
+  }
+  @media (min-width: 769px) { .mobile-toggle { display: none; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-tag">Consumer Health Notice</span>
+</nav>
+
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Consumer Health Notice</h1>
+  <p class="hero-sub">VIBEZCORE is a personal development platform — not a medical service. Please read this notice carefully before using our products or services.</p>
+</div>
+
+<div class="page-wrap">
+
+  <aside class="sidebar">
+    <p class="sidebar-label">Contents</p>
+    <button class="mobile-toggle" id="contentsToggle">
+      Contents
+      <svg class="mobile-toggle-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link" data-target="s1">Purpose of Our Platform</button>
+      <button class="sidebar-link" data-target="s2">Important Disclaimer</button>
+      <button class="sidebar-link" data-target="s3">Safe Use</button>
+      <button class="sidebar-link" data-target="s4">Possible Reactions</button>
+      <button class="sidebar-link" data-target="s5">Use Caution If…</button>
+      <button class="sidebar-link" data-target="s6">Smart Bead Bracelet — Safety Notice</button>
+      <button class="sidebar-link" data-target="s7">Children &amp; Teenagers</button>
+      <button class="sidebar-link" data-target="s8">Professional Help</button>
+      <button class="sidebar-link" data-target="s9">Personal Responsibility</button>
+      <button class="sidebar-link" data-target="s10">Results Vary</button>
+      <button class="sidebar-link" data-target="s11">Reporting Concerns</button>
+      <button class="sidebar-link" data-target="s12">Contact</button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="date-badge">Last updated: October 2026</div>
+
+    <section class="section" id="s0" style="padding-top:0;border-bottom:none;padding-bottom:24px;">
+      <div class="danger">
+        <h4>In Crisis Right Now?</h4>
+        <p>If you are experiencing a mental health emergency or thoughts of self-harm, please reach out to a trained professional in your country immediately.
+
+<strong><a href="https://findahelpline.com" target="_top" rel="noopener">findahelpline.com</a></strong> lists free, confidential crisis support lines worldwide. If you are in immediate danger, contact your local emergency services.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s1">
+      <p class="section-number">01</p>
+      <h2>Purpose of Our Platform</h2>
+      <p>VIBEZCORE is designed exclusively for personal development, self-improvement, and educational purposes. Breathwork, State Control, the Audio Library and our tools are created to help individuals gain insights and apply them in daily life — in the areas of mindset, resilience, social mastery, and personal growth.</p>
+      <div class="tag-grid">
+        <span class="tag">Psychological Resilience</span>
+        <span class="tag">Inner Sovereignty</span>
+        <span class="tag">Social Mastery</span>
+        <span class="tag">Strategic Execution &amp; Wealth</span>
+      </div>
+      <p>VIBEZCORE content and tools are not a substitute for professional care of any kind.</p>
+    </section>
+
+    <section class="section" id="s2">
+      <p class="section-number">02</p>
+      <h2>Important Disclaimer</h2>
+      <p><strong>VIBEZCORE is a personal development tool, not medical care.</strong> Breathwork, State Control, the Audio Library and the Smart Bead Bracelet are designed to support self-reflection, focus, and resilience — they are <strong>not</strong> therapy, counselling, diagnosis, or treatment for any mental or physical health condition. The bracelet delivers haptic stimulation through the wrist; it is not a medical device.</p>
+      <p>If you are experiencing significant emotional distress, mental illness, trauma, or any medical condition, please consult a licensed professional. Our service is intended to complement, not replace, professional care.</p>
+    </section>
+
+    <section class="section" id="s3">
+      <p class="section-number">03</p>
+      <h2>Safe Use</h2>
+      <p>VIBEZCORE is designed for everyday life — at home, at work, during walks, on the commute. The point is to fit personal development into your real routine, not to remove you from it. <strong>Listening and active breathing are two different things</strong>: audio you can take almost anywhere; a guided breathwork session asks for your attention and changes your breathing pace — do it seated or lying down, in a place where you can close your eyes.</p>
+      <p>For your safety, please use common sense:</p>
+      <ul class="rights-list">
+        <li><strong>Stay aware of your surroundings.</strong> Keep volume at a level where you can still hear traffic, alarms, and people around you</li>
+        <li><strong>Never practice breathwork while driving, cycling, swimming, standing in water, or operating machinery.</strong> Paced breathing and breath holds can cause light-headedness — harmless when seated, dangerous behind the wheel or in water</li>
+        <li><strong>Choose the right session for the moment.</strong> Deep relaxation and sleep sessions should only be used when stationary and safe</li>
+        <li><strong>Use headphones responsibly</strong> — protect your hearing with moderate volume; consider one earbud when situational awareness matters (cycling, walking near traffic)</li>
+        <li><strong>Follow local laws.</strong> Some regions restrict headphone use while driving or cycling — respect them</li>
+        <li><strong>Pause when you need full attention.</strong> Heavy traffic, busy intersections, complex tasks — stop the session and resume later</li>
+        <li><strong>Stop and breathe normally</strong> if you feel dizzy, tingling, or short of breath during a session — the effect passes within a minute. Resume gently or leave it for today</li>
+        <li>Stop immediately if you feel nauseous or distressed</li>
+        <li><strong>State Control and Breathwork use gentle vibration</strong> on your phone, smartwatch or bracelet to guide the rhythm. Stop the session if the vibration feels uncomfortable</li>
+        <li><strong>Your resting heart rate in State Control is not a medical measurement.</strong> It only sets the starting pace of your rhythm. VIBEZCORE does not diagnose, monitor or treat any heart condition</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s4">
+      <p class="section-number">04</p>
+      <h2>Possible Reactions</h2>
+      <p>Some sessions involve self-reflection on emotions, identity, past experiences, or fears. This can occasionally bring up strong feelings — that is a normal part of inner work, but it can be challenging.</p>
+      <p>If a session feels overwhelming:</p>
+      <ul class="rights-list">
+        <li>Pause or stop the session</li>
+        <li>Take a few slow breaths and ground yourself in your surroundings</li>
+        <li>Talk to someone you trust</li>
+        <li>If feelings persist or intensify, reach out to a mental health professional</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s5">
+      <p class="section-number">05</p>
+      <h2>Use Caution If…</h2>
+      <p>Please use caution or consult a professional before using VIBEZCORE breathwork or audio sessions if you:</p>
+      <ul class="rights-list">
+        <li>Are currently being treated for a serious mental health condition</li>
+        <li>Have a history of psychosis, severe trauma, or dissociation</li>
+        <li>Are in active crisis or recently bereaved</li>
+        <li>Have a medical condition that may be affected by deep relaxation or focused attention</li>
+        <li>Are pregnant, or have a cardiovascular or respiratory condition — breath holds and fast-paced breathing may not be suitable; slower rhythms usually are, but check with your doctor first</li>
+        <li>Have a history of fainting or epilepsy — avoid fast-paced breathing sessions</li>
+      </ul>
+      <p>When in doubt, talk to your doctor or therapist first.</p>
+      <div class="highlight">
+        <p>Any reference to researchers, thought leaders, or public figures within our sessions is for informational purposes only. These individuals are not affiliated with, endorsed by, or partnered with VIBEZCORE in any way.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s6">
+      <p class="section-number">06</p>
+      <h2>Smart Bead Bracelet — Safety Notice</h2>
+      <p>The VIBEZCORE Smart Bead Bracelet delivers gentle haptic stimulation (subtle vibration) to the wrist. It is a personal wellness accessory, <strong>not a medical device</strong> and not intended to diagnose, treat, cure, or prevent any condition. Please read the safety notices below before first use.</p>
+      <h3>6.1 Consult Your Doctor Before Use If You…</h3>
+      <p>The bracelet uses small vibration motors against the skin. While the energy levels are low, please consult a licensed physician before wearing it if any of the following applies to you:</p>
+      <ul class="rights-list">
+        <li><strong>Heart conditions</strong> — including arrhythmia, recent cardiac event, or any diagnosed cardiovascular disease</li>
+        <li><strong>Implanted medical devices</strong> — including pacemakers, implantable cardioverter-defibrillators (ICDs), neurostimulators, insulin pumps, or any active electronic implant</li>
+        <li><strong>Pregnancy</strong> — especially during the first trimester; introduce no new stimulation without your obstetrician's approval</li>
+        <li><strong>Epilepsy or seizure disorders</strong> — rhythmic stimulation can in rare cases interact with neurological conditions</li>
+        <li><strong>Neurological conditions</strong> — including Parkinson's disease, essential tremor, multiple sclerosis, or peripheral neuropathy</li>
+        <li><strong>Recent injury or surgery</strong> on the wrist, hand, or arm where the bracelet would be worn</li>
+        <li><strong>Skin conditions</strong> — including active eczema, psoriasis, open wounds, or known contact allergies (silicone, nickel, common metals, or specific stone materials)</li>
+        <li><strong>Vestibular or balance disorders</strong> — including vertigo or Ménière's disease</li>
+        <li><strong>Migraine sufferers</strong> — if vibration or rhythmic patterns trigger your migraines</li>
+        <li>You are taking medication that affects circulation, blood pressure, or the nervous system</li>
+      </ul>
+      <p>If you are unsure whether the bracelet is right for you, <strong>do not use it before discussing with a qualified healthcare professional</strong>.</p>
+      <h3>6.2 Stop Using and Seek Medical Advice If…</h3>
+      <p>Remove the bracelet immediately and consult a doctor if you experience any of the following during or after use:</p>
+      <ul class="rights-list">
+        <li>Chest pain, palpitations, dizziness, or shortness of breath</li>
+        <li>Skin irritation, rash, redness, swelling, or burning sensation at the contact area</li>
+        <li>Headache, nausea, lightheadedness, or visual disturbances</li>
+        <li>Numbness, tingling, or weakness in the hand or arm</li>
+        <li>Any unusual or persistent discomfort that does not stop after removing the bracelet</li>
+      </ul>
+      <div class="danger">
+        <h4>6.3 Children &amp; Choking Hazard</h4>
+        <p>The Smart Bead Bracelet contains <strong>small beads</strong> that present a serious <strong>choking hazard</strong> for children under 3 years of age. <strong>Keep the bracelet out of reach of infants and young children at all times.</strong> The product is designed for adults and is not a toy. Do not allow children to handle, wear, or play with the bracelet, charging dock, or any component. If a bead becomes detached or the bracelet is damaged, stop using it and contact support — <strong>never</strong> allow loose beads or small parts near children. If a child swallows a bead, contact poison control or emergency services immediately.</p>
+      </div>
+      <h3>6.4 Skin &amp; Allergies</h3>
+      <p>The bracelet is in continuous contact with your skin. Even hypoallergenic materials can cause reactions in sensitive individuals.</p>
+      <ul class="rights-list">
+        <li>If you have known allergies to silicone, nickel, latex, or any metals or stones used in the product, <strong>review the material specifications before purchase</strong> or contact support</li>
+        <li>Remove the bracelet immediately at the first sign of redness, itching, or irritation</li>
+        <li>Keep the bracelet clean and dry — wipe the contact surface regularly with a soft cloth</li>
+        <li>Do not wear the bracelet too tight — it should rest comfortably without pressure marks</li>
+        <li>Give your skin daily rest periods — do not wear continuously for more than 12 hours at a time</li>
+      </ul>
+      <h3>6.5 Battery &amp; Charging Safety</h3>
+      <p>The bracelet contains a small rechargeable lithium-ion battery. Lithium batteries can pose a risk if damaged, overheated, or charged improperly.</p>
+      <ul class="rights-list">
+        <li>Use <strong>only the included pogo pin charger</strong> — its pogo-pin contacts are designed exclusively for this bracelet</li>
+        <li>Do <strong>not</strong> charge while wearing the bracelet</li>
+        <li>Do <strong>not</strong> expose the battery or device to high temperatures, fire, or direct sunlight for extended periods</li>
+        <li>Do <strong>not</strong> disassemble, puncture, crush, or attempt to repair the bracelet</li>
+        <li>If the bracelet feels unusually hot, swells, leaks, or emits an odour, <strong>stop using it immediately</strong> and contact support</li>
+        <li>Store and charge the bracelet on a hard, non-flammable surface away from textiles, paper, and combustibles</li>
+        <li>Dispose of the bracelet through proper electronic waste recycling — never in regular household trash or fire</li>
+      </ul>
+      <h3>6.6 Water, Environment &amp; General Care</h3>
+      <ul class="rights-list">
+        <li>Water resistance will be confirmed before launch — until then, do not submerge, swim, shower, or bathe with it on</li>
+        <li>Remove before sauna, steam rooms, or high-humidity environments</li>
+        <li>Avoid contact with chemicals, perfumes, lotions, or cosmetics on the wrist area</li>
+        <li>Keep away from strong magnetic fields</li>
+        <li>Operating temperature: avoid use below 0 °C or above 40 °C</li>
+      </ul>
+      <h3>6.7 Use as Intended</h3>
+      <p>Use the bracelet only as described in the app and product documentation. <strong>Do not use the bracelet to treat or manage any medical, psychological, or sleep condition without professional guidance.</strong> Stop a session at any time if it feels uncomfortable.</p>
+    </section>
+
+    <section class="section" id="s7">
+      <p class="section-number">07</p>
+      <h2>Children &amp; Teenagers</h2>
+      <p>The VIBEZCORE app can be used from <strong>age 13</strong>; users under 18 should use it with the permission and guidance of a parent or guardian. Breathwork and State Control are gentle and suitable for teenagers, for example to calm down when stressed. Some audio content discusses topics such as identity, betrayal, discipline, and resilience that may not be appropriate for younger audiences. The bracelet is not designed or sized for children's wrists and contains small parts that pose a choking hazard (see section 6.3). Parents and guardians are responsible for deciding what is suitable for minors in their care.</p>
+    </section>
+
+    <section class="section" id="s8">
+      <p class="section-number">08</p>
+      <h2>Professional Help</h2>
+      <p>Neither audio sessions nor the bracelet replace therapy. If you would benefit from speaking to someone, please consider:</p>
+      <ul class="rights-list">
+        <li>Your general practitioner or family doctor</li>
+        <li>A licensed psychologist, psychotherapist, or counsellor</li>
+        <li>Your local mental health services</li>
+        <li>A confidential helpline — see <a href="https://findahelpline.com" target="_top" rel="noopener">findahelpline.com</a> for options in your country</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s9">
+      <p class="section-number">09</p>
+      <h2>Personal Responsibility</h2>
+      <p>By accessing VIBEZCORE content or using our products, you acknowledge that you do so at your own discretion and risk. VIBEZCORE accepts no liability for any physical, psychological, or financial outcomes resulting from the use or misuse of our platform, content, or products.</p>
+      <p>Results vary per individual and are not guaranteed.</p>
+    </section>
+
+    <section class="section" id="s10">
+      <p class="section-number">10</p>
+      <h2>Results Vary</h2>
+      <p>Personal development is highly individual. The benefits of the service depend on consistent practice, your circumstances, and many factors outside our control. We make no promises about specific outcomes.</p>
+    </section>
+
+    <section class="section" id="s11">
+      <p class="section-number">11</p>
+      <h2>Reporting Concerns</h2>
+      <p>If a session feels harmful, misleading, or inappropriate, please let us know through the support form. Your feedback helps us keep the library safe and high-quality.</p>
+    </section>
+
+    <section class="section" id="s12" style="border-bottom:none;padding-bottom:0;">
+      <p class="section-number">12</p>
+      <h2>Contact</h2>
+      <p>Questions about this page or the VIBEZCORE platform? Our support team is here to help.</p>
+      <a href="https://www.vibezcore.com/support" target="_top" rel="noopener" class="contact-btn">
+        Support Center
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('.section[id^="s"]:not(#s0)');
+  const toggle = document.getElementById('contentsToggle');
+  const nav = document.getElementById('sidebarNav');
+  toggle.addEventListener('click', () => { nav.classList.toggle('open'); toggle.classList.toggle('open'); });
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      nav.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+  function setActive() {
+    let current = sections[0].id;
+    sections.forEach(s => { if (s.getBoundingClientRect().top <= 120) current = s.id; });
+    btns.forEach(b => b.classList.toggle('active', b.dataset.target === current));
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  /* Wix HTML-embed: stuur de echte hoogte van de inhoud door (geen witruimte, geen scrollbalk). */
+  function reportHeight() {
+    var wrap = document.querySelector('.page-wrap');
+    var h = Math.ceil(wrap.getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+</script>
+
+</body>
+</html>

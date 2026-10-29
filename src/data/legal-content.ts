@@ -20,8 +20,11 @@ import { Platform } from 'react-native';
    noemen. De winkel waar de gebruiker koopt, volgt daarom het toestel; op
    Android blijft de tekst zoals hij was. */
 const IOS = Platform.OS === 'ios';
-const STORE = IOS ? 'the Apple App Store' : 'Google Play';
-const STORE_ACCOUNT = IOS ? 'Apple ID' : 'Google Play account';
+/* 29 okt 2026: dezelfde teksten worden ook de webpagina's (scripts/gen-website-legal.mjs, Platform.OS = 'web'): daar staan
+   Apple én Google, want de site is voor iedereen. */
+const WEB = Platform.OS === 'web';
+const STORE = WEB ? 'the Apple App Store or Google Play' : IOS ? 'the Apple App Store' : 'Google Play';
+const STORE_ACCOUNT = WEB ? 'Apple ID or Google Play account' : IOS ? 'Apple ID' : 'Google Play account';
 
 export type LegalSlug =
   | 'terms'
@@ -425,7 +428,6 @@ export const PRIVACY: LegalDoc = {
         'IAP receipts (Apple / Google)',
         'Listening progress',
         'Favourites & follows',
-        'Bracelet pairing info',
         'Session history (Breathwork & State Control)',
         'Reminder schedule',
         'Resting heart rate (optional, State Control — entered or read with the camera)',
@@ -522,12 +524,11 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'cards',
       items: [
-        IOS
-          ? { title: 'Apple App Store', text: 'Merchant of Record for in-app purchases — handles billing, taxes, and refunds' }
-          : { title: 'Google Play', text: 'Merchant of Record for in-app purchases — handles billing, taxes, and refunds' },
-        { title: 'Supabase (EU)',    text: 'Authentication, account data, and subscription state — hosted in the European Union' },
+        ...(WEB || IOS ? [{ title: 'Apple App Store', text: 'Merchant of Record for iOS in-app purchases — handles billing, taxes, and refunds' }] : []),
+        ...(WEB || !IOS ? [{ title: 'Google Play', text: 'Merchant of Record for Android in-app purchases — handles billing, taxes, and refunds' }] : []),
+        { title: 'Supabase (EU)',    text: 'Authentication, account data, subscription state and your Backup & Sync data — hosted in the European Union' },
         { title: 'Bunny CDN (EU)',   text: 'Audio content delivery — based in the European Union' },
-        { title: 'RevenueCat',       text: `Verifies ${IOS ? 'App Store' : 'Google Play'} receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details` },
+        { title: 'RevenueCat',       text: `Verifies ${WEB ? 'App Store and Google Play' : IOS ? 'App Store' : 'Google Play'} receipts to confirm your subscription status. Receives your app user ID and purchase receipts — no payment card details` },
         { title: 'Google / Apple sign-in', text: 'Optional — only if you choose to sign in with Google or Apple. We receive your email address and a sign-in token' },
         { title: 'Sentry (EU)',      text: 'Crash reports — when the app crashes or hits an error, we receive a technical report (error, app version, device model and operating system) so we can fix it. No name, email address, IP address, heart rate or session content — hosted in the European Union. You can turn this off anytime in Profile → Settings → Privacy → Share crash reports' },
       ],
@@ -550,7 +551,7 @@ export const PRIVACY: LegalDoc = {
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
         { title: 'Notifications',  text: 'Optional — used only if you allow notifications: the session reminders you set, and notices about your access (your Day Pass ending in 1 hour, a cancelled Premium ending in 2 days, or a payment problem).' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
-        { title: 'Smartwatch',     text: `Optional — if you pair ${IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing and your access status (which sessions you can use) to it so it can guide you on your wrist. No health data is read from the watch.` },
+        { title: 'Smartwatch',     text: `Optional — if you pair ${WEB ? 'an Apple Watch or a Wear OS watch' : IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing and your access status (which sessions you can use) to it so it can guide you on your wrist. No health data is read from the watch.` },
         { title: 'Camera & flash', text: 'Optional — only when you choose to read your pulse from your fingertip in State Control. Frames are analysed live on your device and never recorded, saved or uploaded. You can always enter your resting heart rate yourself instead.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
       ],
@@ -558,7 +559,7 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'highlight',
       title: 'What we do NOT request',
-      text: `VIBEZCORE does not request access to your microphone, location, contacts, calendar, photos or ${IOS ? 'Apple Health' : 'Health Connect'}. The camera is used only for the optional fingertip pulse reading. The Smart Bead Bracelet does not collect biometric or health information.`,
+      text: `VIBEZCORE does not request access to your microphone, location, contacts, calendar, photos or ${WEB ? 'Apple Health / Health Connect' : IOS ? 'Apple Health' : 'Health Connect'}. The camera is used only for the optional fingertip pulse reading. The Smart Bead Bracelet does not collect biometric or health information.`,
     },
 
     /* ── 07. International Data Transfers ── */
@@ -1206,7 +1207,7 @@ export const COOKIES: LegalDoc = {
     { kind: 'h3', text: 'Third-party — payments and crash reports' },
     {
       kind: 'p',
-      text: (IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app purchases (subscriptions and the Day Pass). RevenueCat verifies the receipts, and Sentry receives technical crash reports (on by default; you can switch them off in Settings). Each follows its own privacy policy.",
+      text: (WEB ? "**Apple App Store** and **Google Play** handle" : IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app purchases (subscriptions and the Day Pass). RevenueCat verifies the receipts, and Sentry receives technical crash reports (on by default; you can switch them off in Settings). Each follows its own privacy policy.",
     },
     {
       kind: 'highlight',

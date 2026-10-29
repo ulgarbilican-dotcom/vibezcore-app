@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accessibility Statement — VIBEZCORE</title>
+<!-- Gemaakt uit de app (src/data/legal-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  :root {
+    --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b;
+    --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 52px; }
+  .nav-tag { font-size: 12px; color: var(--gray-400); letter-spacing: 0.02em; }
+  .hero { text-align: center; padding: 100px 24px 72px; max-width: 800px; margin: 0 auto; }
+  .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
+  .hero-sub { font-size: 17px; color: var(--gray-400); line-height: 1.6; }
+  .page-wrap { max-width: 1080px; margin: 0 auto; padding: 0 48px 120px; display: grid; grid-template-columns: 220px 1fr; gap: 64px; align-items: start; }
+  .sidebar { position: sticky; top: 72px; }
+  .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px; padding-left: 12px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-link { display: block; width: 100%; padding: 8px 12px; font-size: 13px; color: var(--gray-600); text-decoration: none; border-radius: 6px; transition: background 0.15s, color 0.15s; line-height: 1.4; background: none; border: none; cursor: pointer; text-align: left; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .sidebar-link:hover { background: var(--gray-100); color: var(--black); }
+  .sidebar-link.active { background: var(--gray-100); color: var(--black); font-weight: 500; }
+  .content { min-width: 0; }
+  .date-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); margin-bottom: 48px; }
+  .date-badge::before { content: ''; display: inline-block; width: 7px; height: 7px; background: #34c759; border-radius: 50%; }
+  .section { border-bottom: 1px solid var(--gray-200); padding: 48px 0; opacity: 0; transform: translateY(16px); animation: fadeUp 0.5s forwards; }
+  .section:first-of-type { padding-top: 0; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .section-number { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .section h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--black); margin-bottom: 20px; line-height: 1.2; }
+  .section h3 { font-size: 15px; font-weight: 600; color: var(--black); margin: 28px 0 10px; }
+  .section p { font-size: 15px; color: var(--gray-600); line-height: 1.7; margin-bottom: 14px; }
+  .section p:last-child { margin-bottom: 0; }
+  .section a { color: var(--blue); text-decoration: none; }
+  .section a:hover { text-decoration: underline; }
+  .tag-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; margin-bottom: 14px; }
+  .tag { background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; margin-bottom: 14px; }
+  .card { background: var(--gray-100); border-radius: var(--radius); padding: 20px; }
+  .card h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 4px; }
+  .card p { font-size: 12px; color: var(--gray-400); margin: 0; line-height: 1.5; }
+  /* Lijstpunt als blok met het vinkje absoluut links (operator-fix op health.html): met display:flex werden <strong>/<a> in een
+     lijstpunt aparte flex-items en kregen ze op een smal scherm een eigen kolom. */
+  .rights-list { list-style: none; margin: 16px 0 14px; }
+  .rights-list li { position: relative; padding-left: 28px; margin-bottom: 10px; font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+  .rights-list li:last-child { margin-bottom: 0; }
+  .rights-list li::before { content: ''; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #e8f4fd; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-6' stroke='%230071e3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: cover; }
+  .highlight, .danger { border-radius: var(--radius); padding: 20px 24px; margin: 16px 0 14px; }
+  .highlight { background: #f0f7ff; border-left: 3px solid var(--blue); }
+  .danger { background: #fff2f2; border-left: 3px solid #d70015; }
+  .highlight h4, .danger h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 6px; }
+  .highlight p, .danger p { font-size: 14px; color: #1d1d1f; margin: 0; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none !important; margin-top: 28px; transition: background 0.15s, transform 0.15s; white-space: nowrap; max-width: 100%; }
+  .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
+  .contact-btn svg { color: #ffffff; flex-shrink: 0; }
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap { padding: 0 20px 16px; grid-template-columns: 1fr; gap: 0; }
+    .sidebar { display: block; position: static; margin-bottom: 8px; }
+    .sidebar-label { display: none; }
+    .sidebar-nav { display: none; background: var(--gray-100); border-radius: var(--radius); padding: 8px; margin-top: 0; }
+    .sidebar-nav.open { display: flex; }
+    .mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--gray-100); border: none; border-radius: var(--radius); padding: 12px 16px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: var(--black); cursor: pointer; margin-bottom: 4px; }
+    .mobile-toggle-icon { width: 16px; height: 16px; transition: transform 0.2s; color: var(--gray-400); }
+    .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  }
+  @media (max-width: 480px) {
+    .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
+  }
+  @media (min-width: 769px) { .mobile-toggle { display: none; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-tag">Accessibility Statement</span>
+</nav>
+
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Accessibility Statement</h1>
+  <p class="hero-sub">VIBEZCORE is committed to ensuring digital accessibility for everyone, regardless of technology, ability, or circumstances.</p>
+</div>
+
+<div class="page-wrap">
+
+  <aside class="sidebar">
+    <p class="sidebar-label">Contents</p>
+    <button class="mobile-toggle" id="contentsToggle">
+      Contents
+      <svg class="mobile-toggle-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link" data-target="s1">What Web Accessibility Means</button>
+      <button class="sidebar-link" data-target="s2">In the App</button>
+      <button class="sidebar-link" data-target="s3">Accessibility Adjustments on This Site</button>
+      <button class="sidebar-link" data-target="s4">Browser &amp; Device Compatibility</button>
+      <button class="sidebar-link" data-target="s5">Third-Party Content</button>
+      <button class="sidebar-link" data-target="s6">Continuous Improvement</button>
+      <button class="sidebar-link" data-target="s7">Contact</button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="date-badge">Last updated: October 2026</div>
+
+    <section class="section" id="s0" style="padding-top:0;border-bottom:none;padding-bottom:24px;">
+      <p>VIBEZCORE continuously works to improve the accessibility, usability, and clarity of our digital platform so that all visitors can engage with the VIBEZCORE experience with ease.</p>
+    </section>
+
+    <section class="section" id="s1">
+      <p class="section-number">01</p>
+      <h2>What Web Accessibility Means</h2>
+      <p>An accessible website allows visitors with disabilities to navigate, understand, and interact with content with the same or similar ease as other users. Accessibility may be supported through assistive technologies such as:</p>
+      <ul class="rights-list">
+        <li>Screen readers</li>
+        <li>Keyboard navigation</li>
+        <li>Voice navigation tools</li>
+        <li>Alternative input devices</li>
+        <li>Browser accessibility features</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s2">
+      <p class="section-number">02</p>
+      <h2>In the App</h2>
+      <p>The VIBEZCORE app works with TalkBack, follows your font size and respects Remove animations. Sessions combine voice, visuals and vibration, so each can be followed on its own.</p>
+    </section>
+
+    <section class="section" id="s3">
+      <p class="section-number">03</p>
+      <h2>Accessibility Adjustments on This Site</h2>
+      <p>The VIBEZCORE website aims to follow the Web Content Accessibility Guidelines (WCAG) 2.1 and strives to meet Level AA accessibility standards. The following measures have been implemented:</p>
+      <ul class="rights-list">
+        <li>Clear and structured heading hierarchy across pages</li>
+        <li>Logical content order to support screen readers</li>
+        <li>Defined language settings for the website</li>
+        <li>Alternative text added to images where appropriate</li>
+        <li>Color combinations designed to meet accessibility contrast standards</li>
+        <li>Reduced unnecessary motion and animations</li>
+        <li>Compatibility with keyboard navigation</li>
+        <li>Support for common screen reader technologies</li>
+        <li>Efforts to ensure audio and video content is accessible</li>
+      </ul>
+      <p>Accessibility improvements are reviewed and implemented on an ongoing basis.</p>
+    </section>
+
+    <section class="section" id="s4">
+      <p class="section-number">04</p>
+      <h2>Browser &amp; Device Compatibility</h2>
+      <p>The VIBEZCORE website is designed to be compatible with modern web browsers and assistive technologies. Tested on the latest versions of:</p>
+      <div class="tag-grid">
+        <span class="tag">Google Chrome</span>
+        <span class="tag">Mozilla Firefox</span>
+        <span class="tag">Apple Safari</span>
+        <span class="tag">Microsoft Edge</span>
+      </div>
+      <p>Functionality may vary slightly depending on device configuration or assistive technology.</p>
+    </section>
+
+    <section class="section" id="s5">
+      <p class="section-number">05</p>
+      <h2>Third-Party Content</h2>
+      <p>Some parts of the VIBEZCORE website may include content or services provided by third-party platforms such as embedded media, external tools, or social media integrations.</p>
+      <div class="highlight">
+        <p>While we strive to ensure accessibility throughout the website, we cannot fully guarantee the accessibility standards of third-party content.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s6">
+      <p class="section-number">06</p>
+      <h2>Continuous Improvement</h2>
+      <p>Accessibility is an ongoing process. VIBEZCORE continuously evaluates and improves the website to enhance accessibility, usability, and clarity for all visitors.</p>
+      <p>We welcome feedback that helps us improve the experience.</p>
+    </section>
+
+    <section class="section" id="s7" style="border-bottom:none;padding-bottom:0;">
+      <p class="section-number">07</p>
+      <h2>Contact</h2>
+      <p>Questions about accessibility or the VIBEZCORE platform? Our support team is here to help.</p>
+      <a href="https://www.vibezcore.com/support" target="_top" rel="noopener" class="contact-btn">
+        Support Center
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('.section[id^="s"]:not(#s0)');
+  const toggle = document.getElementById('contentsToggle');
+  const nav = document.getElementById('sidebarNav');
+  toggle.addEventListener('click', () => { nav.classList.toggle('open'); toggle.classList.toggle('open'); });
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      nav.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+  function setActive() {
+    let current = sections[0].id;
+    sections.forEach(s => { if (s.getBoundingClientRect().top <= 120) current = s.id; });
+    btns.forEach(b => b.classList.toggle('active', b.dataset.target === current));
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  /* Wix HTML-embed: stuur de echte hoogte van de inhoud door (geen witruimte, geen scrollbalk). */
+  function reportHeight() {
+    var wrap = document.querySelector('.page-wrap');
+    var h = Math.ceil(wrap.getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+</script>
+
+</body>
+</html>

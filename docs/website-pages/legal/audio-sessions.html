@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Sessions — VIBEZCORE</title>
+<!-- Gemaakt uit de app (src/data/legal-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  :root {
+    --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b;
+    --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 52px; }
+  .nav-tag { font-size: 12px; color: var(--gray-400); letter-spacing: 0.02em; }
+  .hero { text-align: center; padding: 100px 24px 72px; max-width: 800px; margin: 0 auto; }
+  .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
+  .hero-sub { font-size: 17px; color: var(--gray-400); line-height: 1.6; }
+  .page-wrap { max-width: 1080px; margin: 0 auto; padding: 0 48px 120px; display: grid; grid-template-columns: 220px 1fr; gap: 64px; align-items: start; }
+  .sidebar { position: sticky; top: 72px; }
+  .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px; padding-left: 12px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-link { display: block; width: 100%; padding: 8px 12px; font-size: 13px; color: var(--gray-600); text-decoration: none; border-radius: 6px; transition: background 0.15s, color 0.15s; line-height: 1.4; background: none; border: none; cursor: pointer; text-align: left; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .sidebar-link:hover { background: var(--gray-100); color: var(--black); }
+  .sidebar-link.active { background: var(--gray-100); color: var(--black); font-weight: 500; }
+  .content { min-width: 0; }
+  .date-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); margin-bottom: 48px; }
+  .date-badge::before { content: ''; display: inline-block; width: 7px; height: 7px; background: #34c759; border-radius: 50%; }
+  .section { border-bottom: 1px solid var(--gray-200); padding: 48px 0; opacity: 0; transform: translateY(16px); animation: fadeUp 0.5s forwards; }
+  .section:first-of-type { padding-top: 0; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .section-number { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .section h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--black); margin-bottom: 20px; line-height: 1.2; }
+  .section h3 { font-size: 15px; font-weight: 600; color: var(--black); margin: 28px 0 10px; }
+  .section p { font-size: 15px; color: var(--gray-600); line-height: 1.7; margin-bottom: 14px; }
+  .section p:last-child { margin-bottom: 0; }
+  .section a { color: var(--blue); text-decoration: none; }
+  .section a:hover { text-decoration: underline; }
+  .tag-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; margin-bottom: 14px; }
+  .tag { background: var(--gray-100); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gray-600); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; margin-bottom: 14px; }
+  .card { background: var(--gray-100); border-radius: var(--radius); padding: 20px; }
+  .card h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 4px; }
+  .card p { font-size: 12px; color: var(--gray-400); margin: 0; line-height: 1.5; }
+  /* Lijstpunt als blok met het vinkje absoluut links (operator-fix op health.html): met display:flex werden <strong>/<a> in een
+     lijstpunt aparte flex-items en kregen ze op een smal scherm een eigen kolom. */
+  .rights-list { list-style: none; margin: 16px 0 14px; }
+  .rights-list li { position: relative; padding-left: 28px; margin-bottom: 10px; font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+  .rights-list li:last-child { margin-bottom: 0; }
+  .rights-list li::before { content: ''; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #e8f4fd; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-6' stroke='%230071e3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: cover; }
+  .highlight, .danger { border-radius: var(--radius); padding: 20px 24px; margin: 16px 0 14px; }
+  .highlight { background: #f0f7ff; border-left: 3px solid var(--blue); }
+  .danger { background: #fff2f2; border-left: 3px solid #d70015; }
+  .highlight h4, .danger h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 6px; }
+  .highlight p, .danger p { font-size: 14px; color: #1d1d1f; margin: 0; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none !important; margin-top: 28px; transition: background 0.15s, transform 0.15s; white-space: nowrap; max-width: 100%; }
+  .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
+  .contact-btn svg { color: #ffffff; flex-shrink: 0; }
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .page-wrap { padding: 0 20px 16px; grid-template-columns: 1fr; gap: 0; }
+    .sidebar { display: block; position: static; margin-bottom: 8px; }
+    .sidebar-label { display: none; }
+    .sidebar-nav { display: none; background: var(--gray-100); border-radius: var(--radius); padding: 8px; margin-top: 0; }
+    .sidebar-nav.open { display: flex; }
+    .mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--gray-100); border: none; border-radius: var(--radius); padding: 12px 16px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: var(--black); cursor: pointer; margin-bottom: 4px; }
+    .mobile-toggle-icon { width: 16px; height: 16px; transition: transform 0.2s; color: var(--gray-400); }
+    .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
+    .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  }
+  @media (max-width: 480px) {
+    .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
+  }
+  @media (min-width: 769px) { .mobile-toggle { display: none; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-tag">Audio Sessions</span>
+</nav>
+
+<div class="hero">
+  <span class="hero-label">Legal</span>
+  <h1>Audio Sessions</h1>
+  <p class="hero-sub">Our sessions are designed to deliver real insights for real-life challenges — built to be applied, not just heard. Please read the following carefully before you begin.</p>
+</div>
+
+<div class="page-wrap">
+
+  <aside class="sidebar">
+    <p class="sidebar-label">Contents</p>
+    <button class="mobile-toggle" id="contentsToggle">
+      Contents
+      <svg class="mobile-toggle-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link" data-target="s1">No Affiliation with Referenced Individuals or Research</button>
+      <button class="sidebar-link" data-target="s2">Independently Developed Content</button>
+      <button class="sidebar-link" data-target="s3">Purpose — Insight Into Action</button>
+      <button class="sidebar-link" data-target="s4">Not a Substitute for Professional Help</button>
+      <button class="sidebar-link" data-target="s5">Personal Responsibility</button>
+      <button class="sidebar-link" data-target="s6">Intellectual Property</button>
+      <button class="sidebar-link" data-target="s7">Contact</button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="date-badge">Last updated: October 2026</div>
+
+    <section class="section" id="s0" style="padding-top:0;border-bottom:none;padding-bottom:24px;">
+      <div class="highlight">
+        <p>All third-party names, research, and public figures referenced in our sessions are independent of VIBEZCORE. No affiliation, endorsement, or partnership of any kind exists or is implied.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s1">
+      <p class="section-number">01</p>
+      <h2>No Affiliation with Referenced Individuals or Research</h2>
+      <p>Our audio sessions may reference publicly available research, scientific findings, or the work of thought leaders, researchers, academics, and public figures in the fields of psychology, philosophy, research and personal development.</p>
+      <p><strong>None of the individuals, researchers, institutions, or organisations referenced in our sessions are affiliated with, employed by, partnered with, or endorsing VIBEZCORE in any capacity.</strong> Any such reference is made solely for educational and illustrative purposes, based exclusively on information that is publicly available in the open domain.</p>
+      <p>VIBEZCORE does not claim any association, collaboration, or approval from any referenced party. All referenced names, works, and findings remain the intellectual property of their respective owners.</p>
+    </section>
+
+    <section class="section" id="s2">
+      <p class="section-number">02</p>
+      <h2>Independently Developed Content</h2>
+      <p>All VIBEZCORE audio sessions are independently developed by the VIBEZCORE team. Our content is inspired by widely available knowledge, established research, and real-life human experience — not derived from, licensed from, or produced in collaboration with any third party.</p>
+      <p>Every session is carefully composed around genuine challenges people face in daily life. We invest significant time and rigour into ensuring each session delivers relevant, grounded, and actionable insights — not theoretical concepts.</p>
+    </section>
+
+    <section class="section" id="s3">
+      <p class="section-number">03</p>
+      <h2>Purpose — Insight Into Action</h2>
+      <p>VIBEZCORE audio sessions are created with one objective: to help you gain insights and apply them in real life. We operate on the belief that knowledge only has value when it creates tangible change.</p>
+      <p>Our sessions are structured to bridge the gap between understanding and doing — from awareness to implementation, from pattern recognition to deliberate action.</p>
+    </section>
+
+    <section class="section" id="s4">
+      <p class="section-number">04</p>
+      <h2>Not a Substitute for Professional Help</h2>
+      <p>VIBEZCORE audio sessions are provided for <strong>educational and personal development purposes only</strong>. They do not constitute and must not be interpreted as professional medical, psychological, psychiatric, or therapeutic advice, diagnosis, or treatment of any kind.</p>
+      <p>If you are experiencing serious mental health challenges, psychological distress, or any condition requiring clinical support, please consult a qualified and licensed professional. VIBEZCORE is not a clinical service and makes no representation that its content is suitable as a substitute for professional care.</p>
+    </section>
+
+    <section class="section" id="s5">
+      <p class="section-number">05</p>
+      <h2>Personal Responsibility</h2>
+      <p>By accessing VIBEZCORE audio sessions, you acknowledge and agree that you are solely responsible for how you use, interpret, and apply the content provided. Individual results vary and are dependent on personal circumstances, effort, and application.</p>
+      <p><strong>VIBEZCORE does not guarantee specific outcomes</strong> and expressly disclaims any liability for decisions made, actions taken, or results experienced based on the content of our sessions. Use of our sessions constitutes your acceptance of full personal responsibility for your engagement with the material.</p>
+    </section>
+
+    <section class="section" id="s6">
+      <p class="section-number">06</p>
+      <h2>Intellectual Property</h2>
+      <p>All audio sessions — including their structure, scripts, recordings, concepts, and presentation — are the exclusive intellectual property of VIBEZCORE and are protected under applicable copyright law.</p>
+      <p><strong>Reproduction, redistribution, resale, public performance, sharing, or any other unauthorised use of any session — in whole or in part, in any format or medium — is strictly prohibited</strong> without the prior explicit written consent of VIBEZCORE. Violations may result in civil and/or criminal liability under applicable law.</p>
+      <p>For licensing inquiries, please submit a request through our <a href="https://www.vibezcore.com/support" target="_top" rel="noopener">Support page</a>.</p>
+      <div class="highlight">
+        <h4>Legal notice</h4>
+        <p>The use of any third-party name, trademark, or intellectual property in our sessions is solely for descriptive and educational reference under the principles of nominative fair use. VIBEZCORE asserts no ownership over, and claims no association with, any third-party name or brand. All trademarks and intellectual property rights belong to their respective owners. This notice does not constitute legal advice.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s7" style="border-bottom:none;padding-bottom:0;">
+      <p class="section-number">07</p>
+      <h2>Contact</h2>
+      <p>Questions about this page or the VIBEZCORE platform? Our support team is here to help.</p>
+      <a href="https://www.vibezcore.com/support" target="_top" rel="noopener" class="contact-btn">
+        Support Center
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('.section[id^="s"]:not(#s0)');
+  const toggle = document.getElementById('contentsToggle');
+  const nav = document.getElementById('sidebarNav');
+  toggle.addEventListener('click', () => { nav.classList.toggle('open'); toggle.classList.toggle('open'); });
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      nav.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+  function setActive() {
+    let current = sections[0].id;
+    sections.forEach(s => { if (s.getBoundingClientRect().top <= 120) current = s.id; });
+    btns.forEach(b => b.classList.toggle('active', b.dataset.target === current));
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  /* Wix HTML-embed: stuur de echte hoogte van de inhoud door (geen witruimte, geen scrollbalk). */
+  function reportHeight() {
+    var wrap = document.querySelector('.page-wrap');
+    var h = Math.ceil(wrap.getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+</script>
+
+</body>
+</html>
