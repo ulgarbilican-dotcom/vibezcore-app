@@ -113,6 +113,8 @@ import {
   claimVoiceSource,
   playBreathCue,
   playCompletionCue,
+  isExplanationPlaying,
+  stopExplanation,
   isPrivateMode,
   setPrivateMode,
   preloadCompletionCue,
@@ -1336,7 +1338,8 @@ export function BreathSession() {
        in breath-voice.ts kent maar één vlag. Bij het verlaten van het scherm
        gaat hij terug naar de algemene stand — zie de opruiming hieronder. */
     setVoiceEnabled(voiceOn);
-    if (!voiceOn) stopVoice();
+    /* De Ujjayi-uitleg niet meestoppen (zie breath-voice.ts setVoiceEnabled). */
+    if (!voiceOn && !isExplanationPlaying()) stopVoice();
   }, [voiceOn]);
   useEffect(() => {
     hapticRef.current = hapticsOn;
@@ -3820,7 +3823,7 @@ export function BreathSession() {
                   if (ujjayiSound) {
                     setUjjayiSound(false);
                     setUjjayiSoundPref(false);
-                    stopVoice();
+                    stopExplanation();
                   } else {
                     setUjjayiSound(true);
                     setUjjayiSoundPref(true);

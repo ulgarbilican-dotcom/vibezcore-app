@@ -279,7 +279,21 @@ let activePlayer: AudioPlayer | null = null;
 /** Voice cues aan/uit zetten. Bij uit-zetten stopt eventuele actieve cue. */
 export function setVoiceEnabled(enabled: boolean): void {
   voiceEnabled = enabled;
-  if (!enabled) stopVoice();
+  /* 29 okt 2026 (operator: "bij Ujjayi hoor ik niets bij het verschijnen van de popup"): het sessiescherm zet bij het openen de
+     stem-instelling van de sessie (bij de operator: uit) en stopte daarmee ook de Ujjayi-uitleg die net begon. Die uitleg staat los
+     van de stem-begeleiding — hij wordt enkel gestopt door de eigen knop "Sound off" (stopExplanation) of het verlaten van het scherm. */
+  if (!enabled && !isExplanationPlaying()) stopVoice();
+}
+
+/* De Ujjayi-uitleg duurt ~10 s; 20 s marge. */
+let explanationUntil = 0;
+export function isExplanationPlaying(): boolean {
+  return Date.now() < explanationUntil;
+}
+/** De eigen knop "Sound off" in de Ujjayi-popup: de uitleg meteen stilzetten. */
+export function stopExplanation(): void {
+  explanationUntil = 0;
+  stopVoice();
 }
 
 /** Iter v170 (2026-06-28): claim voice-ownership voor één source. Een
@@ -441,6 +455,7 @@ export function playBreathCue(
  *  staat pas op de volgende pagina. De popup heeft een eigen luidspreker-knop om ze aan/uit te zetten. */
 export function playUjjayiStartCue(always = false): void {
   if (!voiceEnabled && !always) return;
+  explanationUntil = Date.now() + 20_000;
   if (libraryBlocksVoice()) return;
   if (nativeVoice()) {
     playUrl(activeUjjayiStartUrl());
