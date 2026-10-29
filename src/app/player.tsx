@@ -57,7 +57,6 @@ import {
   Dimensions,
   Image,
   Pressable,
-  Share,
   StyleSheet,
   Switch,
   Text,
@@ -70,6 +69,7 @@ import Svg, { Path } from 'react-native-svg';
 import { needsPreview } from '@/utils/access-tier';
 import { MoreHorizontal } from 'lucide-react-native';
 import { showVibezAlert } from '@/components/VibezAlert';
+import { shareFreeSession } from '@/utils/share';
 import Animated, {
   Easing,
   useSharedValue,
@@ -380,23 +380,10 @@ export default function PlayerScreen() {
      werkte ook niet. Native MediaSession implementation nodig voor sleep
      timer die WERKT in lockscreen/Doze — parked voor v1.1. */
 
-  /* Iter v174 (2026-06-30): personal opener ("I'm listening to…") geeft
-     context aan ontvangers die VIBEZCORE niet kennen — sessie-naam alleen
-     ("Neural State Control") zegt outsiders niks. Daarna brand-pitch
-     (science/philosophy/psychology + bracelet) + Play Store install. */
+  /* Delen = de goedgekeurde tekst met een link (nooit audio, geen titel), enkel bij gratis sessies — utils/share.ts. */
   const onShare = async () => {
     if (!session) return;
-    const url = 'https://www.vibezcore.com/';
-    const pitch =
-      "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
-      'Launching Early 2027 — Smart Bead Bracelet for instant state control.';
-    try {
-      await Share.share({
-        title: 'VIBEZCORE',
-        message: `I'm listening to "${session.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to free full sessions: ${url}`,
-        url,
-      });
-    } catch {}
+    await shareFreeSession();
   };
 
   const onUpsellMaybeLater = async () => {

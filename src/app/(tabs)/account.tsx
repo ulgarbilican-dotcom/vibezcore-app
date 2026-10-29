@@ -98,7 +98,6 @@ import {
     Linking,
     Platform,
     Pressable,
-    Share,
     StyleSheet,
     Text,
     TextInput,
@@ -135,39 +134,9 @@ import {
   UserPlus,
 } from 'lucide-react-native';
 
-/* Iter v244 (2026-07-20, operator-feedback): pitch herschreven — noemt
-   nu expliciet de denkers/insights ipv generieke "grounded in Science,
-   Philosophy & Psychology", en link is de universele vibezcore.com/app
-   (werkt voor Android + iOS-status) ipv de directe Play Store-link.
-   Single source of truth binnen dit bestand — bij wijziging hoeven we
-   maar 1 plek aan te passen. KS-launch: Fall 2026 (operator 2026-07-14
-   — sep-datum weg, geen concrete datum meer). */
-/* Operator, 18 okt 2026: naar de website zelf. */
-const APP_LINK_URL = 'https://www.vibezcore.com/';
-/* Breathwork voorop, bracelet als "komt eraan", audio library als
-   inbegrepen extra (operator, 11 augustus 2026: bracelet is het
-   toekomstige hoofdproduct — uniek, maar nog niet beschikbaar; breathwork
-   is NU verkoopbaar; audio library verkoopt moeilijk als eigen product en
-   hoort er daarom bij als bonus, niet als kop). Vervangt de eerdere versie
-   (9 augustus 2026) die de bibliotheek helemaal wegliet — die redenering
-   klopte nog steeds (geen aparte titel), maar één regel "inclusief"
-   ontbrak. Toestand-taal, geen claims; de gratis kennismakingssessie is
-   wat een genodigde werkelijk krijgt. */
-/* Operator, 19 okt 2026 (akkoord): kort. De kop = de drie knoppen van het
-   welkomstscherm; de uitleg staat al in het voorbeeldkaartje van de site. */
-const BRAND_PITCH = 'Reset Yourself. Control Your State. Train Your Mind.';
-const INVITE_MESSAGE = `${BRAND_PITCH}\n\nTry VIBEZCORE for free: ${APP_LINK_URL}`;
-
-async function shareInvite(): Promise<void> {
-  try {
-    await Share.share({
-      title: 'VIBEZCORE',
-      message: INVITE_MESSAGE,
-      /* iOS toonde de link dubbel (staat al in de tekst) — 17 okt 2026. */
-    });
-  } catch {}
-}
+/* Deelteksten (APP_LINK_URL, BRAND_PITCH, uitnodigen) staan sinds 29 okt 2026 in utils/share.ts — één bron voor elke deelknop. */
 import { showVibezAlert } from '@/components/VibezAlert';
+import { shareInvite } from '@/utils/share';
 import KeyboardAwareScrollView from '@/components/KeyboardAwareScroll';
 import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { useTabBarInset } from '@/utils/tab-bar-inset';

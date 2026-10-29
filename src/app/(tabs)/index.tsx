@@ -1,5 +1,6 @@
 import { TabReveal } from '@/components/Reveal';
 import { openStateControl } from '@/utils/state-control-ui';
+import { shareFreeSession } from '@/utils/share';
 import { SPRING_PRESS_IN, SPRING_PRESS_OUT, reveal } from '@/constants/motion';
 import Tap from '@/components/Tap';
 import { setPremiumPillLow } from '@/utils/premium-pill-slot';
@@ -117,7 +118,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleProp,
   StyleSheet,
   Switch,
@@ -2789,24 +2789,11 @@ function AudioScreen({
                                   {`Series · ${sess.series}`}
                                 </Text>
                               </View>
-                              {/* Share-knop — iter v174 (2026-06-30): personal
-                                  opener ("I'm listening to…") + brand-pitch
-                                  (Free Personal Growth Audio Sessions grounded
-                                  in Science, Philosophy & Psychology + bracelet
-                                  KS) + Play Store install. Operator v173-feedback:
-                                  sessie-naam alleen zegt outsiders niks. */}
+                              {/* Share-knop: goedgekeurde tekst + link, nooit audio, geen titel (utils/share.ts, 29 okt 2026). */}
                               <Tap
                                 onPress={(e) => {
                                   e.stopPropagation();
-                                  const url = 'https://www.vibezcore.com/';
-                                  const pitch =
-                                    "Available now: In-depth audio sessions built on the theories, principles, and insights of history's greatest thinkers—whose work continues to shape our understanding of human nature, psychology, behavior, and personal growth.\n\n" +
-                                    'Launching Early 2027 — Smart Bead Bracelet for instant state control.';
-                                  Share.share({
-                                    title: 'VIBEZCORE',
-                                    message: `I'm listening to "${sess.title}" on VIBEZCORE.\n\n${pitch}\n\nInstall the app and listen to free full sessions: ${url}`,
-                                    url,
-                                  }).catch(() => {});
+                                  void shareFreeSession();
                                 }}
                                 hitSlop={8}
                                 style={{
