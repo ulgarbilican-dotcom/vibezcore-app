@@ -469,53 +469,27 @@ export default function SettingsScreen() {
               ios_backgroundColor="#3a3a3a"
             />
           </View>
-        </View>
-
-        </Reveal>
-
-        <Reveal i={5}>
-        <Text style={s.subLabel}>General</Text>
-        <View style={s.card}>
-          {/* 25 okt 2026 (operator: "hoe kan ik de intro opnieuw zien"): de algemene uitleg van de app. */}
-          <PressFeedback
-            style={s.row}
-            onPress={() => router.push('/intro?replay=1' as never)}
-            accessibilityLabel="Watch the introduction to VIBEZCORE again"
-          >
-            <View style={s.rowText}>
-              <Text style={s.rowTitle}>Introduction to VIBEZCORE</Text>
-              <BalancedText style={s.rowSub}>What the app and its three parts do.</BalancedText>
-            </View>
-            <Text style={s.versionText}>›</Text>
-          </PressFeedback>
           <View style={s.divider} />
+          {/* 29 okt 2026 (operator: "watch the intro again ... kom ik in het oude onboarding welcome
+             screen ... dit moet bij breathwork staan niet general"): stond onder "General" en opende
+             het hero-scherm als stap 1 van 5. Nu bij Breathwork, zelfde plek als bij State Control, en
+             fromTab=1 = hetzelfde verloop als vanaf de Breathwork-pagina: meteen STEP 1 OF 4. */}
           <PressFeedback
             style={s.row}
-            /* Operator, 4 okt 2026 (smoothness-audit): was `await
-               setSetting(...)` vóór de navigatie — de schermovergang
-               wachtte op de AsyncStorage-schrijfactie. `void` i.p.v.
-               `await`: de write loopt op de achtergrond door, de
-               navigatie gebeurt meteen (zelfde patroon als goal.tsx se
-               `onTap`). */
+            /* Operator, 4 okt 2026 (smoothness-audit): `void` i.p.v. `await` — de navigatie wacht
+               niet op de AsyncStorage-schrijfactie. */
             onPress={() => {
               void setSetting('breathOnboardingCompletedAt', null);
-              router.push('/breath-welcome?replay=1' as never);
+              router.push({ pathname: '/breath-welcome', params: { replay: '1', fromTab: '1' } } as never);
             }}
-            accessibilityLabel="Watch the breathwork intro again"
+            accessibilityLabel="Watch the Breathwork intro again"
           >
             <View style={s.rowText}>
               <Text style={s.rowTitle}>Watch the intro again</Text>
-              <BalancedText style={s.rowSub}>
-                The five-screen walkthrough, from the start.
-              </BalancedText>
+              <BalancedText style={s.rowSub}>How Breathwork works, step by step.</BalancedText>
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>
-          {/* Operator, 15 september 2026: een zelfde rij voor de Audio
-             Library-intro is hier NIET nodig — die toont zich sinds
-             "intro mag zich elke keer tonen" gewoon bij elke montage van
-             de tab (zie (tabs)/index.tsx), geen eenmalige vlag meer om te
-             resetten. */}
         </View>
         </Reveal>
 
@@ -683,6 +657,20 @@ export default function SettingsScreen() {
             </View>
             <Text style={s.versionText}>{versionLabel}</Text>
           </View>
+          <View style={s.divider} />
+          {/* 25 okt 2026 (operator: "hoe kan ik de intro opnieuw zien"): de algemene uitleg van de app.
+             29 okt: van Breathwork → General naar About, want ze gaat over de hele app. */}
+          <PressFeedback
+            style={s.row}
+            onPress={() => router.push('/intro?replay=1' as never)}
+            accessibilityLabel="Watch the introduction to VIBEZCORE again"
+          >
+            <View style={s.rowText}>
+              <Text style={s.rowTitle}>Introduction to VIBEZCORE</Text>
+              <BalancedText style={s.rowSub}>What the app and its three parts do.</BalancedText>
+            </View>
+            <Text style={s.versionText}>›</Text>
+          </PressFeedback>
         </View>
         </Reveal>
 
