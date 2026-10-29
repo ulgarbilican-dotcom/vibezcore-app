@@ -63,7 +63,7 @@ import { applyPositionsSync, getPositionsSyncSnapshot, reloadPositions } from '@
 import { getActivePlanLoaded, clearActivePlan, reloadActivePlan, saveActivePlan, type ActivePlan } from '@/utils/plan-store';
 import { getActiveBraceletPlanLoaded, reloadActiveBraceletPlan, saveActiveBraceletPlan, type BraceletActivePlan } from '@/utils/bracelet-plan-store';
 import { SETTING_DEFAULTS, ensureSettingsLoaded, getSetting, setSetting } from '@/utils/settings';
-import { resolveActiveBucket, subscribeUserBucket } from '@/utils/user-bucket';
+import { getCurrentBucket, refreshUserBucket, resolveActiveBucket, subscribeUserBucket } from '@/utils/user-bucket';
 
 /** Onderdelen die de server afwees; tot de volgende start niet opnieuw proberen. */
 const rejectedDomains = new Set<SyncDomain>();
@@ -298,6 +298,15 @@ async function runOnce(force: boolean): Promise<SyncResult> {
     return 'skipped';
   }
   const bucket = await resolveActiveBucket();
+  /* 29 okt 2026 (operator: "Your Journey en favorieten leeg na inloggen, gewiste activiteit kwam terug"): de back-up las de emmer al uit
+     het nieuwe inlogtoken terwijl de opslag van de app nog op de vorige emmer (gast) stond. Wat de back-up dan terugzette, ging naar de
+     gast-emmer; daarna schakelde de app over naar de account-emmer (leeg) en stuurde die lege lijst naar de server. Nu: zolang de app
+     zelf nog niet op dezelfde emmer staat, wacht de back-up — de wissel roept hem daarna vanzelf opnieuw op (subscribeUserBucket). */
+  if (getCurrentBucket() !== bucket) {
+    qaLog({ result: 'skipped', why: 'bucket-switching', app: getCurrentBucket().slice(0, 6), token: bucket.slice(0, 6) });
+    void refreshUserBucket();
+    return 'skipped';
+  }
   if (!bucket.startsWith('u-')) {
     qaLog({ result: 'skipped', why: 'not-a-real-user', bucket: bucket.slice(0, 6) });
     return 'skipped'; // gast of testbuild-override: blijft lokaal
@@ -373,7 +382,14 @@ async function runOnce(force: boolean): Promise<SyncResult> {
   }
   user.checkedAt = Date.now();
   await saveMeta(meta);
-  qaLog({ result: 'ok', rows: rows.length, actions });
+  /* Testbuild: hoeveel er na deze ronde lokaal staat, zodat een toesteltest kan zien of terugzetten echt aankomt (29 okt 2026). */
+  if (QA_ENABLED) {
+    const n = (v: unknown, k: string) => (isObj(v) && Array.isArray((v as Record<string, unknown>)[k]) ? ((v as Record<string, unknown>)[k] as unknown[]).length : -1);
+    const [bh, st, au] = await Promise.all([HANDLERS.breath_history.read(), HANDLERS.state_history.read(), HANDLERS.audio.read()]);
+    qaLog({ result: 'ok', rows: rows.length, actions, bucket: bucket.slice(0, 6), counts: { breath: n(bh, 'entries'), state: n(st, 'sessions'), favs: n(au, 'favorites'), listens: n(au, 'history') } });
+  } else {
+    qaLog({ result: 'ok', rows: rows.length, actions });
+  }
   return 'ok';
 }
 

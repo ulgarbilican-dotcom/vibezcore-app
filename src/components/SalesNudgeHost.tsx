@@ -79,6 +79,8 @@ const DAY_PASS_FALLBACK_PRICE = '€1.29';
 
 /** Schermen waar nooit een saleskaart mag verschijnen. */
 const BLOCKED_PATHS = [
+  /* 29 okt 2026 (operator: "de Day Pass-kaart komt te snel, zelfs bij de intro"): de intro telt niet als rondkijken en toont nooit een kaart. */
+  '/intro',
   '/welcome',
   '/breath-welcome',
   '/state-onboarding',

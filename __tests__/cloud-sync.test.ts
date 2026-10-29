@@ -34,7 +34,8 @@ jest.mock('@/services/auth', () => ({
 jest.mock('@/utils/user-bucket', () => ({
   resolveActiveBucket: async () => (globalThis as any).__bucket,
   ensureBucketLoaded: async () => (globalThis as any).__bucket,
-  getCurrentBucket: () => (globalThis as any).__bucket,
+  getCurrentBucket: () => (globalThis as any).__appBucket ?? (globalThis as any).__bucket,
+  refreshUserBucket: async () => {},
   subscribeUserBucket: () => () => {},
 }));
 
@@ -196,6 +197,24 @@ describe('Backup & Sync', () => {
     const calls = server.calls;
     expect(await a.sync.syncNow(false)).toBe('skipped');
     expect(server.calls).toBe(calls);
+  });
+
+  it('waits while the app is still on another bucket (just signed in): nothing applied, nothing sent', async () => {
+    const a = newDevice('u-abc');
+    await a.history.addBreathSession(session(1000));
+    await a.sync.syncNow(true);
+    const calls = server.calls;
+    const b = newDevice('u-abc');
+    (globalThis as any).__appBucket = 'anon'; // token says u-abc, the app's own storage is still on the guest bucket
+    try {
+      expect(await b.sync.syncNow(true)).toBe('skipped');
+      expect(server.calls).toBe(calls);
+      expect((await b.history.getBreathSyncSnapshot()).entries).toHaveLength(0);
+    } finally {
+      delete (globalThis as any).__appBucket;
+    }
+    expect(await b.sync.syncNow(true)).toBe('ok');
+    expect((await b.history.getBreathSyncSnapshot()).entries.map((e) => e.ts)).toEqual([1000]);
   });
 
   it('a local change goes out on the next quiet poll (no forced sync needed)', async () => {
