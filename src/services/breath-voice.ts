@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 /* ───────────────────────────────────────────────────────────────────────────
    VIBEZCORE — Breath voice cues
 
@@ -483,8 +484,30 @@ export function playEnjoySessionCue(): void {
  *
  *  Stilte is de veilige stand, en er is geen uitzondering — zie
  *  playBreathCue hierboven. */
-export function playCompletionCue(key: BreathKey): void {
-  if (!voiceEnabled) return;
+/* 29 okt 2026 (operator: "Ujjayi en Buddha moeten standaard praten; wie niet wil zet de stem af"): Private mode is een EIGEN keuze,
+   los van de stem-begeleiding van de sessie. Aan = geen afsluitende woorden (Buddha-blad), op elk toestel bewaard tot de gebruiker
+   ze zelf wijzigt. Vervangt voor de afsluiting de regel van 3 aug 2026 ("volgt dezelfde schakelaar als de fasecues"). */
+const PRIVATE_MODE_KEY = 'vz_private_mode_v1';
+let privateMode = false;
+AsyncStorage.getItem(PRIVATE_MODE_KEY)
+  .then((v) => {
+    privateMode = v === '1';
+  })
+  .catch(() => {});
+export function isPrivateMode(): boolean {
+  return privateMode;
+}
+export function setPrivateMode(on: boolean): void {
+  privateMode = on;
+  AsyncStorage.setItem(PRIVATE_MODE_KEY, on ? '1' : '0').catch(() => {});
+  if (on) stopVoice();
+}
+
+/** `always`: de afsluiting van een ademsessie speelt standaard, ook als de stem-begeleiding tijdens de sessie uit stond — enkel
+ *  Private mode houdt haar stil. Zonder `always` (State Control/bracelet) blijft de oude poort op de stem-instelling gelden. */
+export function playCompletionCue(key: BreathKey, always = false): void {
+  if (privateMode) return;
+  if (!voiceEnabled && !always) return;
   if (libraryBlocksVoice()) return;
   const url = COMPLETION_URLS[key];
   if (!url) return;

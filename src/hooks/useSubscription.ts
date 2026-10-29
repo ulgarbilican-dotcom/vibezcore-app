@@ -24,6 +24,7 @@ import { GUEST_PURCHASE_RC_ID_KEY, getToken } from '@/services/auth';
 import { apiCall } from '@/utils/api';
 import { useDevUserOverride } from '@/utils/dev-user-override';
 import { subscriptionTierFromEntitlement } from '@/services/iap-contract';
+import { syncAccessNotifications } from '@/services/access-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
@@ -67,6 +68,9 @@ export type SubscriptionStatus = {
    *  1 okt 2026: "27" hier was het al op 1 sept gecorrigeerde foute
    *  getal (10 public + 17 account), dit commentaar had de fix gemist. */
   isTrialing?: boolean;
+  /** 29 okt 2026: ISO-moment waarop de store een betaalprobleem meldde (RevenueCat `billingIssueDetectedAt`) — voor de
+   *  melding "Update your payment to keep Premium" (services/access-notifications.ts). */
+  billingIssueAt?: string;
   /** Iter 9dq v150 (operator 2026-06-17): Gumroad-veld verwijderd. App is
    *  IAP-only (App Store / Play Store). Geen Gumroad-subscriptions meer
    *  in productie — operator-besluit "GUMROAD NIET MEER VOOR DE APP".
@@ -135,6 +139,8 @@ function scheduleDayPassEnd(status: SubscriptionStatus | null): void {
 function notifyAll(status: SubscriptionStatus | null): void {
   cachedStatus = status;
   scheduleDayPassEnd(status);
+  /* 29 okt 2026: meldingen rond het einde van de toegang volgen elke nieuwe status (dagpas, opgezegd, betaalprobleem). */
+  syncAccessNotifications(status);
   setTimeout(() => {
     subscribers.forEach((cb) => cb(status));
   }, 0);
@@ -284,6 +290,7 @@ async function tryRevenueCatStatus(
          kent dit onderscheid niet, dus GEEN fallback op backendStatus
          hier). */
       isTrialing: audioPro.periodType === 'TRIAL',
+      billingIssueAt: typeof audioPro.billingIssueDetectedAt === 'string' ? audioPro.billingIssueDetectedAt : undefined,
     };
   } catch {
     return null; /* SDK niet geladen / native module mist — fall back */

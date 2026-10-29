@@ -113,6 +113,8 @@ import {
   claimVoiceSource,
   playBreathCue,
   playCompletionCue,
+  isPrivateMode,
+  setPrivateMode,
   preloadCompletionCue,
   playUjjayiStartCue,
   preloadBreathCues,
@@ -1132,8 +1134,7 @@ export function BreathSession() {
   const [voiceGenderSetting, setVoiceGenderSetting] = useSetting('voiceGender');
   const pref = prefs[st.key] ?? {};
   const voiceDefault = pref.voice ?? voiceGlobal;
-  const voiceDefaultRef = useRef(voiceDefault);
-  voiceDefaultRef.current = voiceDefault;
+  const [privateOn, setPrivateOn] = useState(isPrivateMode());
   const hapticDefault = pref.haptics ?? hapticGlobal;
   const voiceGenderDefault = pref.voiceGender ?? voiceGenderSetting;
   /* Mens-leesbare naam voor de "Just for …"-knop in het onthoud-scherm
@@ -2509,8 +2510,8 @@ export function BreathSession() {
            popup verschijnt (auto-play), niet pas als "Got it" ingedrukt
            wordt. */
         /* Standaard aan — behalve als de gebruiker de stem zelf bewust uitzette (bv. om in gezelschap stil te ademen). */
-        const pref = ujjayiSoundPrefRef.current;
-        const speak = pref ? pref === 'on' : !getSetting('voiceCuesChosen') || voiceDefaultRef.current;
+        /* 29 okt 2026 (operator): standaard praten; enkel de eigen knop "Sound off" in deze popup houdt de uitleg stil. */
+        const speak = ujjayiSoundPrefRef.current !== 'off';
         setUjjayiSound(speak);
         if (speak) playUjjayiStartCue(true);
         return;
@@ -2804,9 +2805,9 @@ export function BreathSession() {
      over een scherm dat er niet meer is. */
   useEffect(() => {
     if (!done) return;
-    if (!voiceRef.current) return;
+    /* 29 okt 2026 (operator): standaard praten, ook als de stem tijdens de sessie uit stond; enkel Private mode houdt haar stil. */
     try {
-      playCompletionCue(st.key as BreathKey);
+      playCompletionCue(st.key as BreathKey, true);
     } catch {
       /* een haperende afsluiting mag de sessie niet alsnog laten stuklopen */
     }
@@ -4577,9 +4578,8 @@ export function BreathSession() {
               You completed {rounds} rounds of {tech.name}.
               {'\n'}Carry the breath with you.
             </Text>
-            {/* 29 okt 2026 (operator: "stem voor altijd aan/uit — mensen willen soms stil ademen waar anderen bij zijn"; naam van de operator:
-                "Private mode"): aan = geen enkele gesproken stem (uitleg vooraf, begeleiding, woorden op het einde), voor ALLE sessies en
-                toestanden. Zelfde onderliggende instelling als de stem in Audio & Haptics (voiceCues), omgekeerd weergegeven. */}
+            {/* 29 okt 2026 (operator): "Private mode" — aan = de afsluitende woorden na een sessie zwijgen, tot de gebruiker het weer
+                uitzet (breath-voice.ts setPrivateMode, bewaard op het toestel). Los van de stem-begeleiding tijdens de sessie. */}
             <View style={s.doneVoiceRow}>
               <View style={s.doneVoiceIcon}>
                 <VibezGlass radius={18} level="raised" style={StyleSheet.absoluteFill} />
@@ -4589,23 +4589,15 @@ export function BreathSession() {
                 <Text style={s.doneVoiceLabel}>Private mode</Text>
               </View>
               <Switch
-                value={!voiceDefault}
+                value={privateOn}
                 onValueChange={(on) => {
-                  const v = !on; // Private mode aan = geen stem
-                  setVoiceGlobal(v);
-                  void setSetting('voiceCuesChosen', true);
-                  /* Voor altijd: ook de keuzes per toestand vrijgeven, anders wint daar een oudere per-toestand-stand. */
-                  const next: typeof prefs = {};
-                  for (const [k, p] of Object.entries(prefs)) {
-                    const { voice: _v, ...rest } = p;
-                    next[k] = rest;
-                  }
-                  setPrefs(next);
+                  setPrivateOn(on);
+                  setPrivateMode(on); // aan = de afsluitende woorden zwijgen (ook meteen), tot de gebruiker het weer uitzet
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
                 ios_backgroundColor="#3a3a3a"
-                accessibilityLabel="Private mode, no spoken voice in any session"
+                accessibilityLabel="Private mode, no closing words after a session"
               />
             </View>
 
