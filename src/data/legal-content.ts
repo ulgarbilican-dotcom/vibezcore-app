@@ -243,7 +243,7 @@ export const TERMS: LegalDoc = {
       items: [
         `The Day Pass is a one-time purchase charged to your ${STORE_ACCOUNT} when you confirm it. It is not a subscription and does not renew`,
         'It gives access to all VIBEZCORE Premium content in the app for 24 hours from the moment of purchase. Access ends automatically after that',
-        'Audio is streamed during the Day Pass; downloading Premium audio is not included',
+        'Audio is streamed during the Day Pass (an internet connection is needed)',
         'You can buy a new Day Pass at any time, or switch to a subscription',
       ],
     },
@@ -388,9 +388,8 @@ export const PRIVACY: LegalDoc = {
       items: [
         'Name',
         'Email address',
-        'Phone number',
         'Login credentials',
-        'Billing information',
+        'Store purchase receipts',
         'Form submissions',
       ],
     },
@@ -416,7 +415,7 @@ export const PRIVACY: LegalDoc = {
     { kind: 'h3', text: 'Mobile App Data' },
     {
       kind: 'p',
-      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts, anonymous play counts (which audio session was played, linked to a random identifier — not to you or your account), (if you allow it) crash reports and — only when you are signed in — the Backup & Sync data described below are transmitted to our servers or processors.',
+      text: 'When you use the VIBEZCORE mobile app, we process the following — most of it stays locally on your device. Only authentication tokens, purchase receipts, anonymous play counts (which audio session was played, linked to a random identifier — not to you or your account), crash reports (on by default; you can switch them off in Settings) and — only when you are signed in — the Backup & Sync data described below are transmitted to our servers or processors.',
     },
     {
       kind: 'tags',
@@ -488,7 +487,6 @@ export const PRIVACY: LegalDoc = {
         `Verifying subscription entitlements with ${STORE}`,
         'Responding to inquiries and support requests',
         'Communicating updates and service-related messages',
-        'Sending newsletters when you have opted in',
         'Monitoring platform performance and usage patterns',
         'Preventing fraud, abuse, or security threats',
         'Complying with legal and regulatory obligations',
@@ -548,11 +546,11 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'cards',
       items: [
-        { title: 'Bluetooth',      text: 'Only used to connect a Smart Bead Bracelet (launching Early 2027). Not used for tracking or location.' },
+        { title: 'Bluetooth',      text: 'Not requested today. It will only be used to connect a Smart Bead Bracelet once it launches (Early 2027). Never used for tracking or location.' },
         { title: 'Audio playback', text: 'Required for background audio session playback when your screen is off.' },
-        { title: 'Notifications',  text: 'Optional — used only if you opt in to session reminders or completion alerts.' },
+        { title: 'Notifications',  text: 'Optional — used only if you allow notifications: the session reminders you set, and notices about your access (your Day Pass ending in 1 hour, a cancelled Premium ending in 2 days, or a payment problem).' },
         { title: 'Vibration',      text: 'Used for haptic guidance during Breathwork and State Control sessions on your phone.' },
-        { title: 'Smartwatch',     text: `Optional — if you pair ${IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing to it so it can guide you on your wrist. No health data is read from the watch.` },
+        { title: 'Smartwatch',     text: `Optional — if you pair ${IOS ? 'an Apple Watch' : 'a Wear OS watch'}, the app sends session timing and your access status (which sessions you can use) to it so it can guide you on your wrist. No health data is read from the watch.` },
         { title: 'Camera & flash', text: 'Optional — only when you choose to read your pulse from your fingertip in State Control. Frames are analysed live on your device and never recorded, saved or uploaded. You can always enter your resting heart rate yourself instead.' },
         { title: 'Network',        text: 'Required for login, content streaming, and subscription verification.' },
       ],
@@ -753,7 +751,7 @@ export const ACCESSIBILITY: LegalDoc = {
         'Reduced unnecessary motion and animations',
         'Compatibility with keyboard navigation',
         'Support for common screen reader technologies',
-        'Efforts to ensure audio, video, and downloadable files are accessible',
+        'Efforts to ensure audio and video content is accessible',
       ],
     },
     {
@@ -829,6 +827,10 @@ export const SHIPPING: LegalDoc = {
     {
       kind: 'p',
       text: 'The Smart Bead Bracelet launches on Kickstarter in Early 2027. Backer rewards follow the Kickstarter terms; this policy applies to orders placed with VIBEZCORE directly. This Shipping Policy applies to all physical product orders placed through the VIBEZCORE website. VIBEZCORE ships worldwide, subject to carrier availability and local regulations.',
+    },
+    {
+      kind: 'highlight',
+      text: '**No physical products are on sale yet.** This policy will apply once VIBEZCORE opens orders for the Smart Bead Bracelet.',
     },
 
     /* ── 01. Order Processing ── */
@@ -1006,7 +1008,7 @@ export const REFUND: LegalDoc = {
     {
       kind: 'ul',
       items: [
-        '**Physical Products** — such as the VIBEZCORE Smart Bead Bracelet',
+        '**Physical Products** — such as the VIBEZCORE Smart Bead Bracelet (not on sale yet — launching Early 2027; the sections on physical products apply once orders open)',
         '**Digital Content or Services** — such as VIBEZCORE Premium — a monthly or yearly subscription or a Day Pass (Breathwork, State Control and the Audio Library), Digital Materials, or memberships',
       ],
     },
@@ -1086,11 +1088,11 @@ export const REFUND: LegalDoc = {
     { kind: 'h2', text: 'Digital Products and Services' },
     {
       kind: 'p',
-      text: `Digital products and services — including VIBEZCORE Premium (Breathwork, State Control and the Audio Library) as a subscription or Day Pass, Digital Materials, Membership Access, and Streaming or Downloadable Content — are **generally non-refundable once access has been granted**. Subscriptions and Day Passes purchased through ${STORE} follow the refund rules of that store.`,
+      text: `Digital products and services — including VIBEZCORE Premium (Breathwork, State Control and the Audio Library) as a subscription or Day Pass, Digital Materials, Membership Access, and Streaming Content — are **generally non-refundable once access has been granted**. Subscriptions and Day Passes purchased through ${STORE} follow the refund rules of that store.`,
     },
     {
       kind: 'p',
-      text: 'Due to the nature of digital content, returns cannot be accepted once the content has been accessed, streamed, or downloaded.',
+      text: 'Due to the nature of digital content, returns cannot be accepted once the content has been accessed or streamed.',
     },
 
     /* ── 06. Right of Withdrawal — Digital Content ── */
@@ -1122,7 +1124,6 @@ export const REFUND: LegalDoc = {
       style: 'check',
       items: [
         'Digital content once accessed',
-        'Downloadable products once downloaded',
         'Membership services once activated',
         'Products returned in used or damaged condition (unless defective upon receipt)',
       ],
@@ -1200,12 +1201,12 @@ export const COOKIES: LegalDoc = {
     },
     {
       kind: 'p',
-      text: 'All of the above are stored locally on your device and are not synced to our servers — signing in does not change this.',
+      text: 'All of the above are stored locally on your device. Only when you are signed in are your listening progress, play history and favourites also backed up to your account, as described under Backup & Sync below.',
     },
     { kind: 'h3', text: 'Third-party — payments and crash reports' },
     {
       kind: 'p',
-      text: (IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app purchases (subscriptions and the Day Pass). RevenueCat verifies the receipts, and Sentry receives technical crash reports if you allow it. Each follows its own privacy policy.",
+      text: (IOS ? "**Apple App Store** handles" : "**Google Play** handles") + " all in-app purchases (subscriptions and the Day Pass). RevenueCat verifies the receipts, and Sentry receives technical crash reports (on by default; you can switch them off in Settings). Each follows its own privacy policy.",
     },
     {
       kind: 'highlight',
@@ -1329,7 +1330,7 @@ export const HEALTH: LegalDoc = {
       text: 'VIBEZCORE content and tools are not a substitute for professional care of any kind.',
     },
 
-    { kind: 'h2', text: '1. Important Disclaimer' },
+    { kind: 'h2', text: 'Important Disclaimer' },
     {
       kind: 'p',
       text: '**VIBEZCORE is a personal development tool, not medical care.** Breathwork, State Control, the Audio Library and the Smart Bead Bracelet are designed to support self-reflection, focus, and resilience — they are **not** therapy, counselling, diagnosis, or treatment for any mental or physical health condition. The bracelet delivers haptic stimulation through the wrist; it is not a medical device.',
@@ -1338,7 +1339,7 @@ export const HEALTH: LegalDoc = {
       kind: 'p',
       text: 'If you are experiencing significant emotional distress, mental illness, trauma, or any medical condition, please consult a licensed professional. Our service is intended to complement, not replace, professional care.',
     },
-    { kind: 'h2', text: '2. Safe Use' },
+    { kind: 'h2', text: 'Safe Use' },
     {
       kind: 'p',
       text: 'VIBEZCORE is designed for everyday life — at home, at work, during walks, on the commute. The point is to fit personal development into your real routine, not to remove you from it. **Listening and active breathing are two different things**: audio you can take almost anywhere; a guided breathwork session asks for your attention and changes your breathing pace — do it seated or lying down, in a place where you can close your eyes.',
@@ -1362,7 +1363,7 @@ export const HEALTH: LegalDoc = {
         '**Your resting heart rate in State Control is not a medical measurement.** It only sets the starting pace of your rhythm. VIBEZCORE does not diagnose, monitor or treat any heart condition',
       ],
     },
-    { kind: 'h2', text: '3. Possible Reactions' },
+    { kind: 'h2', text: 'Possible Reactions' },
     {
       kind: 'p',
       text: 'Some sessions involve self-reflection on emotions, identity, past experiences, or fears. This can occasionally bring up strong feelings — that is a normal part of inner work, but it can be challenging.',
@@ -1377,7 +1378,7 @@ export const HEALTH: LegalDoc = {
         'If feelings persist or intensify, reach out to a mental health professional',
       ],
     },
-    { kind: 'h2', text: '4. Use Caution If…' },
+    { kind: 'h2', text: 'Use Caution If…' },
     {
       kind: 'p',
       text: 'Please use caution or consult a professional before using VIBEZCORE breathwork or audio sessions if you:',
@@ -1403,7 +1404,7 @@ export const HEALTH: LegalDoc = {
       kind: 'highlight',
       text: 'Any reference to researchers, thought leaders, or public figures within our sessions is for informational purposes only. These individuals are not affiliated with, endorsed by, or partnered with VIBEZCORE in any way.',
     },
-    { kind: 'h2', text: '5. Smart Bead Bracelet — Safety Notice' },
+    { kind: 'h2', text: 'Smart Bead Bracelet — Safety Notice' },
     {
       kind: 'p',
       text: 'The VIBEZCORE Smart Bead Bracelet delivers gentle haptic stimulation (subtle vibration) to the wrist. It is a personal wellness accessory, **not a medical device** and not intended to diagnose, treat, cure, or prevent any condition. Please read the safety notices below before first use.',
@@ -1450,7 +1451,7 @@ export const HEALTH: LegalDoc = {
     {
       kind: 'danger',
       title: '6.3 Children & Choking Hazard',
-      text: 'The Smart Bead Bracelet contains **small beads** that present a serious **choking hazard** for children under 3 years of age. **Keep the bracelet out of reach of infants and young children at all times.** The product is designed and tested for adults only and is not a toy. Do not allow children to handle, wear, or play with the bracelet, charging dock, or any component. If a bead becomes detached or the bracelet is damaged, stop using it and contact support — **never** allow loose beads or small parts near children. If a child swallows a bead, contact poison control or emergency services immediately.',
+      text: 'The Smart Bead Bracelet contains **small beads** that present a serious **choking hazard** for children under 3 years of age. **Keep the bracelet out of reach of infants and young children at all times.** The product is designed for adults and is not a toy. Do not allow children to handle, wear, or play with the bracelet, charging dock, or any component. If a bead becomes detached or the bracelet is damaged, stop using it and contact support — **never** allow loose beads or small parts near children. If a child swallows a bead, contact poison control or emergency services immediately.',
     },
     { kind: 'h3', text: '6.4 Skin & Allergies' },
     {
@@ -1500,12 +1501,12 @@ export const HEALTH: LegalDoc = {
       kind: 'p',
       text: 'Use the bracelet only as described in the app and product documentation. **Do not use the bracelet to treat or manage any medical, psychological, or sleep condition without professional guidance.** Stop a session at any time if it feels uncomfortable.',
     },
-    { kind: 'h2', text: '6. Children & Teenagers' },
+    { kind: 'h2', text: 'Children & Teenagers' },
     {
       kind: 'p',
       text: 'The VIBEZCORE app can be used from **age 13**; users under 18 should use it with the permission and guidance of a parent or guardian. Breathwork and State Control are gentle and suitable for teenagers, for example to calm down when stressed. Some audio content discusses topics such as identity, betrayal, discipline, and resilience that may not be appropriate for younger audiences. The bracelet is not designed or sized for children\'s wrists and contains small parts that pose a choking hazard (see section 6.3). Parents and guardians are responsible for deciding what is suitable for minors in their care.',
     },
-    { kind: 'h2', text: '7. Professional Help' },
+    { kind: 'h2', text: 'Professional Help' },
     {
       kind: 'p',
       text: 'Neither audio sessions nor the bracelet replace therapy. If you would benefit from speaking to someone, please consider:',
@@ -1522,7 +1523,7 @@ export const HEALTH: LegalDoc = {
     /* Personal Responsibility — toegevoegd van website 2026-05-30.
        Sterkere liability-disclaimer dan onze bestaande "Results Vary".
        Hoort vóór Results Vary zodat ze samen flowen. */
-    { kind: 'h2', text: '8. Personal Responsibility' },
+    { kind: 'h2', text: 'Personal Responsibility' },
     {
       kind: 'p',
       text: 'By accessing VIBEZCORE content or using our products, you acknowledge that you do so at your own discretion and risk. VIBEZCORE accepts no liability for any physical, psychological, or financial outcomes resulting from the use or misuse of our platform, content, or products.',
@@ -1531,12 +1532,12 @@ export const HEALTH: LegalDoc = {
       kind: 'p',
       text: 'Results vary per individual and are not guaranteed.',
     },
-    { kind: 'h2', text: '9. Results Vary' },
+    { kind: 'h2', text: 'Results Vary' },
     {
       kind: 'p',
       text: 'Personal development is highly individual. The benefits of the service depend on consistent practice, your circumstances, and many factors outside our control. We make no promises about specific outcomes.',
     },
-    { kind: 'h2', text: '10. Reporting Concerns' },
+    { kind: 'h2', text: 'Reporting Concerns' },
     {
       kind: 'p',
       text: 'If a session feels harmful, misleading, or inappropriate, please let us know through the support form. Your feedback helps us keep the library safe and high-quality.',
