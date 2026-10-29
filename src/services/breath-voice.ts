@@ -633,6 +633,10 @@ export function preloadBreathCues(which: 'active' | 'both' = 'active'): void {
            meer: gewoon stil laten doorspelen (volume 0) tot de echte
            sessie 'm nodig heeft — `playUrl()` doet dan zelf `seekTo(0)` +
            `play()`, tegen die tijd allang volledig gebufferd. */
+        /* 29 okt 2026 (operator: "Ujjayi praat niet vanzelf" — 3e melding; op de A16 gemeten: de opname speelde wél, maar met
+           volume 0). Deze preload loopt in kleine stappen ná het openen; tegen de tijd dat hij bij de Ujjayi-zin kwam, speelde die
+           al echt — en hier werd hij terug op volume 0 gezet. Een opname die al gevraagd is (de actieve speler) nooit meer stilzetten. */
+        if (player === activePlayer) return;
         player.volume = 0;
         player.play();
       } catch {
