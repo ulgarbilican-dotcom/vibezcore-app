@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserve Your Spot — VIBEZCORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="https://static.wixstatic.com/media/63ceef_5a250d10d4394e87b32c7826e1bd8fd6~mv2.jpg">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#fff;color:#1D1D1F;font-family:Inter,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow:hidden !important;scrollbar-width:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+.hero{padding:120px 0 96px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 56px}
+.eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:12px;font-weight:700;letter-spacing:1.5px;line-height:1.33;text-transform:uppercase}
+.eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:#1D1D1F;animation:live 2.4s ease-in-out infinite}
+@keyframes live{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+h1{font-size:88px;font-weight:700;line-height:1.03;letter-spacing:-.025em;text-wrap:balance}
+h1 span{display:block;white-space:nowrap}
+.sub{margin-top:24px;font-size:28px;font-weight:500;line-height:1.3;letter-spacing:-.01em;color:#6E6E73}
+.img{margin-top:72px;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#F5F5F7}
+.img img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 30%}
+.rv{opacity:0;transform:translateY(30px);transition:opacity 1.2s cubic-bezier(.25,1,.5,1),transform 1.2s cubic-bezier(.25,1,.5,1)}
+.rv.on{opacity:1;transform:none}
+@media(max-width:1023px) and (min-width:769px){.hero{padding:96px 0 80px}.wrap{padding:0 40px}h1{font-size:68px}.sub{font-size:24px}.img{margin-top:56px}}
+@media(max-width:768px){.hero{padding:64px 0 56px}.wrap{padding:0 24px}.eyebrow{font-size:11px}
+h1{font-size:min(40px,calc((100vw - 48px) / 7.6));line-height:1.1;letter-spacing:-.4px}
+.sub{margin-top:16px;font-size:17px;font-weight:400;line-height:1.45;letter-spacing:0}
+.img{margin-top:32px;aspect-ratio:4/5;border-radius:14px}.img img{object-position:40% 30%}}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.eyebrow::before{animation:none}}
+</style>
+</head>
+<body>
+<section class="hero"><div class="wrap">
+  <span class="eyebrow rv">Kickstarter &middot; Early 2027</span>
+  <h1 class="rv"><span>Stay in control.</span> <span>Start here.</span></h1>
+  <p class="sub rv">Reserve your spot and relax.</p>
+  <div class="img rv"><img src="https://static.wixstatic.com/media/63ceef_5a250d10d4394e87b32c7826e1bd8fd6~mv2.jpg" alt="Man relaxing with eyes closed on a sofa" loading="eager"></div>
+</div></section>
+<script>
+document.querySelectorAll('.rv').forEach(function(el,i){setTimeout(function(){el.classList.add('on')},80+i*120)});
+</script>
+</body>
+</html>
