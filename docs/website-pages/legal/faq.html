@@ -637,12 +637,7 @@
   window.toggle = toggle; window.filterCat = filterCat; window.filterFAQ = filterFAQ;
 }());
 
-  document.querySelectorAll('a[href^="https://www.vibezcore.com"]').forEach(function (a) {
-    a.addEventListener('click', function (e) {
-      e.preventDefault();
-      window.parent.postMessage({ type: 'navigate', url: a.getAttribute('href') }, '*');
-    });
-  });
+
 </script>
 
 </body>

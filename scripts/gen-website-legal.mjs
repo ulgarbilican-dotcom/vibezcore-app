@@ -268,13 +268,10 @@ const CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; paddi
   }
   @media (min-width: 769px) { .mobile-toggle { display: none; } }`;
 
-/* Links naar andere pagina's van vibezcore.com laten Wix navigeren (uit audio-sessions.html van de operator). */
-const WIX_NAV = `  document.querySelectorAll('a[href^="https://www.vibezcore.com"]').forEach(function (a) {
-    a.addEventListener('click', function (e) {
-      e.preventDefault();
-      window.parent.postMessage({ type: 'navigate', url: a.getAttribute('href') }, '*');
-    });
-  });`;
+/* Links naar andere pagina's van vibezcore.com: gewone links met target="_top". Op de live site heeft het Wix-HTML-blok geen
+   sandbox, dus die navigeren gewoon (getest 29 okt op /delete-account). Het vroegere postMessage({type:'navigate'}) werkte NIET:
+   er is geen Velo-code die het opvangt, waardoor de knoppen niets deden. In de editor/Preview blokkeert Wix alle links naar boven. */
+const WIX_NAV = ``;
 
 const SCRIPT = `  const btns = document.querySelectorAll('.sidebar-link');
   const sections = document.querySelectorAll('.section[id^="s"]:not(#s0)');
