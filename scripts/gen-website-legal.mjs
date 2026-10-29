@@ -122,6 +122,10 @@ ${s.blocks.map(block).join('\n')}${last ? `\n${CONTACT_BTN}` : ''}
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(doc.title)} — VIBEZCORE</title>
 <!-- Gemaakt uit de app (src/data/legal-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<!-- 29 okt 2026: overal hetzelfde lettertype (Inter, het merklettertype), zodat de pagina op elke gsm en in de Wix-editor exact even hoog is — het Wix-blok heeft een vaste hoogte. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet">
 <style>
 ${CSS}
 </style>
@@ -179,8 +183,8 @@ const CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; paddi
     --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b;
     --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px;
   }
-  html { scroll-behavior: smooth; }
-  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
   nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 52px; }
   .nav-tag { font-size: 12px; color: var(--gray-400); letter-spacing: 0.02em; }
   .hero { text-align: center; padding: 100px 24px 72px; max-width: 800px; margin: 0 auto; }
@@ -191,7 +195,7 @@ const CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; paddi
   .sidebar { position: sticky; top: 72px; }
   .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px; padding-left: 12px; }
   .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
-  .sidebar-link { display: block; width: 100%; padding: 8px 12px; font-size: 13px; color: var(--gray-600); text-decoration: none; border-radius: 6px; transition: background 0.15s, color 0.15s; line-height: 1.4; background: none; border: none; cursor: pointer; text-align: left; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .sidebar-link { display: block; width: 100%; padding: 8px 12px; font-size: 13px; color: var(--gray-600); text-decoration: none; border-radius: 6px; transition: background 0.15s, color 0.15s; line-height: 1.4; background: none; border: none; cursor: pointer; text-align: left; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; }
   .sidebar-link:hover { background: var(--gray-100); color: var(--black); }
   .sidebar-link.active { background: var(--gray-100); color: var(--black); font-weight: 500; }
   .content { min-width: 0; }
@@ -224,7 +228,7 @@ const CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; paddi
   .danger { background: #fff2f2; border-left: 3px solid #d70015; }
   .highlight h4, .danger h4 { font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 6px; }
   .highlight p, .danger p { font-size: 14px; color: #1d1d1f; margin: 0; }
-  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none !important; margin-top: 28px; transition: background 0.15s, transform 0.15s; white-space: nowrap; max-width: 100%; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none !important; margin-top: 28px; transition: background 0.15s, transform 0.15s; white-space: nowrap; max-width: 100%; }
   .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
   .contact-btn svg { color: #ffffff; flex-shrink: 0; }
   @media (max-width: 768px) {
@@ -235,7 +239,7 @@ const CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; paddi
     .sidebar-label { display: none; }
     .sidebar-nav { display: none; background: var(--gray-100); border-radius: var(--radius); padding: 8px; margin-top: 0; }
     .sidebar-nav.open { display: flex; }
-    .mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--gray-100); border: none; border-radius: var(--radius); padding: 12px 16px; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: var(--black); cursor: pointer; margin-bottom: 4px; }
+    .mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--gray-100); border: none; border-radius: var(--radius); padding: 12px 16px; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 500; color: var(--black); cursor: pointer; margin-bottom: 4px; }
     .mobile-toggle-icon { width: 16px; height: 16px; transition: transform 0.2s; color: var(--gray-400); }
     .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
     .section:last-of-type { border-bottom: none; padding-bottom: 0; }
@@ -353,6 +357,10 @@ ${items}
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FAQ — VIBEZCORE</title>
 <!-- Gemaakt uit de app (src/data/faq-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<!-- 29 okt 2026: overal hetzelfde lettertype (Inter, het merklettertype), zodat de pagina op elke gsm en in de Wix-editor exact even hoog is — het Wix-blok heeft een vaste hoogte. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet">
 <style>
 ${FAQ_CSS}
 </style>
@@ -439,8 +447,8 @@ ${WIX_NAV}
 const FAQ_CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
   :root { --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b; --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px; }
   html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
-  html { scroll-behavior: smooth; }
-  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
   .hero { text-align: center; padding: 72px 24px 56px; max-width: 800px; margin: 0 auto; }
   .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
   .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
