@@ -60,3 +60,26 @@ wetenschaps-/medische claims" (CLAUDE.md) en op de App Store-/Play-richtlijnen a
 - Wix zet achter elke titel automatisch " | Vibezcore" (kleine letters) waar je zelf geen titel invulde → altijd een eigen titel invullen
   met "VIBEZCORE" in hoofdletters.
 - Site-naam in Wix (Settings → Website settings → Site name) op **VIBEZCORE** zetten, dan wordt ook de automatische toevoeging juist.
+
+## E. Uitgevoerd in Wix (29 okt, opgeslagen, NIET gepubliceerd)
+
+- SEO basics (title, description, index) ingevuld/ingekort voor alle pagina's in het menu en de footer; index UIT op Subscribe Bracelet/Bundle,
+  Community, Audio sessions, Consumer Health, Accessibility, Shipping, Refund, Cookie. Index AAN o.a. Privacy, Terms, Delete Account, FAQ, Support.
+- Dashboard (meteen live): noindex op winkelcategorieën, prijsplannen, ledenprofielen en auteursprofielen; Site name = VIBEZCORE;
+  doorverwijzing /smartwatches → /state-control (werkt na publiceren).
+- Logo in de header: alt-tekst "VIBEZCORE logo" (Wix-checklist "alt text" stond daardoor op elke pagina rood).
+- Inhoud vervangen (desktop + gsm-hoogtes gemeten): FAQ, Support, Delete Account, Subscribe Bracelet, Subscribe Bundle
+  (scripts/gen-website-subscribe.mjs; prijzen en pakketinhoud = /shop; bundel = bracelet + VIBEZCORE Premium 1 jaar + extra kralenset).
+- Privacy gsm: sectie 10727 (blok 10600) → ±2,5 cm ruimte onder de knop.
+
+## F. Blogberichten — door de operator in te vullen (Wix vraagt "Publish" per bericht)
+
+SEO & GEO → SEO Settings → Blog posts → potlood bij Title tag / Meta description → Publish.
+
+| Bericht | Title tag | Meta description |
+|---|---|---|
+| what-is-bottom-up-regulation | What Is Bottom-Up Regulation? \| VIBEZCORE Journal | Bottom-up regulation starts in the body, not the mind. What it is, why it matters and how VIBEZCORE uses breath and haptic rhythm. |
+| haptic-technology-nervous-system | Haptic Technology and Your Nervous System \| VIBEZCORE | How rhythmic touch on the skin connects to your nervous system, and why VIBEZCORE uses haptic rhythm for State Control. |
+| why-the-wrist-is-the-most-powerful-entry-point-for-regulation | Why the Wrist Is an Entry Point for Regulation \| VIBEZCORE | The wrist is rich in sensory receptors. Why it is a natural place for haptic rhythm, on a smartwatch or the Smart Bead Bracelet. |
+| why-your-body-knows-before-your-mind-does | Why Your Body Knows Before Your Mind Does \| VIBEZCORE | Why you can feel stressed before a single thought forms, and what the work of Porges, Damasio and Craig says about body-first regulation. |
+| why-motivation-fails-and-what-direction-actually-feels-like | Why Motivation Fails: What Direction Feels Like \| VIBEZCORE | Motivation is not a discipline problem but a direction problem. On dopamine, wanting versus liking, and what direction actually feels like. |
