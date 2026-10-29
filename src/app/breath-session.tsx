@@ -4562,7 +4562,6 @@ export function BreathSession() {
             <View style={s.doneVoiceRow}>
               <View style={{ flex: 1 }}>
                 <Text style={s.doneVoiceLabel}>Private mode</Text>
-                <Text style={s.doneVoiceSub}>No spoken voice. Breathe quietly when others are around.</Text>
               </View>
               <Switch
                 value={!voiceDefault}
@@ -5596,7 +5595,6 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   doneBodySpace: { marginBottom: 28 },
   doneVoiceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24, paddingHorizontal: 4 },
   doneVoiceLabel: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
-  doneVoiceSub: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.regular, fontSize: 12.5, lineHeight: 17, marginTop: 2 },
   doneCenter: { textAlign: 'center' },
   doneStrip: {
     position: 'absolute',
