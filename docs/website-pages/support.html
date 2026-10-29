@@ -562,7 +562,7 @@
     <!-- LEGAL TEXT -->
     <div style="border-top:1px solid var(--gray-200);padding-top:24px;">
       <p style="font-size:12px;color:var(--gray-400);line-height:1.7;margin-bottom:12px;">
-        By submitting this form you agree that VIBEZCORE may process your personal data (name, email address, and message content) solely for the purpose of handling your support request. This form is delivered to our inbox by FormSubmit (formsubmit.co); we do not share your data with anyone else. It is retained only as long as necessary to resolve your request, in accordance with our <a href="https://www.vibezcore.com/privacy-policy" target="_blank" style="color:var(--gray-600);text-decoration:underline;">Privacy Policy</a> and applicable data protection legislation (GDPR).
+        By submitting this form you agree that VIBEZCORE may process your personal data (name, email address, and message content) solely for the purpose of handling your support request. This form is delivered to our inbox by Web3Forms (web3forms.com); we do not share your data with anyone else. It is retained only as long as necessary to resolve your request, in accordance with our <a href="https://www.vibezcore.com/privacy-policy" target="_blank" style="color:var(--gray-600);text-decoration:underline;">Privacy Policy</a> and applicable data protection legislation (GDPR).
       </p>
       <p style="font-size:12px;color:var(--gray-400);line-height:1.7;margin-bottom:12px;">
         VIBEZCORE aims to respond to all support requests within 1–2 business days. Response times may vary during public holidays or periods of high volume. Submitting a support request does not constitute a guarantee of a specific outcome or resolution.
@@ -579,10 +579,12 @@
 <script>
   /* ─────────────────────────────────────────────────────────────
      CONTACT FORM — sends submissions to info@vibezcore.com via
-     FormSubmit.co (no account, no API key). On first submission
-     FormSubmit emails an activation link to info@vibezcore.com —
-     click it once, then all future submissions arrive directly.
+     Web3Forms (api.web3forms.com). 29 okt 2026 (operator: "ok ik stap
+     over"): FormSubmit lag plat (Cloudflare 521). De toegangssleutel is
+     publiek bedoeld (hij staat altijd in de pagina) en stuurt enkel naar
+     het adres waarvoor hij werd aangemaakt.
      ───────────────────────────────────────────────────────────── */
+  var WEB3FORMS_KEY = '[OPERATOR: Web3Forms access key]';
   (function () {
     var form = document.getElementById('supportForm');
     var status = document.getElementById('formStatus');
@@ -731,15 +733,25 @@
 
       var data = new FormData(form);
       var chosen = data.get('Subject') || 'Support Request';
-      data.set('_subject', 'VIBEZCORE Support · ' + chosen);
-      data.set('_captcha', 'false');
-      data.set('_template', 'table');
+      /* Honeypot ingevuld = bot: doen alsof het gelukt is, niets versturen. */
+      if (data.get('_honey')) {
+        status.className = 'form-status success';
+        status.textContent = 'Thank you — your message has been sent.';
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        return;
+      }
+      data.delete('_honey');
+      data.set('access_key', WEB3FORMS_KEY);
+      data.set('subject', 'VIBEZCORE Support · ' + chosen);
+      data.set('from_name', 'VIBEZCORE Support Center');
+      data.set('replyto', data.get('Email') || '');
 
-      /* 29 okt 2026: FormSubmit lag plat (Cloudflare 521) en de fetch bleef dan hangen of faalde.
-         Na 15 s geven we op en bieden we hetzelfde bericht aan als e-mail (zie mailFallback). */
+      /* Lukt het niet binnen 15 s of faalt de dienst, dan staat hetzelfde bericht klaar als
+         e-mail (zie mailFallback) — er gaat nooit een aanvraag verloren. */
       var ctrl = window.AbortController ? new AbortController() : null;
       var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
-      fetch('https://formsubmit.co/ajax/info@vibezcore.com', {
+      fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Accept': 'application/json' },
         body: data,
