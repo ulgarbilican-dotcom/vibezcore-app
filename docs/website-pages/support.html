@@ -361,6 +361,16 @@
     border: 1px solid #fecaca;
   }
 
+  .fallback-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .fallback-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 20px; border-radius: 980px; border: 1px solid var(--blue);
+    background: var(--blue); color: #fff !important; font-family: inherit;
+    font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer;
+  }
+  .fallback-btn.ghost { background: #fff; color: var(--blue) !important; }
+  .fallback-addr { margin-top: 10px; font-size: 13px; }
+
   @media (max-width: 600px) {
     .form-row { grid-template-columns: 1fr; gap: 0; margin-bottom: 0; }
   }
@@ -659,6 +669,55 @@
       });
     });
 
+    /* Vangnet: lukt het verzenden niet, dan staat het volledige bericht klaar als e-mail in de
+       mail-app van de bezoeker (één tik), met ook een knop om het te kopiëren. Zo gaat er nooit een
+       aanvraag verloren. Er wordt niets automatisch geopend: de bezoeker kiest zelf. */
+    function mailFallback(data, chosen) {
+      var body =
+        'Name: ' + (data.get('First name') || '') + ' ' + (data.get('Last name') || '') + '\n' +
+        'Email: ' + (data.get('Email') || '') + '\n' +
+        'Subject: ' + chosen + '\n\n' +
+        (data.get('Message') || '');
+      var href = 'mailto:info@vibezcore.com?subject=' + encodeURIComponent('VIBEZCORE Support · ' + chosen) +
+        '&body=' + encodeURIComponent(body);
+      status.className = 'form-status error';
+      status.innerHTML = '';
+      var p = document.createElement('p');
+      p.textContent = 'Our form could not send your message right now. Your text is ready below. Send it by email and it reaches us just the same.';
+      var row = document.createElement('div');
+      row.className = 'fallback-row';
+      var mail = document.createElement('a');
+      mail.className = 'fallback-btn';
+      mail.href = href;
+      mail.target = '_top';
+      mail.textContent = 'Send by email';
+      var copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'fallback-btn ghost';
+      copy.textContent = 'Copy message';
+      copy.addEventListener('click', function () {
+        var done = function () { copy.textContent = 'Copied'; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(body).then(done, function () { legacyCopy(body); done(); });
+        } else { legacyCopy(body); done(); }
+      });
+      var addr = document.createElement('p');
+      addr.className = 'fallback-addr';
+      addr.textContent = 'Or write to info@vibezcore.com';
+      row.appendChild(mail);
+      row.appendChild(copy);
+      status.appendChild(p);
+      status.appendChild(row);
+      status.appendChild(addr);
+    }
+    function legacyCopy(text) {
+      var t = document.createElement('textarea');
+      t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(t);
+    }
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!form.checkValidity()) { form.reportValidity(); return; }
@@ -676,10 +735,15 @@
       data.set('_captcha', 'false');
       data.set('_template', 'table');
 
+      /* 29 okt 2026: FormSubmit lag plat (Cloudflare 521) en de fetch bleef dan hangen of faalde.
+         Na 15 s geven we op en bieden we hetzelfde bericht aan als e-mail (zie mailFallback). */
+      var ctrl = window.AbortController ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
       fetch('https://formsubmit.co/ajax/info@vibezcore.com', {
         method: 'POST',
         headers: { 'Accept': 'application/json' },
-        body: data
+        body: data,
+        signal: ctrl ? ctrl.signal : undefined
       })
         .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, json: j }; }); })
         .then(function (result) {
@@ -694,10 +758,10 @@
           }
         })
         .catch(function () {
-          status.className = 'form-status error';
-          status.textContent = 'Something went wrong. Please email info@vibezcore.com directly so your request still reaches us.';
+          mailFallback(data, chosen);
         })
         .then(function () {
+          if (timer) clearTimeout(timer);
           btn.disabled = false;
           btn.innerHTML = originalHTML;
         });
