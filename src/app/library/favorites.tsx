@@ -10,6 +10,7 @@
 import BalancedText from '@/components/BalancedText';
 import { Reveal } from '@/components/Reveal';
 import Tap from '@/components/Tap';
+import { showVibezAlert } from '@/components/VibezAlert';
 import { LibraryListRow } from '@/components/LibraryListRow';
 import { SESSIONS, type Session } from '@/data/audio-library-data';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -27,7 +28,7 @@ import {
 import { SafeAreaView } from '@/utils/safe-area';
 
 export default function LibraryFavoritesScreen() {
-  const { favorites, toggle: toggleFavorite } = useFavorites();
+  const { favorites, toggle: toggleFavorite, clearAll } = useFavorites();
   /* Iter 9dq v63 (2026-06-03): gated-open. Tap op een favoriete PRO-sessie
      door een free-user → push naar /subscribe ipv stille fail in player. */
   const openGated = useGatedOpenSession();
@@ -61,7 +62,28 @@ export default function LibraryFavoritesScreen() {
           <Text style={s.backText}>Back</Text>
         </Tap>
         <Text style={s.topbarTitle}>Your Favorites</Text>
-        <View style={s.topbarRight} />
+        {/* 29 okt 2026 (operator): alle favorieten in één keer verwijderen, met bevestiging. */}
+        <View style={s.topbarRight}>
+          {sessions.length > 0 ? (
+            <Tap
+              onPress={() => {
+                void showVibezAlert({
+                  title: 'Remove all favorites?',
+                  message: 'This removes every session from Your Favorites.',
+                  buttons: [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Remove all', style: 'destructive', onPress: clearAll },
+                  ],
+                });
+              }}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Remove all favorites"
+            >
+              <Text style={s.clearAll}>Remove all</Text>
+            </Tap>
+          ) : null}
+        </View>
       </View>
       <ScrollView
         contentContainerStyle={s.scroll}
@@ -101,8 +123,10 @@ export default function LibraryFavoritesScreen() {
                     e?.stopPropagation?.();
                     toggleFavorite(sess);
                   }}
-                  hitSlop={10}
+                  hitSlop={12}
                   style={s.heart}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${sess.title} from favorites`}
                 >
                   <Text style={s.heartGlyph}>♥</Text>
                 </Tap>
@@ -152,7 +176,8 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  topbarRight: { minWidth: 80 },
+  topbarRight: { minWidth: 80, alignItems: 'flex-end', paddingRight: 8 },
+  clearAll: { color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: '600' },
 
   header: {
     alignItems: 'center',
@@ -209,9 +234,10 @@ const s = StyleSheet.create({
     maxWidth: 280,
   },
 
+  /* 29 okt 2026 (operator: "per audio verwijderen gaat niet"): groter tikvlak, het hartje zelf blijft het teken. */
   heart: {
-    width: 20,
-    height: 20,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

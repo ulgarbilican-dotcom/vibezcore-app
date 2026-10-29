@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { hasStoredSession } from '@/services/auth';
 import { useBreathHistory } from '@/utils/breath-history';
 import { useSetting } from '@/utils/settings';
+import { subscribeUserBucket } from '@/utils/user-bucket';
 
 const KEY = 'vz_account_invite_v1';
 const MAX_DISMISSALS = 2;
@@ -53,15 +54,20 @@ export function useAccountInvite(): { show: boolean; dismiss: () => void } {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const check = async () => {
       const [signedIn, s] = await Promise.all([hasStoredSession(), load()]);
       if (!alive) return;
       setGuest(!signedIn);
       setStored(s);
       setReady(true);
-    })();
+    };
+    void check();
+    /* 29 okt 2026 (operator: "na account maken stond de kaart er nog; pas na wegtikken weg"): opnieuw kijken zodra de gebruiker in- of
+       uitlogt, niet enkel bij het openen van de pagina. */
+    const unsub = subscribeUserBucket(() => void check());
     return () => {
       alive = false;
+      unsub();
     };
   }, []);
 

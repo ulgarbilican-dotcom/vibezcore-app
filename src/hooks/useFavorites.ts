@@ -250,7 +250,14 @@ export function useFavorites() {
     save();
   }, []);
 
+  /** 29 okt 2026 (operator): alles in één keer verwijderen (met bevestiging op het scherm). Reist mee in Backup & Sync zoals één verwijdering. */
+  const clearAll = useCallback(() => {
+    favoritesState = new Map();
+    notify();
+    save();
+  }, []);
+
   const has = useCallback((url: string) => snapshot.has(url), [snapshot]);
 
-  return { favorites: snapshot, toggle, has };
+  return { favorites: snapshot, toggle, has, clearAll };
 }
