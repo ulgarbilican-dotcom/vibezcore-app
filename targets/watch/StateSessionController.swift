@@ -130,6 +130,15 @@ final class StateSessionController: ObservableObject {
   private var ackTimer: Timer?
   private var endTimers: [Timer] = []
   private var generation = 0
+  /* 29 okt 2026 (operator: "een systeem dat op elk toestel klopt") — ZELFCORRECTIE tijdens de sessie, zoals op Wear OS: 3 s na de start
+     en daarna elke 20 s meet het horloge het klokverschil met de iPhone opnieuw. Wijkt het meer dan 40 ms af van het verschil waarmee de
+     sessie startte, dan start het opnieuw op exact de plek waar de iPhone nu is. Enkel voor een sessie die de iPhone speelt. */
+  private var syncMessage: [String: Any]?
+  private var syncStamp: Double = 0
+  private var syncAheadUsed: Double = 0
+  private static let resyncFirstSec: Double = 3
+  private static let resyncEverySec: Double = 20
+  private static let resyncToleranceMs: Double = 40
   /** Laatst toegepaste `sentAtMs` van de telefoon (volgorde-bewaking). */
   private var lastAppliedStamp: Double = 0
   /** Ack al verstuurd voor de huidige start? */
@@ -198,6 +207,13 @@ final class StateSessionController: ObservableObject {
     /* Laat afgeleverd (userInfo-wachtrij): de sessie liep op de telefoon
        intussen door. Negatieve vertraging = klokverschil → negeren. */
     if let sentAtMs = sentAtMs {
+      syncMessage = message
+      syncStamp = sentAtMs
+      syncAheadUsed = PhoneConnector.shared.clockAheadMs()
+    } else {
+      syncMessage = nil
+    }
+    if let sentAtMs = sentAtMs {
       /* sentAtMs is iPhone-klok → eerst naar de Watch-klok (20 okt 2026) */
       let rawDelaySec = Date().timeIntervalSince1970
         - (sentAtMs + PhoneConnector.shared.clockAheadMs()) / 1000
@@ -253,6 +269,24 @@ final class StateSessionController: ObservableObject {
     scheduleNextBeat(gen: generation)
     ackIfRuntimeRunning()
     startAckLoop()
+    if syncMessage != nil { scheduleResync(gen: generation, after: Self.resyncFirstSec) }
+  }
+
+  private func scheduleResync(gen: Int, after: Double) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + after) { [weak self] in
+      guard let self = self, gen == self.generation, self.active, !self.paused, self.syncMessage != nil else { return }
+      PhoneConnector.shared.measureClock()
+      /* measureClock verzamelt ~3 s antwoorden; daarna het nieuwe verschil vergelijken. */
+      DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) { [weak self] in
+        guard let self = self, gen == self.generation, self.active, !self.paused, let msg = self.syncMessage else { return }
+        let drift = PhoneConnector.shared.clockAheadMs() - self.syncAheadUsed
+        if abs(drift) > Self.resyncToleranceMs {
+          self.start(msg, sentAtMs: self.syncStamp)
+        } else {
+          self.scheduleResync(gen: gen, after: Self.resyncEverySec)
+        }
+      }
+    }
   }
 
   /** Telefoon zegt pauze (of lokale terugval): tikken stoppen, sessie
@@ -260,6 +294,7 @@ final class StateSessionController: ObservableObject {
    *  en een hervat-bericht (nieuwe state_start) live kan binnenkomen. */
   func pause() {
     guard active, !paused else { return }
+    syncMessage = nil
     let now = Date()
     pausedCurveSec = offsetSec + now.timeIntervalSince(anchor)
     pausedRemainingSec = max(0, endDate?.timeIntervalSince(now) ?? 0)

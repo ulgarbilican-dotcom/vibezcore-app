@@ -65,6 +65,17 @@ final class BreathSessionController: NSObject, ObservableObject {
   private var generation = 0
   /** Huidige fase-index (voor hervatten van een lokale sessie). */
   private var currentIdx = 0
+  /* 29 okt 2026 (operator: "een systeem dat op elk toestel klopt") — ZELFCORRECTIE tijdens de sessie, zoals op Wear OS. Vroeger telde een
+     bezorgvertraging tot 4 s als hoogstens 1,5 s: kwam het startbericht 3 s te laat, dan liep de pols 1,5 s achter, de hele sessie lang.
+     Nu meet het horloge 3 s na de start en daarna elke 20 s het klokverschil opnieuw en rekent het uit waar de iPhone NU is; wijkt de
+     eigen plek meer dan 40 ms af, dan sluit het stil aan op de juiste plek (zonder extra tik). Enkel voor een sessie die de iPhone speelt. */
+  private var syncMessage: [String: Any]?
+  private var syncElapsedUsed: TimeInterval = 0
+  private var syncAt = Date()
+  private var resyncing = false
+  private static let resyncFirstSec: Double = 3
+  private static let resyncEverySec: Double = 20
+  private static let resyncTolerance: TimeInterval = 0.04
 
   /* ── Op het horloge zelf gestart (18 okt 2026) ─────────────────────────
      Het horloge is dan de bron van waarheid: pauze, hervatten en stop
@@ -133,13 +144,20 @@ final class BreathSessionController: NSObject, ObservableObject {
       let sentAtWatch = sentAt + PhoneConnector.shared.clockAheadMs()
       elapsed = max(0, Date().timeIntervalSince1970 - sentAtWatch / 1000)
       /* Tot 4 s = gewone bezorgvertraging: zoals voorheen maximaal 1,5 s (een kleine klokafwijking mag geen fasen laten springen). Pas een
-         duidelijk late start (Watch-app later geopend) haalt volledig in. */
-      if elapsed <= 4 { elapsed = min(1.5, elapsed) }
+         duidelijk late start (Watch-app later geopend) haalt volledig in. Bij een zelfcorrectie telt de volle, gemeten tijd. */
+      if elapsed <= 4 && !resyncing { elapsed = min(1.5, elapsed) }
+    }
+    if fromPhone, let sentAt = message["sentAtMs"] as? Double, sentAt > 0 {
+      syncMessage = message
+      syncElapsedUsed = elapsed
+      syncAt = Date()
+    } else {
+      syncMessage = nil
     }
     var joinRound = startRound
     var joinIdx = startPhase
     var joinDur = midPhase ? TimeInterval(remainingMs) / 1000 : TimeInterval(phases[startPhase].secs)
-    var joinSilent = midPhase
+    var joinSilent = midPhase || resyncing
     var joinRemaining = joinDur - elapsed
     while joinRemaining <= 0.15 {
       joinIdx = (joinIdx + 1) % phases.count
@@ -163,6 +181,30 @@ final class BreathSessionController: NSObject, ObservableObject {
       duration: joinDur,
       silentStart: joinSilent
     )
+    if syncMessage != nil { scheduleResync(gen: generation, after: Self.resyncFirstSec) }
+  }
+
+  private func scheduleResync(gen: Int, after: Double) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + after) { [weak self] in
+      guard let self = self, gen == self.generation, self.running, self.syncMessage != nil else { return }
+      PhoneConnector.shared.measureClock()
+      /* measureClock verzamelt ~3 s antwoorden; daarna uitrekenen waar de iPhone nu is. */
+      DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) { [weak self] in
+        guard let self = self, gen == self.generation, self.running, let msg = self.syncMessage,
+          let sentAt = msg["sentAtMs"] as? Double, sentAt > 0
+        else { return }
+        let now = Date()
+        let elapsedNow = now.timeIntervalSince1970 - (sentAt + PhoneConnector.shared.clockAheadMs()) / 1000
+        let elapsedOwn = self.syncElapsedUsed + now.timeIntervalSince(self.syncAt)
+        if abs(elapsedNow - elapsedOwn) > Self.resyncTolerance {
+          self.resyncing = true
+          self.apply(msg)
+          self.resyncing = false
+        } else {
+          self.scheduleResync(gen: gen, after: Self.resyncEverySec)
+        }
+      }
+    }
   }
 
   /// `start`/`duration`: gepland begin en duur — elke fase begint op het
