@@ -1129,6 +1129,8 @@ export function BreathSession() {
   const [voiceGenderSetting, setVoiceGenderSetting] = useSetting('voiceGender');
   const pref = prefs[st.key] ?? {};
   const voiceDefault = pref.voice ?? voiceGlobal;
+  const voiceDefaultRef = useRef(voiceDefault);
+  voiceDefaultRef.current = voiceDefault;
   const hapticDefault = pref.haptics ?? hapticGlobal;
   const voiceGenderDefault = pref.voiceGender ?? voiceGenderSetting;
   /* Mens-leesbare naam voor de "Just for …"-knop in het onthoud-scherm
@@ -2490,8 +2492,10 @@ export function BreathSession() {
            audio moet bij eerste popup beginnen" — speelt nu METEEN als de
            popup verschijnt (auto-play), niet pas als "Got it" ingedrukt
            wordt. */
-        setUjjayiSound(true);
-        playUjjayiStartCue(true);
+        /* Standaard aan — behalve als de gebruiker de stem zelf bewust uitzette (bv. om in gezelschap stil te ademen). */
+        const speak = !getSetting('voiceCuesChosen') || voiceDefaultRef.current;
+        setUjjayiSound(speak);
+        if (speak) playUjjayiStartCue(true);
         return;
       }
       proceedToStart(preview);
@@ -4552,6 +4556,34 @@ export function BreathSession() {
               You completed {rounds} rounds of {tech.name}.
               {'\n'}Carry the breath with you.
             </Text>
+            {/* 29 okt 2026 (operator: "stem voor altijd aan/uit — mensen willen soms stil ademen waar anderen bij zijn"; naam van de operator:
+                "Private mode"): aan = geen enkele gesproken stem (uitleg vooraf, begeleiding, woorden op het einde), voor ALLE sessies en
+                toestanden. Zelfde onderliggende instelling als de stem in Audio & Haptics (voiceCues), omgekeerd weergegeven. */}
+            <View style={s.doneVoiceRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.doneVoiceLabel}>Private mode</Text>
+                <Text style={s.doneVoiceSub}>No spoken voice. Breathe quietly when others are around.</Text>
+              </View>
+              <Switch
+                value={!voiceDefault}
+                onValueChange={(on) => {
+                  const v = !on; // Private mode aan = geen stem
+                  setVoiceGlobal(v);
+                  void setSetting('voiceCuesChosen', true);
+                  /* Voor altijd: ook de keuzes per toestand vrijgeven, anders wint daar een oudere per-toestand-stand. */
+                  const next: typeof prefs = {};
+                  for (const [k, p] of Object.entries(prefs)) {
+                    const { voice: _v, ...rest } = p;
+                    next[k] = rest;
+                  }
+                  setPrefs(next);
+                }}
+                trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
+                thumbColor="#ffffff"
+                ios_backgroundColor="#3a3a3a"
+                accessibilityLabel="Private mode, no spoken voice in any session"
+              />
+            </View>
 
             {/* Operator, 8 okt 2026 ("coming to your wrist en go to the audio
                 library mag ook weg in de popups"): afsluitblad enkel nog de
@@ -5561,7 +5593,10 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     paddingHorizontal: 30,
     gap: 16,
   },
-  doneBodySpace: { marginBottom: 40 },
+  doneBodySpace: { marginBottom: 28 },
+  doneVoiceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24, paddingHorizontal: 4 },
+  doneVoiceLabel: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
+  doneVoiceSub: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.regular, fontSize: 12.5, lineHeight: 17, marginTop: 2 },
   doneCenter: { textAlign: 'center' },
   doneStrip: {
     position: 'absolute',
