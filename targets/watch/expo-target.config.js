@@ -48,6 +48,10 @@ module.exports = {
     vzArtClarity: '../../assets/watch-art/vz_art_clarity.png',
     vzArtTree: '../../assets/watch-art/vz_art_tree.png',
   },
+  /* 29 okt 2026: HealthKit enkel zodat de iPhone deze app kan openen bij het starten van een sessie (startWatchApp). */
+  entitlements: {
+    'com.apple.developer.healthkit': true,
+  },
   /* Geen App Group (6 okt 2026): werd nergens gebruikt — telefoon en Watch
      praten via WatchConnectivity — en vroeg wel een extra registratie bij
      Apple die de build kon laten falen. */

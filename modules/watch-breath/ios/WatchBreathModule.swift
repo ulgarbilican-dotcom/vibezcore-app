@@ -1,4 +1,5 @@
 import ExpoModulesCore
+import HealthKit
 import WatchConnectivity
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -186,6 +187,32 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     var message = payload
     message["type"] = "start"
     deliver(message)
+    launchWatchAppIfNeeded()
+  }
+
+  /* 29 okt 2026 (operator: "Apple Watch moet ook automatisch het VIBEZCORE-scherm openen bij het starten vanuit de telefoon"): de enige
+     manier die Apple toelaat, is de horloge-app openen als workout via HealthKit (startWatchApp). Enkel als er een Apple Watch met
+     VIBEZCORE gekoppeld is en die app niet al open staat. Er wordt geen workout opgeslagen en geen gezondheidsgegevens gelezen; de sessie
+     zelf komt zoals altijd via WatchConnectivity binnen. Apple vraagt enkel om toestemming als dat nodig blijkt (één keer). */
+  private let healthStore = HKHealthStore()
+  private var lastWatchLaunch = Date.distantPast
+
+  private func launchWatchAppIfNeeded() {
+    let s = WCSession.default
+    guard HKHealthStore.isHealthDataAvailable(), s.activationState == .activated, s.isPaired, s.isWatchAppInstalled,
+      !s.isReachable, Date().timeIntervalSince(lastWatchLaunch) > 5
+    else { return }
+    lastWatchLaunch = Date()
+    let config = HKWorkoutConfiguration()
+    config.activityType = .mindAndBody
+    config.locationType = .unknown
+    healthStore.startWatchApp(with: config) { [weak self] ok, error in
+      guard !ok, let self = self, let hk = error as? HKError, hk.code == .errorAuthorizationNotDetermined else { return }
+      self.healthStore.requestAuthorization(toShare: [HKObjectType.workoutType()], read: nil) { granted, _ in
+        guard granted else { return }
+        self.healthStore.startWatchApp(with: config) { _, _ in }
+      }
+    }
   }
 
   /* Pauze (6 okt 2026): de Watch stopt het ritme en toont Resume. Hervatten
@@ -238,6 +265,7 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     var message = start
     message["type"] = "state_start"
     deliverState(message)
+    launchWatchAppIfNeeded()
   }
 
   func sendStatePause() {

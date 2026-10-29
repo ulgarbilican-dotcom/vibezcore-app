@@ -1,7 +1,20 @@
+import HealthKit
 import SwiftUI
+import WatchKit
+
+/* 29 okt 2026: de iPhone opent deze app bij het starten van een sessie (HKHealthStore.startWatchApp, zie WatchBreathModule.swift).
+   watchOS meldt dat hier; de app staat dan vooraan en de sessie zelf komt via WatchConnectivity binnen. Er wordt geen workout gestart
+   of opgeslagen. */
+final class WatchAppDelegate: NSObject, WKApplicationDelegate {
+  func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
+    PhoneConnector.shared.activate()
+    RuntimeSessionManager.shared.appDidBecomeActive()
+  }
+}
 
 @main
 struct VibezcoreWatchApp: App {
+  @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var appDelegate
   @Environment(\.scenePhase) private var scenePhase
 
   init() {

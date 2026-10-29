@@ -18,7 +18,9 @@
         "NSSupportsLiveActivities": true,
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSHealthUpdateUsageDescription": "VIBEZCORE uses this only to open its Apple Watch app when you start a session on your iPhone. No health data is read or saved.",
+        "NSHealthShareUsageDescription": "VIBEZCORE does not read your health data. Access is only used to open its Apple Watch app when you start a session on your iPhone."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -99,6 +101,9 @@
             ]
           }
         ]
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true
       }
     },
     "android": {
