@@ -492,3 +492,51 @@ for (const slug of LEGAL_ORDER) {
   fs.writeFileSync(path.join(OUT, `${slug}.html`), page(doc), 'utf8');
   console.log(`${slug}.html  (${doc.blocks.length} blokken)`);
 }
+
+/* ── Gewone Wix-tekst (operator, 29 okt 2026: "laat Wix dat bepalen") ──────────────────────────────────────────
+   Een HTML-blok in Wix heeft een vaste hoogte en past nooit exact op elke gsm. Daarom ook een eenvoudige versie per document: enkel
+   titels, alinea's, vet, lijstjes en links, zonder eigen opmaak. Openen in de browser → Ctrl+A → kopiëren → plakken in een Wix-tekstvak;
+   Wix bepaalt dan zelf de hoogte. Kaartjes en labels worden lijstjes, kaders vette alinea's. */
+const PLAIN_OUT = path.join(ROOT, 'docs', 'website-pages', 'wix-text');
+function plainBlock(b) {
+  switch (b.kind) {
+    case 'p':
+      return `<p>${inline(b.text)}</p>`;
+    case 'h3':
+      return `<h3>${inline(b.text)}</h3>`;
+    case 'ul':
+    case 'tags':
+      return `<ul>\n${b.items.map((i) => `  <li>${inline(i)}</li>`).join('\n')}\n</ul>`;
+    case 'cards':
+      return `<ul>\n${b.items.map((c) => `  <li><strong>${inline(c.title)}</strong> — ${inline(c.text)}</li>`).join('\n')}\n</ul>`;
+    case 'highlight':
+    case 'danger':
+      return `${b.title ? `<p><strong>${inline(b.title)}</strong></p>\n` : ''}<p><strong>${inline(b.text)}</strong></p>`;
+    default:
+      throw new Error(`gen-website-legal: onbekend blok ${b.kind}`);
+  }
+}
+function plainPage(doc) {
+  let n = 0;
+  const body = doc.blocks
+    .map((b) => (b.kind === 'h2' ? `<h2>${String(++n).padStart(2, '0')} · ${inline(b.text)}</h2>` : plainBlock(b)))
+    .join('\n');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${esc(doc.title)} — tekst voor Wix</title>
+<!-- Gemaakt uit de app (src/data/legal-content.ts). Open in de browser, Ctrl+A, kopiëren, plakken in een Wix-tekstvak. -->
+</head>
+<body>
+<h1>${esc(doc.title)}</h1>
+${doc.subtitle ? `<p>${inline(doc.subtitle)}</p>\n` : ''}<p><em>Last updated: ${esc(doc.lastUpdated)}</em></p>
+${body}
+<p>Questions? Visit our <a href="${SUPPORT_URL}">Support Center</a>.</p>
+</body>
+</html>
+`;
+}
+fs.mkdirSync(PLAIN_OUT, { recursive: true });
+for (const slug of LEGAL_ORDER) fs.writeFileSync(path.join(PLAIN_OUT, `${slug}.html`), plainPage(LEGAL_DOCS[slug]), 'utf8');
+console.log(`wix-text: ${LEGAL_ORDER.length} documenten`);
