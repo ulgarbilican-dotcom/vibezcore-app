@@ -3812,7 +3812,9 @@ export function BreathSession() {
                 accessibilityRole="button"
                 accessibilityLabel={ujjayiSound ? 'Turn spoken explanation off' : 'Play spoken explanation'}
               >
-                {ujjayiSound ? <Volume2 size={18} color="#ffffff" strokeWidth={1.9} /> : <VolumeX size={18} color="rgba(255,255,255,0.6)" strokeWidth={1.9} />}
+                {/* 29 okt 2026 (operator: "duidelijk dat ze dit op stil kunnen zetten"): icoon + woord, zodat niemand moet raden. */}
+                {ujjayiSound ? <Volume2 size={16} color="#ffffff" strokeWidth={1.9} /> : <VolumeX size={16} color="#ffffff" strokeWidth={1.9} />}
+                <Text style={s.ujjayiSoundTxt}>{ujjayiSound ? 'Sound on' : 'Sound off'}</Text>
               </Tap>
             </View>
             <Text style={s.modalTitle}>The sound is the technique</Text>
@@ -4560,6 +4562,10 @@ export function BreathSession() {
                 "Private mode"): aan = geen enkele gesproken stem (uitleg vooraf, begeleiding, woorden op het einde), voor ALLE sessies en
                 toestanden. Zelfde onderliggende instelling als de stem in Audio & Haptics (voiceCues), omgekeerd weergegeven. */}
             <View style={s.doneVoiceRow}>
+              <View style={s.doneVoiceIcon}>
+                <VibezGlass radius={18} level="raised" style={StyleSheet.absoluteFill} />
+                <VolumeX size={18} color="#ffffff" strokeWidth={1.9} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.doneVoiceLabel}>Private mode</Text>
               </View>
@@ -5454,15 +5460,18 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   },
   ujjayiHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   ujjayiSoundBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
   },
+  ujjayiSoundTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 13 },
   modalEyebrow: {
     fontFamily: BrandFonts.bold,
     fontSize: 9.5,
@@ -5594,6 +5603,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   },
   doneBodySpace: { marginBottom: 28 },
   doneVoiceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24, paddingHorizontal: 4 },
+  doneVoiceIcon: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   doneVoiceLabel: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
   doneCenter: { textAlign: 'center' },
   doneStrip: {
