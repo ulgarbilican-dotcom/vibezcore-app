@@ -389,7 +389,12 @@ ${CONTACT_BTN}
 
 <script>
 (function () {
-  function toggle(btn) { btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('open'); }
+  /* Eén antwoord tegelijk open (29 okt 2026): het Wix-blok heeft een vaste hoogte, die is afgestemd op alle vragen dicht + het langste antwoord. */
+  function toggle(btn) {
+    var opening = !btn.classList.contains('open');
+    document.querySelectorAll('.faq-q.open').forEach(function (b) { b.classList.remove('open'); b.nextElementSibling.classList.remove('open'); });
+    if (opening) { btn.classList.add('open'); btn.nextElementSibling.classList.add('open'); }
+  }
   function filterCat(btn, cat) {
     document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('active'); });
     btn.classList.add('active');
