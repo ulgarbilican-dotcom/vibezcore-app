@@ -507,7 +507,7 @@ export default function IntroScreen() {
   const photoTopPx = cur.photo && !cur.pan ? Math.round(winH * (cur.photoTop ?? 0)) : 0;
   /* Eerste scherm: de brede foto begint volledig (de buitenste mensen = het begin: drifting) en zoomt langzaam naar binnen op de twee in het midden (directing). */
   /* 28 okt 2026 (operator, iPhone): 'de foto gaat te snel, de mensen mogen even zichtbaar zijn (niet te traag, niet te snel)': rust 450 → 650 ms,
-     zoom 2,6 → 3,4 s (was 4,5 s inOut, toen te traag bevonden). */
+     zoom 2,6 → 3,4 s (was 4,5 s inOut, toen te traag bevonden). 29 okt 2026 (operator: "iets trager inzoomen"): 3,4 → 4,2 s. */
   const zoom = useSharedValue(1);
   const stripH = Math.round(winW * (cur.photoRatio ?? 0.43));
   const zoomTo = Math.min(3, Math.max(1, (photoH / Math.max(1, stripH)) * 0.92));
@@ -524,7 +524,7 @@ export default function IntroScreen() {
     }
     /* Pas inzoomen als de opstart-animatie de app vrijgeeft (zie whenAppVisible), anders speelt de zoom af achter het logo. */
     const stop = whenAppVisible(() => {
-      zoom.value = withDelay(650, withTiming(zoomTo, { duration: 3400, easing: Easing.out(Easing.cubic) }));
+      zoom.value = withDelay(650, withTiming(zoomTo, { duration: 4200, easing: Easing.out(Easing.cubic) }));
     });
     return () => {
       stop();
