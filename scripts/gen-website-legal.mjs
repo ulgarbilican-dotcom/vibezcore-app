@@ -24,20 +24,33 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const SRC = path.join(ROOT, 'src', 'data', 'legal-content.ts');
 const OUT = path.join(ROOT, 'docs', 'website-pages', 'legal');
 
-/* legal-content.ts laden met Platform.OS = 'web' (zie WEB daar: Apple én Google). */
-const js = ts.transpileModule(fs.readFileSync(SRC, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-}).outputText;
-const mod = { exports: {} };
-vm.runInNewContext(js, {
-  module: mod,
-  exports: mod.exports,
-  require: (name) => {
-    if (name === 'react-native') return { Platform: { OS: 'web' } };
-    throw new Error(`gen-website-legal: onverwachte import ${name}`);
-  },
-});
-const { LEGAL_DOCS, LEGAL_ORDER, SUPPORT_URL } = mod.exports;
+/* Een app-bestand laden zoals de app het ziet op platform `os` (react-native = enkel Platform; '@/…' = src/…). */
+function loadModule(file, os, cache = new Map()) {
+  if (cache.has(file)) return cache.get(file);
+  const js = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const mod = { exports: {} };
+  cache.set(file, mod.exports);
+  vm.runInNewContext(js, {
+    module: mod,
+    exports: mod.exports,
+    require: (name) => {
+      if (name === 'react-native') return { Platform: { OS: os } };
+      if (name.startsWith('@/')) {
+        const base = path.join(ROOT, 'src', name.slice(2));
+        const hit = ['.ts', '.tsx', '/index.ts'].map((ext) => base + ext).find((f) => fs.existsSync(f));
+        if (hit) return loadModule(hit, os, cache);
+      }
+      throw new Error(`gen-website-legal: onverwachte import ${name}`);
+    },
+  });
+  cache.set(file, mod.exports);
+  return mod.exports;
+}
+
+/* legal-content.ts met Platform.OS = 'web' (zie WEB daar: Apple én Google). */
+const { LEGAL_DOCS, LEGAL_ORDER, SUPPORT_URL } = loadModule(SRC, 'web');
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /* Inline markup zoals de app-renderer: **vet** en [tekst](url). */
@@ -230,6 +243,14 @@ const CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; paddi
   }
   @media (min-width: 769px) { .mobile-toggle { display: none; } }`;
 
+/* Links naar andere pagina's van vibezcore.com laten Wix navigeren (uit audio-sessions.html van de operator). */
+const WIX_NAV = `  document.querySelectorAll('a[href^="https://www.vibezcore.com"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'navigate', url: a.getAttribute('href') }, '*');
+    });
+  });`;
+
 const SCRIPT = `  const btns = document.querySelectorAll('.sidebar-link');
   const sections = document.querySelectorAll('.section[id^="s"]:not(#s0)');
   const toggle = document.getElementById('contentsToggle');
@@ -264,9 +285,210 @@ const SCRIPT = `  const btns = document.querySelectorAll('.sidebar-link');
   if (document.readyState === 'complete') reportHeight();
   else window.addEventListener('load', reportHeight);
   window.addEventListener('resize', reportHeight);
-  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });`;
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+${WIX_NAV}`;
+
+/* ── FAQ (src/data/faq-content.ts) ─────────────────────────────────────────
+   Twee keer geladen, als iPhone en als Android. Verschilt een antwoord, dan staan beide op de site onder hun platform; een vraag die
+   maar op één platform bestaat (bv. batterij-optimalisatie op Android) krijgt dat platform in de titel. */
+const FAQ_SRC = path.join(ROOT, 'src', 'data', 'faq-content.ts');
+const faqIos = loadModule(FAQ_SRC, 'ios');
+const faqAndroid = loadModule(FAQ_SRC, 'android');
+const { FAQ_CATEGORY_ORDER, FAQ_CATEGORY_LABELS } = faqAndroid;
+const iosById = new Map(faqIos.FAQ_ITEMS.map((x) => [x.id, x]));
+const androidById = new Map(faqAndroid.FAQ_ITEMS.map((x) => [x.id, x]));
+const allIds = [...new Set([...faqAndroid.FAQ_ITEMS.map((x) => x.id), ...faqIos.FAQ_ITEMS.map((x) => x.id)])];
+const faqItems = allIds.map((id) => {
+  const a = androidById.get(id);
+  const i = iosById.get(id);
+  const base = a ?? i;
+  if (a && i && a.answer !== i.answer) {
+    return { ...base, answer: `**iPhone & Apple Watch**\n${i.answer}\n\n**Android & Wear OS**\n${a.answer}` };
+  }
+  if (!a || !i) return { ...base, question: `${base.question} (${a ? 'Android' : 'iPhone'})` };
+  return base;
+});
+
+const answerHtml = (txt) =>
+  txt
+    .split(/\n{2,}/)
+    .map((para) => `          <p>${para.split('\n').map(inline).join('<br>')}</p>`)
+    .join('\n');
+
+function faqPage() {
+  const cats = FAQ_CATEGORY_ORDER.filter((c) => faqItems.some((x) => x.category === c));
+  const tabs = [`    <button onclick="filterCat(this,'all')" class="cat-btn active">All</button>`]
+    .concat(cats.map((c) => `    <button onclick="filterCat(this,'${c}')" class="cat-btn">${esc(FAQ_CATEGORY_LABELS[c])}</button>`))
+    .join('\n');
+  const sections = cats
+    .map((c) => {
+      const items = faqItems
+        .filter((x) => x.category === c)
+        .map(
+          (x) => `      <div class="faq-item" data-q="${esc(x.question)}">
+        <button class="faq-q" onclick="toggle(this)">${inline(x.question)}<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+${answerHtml(x.answer)}
+        </div>
+      </div>`,
+        )
+        .join('\n\n');
+      return `    <div class="faq-section" data-cat="${c}">
+      <h3 class="faq-cat-title">${esc(FAQ_CATEGORY_LABELS[c])}</h3>
+
+${items}
+    </div>`;
+    })
+    .join('\n\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — VIBEZCORE</title>
+<!-- Gemaakt uit de app (src/data/faq-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<style>
+${FAQ_CSS}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="hero-label">VIBEZCORE</span>
+  <h1>Frequently Asked<br>Questions</h1>
+  <p class="hero-sub">Everything you need to know about VIBEZCORE — State Control, Breathwork, the Audio Library, your smartwatch and the Smart Bead Bracelet.</p>
+</div>
+
+<div class="page-wrap">
+
+  <div class="search">
+    <input id="faqSearch" type="text" placeholder="Search questions..." oninput="filterFAQ()" aria-label="Search questions">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </div>
+
+  <div id="catTabs">
+${tabs}
+  </div>
+
+  <div id="faqList">
+
+${sections}
+
+    <div id="noResults">
+      <p>No questions found. Try a different search term.</p>
+    </div>
+  </div>
+
+  <div class="support-card">
+    <p>Still have a question?</p>
+${CONTACT_BTN}
+  </div>
+
+</div>
+
+<script>
+(function () {
+  function toggle(btn) { btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('open'); }
+  function filterCat(btn, cat) {
+    document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('faqSearch').value = '';
+    document.querySelectorAll('.faq-section').forEach(function (s) { s.classList.toggle('hidden', cat !== 'all' && s.dataset.cat !== cat); });
+    document.querySelectorAll('.faq-item').forEach(function (i) { i.classList.remove('hidden'); });
+    document.getElementById('noResults').style.display = 'none';
+  }
+  function filterFAQ() {
+    var q = document.getElementById('faqSearch').value.toLowerCase();
+    document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelector('.cat-btn').classList.add('active');
+    var any = false;
+    document.querySelectorAll('.faq-item').forEach(function (item) {
+      var text = item.dataset.q.toLowerCase() + item.querySelector('.faq-a').textContent.toLowerCase();
+      var show = !q || text.indexOf(q) !== -1;
+      item.classList.toggle('hidden', !show);
+      if (show) any = true;
+    });
+    document.querySelectorAll('.faq-section').forEach(function (s) {
+      s.classList.toggle('hidden', !s.querySelector('.faq-item:not(.hidden)'));
+    });
+    document.getElementById('noResults').style.display = any ? 'none' : 'block';
+  }
+  window.toggle = toggle; window.filterCat = filterCat; window.filterFAQ = filterFAQ;
+}());
+
+  function reportHeight() {
+    var h = Math.ceil(document.querySelector('.page-wrap').getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+${WIX_NAV}
+</script>
+
+</body>
+</html>
+`;
+}
+
+/* Opmaak = faq.html van de operator (zoekveld, categorieknoppen, uitklapvragen), zonder de productkaarten en banner met claims. */
+const FAQ_CSS = `  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+  :root { --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b; --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  .hero { text-align: center; padding: 72px 24px 56px; max-width: 800px; margin: 0 auto; }
+  .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
+  .hero-sub { font-size: 17px; color: var(--gray-400); line-height: 1.6; }
+  .page-wrap { max-width: 800px; margin: 0 auto; padding: 0 24px 80px; }
+  .search { position: relative; margin-bottom: 32px; }
+  .search input { width: 100%; padding: 14px 20px 14px 44px; border: 1px solid var(--gray-200); border-radius: 980px; font-family: inherit; font-size: 15px; color: var(--black); background: var(--gray-100); outline: none; appearance: none; }
+  .search input:focus { background: #fff; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,113,227,0.12); }
+  .search svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none; }
+  #catTabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 48px; }
+  .cat-btn { background: var(--gray-100); border: none; border-radius: 980px; padding: 8px 16px; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--gray-600); cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .cat-btn:hover { background: var(--gray-200); }
+  .cat-btn.active { background: var(--black); color: #fff; }
+  .faq-cat-title { font-size: 13px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gray-400); margin: 48px 0 16px; }
+  .faq-section:first-child .faq-cat-title { margin-top: 0; }
+  .faq-item { border-bottom: 1px solid var(--gray-200); }
+  .faq-q { width: 100%; background: none; border: none; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-family: inherit; font-size: 15px; font-weight: 500; color: var(--black); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+  .faq-q:hover { color: var(--blue); }
+  .faq-icon { flex-shrink: 0; font-size: 20px; font-weight: 300; color: var(--gray-400); transition: transform 0.2s; line-height: 1; }
+  .faq-q.open .faq-icon { transform: rotate(45deg); color: var(--blue); }
+  .faq-a { display: none; padding: 0 0 20px; }
+  .faq-a.open { display: block; }
+  .faq-a p { font-size: 14px; color: var(--gray-600); line-height: 1.75; margin-bottom: 10px; }
+  .faq-a p:last-child { margin-bottom: 0; }
+  .faq-a a { color: var(--blue); text-decoration: none; }
+  .faq-a a:hover { text-decoration: underline; }
+  .faq-a strong { color: var(--black); font-weight: 600; }
+  .faq-section.hidden, .faq-item.hidden { display: none; }
+  #noResults { display: none; text-align: center; padding: 60px 0; color: var(--gray-400); font-size: 15px; }
+  .support-card { text-align: center; padding-top: 40px; }
+  .support-card p { font-size: 15px; color: var(--gray-600); margin-bottom: 4px; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none; margin-top: 20px; transition: background 0.15s, transform 0.15s; white-space: nowrap; }
+  .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
+  .contact-btn svg { color: #fff; flex-shrink: 0; }
+  @media (max-width: 640px) {
+    .hero { padding: 40px 20px 32px; }
+    .page-wrap { padding: 0 16px 60px; }
+    #catTabs { gap: 6px; }
+    .cat-btn { font-size: 12px; padding: 7px 12px; }
+    .faq-cat-title { margin-top: 32px; }
+    .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
+  }`;
 
 fs.mkdirSync(OUT, { recursive: true });
+fs.writeFileSync(path.join(OUT, 'faq.html'), faqPage(), 'utf8');
+console.log(`faq.html  (${faqItems.length} vragen)`);
 for (const slug of LEGAL_ORDER) {
   const doc = LEGAL_DOCS[slug];
   fs.writeFileSync(path.join(OUT, `${slug}.html`), page(doc), 'utf8');

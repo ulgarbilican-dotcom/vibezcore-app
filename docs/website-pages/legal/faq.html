@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — VIBEZCORE</title>
+<!-- Gemaakt uit de app (src/data/faq-content.ts) met scripts/gen-website-legal.mjs. Niet met de hand aanpassen: wijzig de app-tekst en maak opnieuw. -->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+  :root { --white: #ffffff; --black: #1d1d1f; --gray-100: #f5f5f7; --gray-200: #e8e8ed; --gray-400: #86868b; --gray-600: #515154; --blue: #0071e3; --blue-hover: #0077ed; --radius: 12px; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--white); color: var(--black); -webkit-font-smoothing: antialiased; line-height: 1.6; }
+  .hero { text-align: center; padding: 72px 24px 56px; max-width: 800px; margin: 0 auto; }
+  .hero-label { display: inline-block; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.07; color: var(--black); margin-bottom: 20px; }
+  .hero-sub { font-size: 17px; color: var(--gray-400); line-height: 1.6; }
+  .page-wrap { max-width: 800px; margin: 0 auto; padding: 0 24px 80px; }
+  .search { position: relative; margin-bottom: 32px; }
+  .search input { width: 100%; padding: 14px 20px 14px 44px; border: 1px solid var(--gray-200); border-radius: 980px; font-family: inherit; font-size: 15px; color: var(--black); background: var(--gray-100); outline: none; appearance: none; }
+  .search input:focus { background: #fff; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,113,227,0.12); }
+  .search svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none; }
+  #catTabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 48px; }
+  .cat-btn { background: var(--gray-100); border: none; border-radius: 980px; padding: 8px 16px; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--gray-600); cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .cat-btn:hover { background: var(--gray-200); }
+  .cat-btn.active { background: var(--black); color: #fff; }
+  .faq-cat-title { font-size: 13px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gray-400); margin: 48px 0 16px; }
+  .faq-section:first-child .faq-cat-title { margin-top: 0; }
+  .faq-item { border-bottom: 1px solid var(--gray-200); }
+  .faq-q { width: 100%; background: none; border: none; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-family: inherit; font-size: 15px; font-weight: 500; color: var(--black); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+  .faq-q:hover { color: var(--blue); }
+  .faq-icon { flex-shrink: 0; font-size: 20px; font-weight: 300; color: var(--gray-400); transition: transform 0.2s; line-height: 1; }
+  .faq-q.open .faq-icon { transform: rotate(45deg); color: var(--blue); }
+  .faq-a { display: none; padding: 0 0 20px; }
+  .faq-a.open { display: block; }
+  .faq-a p { font-size: 14px; color: var(--gray-600); line-height: 1.75; margin-bottom: 10px; }
+  .faq-a p:last-child { margin-bottom: 0; }
+  .faq-a a { color: var(--blue); text-decoration: none; }
+  .faq-a a:hover { text-decoration: underline; }
+  .faq-a strong { color: var(--black); font-weight: 600; }
+  .faq-section.hidden, .faq-item.hidden { display: none; }
+  #noResults { display: none; text-align: center; padding: 60px 0; color: var(--gray-400); font-size: 15px; }
+  .support-card { text-align: center; padding-top: 40px; }
+  .support-card p { font-size: 15px; color: var(--gray-600); margin-bottom: 4px; }
+  .contact-btn { display: inline-flex; align-items: center; gap: 12px; background: var(--blue); color: #ffffff !important; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; padding: 14px 28px; border-radius: 980px; text-decoration: none; margin-top: 20px; transition: background 0.15s, transform 0.15s; white-space: nowrap; }
+  .contact-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
+  .contact-btn svg { color: #fff; flex-shrink: 0; }
+  @media (max-width: 640px) {
+    .hero { padding: 40px 20px 32px; }
+    .page-wrap { padding: 0 16px 60px; }
+    #catTabs { gap: 6px; }
+    .cat-btn { font-size: 12px; padding: 7px 12px; }
+    .faq-cat-title { margin-top: 32px; }
+    .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="hero-label">VIBEZCORE</span>
+  <h1>Frequently Asked<br>Questions</h1>
+  <p class="hero-sub">Everything you need to know about VIBEZCORE — State Control, Breathwork, the Audio Library, your smartwatch and the Smart Bead Bracelet.</p>
+</div>
+
+<div class="page-wrap">
+
+  <div class="search">
+    <input id="faqSearch" type="text" placeholder="Search questions..." oninput="filterFAQ()" aria-label="Search questions">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </div>
+
+  <div id="catTabs">
+    <button onclick="filterCat(this,'all')" class="cat-btn active">All</button>
+    <button onclick="filterCat(this,'overview')" class="cat-btn">Product Overview</button>
+    <button onclick="filterCat(this,'stateControl')" class="cat-btn">State Control</button>
+    <button onclick="filterCat(this,'breathwork')" class="cat-btn">Breathwork</button>
+    <button onclick="filterCat(this,'smartwatch')" class="cat-btn">Smartwatch</button>
+    <button onclick="filterCat(this,'audio')" class="cat-btn">Audio Library</button>
+    <button onclick="filterCat(this,'bracelet')" class="cat-btn">Smart Bead Bracelet</button>
+    <button onclick="filterCat(this,'design')" class="cat-btn">Design &amp; Materials</button>
+    <button onclick="filterCat(this,'orders')" class="cat-btn">Orders &amp; Shipping</button>
+    <button onclick="filterCat(this,'membership')" class="cat-btn">Membership</button>
+    <button onclick="filterCat(this,'privacy')" class="cat-btn">Privacy &amp; Data</button>
+  </div>
+
+  <div id="faqList">
+
+    <div class="faq-section" data-cat="overview">
+      <h3 class="faq-cat-title">Product Overview</h3>
+
+      <div class="faq-item" data-q="What is VIBEZCORE?">
+        <button class="faq-q" onclick="toggle(this)">What is VIBEZCORE?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>VIBEZCORE is a platform for state control and personal growth. It combines three instruments, on your phone and your smartwatch:</p>
+          <p><strong>State Control — shift your state in the moment.</strong> A heartbeat rhythm, felt as gentle taps, that starts at your own resting heart rate and settles toward the state you choose: energy, focus, calm, clarity or sleep. Nothing to follow, nothing to watch.</p>
+          <p><strong>Guided Breathwork — active state training.</strong> 15 techniques across five states, with voice, visuals and haptics guiding every breath.</p>
+          <p><strong>Audio Library — long-term growth.</strong> Sessions that develop new mental models, habits and behavioural patterns that compound over time.</p>
+          <p>From Early 2027, the Smart Bead Bracelet adds State Control and breathwork guidance on your wrist, in a piece of jewellery.</p>
+          <p>VIBEZCORE helps people not only feel better, but also perform better and continue developing over time.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What results can I expect from VIBEZCORE?">
+        <button class="faq-q" onclick="toggle(this)">What results can I expect from VIBEZCORE?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Greater control over how you feel, think, and perform.</p>
+          <p><strong>Short term:</strong> more calm, better focus, higher energy, improved sleep.</p>
+          <p><strong>Long term:</strong> better habits, greater self-awareness, stronger mental resilience, more intentional living.</p>
+          <p>In one sentence: VIBEZCORE helps you consciously direct your state and systematically develop yourself over time. Or even shorter — Control Your State. Build Your Future.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What components are part of the VIBEZCORE system?">
+        <button class="faq-q" onclick="toggle(this)">What components are part of the VIBEZCORE system?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>VIBEZCORE consists of three instruments — each addressing a different dimension of how you operate. All three work on your phone; State Control and Breathwork also run on your smartwatch.</p>
+          <p><strong>1. State Control — in the moment</strong><br>Five states: energy, focus, calm, clarity and sleep. A heartbeat rhythm starts at your own resting heart rate and moves toward the state you choose. Bottom-up by design: you simply feel it.</p>
+          <p><strong>2. Guided Breathwork — active state training</strong><br>15 techniques across the same five states, with voice, visuals and haptics carrying every breath.</p>
+          <p><strong>3. Audio Library — long-term growth</strong><br>A structured library built on psychology, philosophy and research: not motivation, understanding. Each session expands the frameworks through which you understand yourself, sharpens self-awareness, and strengthens reflective thinking. Over time the ideas compound.</p>
+          <p><strong>Coming Early 2027 — Smart Bead Bracelet</strong><br>The premium upgrade: the same State Control rhythm and breathwork guidance on your wrist, without your phone. Stainless steel with real gemstone beads and interchangeable bead sets — nature meets tech.</p>
+          <p>Body first. Mind follows.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I buy the bracelet and the app separately?">
+        <button class="faq-q" onclick="toggle(this)">Can I buy the bracelet and the app separately?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. The app and the bracelet are independent.</p>
+          <p><strong>VIBEZCORE Premium (available now)</strong> — State Control, Guided Breathwork and the full Audio Library, on your phone and your smartwatch. No bracelet needed.</p>
+          <p><strong>Smart Bead Bracelet (launching Early 2027 on Kickstarter)</strong> — State Control on your wrist, without your phone. It works with the free VIBEZCORE app; a membership isn't required for it.</p>
+          <p><strong>Both</strong> — they complement each other: the bracelet carries the same rhythms and breathwork guidance you use in the app.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Who is VIBEZCORE designed for?">
+        <button class="faq-q" onclick="toggle(this)">Who is VIBEZCORE designed for?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>For anyone who wants more control over how they feel, think and live — whether you're a parent with a full day ahead, a student before an exam, working shifts or behind a desk, or building something of your own as an entrepreneur, leader or creative.</p>
+          <p>You don't need to be a high-performer to start. You only need to want more from your days.</p>
+          <p>In short: for everyone who refuses to live on autopilot.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What makes VIBEZCORE different from other self-improvement platforms?">
+        <button class="faq-q" onclick="toggle(this)">What makes VIBEZCORE different from other self-improvement platforms?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Most personal development gives you inspiration that fades by evening. VIBEZCORE gives you a system that works on three levels at once — instant, active, and long-term.</p>
+          <p><strong>State Control</strong> — in the moment: a rhythm you feel, on your phone or smartwatch, that starts at your own heart rate and guides you toward calm, focus, energy, clarity or sleep. No technique to learn and no conscious effort required.</p>
+          <p><strong>Guided Breathwork</strong> — active practice: 15 techniques across five states, with voice, visuals and haptics carrying every breath.</p>
+          <p><strong>Audio Library</strong> — long-term growth through ideas drawn from psychology, philosophy and behavioural science, building frameworks, self-awareness and reflective thinking that compound session after session.</p>
+          <p>Three instruments. One direction: growth, success, and freedom.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="stateControl">
+      <h3 class="faq-cat-title">State Control</h3>
+
+      <div class="faq-item" data-q="What is State Control?">
+        <button class="faq-q" onclick="toggle(this)">What is State Control?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>State Control guides your state with a rhythm you feel rather than follow. Choose one of five states — Boost, Sharp Focus, Calm Control, Clarity &amp; Relax or Sleep — and gentle taps in a heartbeat rhythm start at your own resting heart rate and settle toward that state.</p>
+          <p>Nothing to follow, nothing to watch: you simply feel it, on your phone or your smartwatch.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How long is a State Control session?">
+        <button class="faq-q" onclick="toggle(this)">How long is a State Control session?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Each state has a recommended length, and you can choose any whole minute in its range: Boost 5–20 minutes, Sharp Focus 5–30, Calm Control 5–30, Clarity &amp; Relax 10–45 and Sleep 10–50.</p>
+          <p>For a quick reset, Quick Chill and Quick Boost run for 5 minutes and start right away.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Why does State Control use my resting heart rate?">
+        <button class="faq-q" onclick="toggle(this)">Why does State Control use my resting heart rate?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Your rhythm starts where your body is. VIBEZCORE uses your resting heart rate as the starting tempo — measured in the app with your phone's camera, or entered by you — and then slowly moves toward the tempo of the state you chose. Until you measure, it uses an average resting heart rate.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I hear the rhythm as well?">
+        <button class="faq-q" onclick="toggle(this)">Can I hear the rhythm as well?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. In Audio &amp; Haptics you can choose haptics only, or haptics with a soft heartbeat sound. When your smartwatch takes over the vibration, the sound keeps playing on your phone or headphones.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="breathwork">
+      <h3 class="faq-cat-title">Breathwork</h3>
+
+      <div class="faq-item" data-q="What is guided breathwork on VIBEZCORE?">
+        <button class="faq-q" onclick="toggle(this)">What is guided breathwork on VIBEZCORE?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Five guided breathing states — Boost, Sharp Focus, Calm Control, Clarity &amp; Relax and Sleep — with 15 techniques between them, each built around a specific breathing rhythm. Voice, visuals and haptics carry you through every breath in real time, on your phone or your smartwatch, so you always know exactly when to inhale, hold and exhale.</p>
+          <p>This is active practice: something you consciously do, not something you passively receive.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How long are breathwork sessions?">
+        <button class="faq-q" onclick="toggle(this)">How long are breathwork sessions?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Each state offers several session lengths, from short resets to longer, deeper sessions. Every length has a name and a reason — tap your choice to select it, tap it again to see why that length exists. There's no single &quot;correct&quot; duration; pick what fits the moment.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I practice breathwork without sound?">
+        <button class="faq-q" onclick="toggle(this)">Can I practice breathwork without sound?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. During a session you can switch between Voice (spoken guidance), Haptics (vibration cues) and Silent (visuals only) — whatever fits where you are. With a smartwatch, the vibration guides you on your wrist, so you can put your phone away.</p>
+          <p>From Early 2027, the Smart Bead Bracelet will do the same on your wrist, no screen or sound needed.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Why does VIBEZCORE ask to run in the background / ignore battery optimization? (Android)">
+        <button class="faq-q" onclick="toggle(this)">Why does VIBEZCORE ask to run in the background / ignore battery optimization? (Android)<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>On Android, your phone can pause apps running in the background to save battery. If that happens partway through a breathwork session, the voice guidance and vibration can stop as soon as you lock your screen — even though the timer is still running.</p>
+          <p>Allowing VIBEZCORE to run unrestricted in the background (a standard Android permission, the same one apps like Spotify or WhatsApp use for calls and playback) prevents that: your session keeps going with the same voice, visuals and haptic timing whether your screen is on or locked.</p>
+          <p>It only affects battery while a session is actually running, and it's entirely optional — without it, sessions still work, but may pause if you lock your screen partway through. You can grant it the first time a session prompts you for it, by tapping Keep sessions running when locked during a breathwork session, or in your phone's settings for VIBEZCORE (Battery → Unrestricted).</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Do I need the Smart Bead Bracelet to practice breathwork?">
+        <button class="faq-q" onclick="toggle(this)">Do I need the Smart Bead Bracelet to practice breathwork?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. Every breathwork session runs fully on your phone today — and on your smartwatch — with voice, visuals and haptics.</p>
+          <p>From Early 2027, the bracelet adds another way: the same guided states as gentle pulses on your wrist, worn like jewellery, no screen needed.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What makes the Smart Bead Bracelet different from other wearables?">
+        <button class="faq-q" onclick="toggle(this)">What makes the Smart Bead Bracelet different from other wearables?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>It's designed as jewellery first, technology second: one compact HapticCore in a bracelet of stainless steel and real gemstone beads, with interchangeable bead sets — no screen, nothing that looks like a gadget.</p>
+          <p>For breathwork and State Control, that means the same guided sessions from the app carried through gentle pulses on your wrist. Subtle enough to use anywhere — in a meeting or on a train — without anyone noticing. Launching Early 2027.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Do I need a membership to practice breathwork?">
+        <button class="faq-q" onclick="toggle(this)">Do I need a membership to practice breathwork?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>You can try each of the five states with a free 30-second preview, and after the intro your first full session is free. The full breathwork experience — every technique and duration — is part of VIBEZCORE Premium, together with State Control and the complete Audio Library: one membership unlocks all three. Not ready for a membership? A Day Pass opens everything for 24 hours.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Is guided breathwork a substitute for professional help?">
+        <button class="faq-q" onclick="toggle(this)">Is guided breathwork a substitute for professional help?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. VIBEZCORE breathwork sessions are for educational and personal development purposes only. They are not a replacement for professional medical, psychological, or therapeutic advice, diagnosis, or treatment. If you have a cardiovascular or respiratory condition, are pregnant, or have any health concern, consult a qualified professional before practicing breathwork exercises.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="smartwatch">
+      <h3 class="faq-cat-title">Smartwatch</h3>
+
+      <div class="faq-item" data-q="Does VIBEZCORE work on my smartwatch?">
+        <button class="faq-q" onclick="toggle(this)">Does VIBEZCORE work on my smartwatch?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>iPhone &amp; Apple Watch</strong><br>Yes. VIBEZCORE works with Apple Watch.</p>
+          <p>Breathwork and State Control sessions guide you on your wrist with gentle vibration — also when the watch screen is off. Start a session on your watch or on your phone, and pause or end it right from your watch.</p>
+          <p><strong>Android &amp; Wear OS</strong><br>Yes. VIBEZCORE works with Wear OS watches (Wear OS 3 or later, such as Samsung Galaxy Watch4 and newer).</p>
+          <p>Breathwork and State Control sessions guide you on your wrist with gentle vibration — also when the watch screen is off. Start a session on your watch or on your phone, and pause or end it right from your watch.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I use VIBEZCORE on my watch without my phone?">
+        <button class="faq-q" onclick="toggle(this)">Can I use VIBEZCORE on my watch without my phone?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. Open VIBEZCORE on your watch, choose State Control or Breathwork, pick your state, technique and duration, and start — the session runs entirely on your watch.</p>
+          <p>Open the app on your phone once to set up your watch. Sessions you do on the watch appear in your history on your phone the next time you open the app.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Why does my watch screen dim during a session?">
+        <button class="faq-q" onclick="toggle(this)">Why does my watch screen dim during a session?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>iPhone &amp; Apple Watch</strong><br>Apple Watch dims its screen after about 15 seconds without a touch, even while you look at it. Your session keeps running: VIBEZCORE stays on screen, the taps on your wrist continue, and the dimmed screen still shows your state and the minutes left.</p>
+          <p>To keep the screen bright longer, open Settings on your watch → Display &amp; Brightness → Wake Duration → Wake for 70 Seconds.</p>
+          <p>You don't need to look: each phase has its own tap. Inhale is a rising tap followed by soft taps, hold is a single tap, exhale is a falling tap.</p>
+          <p><strong>Android &amp; Wear OS</strong><br>Your watch dims its screen after a short time without a touch. Your session keeps running and the vibration on your wrist continues.</p>
+          <p>To keep the screen on longer, open Settings on your watch → Display → Screen timeout.</p>
+          <p>You don't need to look: inhale, hold and exhale each have their own vibration pattern.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How do I install VIBEZCORE on my watch?">
+        <button class="faq-q" onclick="toggle(this)">How do I install VIBEZCORE on my watch?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>iPhone &amp; Apple Watch</strong><br>Open the Watch app on your iPhone and install VIBEZCORE under Available Apps. During a session on your phone, Audio &amp; Haptics shows whether your watch is ready.</p>
+          <p><strong>Android &amp; Wear OS</strong><br>On Wear OS, VIBEZCORE installs from the Play Store on your watch. During a session on your phone, open Audio &amp; Haptics: if your watch is connected but doesn't have the app yet, tap Install.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Do I need a separate membership for my watch?">
+        <button class="faq-q" onclick="toggle(this)">Do I need a separate membership for my watch?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. Your watch uses the same membership as your phone: what's unlocked on your phone is unlocked on your watch. After you subscribe, open VIBEZCORE on your phone once so your watch is updated.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Does VIBEZCORE use my watch's heart rate?">
+        <button class="faq-q" onclick="toggle(this)">Does VIBEZCORE use my watch's heart rate?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. VIBEZCORE doesn't read heart rate from your watch. You measure your resting heart rate in the app with your phone's camera, or enter it yourself — for example the resting heart rate your watch shows. It sets the starting rhythm of State Control and stays on your device.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="audio">
+      <h3 class="faq-cat-title">Audio Library</h3>
+
+      <div class="faq-item" data-q="What makes the VIBEZCORE Audio Library unique?">
+        <button class="faq-q" onclick="toggle(this)">What makes the VIBEZCORE Audio Library unique?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Most growth content is either motivational without substance, or academic without application. VIBEZCORE audio sessions are built at the intersection of both — grounded in real behavioural science and designed for immediate practical use.</p>
+          <p>Each session targets a specific cognitive or emotional pattern, delivers structured insight, and ends with a concrete application point you can use the same day. The goal is not to inspire you — it is to change how you operate.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Who creates the audio sessions?">
+        <button class="faq-q" onclick="toggle(this)">Who creates the audio sessions?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>All VIBEZCORE audio sessions are independently developed by the VIBEZCORE team, drawing on widely available research, behavioural science, and real-world experience. Every session is carefully composed around genuine challenges people face in daily life.</p>
+          <p>Our sessions may reference publicly available findings, research, or the work of thought leaders and public figures in the fields of neuroscience, psychology, and philosophy. <strong>None of these individuals or institutions are affiliated with, employed by, partnered with, or endorsing VIBEZCORE in any capacity.</strong> All references are for educational and contextual purposes only, based exclusively on information in the public domain.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What topics do the audio sessions cover?">
+        <button class="faq-q" onclick="toggle(this)">What topics do the audio sessions cover?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>The VIBEZCORE Audio Library covers four core pillars:</p>
+          <p><strong>Psychological Resilience</strong> — Build what cannot break</p>
+          <p><strong>Inner Sovereignty</strong> — Master what is yours</p>
+          <p><strong>Social Mastery</strong> — Command without force</p>
+          <p><strong>Strategic Execution &amp; Wealth</strong> — Engineer your autonomy</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Are the audio sessions suitable for beginners?">
+        <button class="faq-q" onclick="toggle(this)">Are the audio sessions suitable for beginners?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. The library is structured for all levels. Whether you are new to personal development or deeply experienced, sessions are designed to be immediately applicable regardless of your starting point. Foundational sessions introduce core concepts, while advanced sessions build on established frameworks for those ready to go deeper.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I share or download audio sessions?">
+        <button class="faq-q" onclick="toggle(this)">Can I share or download audio sessions?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Free sessions can be shared with others directly from the player — they are designed as an open entry point into VIBEZCORE.</p>
+          <p>The full Audio Library (subscription content) is streaming-only and cannot be shared, which protects the integrity of the membership for paying subscribers.</p>
+          <p>Offline download is on the roadmap for a future update.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Are the audio sessions a substitute for professional help?">
+        <button class="faq-q" onclick="toggle(this)">Are the audio sessions a substitute for professional help?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. VIBEZCORE audio sessions are for educational and personal development purposes only. They are not a replacement for professional medical, psychological, or therapeutic advice, diagnosis, or treatment. If you are experiencing serious mental health challenges, please consult a qualified professional.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="bracelet">
+      <h3 class="faq-cat-title">Smart Bead Bracelet</h3>
+
+      <div class="faq-item" data-q="How does the Smart Bead Bracelet work?">
+        <button class="faq-q" onclick="toggle(this)">How does the Smart Bead Bracelet work?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>From Early 2027, the Smart Bead Bracelet will carry State Control on your wrist: gentle haptic pulses in a heartbeat rhythm that starts at your own resting heart rate and settles toward the state you choose. Choose your state in the app and the bracelet runs the session on its own — no screen needed.</p>
+          <p>Until then, you can use State Control today on your phone or smartwatch.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Why the wrist for haptic feedback?">
+        <button class="faq-q" onclick="toggle(this)">Why the wrist for haptic feedback?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>The wrist is where you can feel a gentle rhythm without looking or listening — discreet, always within reach, and easy to notice without distraction. It's also where many people already wear a watch or bracelet all day.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How noticeable are the vibrations?">
+        <button class="faq-q" onclick="toggle(this)">How noticeable are the vibrations?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>The vibrations are designed to be subtle and non-intrusive — noticeable to you, invisible to others. In most social and professional settings, the haptic signal goes completely undetected by those around you.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can VIBEZCORE be used multiple times per day?">
+        <button class="faq-q" onclick="toggle(this)">Can VIBEZCORE be used multiple times per day?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. State Control and breathwork can be used as often as you like — today on your phone or smartwatch, and from Early 2027 on the bracelet, which is designed to be worn all day.</p>
+          <p>For audio sessions, listen at whatever pace fits your life. Some users do one session per day, others several. Returning to the same session multiple times also has value — repetition deepens integration as the ideas compound over time.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Does the Smart Bead Bracelet track personal data?">
+        <button class="faq-q" onclick="toggle(this)">Does the Smart Bead Bracelet track personal data?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. The Smart Bead Bracelet is designed without health sensors: it won't monitor heart rate, sleep or other health metrics. Its only job is to deliver the rhythm.</p>
+          <p>State Control is personalised with your resting heart rate, which you measure with your phone's camera or enter yourself in the VIBEZCORE app. It stays on your device.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Does the Smart Bead Bracelet require a smartphone?">
+        <button class="faq-q" onclick="toggle(this)">Does the Smart Bead Bracelet require a smartphone?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Yes. The bracelet will be set up and controlled with the VIBEZCORE app on your phone, where you choose your state and session. Once a session starts, the bracelet runs it on its own — your phone doesn't need to stay nearby.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Is the bracelet a medical device?">
+        <button class="faq-q" onclick="toggle(this)">Is the bracelet a medical device?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. The Smart Bead Bracelet is a personal wellbeing product, not a medical device. It has not been submitted for medical device classification and is not approved or certified for any medical, diagnostic, or therapeutic purpose by any regulatory authority.</p>
+          <p>It should not be used as a substitute for medical treatment or professional health monitoring.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="design">
+      <h3 class="faq-cat-title">Design &amp; Materials</h3>
+
+      <div class="faq-item" data-q="What materials are used in the bracelet?">
+        <button class="faq-q" onclick="toggle(this)">What materials are used in the bracelet?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>The Smart Bead Bracelet is designed around a compact smart pod, threaded on a strong, flexible metal core string, with beads of real gemstones and a stainless steel locking system. Bead sets will be interchangeable, so you can change its look.</p>
+          <p>Final specifications will be published on the product page before launch.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Is the bracelet waterproof?">
+        <button class="faq-q" onclick="toggle(this)">Is the bracelet waterproof?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. The Smart Bead Bracelet is not designed to be waterproof. It's made for everyday wear and light, incidental moisture — remove it before swimming, showering or other prolonged water contact. Final water-resistance details will be published on the product page before launch.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How is the bracelet charged?">
+        <button class="faq-q" onclick="toggle(this)">How is the bracelet charged?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>The Smart Bead Bracelet is designed to charge by resting on its charging dock — POGO-pin contacts connect automatically, no cable to plug in. Battery life and charging time will be confirmed on the product page before launch.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Does the bracelet come in different sizes or styles?">
+        <button class="faq-q" onclick="toggle(this)">Does the bracelet come in different sizes or styles?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Multiple sizes and interchangeable bead sets are planned. The final options will be shown on the product page at launch.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="orders">
+      <h3 class="faq-cat-title">Orders &amp; Shipping</h3>
+
+      <div class="faq-item" data-q="How long does shipping take?">
+        <button class="faq-q" onclick="toggle(this)">How long does shipping take?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Estimated delivery times from dispatch:</p>
+          <p><strong>Europe</strong> — 3–7 business days</p>
+          <p><strong>United States</strong> — 5–10 business days</p>
+          <p><strong>Canada</strong> — 7–12 business days</p>
+          <p><strong>Rest of World</strong> — 7–15 business days</p>
+          <p>For full details, see our Shipping Policy.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I return my order?">
+        <button class="faq-q" onclick="toggle(this)">Can I return my order?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Physical products can be returned within 14 days of receiving your order, provided the item is unused and in its original condition. Digital content is non-refundable once accessed.</p>
+          <p>For the full return procedure, see our Refund &amp; Returns Policy.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Will I have to pay customs or import duties?">
+        <button class="faq-q" onclick="toggle(this)">Will I have to pay customs or import duties?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>International orders may be subject to customs duties or import taxes imposed by your country. These charges are determined by local authorities and are the responsibility of the customer.</p>
+          <p><strong>EU customers</strong> — VAT is included in the product price. No additional import VAT applies for orders shipped within the EU.</p>
+          <p><strong>US customers</strong> — import duties and fees may apply to all US orders, regardless of value.</p>
+          <p><strong>Canadian customers</strong> — GST/HST may apply. You will be contacted by Canada Post or a customs broker if relevant.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="My order hasn't arrived — what should I do?">
+        <button class="faq-q" onclick="toggle(this)">My order hasn't arrived — what should I do?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>First, check your tracking information from your shipping confirmation email. If your order appears stuck or significantly delayed beyond the estimated timeframe, contact our support team via the Support Center with your order number and shipping details ready.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="membership">
+      <h3 class="faq-cat-title">Membership</h3>
+
+      <div class="faq-item" data-q="What does a VIBEZCORE membership include?">
+        <button class="faq-q" onclick="toggle(this)">What does a VIBEZCORE membership include?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>VIBEZCORE Premium gives you full access to State Control, all guided breathwork and the complete Audio Library — including every new session release — on your phone and your smartwatch.</p>
+          <p>Choose Monthly or Yearly, or try everything for 24 hours with a one-time Day Pass. Pricing and terms are shown in full before you buy.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What can I try for free?">
+        <button class="faq-q" onclick="toggle(this)">What can I try for free?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>Audio Library</strong> — 10 sessions are free to listen to, anytime. Every other session plays a short preview.</p>
+          <p><strong>State Control and Breathwork</strong> — every state has a free 30-second preview, and after the intro you get one full session free.</p>
+          <p>Everything else is part of VIBEZCORE Premium: Monthly, Yearly or a 24-hour Day Pass.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What is a Day Pass?">
+        <button class="faq-q" onclick="toggle(this)">What is a Day Pass?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>A Day Pass is a one-time purchase that opens all of VIBEZCORE Premium — State Control, every breathwork session and the complete Audio Library — for 24 hours from the moment you buy it.</p>
+          <p>It is not a subscription: nothing renews and there is nothing to cancel. Audio streams during your pass.</p>
+          <p>You can buy a new Day Pass whenever you like, or switch to Monthly or Yearly at any time.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How do I cancel my membership?">
+        <button class="faq-q" onclick="toggle(this)">How do I cancel my membership?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>iPhone &amp; Apple Watch</strong><br>Open the Profile tab and, under Your plan, tap Manage subscription — this takes you straight to your Apple ID's Subscriptions page, since Apple requires cancellations of in-app purchases to go through its own system. Deleting the app or your VIBEZCORE account does not cancel a subscription.</p>
+          <p>Cancellation takes effect at the end of your current billing period — you keep full access until then. Need help finding it? Contact us via the Support Center.</p>
+          <p><strong>Android &amp; Wear OS</strong><br>Open the Profile tab and, under Your plan, tap Manage subscription — this takes you straight to the Play Store's Subscriptions page, since Google requires cancellations of in-app purchases to go through its own system. Deleting the app or your VIBEZCORE account does not cancel a subscription.</p>
+          <p>Cancellation takes effect at the end of your current billing period — you keep full access until then. Need help finding it? Contact us via the Support Center.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="Can I pause my membership instead of canceling?">
+        <button class="faq-q" onclick="toggle(this)">Can I pause my membership instead of canceling?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>iPhone &amp; Apple Watch</strong><br>Apple doesn't offer a native pause option. You can cancel and resubscribe later — you keep full access until the end of your current billing period.</p>
+          <p><strong>Android &amp; Wear OS</strong><br>Yes. Open your Play Store subscription settings (Profile tab → Your plan → Manage subscription) and choose Pause instead of Cancel. Your plan picks up again when the pause ends.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="I can't log into my account — what should I do?">
+        <button class="faq-q" onclick="toggle(this)">I can't log into my account — what should I do?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>Tap <strong>Forgot password?</strong> on the sign-in screen to reset it. If the issue persists, contact our support team through the Support Center with your account email address and a description of the issue.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-section" data-cat="privacy">
+      <h3 class="faq-cat-title">Privacy &amp; Data</h3>
+
+      <div class="faq-item" data-q="Does VIBEZCORE sell my personal data?">
+        <button class="faq-q" onclick="toggle(this)">Does VIBEZCORE sell my personal data?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>No. VIBEZCORE does not sell personal data — ever. Your data is used solely to provide and improve our services, process transactions, and communicate with you. For full details, see our Privacy Policy.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="What data does VIBEZCORE collect?">
+        <button class="faq-q" onclick="toggle(this)">What data does VIBEZCORE collect?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p>VIBEZCORE collects only what is necessary to provide our services — including account information, purchase details, and usage data to improve the platform. No health or biometric data reaches our servers.</p>
+          <p>If you measure or enter your resting heart rate, it is used only to set your State Control rhythm and stays on your device. Your session history and progress are stored on your device only; sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" data-q="How do I request deletion of my data?">
+        <button class="faq-q" onclick="toggle(this)">How do I request deletion of my data?<span class="faq-icon">+</span></button>
+        <div class="faq-a">
+          <p><strong>iPhone &amp; Apple Watch</strong><br>If you have a VIBEZCORE account, you can delete it yourself at any time in the Profile tab with <strong>Delete account</strong>. This permanently removes your account and its data and cannot be undone. It does not cancel a subscription — cancel that separately in your Apple ID settings.</p>
+          <p>Data stored only on your device can be removed with Settings → Clear all local data, or by uninstalling the app.</p>
+          <p>You can also request full deletion of your personal data through the Support Center; our team will process it in accordance with applicable data protection law (GDPR and CCPA where applicable) within 30 days.</p>
+          <p><strong>Android &amp; Wear OS</strong><br>If you have a VIBEZCORE account, you can delete it yourself at any time in the Profile tab with <strong>Delete account</strong>. This permanently removes your account and its data and cannot be undone. It does not cancel a subscription — cancel that separately in your Google Play settings.</p>
+          <p>Data stored only on your device can be removed with Settings → Clear all local data, or by uninstalling the app.</p>
+          <p>You can also request full deletion of your personal data through the Support Center; our team will process it in accordance with applicable data protection law (GDPR and CCPA where applicable) within 30 days.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="noResults">
+      <p>No questions found. Try a different search term.</p>
+    </div>
+  </div>
+
+  <div class="support-card">
+    <p>Still have a question?</p>
+      <a href="https://www.vibezcore.com/support" target="_top" rel="noopener" class="contact-btn">
+        Support Center
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5h21M17 1l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  function toggle(btn) { btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('open'); }
+  function filterCat(btn, cat) {
+    document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('faqSearch').value = '';
+    document.querySelectorAll('.faq-section').forEach(function (s) { s.classList.toggle('hidden', cat !== 'all' && s.dataset.cat !== cat); });
+    document.querySelectorAll('.faq-item').forEach(function (i) { i.classList.remove('hidden'); });
+    document.getElementById('noResults').style.display = 'none';
+  }
+  function filterFAQ() {
+    var q = document.getElementById('faqSearch').value.toLowerCase();
+    document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelector('.cat-btn').classList.add('active');
+    var any = false;
+    document.querySelectorAll('.faq-item').forEach(function (item) {
+      var text = item.dataset.q.toLowerCase() + item.querySelector('.faq-a').textContent.toLowerCase();
+      var show = !q || text.indexOf(q) !== -1;
+      item.classList.toggle('hidden', !show);
+      if (show) any = true;
+    });
+    document.querySelectorAll('.faq-section').forEach(function (s) {
+      s.classList.toggle('hidden', !s.querySelector('.faq-item:not(.hidden)'));
+    });
+    document.getElementById('noResults').style.display = any ? 'none' : 'block';
+  }
+  window.toggle = toggle; window.filterCat = filterCat; window.filterFAQ = filterFAQ;
+}());
+
+  function reportHeight() {
+    var h = Math.ceil(document.querySelector('.page-wrap').getBoundingClientRect().bottom + (window.pageYOffset || 0)) + 8;
+    try {
+      window.parent.postMessage({ height: h }, '*');
+      window.parent.postMessage({ type: 'hsize', height: h }, '*');
+      window.parent.postMessage(h + '', '*');
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') reportHeight();
+  else window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+  document.querySelectorAll('a[href^="https://www.vibezcore.com"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'navigate', url: a.getAttribute('href') }, '*');
+    });
+  });
+</script>
+
+</body>
+</html>

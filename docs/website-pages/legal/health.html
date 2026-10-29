@@ -352,6 +352,12 @@
   else window.addEventListener('load', reportHeight);
   window.addEventListener('resize', reportHeight);
   if (window.MutationObserver) new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+  document.querySelectorAll('a[href^="https://www.vibezcore.com"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'navigate', url: a.getAttribute('href') }, '*');
+    });
+  });
 </script>
 
 </body>
