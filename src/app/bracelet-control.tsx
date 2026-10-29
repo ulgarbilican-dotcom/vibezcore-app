@@ -4692,7 +4692,10 @@ function IdleScreen({
           </PrimaryCtaButton></Reveal>
         )}
         {/* Vaste ruimte onder de knop/pil (zoals bij Breathwork onder zijn knop). De uitleg-regels staan IN die ruimte: ze duwen de knop niet omhoog, dus de Start-knop staat op dezelfde hoogte als de knop van Breathwork. */}
-        <View style={{ minHeight: 83 - CTA_BOTTOM_LIFT }}>
+        {/* 29 okt 2026 (operator: "bij premium de cta start lager zetten"): zonder volledige toegang staat hier soms een uitleg-regel, dus
+            blijft die ruimte vast. Met volledige toegang komt er nooit tekst: dan enkel de gewone marge van 26 dp boven de tabbalk of de
+            mini-speler (de hoogte van die laag zit al in de onderrand, useTabBarInset). */}
+        <View style={{ minHeight: freeSession || startLocked ? 83 - CTA_BOTTOM_LIFT : 26 }}>
         {/* Free (operator, 19 okt 2026): vóór de start altijd zeggen wat er
             volgt — de ene gratis volledige sessie, of de preview van 30 s. */}
         {freeSession && !sessionRunning ? (

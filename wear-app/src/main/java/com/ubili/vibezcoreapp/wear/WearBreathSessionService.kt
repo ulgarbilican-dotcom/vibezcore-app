@@ -165,11 +165,28 @@ class WearBreathSessionService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
-      ACTION_START -> startSession(intent.getStringExtra(EXTRA_SESSION_JSON) ?: return START_NOT_STICKY, intent.getLongExtra(EXTRA_RECV_UP, 0L))
+      ACTION_START -> {
+        val sessionJson = intent.getStringExtra(EXTRA_SESSION_JSON) ?: return START_NOT_STICKY
+        val recvUp = intent.getLongExtra(EXTRA_RECV_UP, 0L)
+        /* 29 okt 2026: eerst de klok vers meten (max 0,7 s, zie ClockSync.measureNow), dan pas de start uitrekenen. Meteen in de voorgrond:
+           Android geeft daar maar een paar seconden voor. */
+        goForegroundStarting(sessionJson)
+        ClockSync.measureNow(this) { startSession(sessionJson, recvUp) }
+      }
       ACTION_STOP -> stopSession()
       ACTION_PAUSE -> pauseSession()
     }
     return START_NOT_STICKY
+  }
+
+  private fun goForegroundStarting(sessionJson: String) {
+    val modeName = try { JSONObject(sessionJson).optString("modeName", "Breathwork") } catch (_: Exception) { "Breathwork" }
+    val notification = buildNotification("Starting…", modeName)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+    } else {
+      startForeground(NOTIFICATION_ID, notification)
+    }
   }
 
   private fun startSession(sessionJson: String, recvUp: Long = 0L) {
@@ -247,13 +264,17 @@ class WearBreathSessionService : Service() {
        ms); het horloge meet op zijn EIGEN teller hoe lang het bericht onderweg was (de helft van de snelste rondreis) en hoe lang het daarna
        bleef liggen (nu − ontvangst). Oudere telefoon-app (geen leadMs): de klok-methode. */
     val leadMs = if (json.has("leadMs")) json.optLong("leadMs") else Long.MIN_VALUE
+    /* 29 okt 2026: eerst de gedeelde teller (zie ClockSync / WearStateSessionService.start): het moment waarop de telefoon deze fase begon,
+       op de teller van de telefoon, omgerekend naar de eigen — de reistijd van het bericht telt dan niet meer mee. */
+    val monoUp = if (sentAt > 0L) ClockSync.phoneMonoToUptime(this, json.optLong("anchorMono", 0L), json.optLong("phoneBootWall", 0L)) else null
     val relative = sentAt > 0L && leadMs != Long.MIN_VALUE && recvUp > 0L
     val lag = when {
+      monoUp != null -> (SystemClock.uptimeMillis() - monoUp - MARGIN_AFTER_CLOCK_MS).coerceIn(0L, MAX_LAG_MS)
       relative -> (ClockSync.oneWayMs(this) + (SystemClock.uptimeMillis() - recvUp) - leadMs - MARGIN_AFTER_CLOCK_MS).coerceIn(0L, MAX_LAG_MS)
       sentAt > 0L -> (System.currentTimeMillis() - sentAt - MARGIN_AFTER_CLOCK_MS - ClockSync.aheadMs(this)).coerceIn(0L, MAX_LAG_MS)
       else -> 0L
     }
-    VzLog.d("breath start ${if (relative) "rel" else "clk"} sentAt=$sentAt lead=$leadMs oneWay=${ClockSync.oneWayMs(this)} now=${System.currentTimeMillis()} lag=${lag}ms")
+    VzLog.d("breath start ${if (monoUp != null) "mono" else if (relative) "rel" else "clk"} sentAt=$sentAt lead=$leadMs oneWay=${ClockSync.oneWayMs(this)} now=${System.currentTimeMillis()} lag=${lag}ms")
     val now = SystemClock.uptimeMillis()
     var round = startRound
     var idx = startPhase

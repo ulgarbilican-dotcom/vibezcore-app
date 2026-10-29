@@ -75,6 +75,10 @@ private data class StateStart(
   val leadMs: Long = Long.MIN_VALUE,
   /** Ontvangstmoment op de eigen teller (uptime) van het horloge, gezet door BreathListenerService (0 = onbekend). */
   val recvUp: Long = 0L,
+  /** 29 okt 2026: het startmoment (slag 0) op de TELLER van de telefoon, en wanneer de telefoon opstartte (0 = oudere telefoon-app).
+   *  Met de gemeten verhouding tussen beide tellers (ClockSync) speelt de reistijd van het bericht geen rol meer. */
+  val anchorMono: Long = 0L,
+  val phoneBootWall: Long = 0L,
   /** Op het horloge zelf gestart (geen telefoon die meespeelt). */
   val local: Boolean = false,
   /** Het oorspronkelijke bericht, om een horloge-sessie te kunnen hervatten. */
@@ -377,9 +381,13 @@ class WearStateSessionService : Service() {
           beatHandler.post {
             armed = parsed
             armedId = hsId
-            /* Klaar: de dienst draait en de sessie is gelezen. De telefoon wacht hierop en stuurt dan GO. */
-            PhoneLink.send(this, PhoneLink.PATH_STATE_READY, hsId.toString().toByteArray(Charsets.UTF_8))
-            VzLog.d("armed id=$hsId → ready sent")
+            /* 29 okt 2026: eerst de klok VERS meten (het horloge kan sinds de vorige meting geslapen hebben, en dan verspringt zijn teller —
+               zie ClockSync), pas daarna READY. Zo zit er geen slaapmoment tussen de meting en de start. Max 0,7 s. */
+            ClockSync.measureNow(this) {
+              /* Klaar: de dienst draait en de sessie is gelezen. De telefoon wacht hierop en stuurt dan GO. */
+              PhoneLink.send(this, PhoneLink.PATH_STATE_READY, hsId.toString().toByteArray(Charsets.UTF_8))
+              VzLog.d("armed id=$hsId → ready sent")
+            }
           }
         }
       }
@@ -388,13 +396,21 @@ class WearStateSessionService : Service() {
         val j = try { JSONObject(intent.getStringExtra(EXTRA_START_JSON) ?: "{}") } catch (_: Exception) { JSONObject() }
         val id = j.optLong("id", 0L)
         val startInMs = j.optLong("startInMs", 0L)
+        val goMono = j.optLong("anchorMono", 0L)
+        val goBoot = j.optLong("phoneBootWall", 0L)
         beatHandler.post {
           val a = armed
           if (a != null && armedId == id) {
             armed = null
             VzLog.d("go id=$id startInMs=$startInMs")
             /* Het GO-bericht draagt de wachttijd (relatief, op de klok van de telefoon uitgerekend); `sentAtMs` > 0 zet de relatieve start aan. */
-            start(a.copy(leadMs = startInMs, recvUp = recvUp, sentAtMs = if (a.sentAtMs > 0L) a.sentAtMs else 1L), startId)
+            start(
+              a.copy(
+                leadMs = startInMs, recvUp = recvUp, sentAtMs = if (a.sentAtMs > 0L) a.sentAtMs else 1L,
+                anchorMono = if (goMono > 0L) goMono else a.anchorMono, phoneBootWall = if (goBoot > 0L) goBoot else a.phoneBootWall,
+              ),
+              startId,
+            )
           } else {
             VzLog.d("go id=$id genegeerd (armed=${a != null}, armedId=$armedId)")
           }
@@ -426,6 +442,8 @@ class WearStateSessionService : Service() {
     ).takeIf { it.targetBpm > 0 }?.copy(
       sentAtMs = j.optLong("sentAtMs", 0L),
       leadMs = if (j.has("leadMs")) j.optLong("leadMs") else Long.MIN_VALUE,
+      anchorMono = j.optLong("anchorMono", 0L),
+      phoneBootWall = j.optLong("phoneBootWall", 0L),
       local = j.optBoolean("local", false),
       raw = raw,
     )
@@ -474,8 +492,11 @@ class WearStateSessionService : Service() {
        startmoment hij verstuurde); het horloge neemt zijn ontvangstmoment op de eigen teller (`recvUp`) en trekt de reistijd af (de helft van
        de snelste rondreis, ook op de eigen teller gemeten): het startmoment van de telefoon ligt dan op `recvUp + leadMs − reistijd`. Een
        oudere telefoon-app (geen leadMs) valt terug op de klok-methode. */
-    val relative = s.sentAtMs > 0L && s.leadMs != Long.MIN_VALUE && s.recvUp > 0L
-    val anchorUp = if (relative) s.recvUp + s.leadMs - ClockSync.oneWayMs(this) else 0L
+    /* 29 okt 2026: eerst de gedeelde teller (ClockSync.phoneMonoToUptime) — onafhankelijk van hoe lang het bericht onderweg was. Enkel
+       zonder geldige meting (of met een oudere telefoon-app) de reistijd-schatting van 28 okt. */
+    val monoUp = if (s.sentAtMs > 0L && s.anchorMono > 0L) ClockSync.phoneMonoToUptime(this, s.anchorMono, s.phoneBootWall) else null
+    val relative = monoUp != null || (s.sentAtMs > 0L && s.leadMs != Long.MIN_VALUE && s.recvUp > 0L)
+    val anchorUp = monoUp ?: if (relative) s.recvUp + s.leadMs - ClockSync.oneWayMs(this) else 0L
     val rawCurve = if (relative) {
       origin + (nowUp - anchorUp).coerceAtMost(10 * 60_000L) / 1000.0
     } else if (s.sentAtMs > 0L) {
@@ -496,7 +517,7 @@ class WearStateSessionService : Service() {
     val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - (gridT - origin))
     if (aligned.remainingSec <= 0.5) return finish(startId)
     localResumeJson = null
-    VzLog.d("start ${if (relative) "rel" else "clk"} sentAt=${s.sentAtMs} lead=${s.leadMs} oneWay=${ClockSync.oneWayMs(this)} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetUp - nowUp}ms")
+    VzLog.d("start ${if (monoUp != null) "mono" else if (relative) "rel" else "clk"} anchorUp=$anchorUp sentAt=${s.sentAtMs} lead=${s.leadMs} oneWay=${ClockSync.oneWayMs(this)} now=$nowWall phoneCurve=${"%.3f".format(phoneCurve)} firstBeat=${"%.3f".format(gridT)} in=${targetUp - nowUp}ms")
     session = aligned
     val waveform = buildWaveform(aligned, amplitudeControl)
     units = splitIntoUnits(waveform)

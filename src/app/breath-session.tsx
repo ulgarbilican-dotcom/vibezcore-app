@@ -146,6 +146,7 @@ import {
   pauseBreathSessionOnWatch as pauseBreathSessionOnWear,
   sendBreathSessionToWatch as sendBreathSessionToWear,
   stopBreathSessionOnWatch as stopBreathSessionOnWear,
+  wakeWatch as wakeWear,
 } from '../../modules/wear-breath';
 import { showVibezAlert } from '@/components/VibezAlert';
 import {
@@ -732,6 +733,11 @@ function FigureGlow({
    services/breath-session-host.ts. Parameters komen uit die laag. */
 export function BreathSession() {
   const { minimized } = useBreathHost();
+  /* 29 okt 2026: het horloge meet bij elk bericht van de telefoon de verhouding tussen beide klokken (wear-app ClockSync). Een tikje bij het
+     openen zorgt dat die meting vers is vóór de sessie start, zodat het horloge op dezelfde fase overgaat als de telefoon. */
+  useEffect(() => {
+    wakeWear();
+  }, []);
   /* De onderrand komt van het TOESTEL, niet van een gok. SafeAreaView deed
      de onderkant eerder zelf, maar een vastgezette voet valt buiten die
      opvulling — vandaar dat de knop tegen de home-balk aan lag. Nu rekenen

@@ -166,7 +166,9 @@ class WearBreathModule : Module() {
         }
         PATH_CLOCK_PING -> {
           val phoneNow = System.currentTimeMillis()
-          val reply = "${String(event.data, Charsets.UTF_8)},$phoneNow".toByteArray(Charsets.UTF_8)
+          /* 29 okt 2026: ook de teller van de telefoon (springt nooit) — het horloge meet daarmee de verhouding tussen beide tellers.
+             Een oudere horloge-app leest enkel de eerste twee getallen. */
+          val reply = "${String(event.data, Charsets.UTF_8)},$phoneNow,${android.os.SystemClock.elapsedRealtime()}".toByteArray(Charsets.UTF_8)
           Wearable.getMessageClient(context).sendMessage(event.sourceNodeId, PATH_CLOCK_PONG, reply)
         }
         PATH_WATCH_ACTION -> {
@@ -185,8 +187,13 @@ class WearBreathModule : Module() {
           val p = pending
           if (id != null && p != null && p.id == id) {
             pending = null
-            val startInMs = p.anchorWallMs - System.currentTimeMillis()
-            val go = JSONObject().put("id", id).put("startInMs", startInMs).toString().toByteArray(Charsets.UTF_8)
+            val wall = System.currentTimeMillis()
+            val mono = android.os.SystemClock.elapsedRealtime()
+            val startInMs = p.anchorWallMs - wall
+            /* 29 okt 2026: het startmoment ook op de teller van de telefoon (zie stampLead). */
+            val go = JSONObject().put("id", id).put("startInMs", startInMs)
+              .put("anchorMono", p.anchorWallMs - wall + mono).put("phoneBootWall", wall - mono)
+              .toString().toByteArray(Charsets.UTF_8)
             Wearable.getMessageClient(context).sendMessage(event.sourceNodeId, PATH_STATE_GO, go)
             android.util.Log.d("VZSend", "$PATH_STATE_GO sent=${System.currentTimeMillis()} startInMs=$startInMs")
           }
@@ -413,12 +420,19 @@ class WearBreathModule : Module() {
      telefoon daarom op het ECHTE verzendmoment erbij hoeveel ms vóór (+) of na (−) het verzonden startmoment `sentAtMs` dat is: `leadMs`.
      Het horloge rekent daarmee op zijn eigen teller, zonder de klok van de telefoon. */
   private fun stampLead(path: String, payload: ByteArray): ByteArray {
-    if (path != PATH_STATE_START && path != PATH_BREATH_START) return payload
+    if (path != PATH_STATE_START && path != PATH_BREATH_START && path != PATH_STATE_PREPARE) return payload
     return try {
       val j = JSONObject(String(payload, Charsets.UTF_8))
       val sentAt = j.optLong("sentAtMs", 0L)
       if (sentAt <= 0L) return payload
-      j.put("leadMs", sentAt - System.currentTimeMillis())
+      val wall = System.currentTimeMillis()
+      val mono = android.os.SystemClock.elapsedRealtime()
+      j.put("leadMs", sentAt - wall)
+      /* 29 okt 2026 (operator: "een vaste formule, het moet consistent werken"): gemeten deden berichten er 0,8–0,9 s over — wie de reistijd
+         schat zat tot 0,85 s naast de telefoon. Daarom ook het startmoment op de TELLER van de telefoon (elapsedRealtime, springt nooit) en
+         wanneer de telefoon opstartte; het horloge rekent dat met de gemeten verhouding tussen beide tellers om (wear-app ClockSync). */
+      j.put("anchorMono", sentAt - wall + mono)
+      j.put("phoneBootWall", wall - mono)
       j.toString().toByteArray(Charsets.UTF_8)
     } catch (_: Exception) {
       payload
