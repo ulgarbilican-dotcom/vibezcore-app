@@ -74,6 +74,21 @@
     .mobile-toggle-icon { width: 16px; height: 16px; transition: transform 0.2s; color: var(--gray-400); }
     .mobile-toggle.open .mobile-toggle-icon { transform: rotate(180deg); }
     .section:last-of-type { border-bottom: none; padding-bottom: 0; }
+    /* 29 okt 2026: compacter op gsm — Wix laat een HTML-blok niet onbeperkt lang worden (Privacy was ~12.300 px op 320 px breed). */
+    .hero { padding: 36px 16px 24px; }
+    .hero h1 { font-size: 30px; letter-spacing: -0.8px; margin-bottom: 12px; }
+    .hero-sub { font-size: 15px; }
+    .date-badge { margin-bottom: 24px; }
+    .section { padding: 28px 0; }
+    .section h2 { font-size: 20px; margin-bottom: 12px; }
+    .section h3 { margin: 18px 0 8px; }
+    .section p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+    .rights-list li { font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .card-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .card { padding: 12px; }
+    .card p { font-size: 12px; line-height: 1.45; }
+    .highlight, .danger { padding: 14px 16px; }
+    .contact-btn { margin-top: 20px; }
   }
   @media (max-width: 480px) {
     .contact-btn { font-size: 12px; padding: 12px 22px; gap: 10px; letter-spacing: 0.08em; }
