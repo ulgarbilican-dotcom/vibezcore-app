@@ -31,6 +31,14 @@ jest.mock('@/services/auth', () => ({
     return { status: 200, ok: true, json: async () => server.rows };
   },
 }));
+/* De eenmalige overname uit de oude State Control-tabel: hier zonder netwerk (geen oude sessies), behalve waar een test iets zet. */
+const legacy = { sessions: [] as any[], calls: 0 };
+jest.mock('@/utils/bracelet-history-sync', () => ({
+  importLegacyStateSessions: async () => {
+    legacy.calls++;
+    return 0;
+  },
+}));
 jest.mock('@/utils/user-bucket', () => ({
   resolveActiveBucket: async () => (globalThis as any).__bucket,
   ensureBucketLoaded: async () => (globalThis as any).__bucket,
@@ -197,6 +205,19 @@ describe('Backup & Sync', () => {
     const calls = server.calls;
     expect(await a.sync.syncNow(false)).toBe('skipped');
     expect(server.calls).toBe(calls);
+  });
+
+  it('reads the old State Control table only while there is no state_history backup yet', async () => {
+    legacy.calls = 0;
+    const a = newDevice('u-abc');
+    await a.state.recordSession({ mode: 2, startedAt: new Date(2026, 9, 1, 8, 0).toISOString(), endedAt: new Date(2026, 9, 1, 8, 10).toISOString(), durationMin: 10, plannedMin: 10, status: 'completed' } as any);
+    await a.sync.syncNow(true); // geen rij → eenmalig de oude tabel, daarna rij aangemaakt
+    expect(legacy.calls).toBe(1);
+    expect(server.rows.some((r) => r.key === 'state_history')).toBe(true);
+    await a.sync.syncNow(true);
+    const b = newDevice('u-abc');
+    await b.sync.syncNow(true);
+    expect(legacy.calls).toBe(1); // er is nu een back-up: de oude tabel wordt nooit meer gelezen
   });
 
   it('waits while the app is still on another bucket (just signed in): nothing applied, nothing sent', async () => {

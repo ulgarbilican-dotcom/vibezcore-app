@@ -175,3 +175,35 @@ function failResult(error: string): SyncResult {
 function successResult(pushed: number, pulled: number, conflicts: number): SyncResult {
   return { ok: true, pushed, pulled, conflicts };
 }
+
+/* ── 29 okt 2026: eenmalige overname uit de oude opslag ─────────────────────────────────────────────────────────────────
+   Operator: "ik had de State Control-geschiedenis gewist en nu staan er 7 i.p.v. 2". Deze oudere wachtrij pullde bij elke
+   inlog/sessie ALLE records terug uit de aparte backend-tabel (/api/bracelet/sessions/sync) en kende geen wissen — gewiste sessies
+   kwamen telkens terug. Sinds 28 okt reizen State Control-sessies mee in Backup & Sync (user_data, onderdeel state_history), en dat is
+   nu de enige bron. De oude tabel wordt enkel nog EEN keer gelezen, voor een gebruiker die nog geen state_history-back-up heeft
+   (iemand die van een oudere app-versie komt), zodat zijn sessies niet verloren gaan. De backend zelf blijft ongewijzigd. */
+export async function importLegacyStateSessions(): Promise<number> {
+  let token: string | null = null;
+  try {
+    token = await getToken();
+  } catch {
+    return 0;
+  }
+  if (!token) return 0;
+  const bucket = _internalGetActiveBucket();
+  if (!bucket || !bucket.startsWith('u-')) return 0;
+  try {
+    const response = await fetch(SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ push: [], since: null }),
+    });
+    if (!response.ok) return 0;
+    const body = (await response.json()) as { pulled?: SessionRecord[]; conflicts?: SessionRecord[] };
+    const list = [...(Array.isArray(body.pulled) ? body.pulled : []), ...(Array.isArray(body.conflicts) ? body.conflicts : [])];
+    if (list.length > 0) await _internalMergeFromServer(list);
+    return list.length;
+  } catch {
+    return 0;
+  }
+}

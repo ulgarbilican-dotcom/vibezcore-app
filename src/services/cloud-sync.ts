@@ -58,6 +58,7 @@ import { applyRestingSync, getRestingSyncSnapshot, type RestingSyncStored } from
 import { applyBreathSync, getBreathSyncSnapshot, reloadBreathHistory } from '@/utils/breath-history';
 import { applyFavoritesSync, getFavoritesSyncSnapshot, reloadFavorites } from '@/hooks/useFavorites';
 import { applyStateSync, getStateSyncSnapshot, reloadStateHistory } from '@/utils/bracelet-history';
+import { importLegacyStateSessions } from '@/utils/bracelet-history-sync';
 import { applyAudioHistorySync, getAudioHistorySyncSnapshot, reloadAudioHistory } from '@/utils/history';
 import { applyPositionsSync, getPositionsSyncSnapshot, reloadPositions } from '@/utils/vzp';
 import { getActivePlanLoaded, clearActivePlan, reloadActivePlan, saveActivePlan, type ActivePlan } from '@/utils/plan-store';
@@ -351,6 +352,16 @@ async function runOnce(force: boolean): Promise<SyncResult> {
     return 'offline-or-no-table';
   }
   const byKey = new Map(rows.map((r) => [r.key, r]));
+  /* 29 okt 2026: wie nog geen State Control-back-up heeft (komt van een oudere app-versie), krijgt EEN keer zijn sessies uit de oude
+     backend-tabel (bracelet-history-sync.importLegacyStateSessions); daarna is deze back-up de enige bron (geen gewiste sessies die terugkomen). */
+  if (!byKey.has('state_history') && !rejectedDomains.has('state_history')) {
+    const imported = await importLegacyStateSessions();
+    if (imported > 0) {
+      const value = await HANDLERS.state_history.read();
+      locals.state_history = { value, hash: hashValue(value) };
+      actions.legacy_state_import = String(imported);
+    }
+  }
 
   for (const d of SYNC_DOMAINS) {
     if (rejectedDomains.has(d)) {

@@ -304,14 +304,8 @@ export async function recordSession(
       endMs,
     });
   }
-  /* Best-effort sync — silent fail bij netwerk/auth probleem. Dynamic
-     import om circular dependency te vermijden (sync-module importeert
-     deze module). */
-  import('./bracelet-history-sync')
-    .then((m) => m.syncAll())
-    .catch(() => {
-      /* swallow */
-    });
+  /* [VERVANGEN 29 okt 2026] Hier pushte de oude wachtrij (bracelet-history-sync.syncAll) elke sessie naar een aparte backend-tabel
+     en pullde ze terug — die kende geen wissen. State Control-sessies reizen nu enkel mee in Backup & Sync (cloud-sync.ts). */
 }
 
 /** Lees alle records — sorted nieuwste eerst. */
@@ -469,13 +463,8 @@ export async function refreshUserBucket(): Promise<void> {
   cache = [];
   notify();
   await loadOnce();
-  /* Best-effort sync na bucket-load — pullt server-records van deze user
-     (alleen voor real-user buckets, dev/anon blijven puur lokaal). */
-  import('./bracelet-history-sync')
-    .then((m) => m.syncAll())
-    .catch(() => {
-      /* swallow */
-    });
+  /* [VERVANGEN 29 okt 2026] Geen pull meer uit de oude backend-tabel bij elke wissel (gewiste sessies kwamen zo terug); Backup & Sync
+     (cloud-sync.ts) zet de sessies terug, en neemt de oude tabel eenmalig over voor wie nog geen back-up heeft. */
 }
 
 /* ── Stats-berekening ───────────────────────────────────────────────── */
