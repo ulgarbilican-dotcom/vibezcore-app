@@ -101,6 +101,9 @@ let state: BraceletActivePlan | null = null;
 let activeBucket = 'anon';
 let initialized = false;
 let loadPromise: Promise<void> | null = null;
+/* 29 okt 2026: zie utils/history.ts (`loadGen`) — een verouderde laadactie mag de net teruggezette of herladen gegevens (of de
+   emmer waarin geschreven wordt) nooit meer overschrijven. */
+let loadGen = 0;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -144,9 +147,13 @@ async function load(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
+    const gen = loadGen;
     try {
-      activeBucket = await resolveActiveBucket();
+      const resolved = await resolveActiveBucket();
+      if (gen !== loadGen) return;
+      activeBucket = resolved;
       const raw = await AsyncStorage.getItem(planKey(activeBucket));
+      if (gen !== loadGen) return;
       if (raw) {
         const parsed = JSON.parse(raw);
         if (isValidPlan(parsed)) {
@@ -177,6 +184,7 @@ async function persist(): Promise<void> {
 
 /** Opnieuw inlezen na in-/uitloggen — de emmer verandert dan. */
 export async function reloadActiveBraceletPlan(): Promise<void> {
+  loadGen++;
   initialized = false;
   loadPromise = null;
   state = null;
@@ -275,5 +283,6 @@ AppState.addEventListener('change', (s) => {
    schrijven, en na een herstart stond alles in een andere emmer. Nu volgt
    hij elke emmerwissel, net als history.ts/vzp.ts/useFavorites. */
 subscribeUserBucket(() => {
+  loadGen++;
   reloadActiveBraceletPlan().catch(() => {});
 });

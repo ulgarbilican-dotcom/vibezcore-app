@@ -91,6 +91,9 @@ let totals: BreathTotals = { ...EMPTY_TOTALS };
 let activeBucket = 'anon';
 let initialized = false;
 let loadPromise: Promise<void> | null = null;
+/* 29 okt 2026: zie utils/history.ts (`loadGen`) — een verouderde laadactie mag de net teruggezette of herladen gegevens (of de
+   emmer waarin geschreven wordt) nooit meer overschrijven. */
+let loadGen = 0;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -122,10 +125,14 @@ async function load(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
+    const gen = loadGen;
     try {
-      activeBucket = await resolveActiveBucket();
+      const resolved = await resolveActiveBucket();
+      if (gen !== loadGen) return;
+      activeBucket = resolved;
       await migrateLegacy(activeBucket);
       const rawTotals = await AsyncStorage.getItem(totalsKey(activeBucket));
+      if (gen !== loadGen) return;
       if (rawTotals) {
         const t = JSON.parse(rawTotals);
         if (t && typeof t === 'object') {
@@ -137,6 +144,7 @@ async function load(): Promise<void> {
         }
       }
       const raw = await AsyncStorage.getItem(entriesKey(activeBucket));
+      if (gen !== loadGen) return;
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -191,6 +199,7 @@ export async function applyBreathSync(p: { entries: BreathHistoryEntry[]; totals
 /** Opnieuw inlezen na in- of uitloggen. De emmer verandert dan, en zonder
  *  dit blijft de vorige gebruiker in beeld tot de app herstart. */
 export async function reloadBreathHistory(): Promise<void> {
+  loadGen++;
   initialized = false;
   loadPromise = null;
   state = [];
@@ -319,5 +328,6 @@ export function useBreathHistory(): BreathHistoryEntry[] {
    schrijven, en na een herstart stond alles in een andere emmer. Nu volgt
    hij elke emmerwissel, net als history.ts/vzp.ts/useFavorites. */
 subscribeUserBucket(() => {
+  loadGen++;
   reloadBreathHistory().catch(() => {});
 });

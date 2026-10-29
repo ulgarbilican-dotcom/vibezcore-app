@@ -100,6 +100,9 @@ export type SessionRecord = {
 let cache: SessionRecord[] = [];
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
+/* 29 okt 2026: zie utils/history.ts (`loadGen`) — een verouderde laadactie mag de net teruggezette of herladen gegevens (of de
+   emmer waarin geschreven wordt) nooit meer overschrijven. */
+let loadGen = 0;
 let activeBucket: string | null = null;
 const listeners = new Set<() => void>();
 
@@ -193,10 +196,14 @@ async function loadOnce(): Promise<void> {
   if (loaded) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
+    const gen = loadGen;
     try {
-      activeBucket = await resolveActiveBucket();
+      const resolved = await resolveActiveBucket();
+      if (gen !== loadGen) return;
+      activeBucket = resolved;
       await migrateLegacyIfNeeded(activeBucket);
       const raw = await AsyncStorage.getItem(bucketKey(activeBucket));
+      if (gen !== loadGen) return;
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -351,6 +358,7 @@ export async function applyStateSync(records: SessionRecord[]): Promise<void> {
 
 /** Opnieuw inlezen (na het overnemen van gastgegevens in een account). */
 export async function reloadStateHistory(): Promise<void> {
+  loadGen++;
   loaded = false;
   loadPromise = null;
   activeBucket = null;
@@ -453,6 +461,7 @@ export function _internalGetActiveBucket(): string | null {
 export async function refreshUserBucket(): Promise<void> {
   const newBucket = await resolveActiveBucket();
   if (newBucket === activeBucket) return;
+  loadGen++;
   /* Bucket-switch — reload cache from new key. */
   loaded = false;
   loadPromise = null;
