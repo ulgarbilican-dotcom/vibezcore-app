@@ -285,14 +285,17 @@ export function setVoiceEnabled(enabled: boolean): void {
   if (!enabled && !isExplanationPlaying()) stopVoice();
 }
 
-/* De Ujjayi-uitleg duurt ~10 s; 20 s marge. */
+/* De Ujjayi-uitleg duurt ~10 s; 20 s marge. Het token maakt een nog lopende laad/afspeelpoging ongeldig zodra de gebruiker
+   "Sound off", "Got it" of weg tikt. */
 let explanationUntil = 0;
+let explanationToken = 0;
 export function isExplanationPlaying(): boolean {
   return Date.now() < explanationUntil;
 }
 /** De eigen knop "Sound off" in de Ujjayi-popup: de uitleg meteen stilzetten. */
 export function stopExplanation(): void {
   explanationUntil = 0;
+  explanationToken += 1;
   stopVoice();
 }
 
@@ -455,25 +458,49 @@ export function playBreathCue(
  *  staat pas op de volgende pagina. De popup heeft een eigen luidspreker-knop om ze aan/uit te zetten. */
 export function playUjjayiStartCue(always = false): void {
   if (!voiceEnabled && !always) return;
-  explanationUntil = Date.now() + 20_000;
   if (libraryBlocksVoice()) return;
+  explanationUntil = Date.now() + 20_000;
+  const token = ++explanationToken;
+  const url = activeUjjayiStartUrl();
+  /* 29 okt 2026 (operator: "bij Ujjayi hoor ik niets bij het openen, wel na uit/aan" — 3e melding). OORZAAK: bij de eerste opening
+     staat de opname nog niet lokaal; de gewone cue-weg probeert ~2 s (Android) of 1,5 s (iPhone) en geeft dan op, terwijl het laden
+     langer duurt. Bij de tweede tik was het bestand al geladen. Daarom wacht de uitleg hier tot de opname geladen is (max 10 s) en
+     speelt dan meteen — zolang de popup nog open is (stopExplanation maakt het token ongeldig). */
+  const stillWanted = () => token === explanationToken && Date.now() < explanationUntil && !libraryBlocksVoice();
   if (nativeVoice()) {
-    playUrl(activeUjjayiStartUrl());
+    if (playVoiceNow(url, 1, 0)) {
+      releaseAfterVoice();
+      return;
+    }
+    void loadVoice(url, assetUri(url)).then((ok) => {
+      if (ok && stillWanted() && playVoiceNow(url, 1, 0)) releaseAfterVoice();
+    });
     return;
   }
-  /* Android (operator 19 okt 2026: "bij Ujjayi hoor ik niets"): deze zin
-     speelt als enige al bij het openen, terwijl de audiomodus net wordt
-     gezet — eerst die afwachten, dan pas spelen. */
-  const url = activeUjjayiStartUrl();
+  const start = () => {
+    if (!stillWanted()) return;
+    playUrl(url);
+    /* Laadt de opname trager dan de gewone herhaalpogingen van playUrl (tot 2 s), dan hier verder proberen tot ze echt speelt. */
+    const player = getOrCreatePlayer(url);
+    for (const ms of [2500, 3200, 4000, 5000, 6500, 8000, 10000]) {
+      setTimeout(() => {
+        if (!stillWanted() || activePlayer !== player || hasAudibleProgress(player)) return;
+        try {
+          player.volume = 1;
+          player.play();
+        } catch {
+          /* swallow */
+        }
+      }, ms);
+    }
+  };
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     void (require('./session-keepalive') as typeof import('./session-keepalive'))
       .ensureAudioModeSet()
-      .finally(() => {
-        if ((voiceEnabled || always) && !libraryBlocksVoice()) playUrl(url);
-      });
+      .finally(start);
   } catch {
-    playUrl(url);
+    start();
   }
 }
 
@@ -618,6 +645,10 @@ export function preloadBreathCues(which: 'active' | 'both' = 'active'): void {
 /** Stop alle ongoing voice playback. Call bij session-cleanup,
  *  voice-toggle-off, of bij tab-unmount. */
 export function stopVoice(): void {
+  /* Elke stop (scherm verlaten, pauze, stem uit, "Got it") maakt ook een nog ladende Ujjayi-uitleg ongeldig — anders kon die
+     na het verlaten alsnog beginnen te praten (29 okt 2026). */
+  explanationUntil = 0;
+  explanationToken += 1;
   if (nativeVoice()) {
     nativeVoiceRequest += 1;
     stopSessionVoice();

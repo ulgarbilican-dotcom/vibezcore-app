@@ -3809,6 +3809,7 @@ export function BreathSession() {
            wachtte nog op de start) — wegtikken = "Got it, start". */
         onRequestClose={() => {
           setUjjayiIntroOpen(false);
+          stopExplanation(); // 29 okt 2026 (operator): sluiten = meteen stoppen met praten
           proceedToStart(ujjayiPreviewRef.current);
         }}
       >
@@ -3816,6 +3817,7 @@ export function BreathSession() {
           style={s.modalBackdrop}
           onPress={() => {
             setUjjayiIntroOpen(false);
+            stopExplanation(); // 29 okt 2026 (operator): sluiten = meteen stoppen met praten
             proceedToStart(ujjayiPreviewRef.current);
           }}
         >
@@ -3868,6 +3870,7 @@ export function BreathSession() {
               style={[s.modalBtn, pressUjjayiStart.style]}
               onPress={() => {
                 setUjjayiIntroOpen(false);
+                stopExplanation(); // "Got it, start" = meteen stoppen met praten (operator, 29 okt 2026)
                 proceedToStart(ujjayiPreviewRef.current);
               }}
               onPressIn={pressUjjayiStart.onPressIn}
