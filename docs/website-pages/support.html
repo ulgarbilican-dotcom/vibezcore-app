@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Support Center — VIBEZCORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -19,10 +22,10 @@
     --radius: 12px;
   }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
   body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: 'Inter', "Helvetica Neue", Helvetica, Arial, sans-serif;
     background: var(--white);
     color: var(--black);
     -webkit-font-smoothing: antialiased;
@@ -95,26 +98,52 @@
   /* CONTENT */
   .content { min-width: 0; }
 
-  /* CARDS */
+  /* CARDS — onderwerpen, met dezelfde iconen als in de app (lucide + het eigen bracelet-icoon).
+     Een tik op een kaart kiest het onderwerp in het formulier en scrolt erheen. */
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
-    margin-top: 20px;
   }
 
   .card {
+    display: flex;
+    flex-direction: column;
     background: var(--gray-100);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 18px;
     border: 1px solid var(--gray-200);
+    font-family: inherit;
+    text-align: left;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
   }
+
+  .card:hover { background: #eeeef1; border-color: #d9d9de; transform: translateY(-1px); }
+  .card:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+
+  .card-icon svg { width: 19px; height: 19px; }
 
   .card h4 {
     font-size: 13px;
     font-weight: 600;
     color: var(--black);
     margin-bottom: 4px;
+    line-height: 1.35;
   }
 
   .card p {
@@ -126,15 +155,18 @@
 
   .card-link {
     display: inline-block;
-    margin-top: 10px;
+    margin-top: auto;
+    padding-top: 10px;
     font-size: 12px;
     font-weight: 600;
     color: var(--blue);
-    text-decoration: none;
     letter-spacing: 0.02em;
   }
 
-  .card-link:hover { text-decoration: underline; }
+  @media (max-width: 760px) {
+    .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .card { padding: 14px; }
+  }
 
   /* FAQ BANNER */
   .faq-banner {
@@ -258,6 +290,22 @@
     cursor: pointer;
   }
 
+  .subject-hint {
+    display: none;
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--gray-600);
+    line-height: 1.55;
+  }
+
+  .subject-hint.show { display: block; }
+  .subject-hint a { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .subject-hint a:hover { text-decoration: underline; }
+
   .honeypot {
     position: absolute;
     left: -9999px;
@@ -354,7 +402,7 @@
 </div>
 
 <!-- LAYOUT -->
-<div class="page-wrap" style="display:block;max-width:760px;margin:0 auto;padding:0 48px 60px;">
+<div class="page-wrap" style="display:block;max-width:900px;margin:0 auto;padding:0 48px 60px;">
 
   <main class="content" style="max-width:100%;">
 
@@ -368,27 +416,47 @@
 
     <!-- CATEGORY CARDS -->
     <div class="card-grid" style="margin-bottom:32px;">
-      <div class="card">
-        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">💎</div>
+      <button type="button" class="card" data-subject="Premium — Buying Premium or a Day Pass">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg></span>
+        <h4>Premium &amp; billing</h4>
+        <p>Subscriptions, the Day Pass, restoring or cancelling a purchase.</p>
+      </button>
+      <button type="button" class="card" data-subject="Breathwork — sessions">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/></svg></span>
+        <h4>Breathwork</h4>
+        <p>Sessions, the voice and the vibration that guides your breath.</p>
+      </button>
+      <button type="button" class="card" data-subject="State Control — rhythms and haptics">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.247 7.761a6 6 0 0 1 0 8.478"/><path d="M19.075 4.933a10 10 0 0 1 0 14.134"/><path d="M4.925 19.067a10 10 0 0 1 0-14.134"/><path d="M7.753 16.239a6 6 0 0 1 0-8.478"/><circle cx="12" cy="12" r="2"/></svg></span>
+        <h4>State Control</h4>
+        <p>Haptic rhythms on your phone or watch and your daily plan.</p>
+      </button>
+      <button type="button" class="card" data-subject="Audio Library — playback or access">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></span>
+        <h4>Audio Library</h4>
+        <p>Playback, the free sessions and the full library.</p>
+      </button>
+      <button type="button" class="card" data-subject="Smartwatch — Apple Watch">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10v2.2l1.6 1"/><path d="m16.13 7.66-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05"/><path d="m7.88 16.36.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/><circle cx="12" cy="12" r="6"/></svg></span>
+        <h4>Smartwatch</h4>
+        <p>Apple Watch and Wear OS: pairing and sessions on your wrist.</p>
+      </button>
+      <button type="button" class="card" data-subject="Account — sign-in or password">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg></span>
+        <h4>Account &amp; data</h4>
+        <p>Sign-in, password and your personal data.</p>
+      </button>
+      <button type="button" class="card" data-subject="Bracelet — launch and Kickstarter">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16.59 6.45A8 8 0 1 1 7.41 6.45" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/><circle cx="18.93" cy="17" r="1.15" fill="#ffffff"/><circle cx="12" cy="21" r="1.15" fill="#ffffff"/><circle cx="5.07" cy="17" r="1.15" fill="#ffffff"/></svg></span>
         <h4>Smart Bead Bracelet</h4>
-        <p>Launching Early 2027. Questions about the bracelet or the Kickstarter launch.</p>
-      </div>
-      <div class="card">
-        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">🎧</div>
-        <h4>Premium &amp; app</h4>
-        <p>Premium, the Day Pass, billing, sessions, your smartwatch, or playback.</p>
-      </div>
-      <div class="card">
-        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">🔐</div>
-        <h4>Account</h4>
-        <p>Issues with login, password, or account settings.</p>
-      </div>
-      <div class="card">
-        <div style="width:36px;height:36px;background:#f0f0ff;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;">🗑️</div>
-        <h4>Account deletion</h4>
-        <p>Request removal of your account and personal data.</p>
-        <a href="https://www.vibezcore.com/delete-account" target="_top" class="card-link">View instructions →</a>
-      </div>
+        <p>Launching Early 2027 on Kickstarter.</p>
+      </button>
+      <a class="card" href="https://www.vibezcore.com/delete-account" target="_top">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+        <h4>Delete account</h4>
+        <p>Remove your account and personal data.</p>
+        <span class="card-link">See the steps →</span>
+      </a>
     </div>
 
     <!-- FAQ BANNER -->
@@ -429,29 +497,46 @@
       <div class="form-field">
         <label for="subject">Select a subject<span class="req">*</span></label>
         <select id="subject" name="Subject" required>
-          <option value="" disabled selected>Choose one…</option>
-          <optgroup label="Premium &amp; app">
-            <option value="Premium — subscription, Day Pass or billing">Subscription, Day Pass or billing</option>
-            <option value="App — sessions, playback or access">Sessions, playback or access</option>
-            <option value="App — smartwatch">Smartwatch</option>
+          <option value="" disabled selected>Choose a subject…</option>
+          <optgroup label="Premium &amp; billing">
+            <option value="Premium — Buying Premium or a Day Pass">Buying Premium or a Day Pass</option>
+            <option value="Premium — Premium not unlocked / restore a purchase">Premium not unlocked or restore a purchase</option>
+            <option value="Premium — Cancel or change my subscription">Cancel or change my subscription</option>
+            <option value="Premium — Refund request">Refund request</option>
           </optgroup>
-          <optgroup label="Smart Bead Bracelet">
-            <option value="Bracelet — question about the launch">Question about the launch (Early 2027)</option>
+          <optgroup label="Breathwork &amp; State Control">
+            <option value="Breathwork — sessions">Breathwork sessions</option>
+            <option value="State Control — rhythms and haptics">State Control rhythms and haptics</option>
+            <option value="Reminders and notifications">Reminders and notifications</option>
           </optgroup>
-          <optgroup label="Account">
-            <option value="Account — login or password">Login or password</option>
+          <optgroup label="Audio Library">
+            <option value="Audio Library — playback or access">Playback or access</option>
+          </optgroup>
+          <optgroup label="Smartwatch">
+            <option value="Smartwatch — Apple Watch">Apple Watch</option>
+            <option value="Smartwatch — Wear OS">Wear OS watch</option>
+          </optgroup>
+          <optgroup label="Account &amp; data">
+            <option value="Account — sign-in or password">Sign-in or password</option>
+            <option value="Account — my data or a privacy request">My data or a privacy request</option>
             <option value="Delete my VIBEZCORE account">Delete my VIBEZCORE account</option>
           </optgroup>
+          <optgroup label="Smart Bead Bracelet">
+            <option value="Bracelet — launch and Kickstarter">Launch and Kickstarter (Early 2027)</option>
+          </optgroup>
           <optgroup label="Other">
-            <option value="General question">General question</option>
+            <option value="Bug report or crash">Report a bug or crash</option>
+            <option value="Feedback or a feature idea">Feedback or a feature idea</option>
             <option value="Partnership or press">Partnership or press</option>
+            <option value="Something else">Something else</option>
           </optgroup>
         </select>
+        <div id="subjectHint" class="subject-hint" role="note"></div>
       </div>
 
       <div class="form-field">
         <label for="message">Message<span class="req">*</span></label>
-        <textarea id="message" name="Message" required placeholder="Tell us how we can help. If your request relates to account deletion, please confirm your registered email address."></textarea>
+        <textarea id="message" name="Message" required placeholder="Tell us how we can help. Use the email address of your VIBEZCORE account so we can find it."></textarea>
       </div>
 
       <button type="submit" class="submit-btn">
@@ -493,29 +578,86 @@
     var status = document.getElementById('formStatus');
     if (!form) return;
 
-    /* Per-subject message template — gevuld zodra de bezoeker de subject
-       kiest EN het message-veld nog leeg is (we overschrijven nooit wat
-       de bezoeker al getypt heeft). */
+    /* Per onderwerp (29 okt 2026, operator: "goed over nadenken welke vragen users kunnen hebben"):
+       - TEMPLATES: vult het bericht met wat we nodig hebben, enkel als het veld nog leeg is
+         (we overschrijven nooit wat de bezoeker al typte);
+       - HINTS: een korte tip onder de keuzelijst, vaak lost die de vraag al op (opzeggen en
+         terugbetalen gaan via Apple / Google, zie de Refund Policy). */
+    var ACCOUNT_LINE = 'Email address of your VIBEZCORE account: \n';
+    var DEVICE_LINES = 'Phone (model and iOS / Android version): \n' +
+      'App version (Profile → Settings → About): \n';
     var TEMPLATES = {
+      'Premium — Premium not unlocked / restore a purchase':
+        ACCOUNT_LINE + 'Bought in: App Store / Google Play\n' +
+        'What you bought (monthly, yearly or Day Pass) and when: \n\nWhat you see in the app:\n',
+      'Premium — Refund request':
+        ACCOUNT_LINE + 'Bought in: App Store / Google Play\nWhat you bought and when: \n\nReason:\n',
+      'Bug report or crash':
+        ACCOUNT_LINE + DEVICE_LINES + '\nWhat you did:\n\nWhat happened:\n\nWhat you expected:\n',
+      'Smartwatch — Apple Watch':
+        DEVICE_LINES + 'Apple Watch model and watchOS version: \n\nWhat happens:\n',
+      'Smartwatch — Wear OS':
+        DEVICE_LINES + 'Watch model: \n\nWhat happens:\n',
+      'Breathwork — sessions': DEVICE_LINES + '\nYour question:\n',
+      'State Control — rhythms and haptics': DEVICE_LINES + '\nYour question:\n',
+      'Audio Library — playback or access': ACCOUNT_LINE + DEVICE_LINES + '\nSession title (if it is about one session): \n\nWhat happens:\n',
+      'Account — sign-in or password': ACCOUNT_LINE + 'How you sign in (email, Apple or Google): \n\nWhat happens:\n',
+      'Account — my data or a privacy request': ACCOUNT_LINE + '\nYour request (access, correction, export or something else):\n',
       'Delete my VIBEZCORE account':
         'Please process my VIBEZCORE account deletion request.\n\n' +
         'Registered email address: \n\n' +
         'Additional notes (optional):\n'
     };
+    var APPLE_SUBS = '<a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener">Apple</a>';
+    var GOOGLE_SUBS = '<a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play</a>';
+    var HINTS = {
+      'Premium — Premium not unlocked / restore a purchase':
+        'Quick fix: open the app, go to Profile and tap <b>Restore Purchases</b>, signed in with the same Apple ID or Google account you paid with.',
+      'Premium — Cancel or change my subscription':
+        'You cancel or change your plan in your ' + APPLE_SUBS + ' or ' + GOOGLE_SUBS + ' subscriptions. Premium stays active until the end of the period you paid for. A Day Pass runs for 24 hours and cannot be cancelled.',
+      'Premium — Refund request':
+        'Purchases in the app are billed by Apple or Google, so they handle refunds: <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">Apple</a> or <a href="https://support.google.com/googleplay/answer/2479637" target="_blank" rel="noopener">Google Play</a>. See our <a href="https://www.vibezcore.com/refund-policy" target="_top">Refund Policy</a>. Still stuck? Send us the details below.',
+      'Reminders and notifications':
+        'Reminders are set in the app under Profile → Settings. If none arrive, check that notifications for VIBEZCORE are allowed in your phone settings.',
+      'Account — sign-in or password':
+        'Forgot your password? Tap <b>Forgot password</b> on the sign-in screen and we email you a link.',
+      'Delete my VIBEZCORE account':
+        'You can delete your account yourself in the app, in Profile. <a href="https://www.vibezcore.com/delete-account" target="_top">See the steps</a>, or send this form.',
+      'Bracelet — launch and Kickstarter':
+        'The Smart Bead Bracelet launches Early 2027 on Kickstarter and is not on sale yet. <a href="https://www.vibezcore.com/smart-bead-bracelet" target="_top">Read more about it</a>.'
+    };
 
     var subjectSelect = document.getElementById('subject');
     var messageField = document.getElementById('message');
-    if (subjectSelect && messageField) {
-      subjectSelect.addEventListener('change', function () {
-        var template = TEMPLATES[subjectSelect.value];
-        if (template && messageField.value.trim() === '') {
-          messageField.value = template;
-          /* Cursor op de eerste lege regel zetten (na "Registered email address: ") */
-          var pos = template.indexOf('Registered email address: ') + 'Registered email address: '.length;
-          try { messageField.focus(); messageField.setSelectionRange(pos, pos); } catch (e) {}
-        }
-      });
+    var hint = document.getElementById('subjectHint');
+    var lastTemplate = '';
+    function applySubject() {
+      var v = subjectSelect.value;
+      if (hint) {
+        hint.innerHTML = HINTS[v] || '';
+        hint.className = 'subject-hint' + (HINTS[v] ? ' show' : '');
+      }
+      var template = TEMPLATES[v];
+      /* Enkel invullen als het veld leeg is of nog het vorige, onaangeroerde sjabloon bevat. */
+      var current = messageField.value;
+      if (current.trim() === '' || current === lastTemplate) {
+        messageField.value = template || '';
+        lastTemplate = template || '';
+      }
     }
+    if (subjectSelect && messageField) {
+      subjectSelect.addEventListener('change', applySubject);
+    }
+
+    /* Een tik op een onderwerpkaart kiest dat onderwerp en gaat naar het formulier. */
+    Array.prototype.forEach.call(document.querySelectorAll('.card[data-subject]'), function (card) {
+      card.addEventListener('click', function () {
+        subjectSelect.value = card.getAttribute('data-subject');
+        applySubject();
+        subjectSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try { subjectSelect.focus({ preventScroll: true }); } catch (e) {}
+      });
+    });
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -545,6 +687,8 @@
             status.className = 'form-status success';
             status.textContent = 'Thank you — your message has been sent. We will reply within 1–2 business days.';
             form.reset();
+            lastTemplate = '';
+            if (hint) { hint.className = 'subject-hint'; hint.innerHTML = ''; }
           } else {
             throw new Error(result.json.message || 'Submission failed');
           }

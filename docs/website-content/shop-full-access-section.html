@@ -156,7 +156,7 @@ h2 .l{display:block}
 
         <div class="pr" id="pr" aria-live="polite">
           <div class="pr-row"><span class="pr-num" id="num">€5,83</span><span class="pr-per">/mo.</span></div>
-          <p class="pr-sub" id="psub">€69,99 billed yearly.<br><b>Includes a 7-day free trial.</b></p>
+          <p class="pr-sub" id="psub">€69,99 billed yearly.<br><b>Cancel anytime.</b></p>
         </div>
 
         <div class="dl">
@@ -195,9 +195,9 @@ h2 .l{display:block}
     <span class="eyebrow faq-h rv">FAQ</span>
     <h2 class="rv d1">Questions.</h2>
     <div class="faq">
-      <div class="fq"><button type="button" aria-expanded="false">How do I subscribe?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Download the free VIBEZCORE app from the App Store or Google Play. A free selection of 10 full Audio Library sessions is playable without an account. Breathwork includes one free guided session, then two free cycles per state. When you’re ready for more, choose the yearly plan to start a 7-day free trial. It unlocks Breathwork and a wider Audio Library selection during the trial, and everything once your subscription begins. Billing is handled by Apple or Google.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">How do I subscribe?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Download the free VIBEZCORE app from the App Store or Google Play. A free selection of 10 full Audio Library sessions is playable without an account. Breathwork includes one free guided session, then two free cycles per state. When you’re ready for more, choose Premium monthly or yearly, or a Day Pass for 24 hours. Premium unlocks Breathwork, State Control and the full Audio Library. Billing is handled by Apple or Google.</p></div></div></div>
       <div class="fq"><button type="button" aria-expanded="false">Can I cancel anytime?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Yes. Manage or cancel your subscription from your App Store or Google Play account. You keep access until the end of your current billing period.</p></div></div></div>
-      <div class="fq"><button type="button" aria-expanded="false">What’s the difference between monthly and yearly?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>The same full access to Breathwork and the Audio Library. Yearly costs 42% less per month, is billed once a year, and is the only plan with a 7-day free trial.</p></div></div></div>
+      <div class="fq"><button type="button" aria-expanded="false">What’s the difference between monthly and yearly?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>The same full access to Breathwork and the Audio Library. Yearly costs 42% less per month and is billed once a year. Prefer to try it first? A Day Pass gives you everything for 24 hours.</p></div></div></div>
       <div class="fq"><button type="button" aria-expanded="false">What is your refund policy?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Refunds for in-app subscriptions are handled by Apple (apple.com/refund-request) or Google Play (play.google.com). Cancel anytime from your store account; access continues until the end of the period you already paid for.</p></div></div></div>
       <div class="fq"><button type="button" aria-expanded="false">How many devices can I use?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>One account, all your devices. Sign in with the same Apple ID or Google account on your phone and tablet.</p></div></div></div>
       <div class="fq"><button type="button" aria-expanded="false">What payment methods do you accept?<i aria-hidden="true"></i></button><div class="fq-a"><div><p>Payments are processed by the App Store and Google Play. They support cards such as Visa, Mastercard and Amex, Apple Pay, Google Pay and other regional methods, all managed in your store account.</p></div></div></div>
@@ -207,9 +207,9 @@ h2 .l{display:block}
 <script>
 (function(){
   var P={
-    EUR:{monthly:{num:'€9,99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'€5,83',sub:'€69,99 billed yearly.<br><b>Includes a 7-day free trial.</b>'},save:42},
-    USD:{monthly:{num:'$9.99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'$5.83',sub:'$69.99 billed yearly.<br><b>Includes a 7-day free trial.</b>'},save:42},
-    GBP:{monthly:{num:'£8.99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'£5.00',sub:'£59.99 billed yearly.<br><b>Includes a 7-day free trial.</b>'},save:44}
+    EUR:{monthly:{num:'€9,99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'€5,83',sub:'€69,99 billed yearly.<br><b>Cancel anytime.</b>'},save:42},
+    USD:{monthly:{num:'$9.99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'$5.83',sub:'$69.99 billed yearly.<br><b>Cancel anytime.</b>'},save:42},
+    GBP:{monthly:{num:'£8.99',sub:'Billed monthly.<br><b>Cancel anytime.</b>'},yearly:{num:'£5.00',sub:'£59.99 billed yearly.<br><b>Cancel anytime.</b>'},save:44}
   };
   function detect(){try{var tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'',lc=(navigator.language||'').toLowerCase();
     if(tz==='Europe/London'||tz==='Europe/Belfast'||lc.indexOf('en-gb')===0)return'GBP';
