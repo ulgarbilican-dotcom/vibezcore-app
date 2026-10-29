@@ -178,6 +178,7 @@ import {
   Play,
   Settings,
   SlidersHorizontal,
+  Volume2,
   VolumeX,
   X,
 } from 'lucide-react-native';
@@ -2478,6 +2479,8 @@ export function BreathSession() {
      was, want de popup onderbreekt het normale `preview`-argument. */
   const ujjayiPreviewRef = useRef(false);
   const [ujjayiIntroOpen, setUjjayiIntroOpen] = useState(false);
+  /* 29 okt 2026 (operator): de gesproken uitleg staat standaard aan, met een luidspreker-knop in de popup (stem = gekozen man/vrouw). */
+  const [ujjayiSound, setUjjayiSound] = useState(true);
   const startWithBatteryCheck = useCallback(
     (preview = false) => {
       if (tech.key === 'ujjayi') {
@@ -2487,7 +2490,8 @@ export function BreathSession() {
            audio moet bij eerste popup beginnen" — speelt nu METEEN als de
            popup verschijnt (auto-play), niet pas als "Got it" ingedrukt
            wordt. */
-        playUjjayiStartCue();
+        setUjjayiSound(true);
+        playUjjayiStartCue(true);
         return;
       }
       proceedToStart(preview);
@@ -3787,7 +3791,26 @@ export function BreathSession() {
             {/* VIBEZCORE-glas, zelfde als de "Well done"-kaart (operator,
                 7 okt 2026: "popupkaarten breathwork nog altijd niet glas"). */}
             <VibezGlass radius={22} level="sheet" tint={accent} style={StyleSheet.absoluteFill} />
-            <Text style={s.modalEyebrow}>UJJAYI BREATHING</Text>
+            <View style={s.ujjayiHead}>
+              <Text style={s.modalEyebrow}>UJJAYI BREATHING</Text>
+              <Tap
+                onPress={() => {
+                  if (ujjayiSound) {
+                    setUjjayiSound(false);
+                    stopVoice();
+                  } else {
+                    setUjjayiSound(true);
+                    playUjjayiStartCue(true);
+                  }
+                }}
+                hitSlop={14}
+                style={s.ujjayiSoundBtn}
+                accessibilityRole="button"
+                accessibilityLabel={ujjayiSound ? 'Turn spoken explanation off' : 'Play spoken explanation'}
+              >
+                {ujjayiSound ? <Volume2 size={18} color="#ffffff" strokeWidth={1.9} /> : <VolumeX size={18} color="rgba(255,255,255,0.6)" strokeWidth={1.9} />}
+              </Tap>
+            </View>
             <Text style={s.modalTitle}>The sound is the technique</Text>
             <BalancedText style={s.modalBody}>
               Create a soft Darth Vader–like sound at the back of your
@@ -5397,6 +5420,17 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
+  },
+  ujjayiHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  ujjayiSoundBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   modalEyebrow: {
     fontFamily: BrandFonts.bold,

@@ -436,8 +436,10 @@ export function playBreathCue(
  *  niet per fase (zou onnatuurlijk vaak herhalen). Los aan te roepen,
  *  niet via de per-fase `playBreathCue()`-route. Respecteert dezelfde
  *  `voiceEnabled`-instelling. */
-export function playUjjayiStartCue(): void {
-  if (!voiceEnabled) return;
+/** `always` (29 okt 2026, operator): de Ujjayi-uitleg speelt standaard, ook als de stem-begeleiding van de sessie uit staat — die keuze
+ *  staat pas op de volgende pagina. De popup heeft een eigen luidspreker-knop om ze aan/uit te zetten. */
+export function playUjjayiStartCue(always = false): void {
+  if (!voiceEnabled && !always) return;
   if (libraryBlocksVoice()) return;
   if (nativeVoice()) {
     playUrl(activeUjjayiStartUrl());
@@ -452,7 +454,7 @@ export function playUjjayiStartCue(): void {
     void (require('./session-keepalive') as typeof import('./session-keepalive'))
       .ensureAudioModeSet()
       .finally(() => {
-        if (voiceEnabled && !libraryBlocksVoice()) playUrl(url);
+        if ((voiceEnabled || always) && !libraryBlocksVoice()) playUrl(url);
       });
   } catch {
     playUrl(url);
