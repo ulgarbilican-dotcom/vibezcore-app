@@ -47,7 +47,7 @@ import PopupCard from '@/components/PopupCard';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
-import { getHapticStrength, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+import { getHapticStrength, resetHapticStrengthForSession, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import { audioOutputExtraMs } from '@/services/audio-latency';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -1135,9 +1135,14 @@ export function BreathSession() {
   const [hapticGlobal, setHapticGlobal] = useSetting('hapticsPhone');
   const [voiceGenderSetting, setVoiceGenderSetting] = useSetting('voiceGender');
   const pref = prefs[st.key] ?? {};
-  const voiceDefault = pref.voice ?? voiceGlobal;
+  /* 29 okt 2026 (operator: "sessie moet altijd met stem en vibratie aan starten"): elke sessie start met stem en trilling AAN;
+     uitzetten in Audio & Haptics geldt enkel voor die sessie. Vervangt de onthouden keuze per toestand/voor alles (5 aug / 20 sept)
+     voor stem en trilling; de stemkeuze (Eli/Benjamin) wordt wel nog onthouden. Stil ademen bij anderen: per sessie uitzetten. */
+  const voiceDefault = true;
+  void voiceGlobal;
   const [privateOn, setPrivateOn] = useState(isPrivateMode());
-  const hapticDefault = pref.haptics ?? hapticGlobal;
+  const hapticDefault = true;
+  void hapticGlobal;
   const voiceGenderDefault = pref.voiceGender ?? voiceGenderSetting;
   /* Mens-leesbare naam voor de "Just for …"-knop in het onthoud-scherm
      hieronder — `st.eyebrow` is de bestaande toestandsnaam, maar staat
@@ -2542,6 +2547,8 @@ export function BreathSession() {
   useEffect(() => {
     if (autostarted.current) return;
     autostarted.current = true;
+    /* 29 okt 2026 (operator): elke sessie start met de trilling op het maximum. */
+    resetHapticStrengthForSession();
     if (locked) {
       startWithBatteryCheck(true);
     } else {
@@ -4151,13 +4158,7 @@ export function BreathSession() {
                 onValueChange={(v) => {
                   const prev = voiceOn;
                   setVoiceOnLocal(v);
-                  if (v !== voiceDefault) {
-                    setAskDefault({
-                      what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
-                      apply: (scope) => remember({ voice: v }, scope),
-                      revert: () => setVoiceOnLocal(prev),
-                    });
-                  }
+                  void prev; // enkel deze sessie (29 okt 2026) — geen onthoud-vraag meer
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
@@ -4358,13 +4359,7 @@ export function BreathSession() {
                 onValueChange={(v) => {
                   const prev = hapticsOn;
                   setHapticsOn(v);
-                  if (v !== hapticDefault) {
-                    setAskDefault({
-                      what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
-                      apply: (scope) => remember({ haptics: v }, scope),
-                      revert: () => setHapticsOn(prev),
-                    });
-                  }
+                  void prev; // enkel deze sessie (29 okt 2026) — geen onthoud-vraag meer
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"

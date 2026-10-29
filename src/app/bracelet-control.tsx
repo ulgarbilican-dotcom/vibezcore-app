@@ -51,7 +51,7 @@ import { useLibraryPlaying } from '@/services/library-priority';
 import { FREE_COPY } from '@/constants/free-session-copy';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
-import { setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+import { resetHapticStrengthForSession, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -4100,6 +4100,7 @@ function IdleScreen({
   /* 23 okt 2026 (operator): de voorproef begint NIET vanzelf — eerst de play-knop (zoals Breathwork). */
   const trialPlayedRef = useRef(false);
   const startTrial = () => {
+    resetHapticStrengthForSession();
     hapticPress();
     trialPlayedRef.current = false;
     trialPausedRef.current = true;
@@ -5791,6 +5792,8 @@ function BraceletControlScreen({
     });
 
   const onStart = async () => {
+    /* 29 okt 2026 (operator: "trillingen op max starten, ook State Control"): elke sessie begint op Strong. */
+    resetHapticStrengthForSession();
     setBusy(true);
     /* Iter v197 (2026-07-04): endedLocally reset — nieuwe sessie mag niet
        geblokkeerd worden door de flag van een vorige End. */

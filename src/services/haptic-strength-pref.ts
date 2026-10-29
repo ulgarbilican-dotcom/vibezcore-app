@@ -39,21 +39,19 @@ export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1
 export const STATE_MS_FACTOR: Record<HapticStrength, number> = { ...MS_FACTOR, strong: 1.8 };
 export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR, strong: 3 };
 
-/* 27 okt 2026 (operator: "het moet altijd op MAX beginnen"): de standaard is het maximum (Strong); wie bewust Medium koos, houdt die keuze
-   (wordt voortaan opgeslagen, want Medium is niet meer de standaard). */
+/* 29 okt 2026 (operator: "trillingen ook op max starten, geldt ook voor State Control"): ELKE sessie (Breathwork en State Control)
+   start op het maximum (Strong). Lager zetten tijdens een sessie geldt enkel voor die sessie — er wordt niets meer bewaard
+   (vervangt 27 okt: "wie bewust Medium koos, houdt die keuze"). Een oude bewaarde keuze wordt genegeerd. */
 let strength: HapticStrength = 'strong';
 const listeners = new Set<(v: HapticStrength) => void>();
+void AsyncStorage.removeItem(KEY).catch(() => {});
 
-void AsyncStorage.getItem(KEY)
-  .then((v) => {
-    /* 22 okt 2026 (operator: "bij Soft voel ik niets"): Soft bestaat niet meer; een oude opgeslagen
-       'soft' wordt Medium. */
-    if (v === 'medium' && v !== strength) {
-      strength = v;
-      listeners.forEach((l) => l(v));
-    }
-  })
-  .catch(() => {});
+/** Aan het begin van elke sessie: terug naar het maximum. */
+export function resetHapticStrengthForSession(): void {
+  if (strength === 'strong') return;
+  strength = 'strong';
+  listeners.forEach((l) => l('strong'));
+}
 
 export function getHapticStrength(): HapticStrength {
   return strength;
@@ -64,7 +62,6 @@ export function setHapticStrength(vIn: HapticStrength): void {
   if (v === strength) return;
   strength = v;
   listeners.forEach((l) => l(v));
-  void AsyncStorage.setItem(KEY, v).catch(() => {});
 }
 
 export function subscribeHapticStrength(cb: (v: HapticStrength) => void): () => void {
