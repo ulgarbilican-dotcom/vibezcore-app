@@ -167,6 +167,11 @@ private class VibPattern(val timings: LongArray, val amplitudes: IntArray, val r
  *  zonder een getal van één toestel. */
 private const val PRE_ROLL_MS = 250L
 
+/** Zelfcorrectie tijdens de sessie (zie resyncWithPhone). 40 ms = onder wat je als "niet tegelijk" voelt. */
+private const val RESYNC_FIRST_MS = 3_000L
+private const val RESYNC_EVERY_MS = 15_000L
+private const val RESYNC_TOLERANCE_MS = 40L
+
 private fun buildVibPattern(s: StateStart, amplitudeControl: Boolean, skipMs: Long): VibPattern {
   val lubMs = if (amplitudeControl) s.lubMs else s.lubMsNoAmp
   val dubMs = if (amplitudeControl) s.dubMs else s.dubMsNoAmp
@@ -524,6 +529,14 @@ class WearStateSessionService : Service() {
       else -> nowUp + 120L /* horloge-sessie: meteen (na het opbouwen van het scherm) */
     }
     val targetWall = nowWall + (targetUp - nowUp)
+    /* Zelfcorrectie (zie resyncWithPhone): enkel voor een sessie die de telefoon speelt en die de gedeelde klok kent. */
+    if (s.sentAtMs > 0L && !s.local && s.anchorMono > 0L) {
+      syncOrigin = s
+      syncAnchorUp = anchorUp
+      syncStartId = startId
+    } else {
+      syncOrigin = null
+    }
     val aligned = s.copy(curveOffsetSec = gridT, remainingSec = s.remainingSec - (gridT - origin))
     if (aligned.remainingSec <= 0.5) return finish(startId)
     localResumeJson = null
@@ -543,6 +556,7 @@ class WearStateSessionService : Service() {
     hapticStartUptime = hapticUptime
     sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
+    if (syncOrigin === s) scheduleResync(RESYNC_FIRST_MS)
     /* 13 okt 2026 (operator: "stopt regelmatig, mag gewoon niet stoppen"):
        met het scherm uit schakelt Wear OS onze wakelock uit (DISABLED in
        dumpsys power, ook als voorgronddienst) — de processor slaapt en een
@@ -657,6 +671,36 @@ class WearStateSessionService : Service() {
   }
 
   private val wholeVibrationToken = Any()
+
+  /* 29 okt 2026 (operator: "zo is het altijd wel iets") — ZELFCORRECTIE tijdens de sessie. Een start kan altijd slecht vallen (horloge in diepe
+     slaap, koude/trage verbinding: gemeten 1,66 s ernaast). Daarom meet het horloge kort na de start en daarna elke 15 s opnieuw (wakker
+     door de trilmotor, verbinding warm) en zet het zich recht zodra het meer dan RESYNC_TOLERANCE_MS naast de telefoon zit. */
+  private var syncOrigin: StateStart? = null
+  private var syncAnchorUp = 0L
+  private var syncStartId = 0
+  private val resyncRunnable = Runnable { resyncWithPhone() }
+
+  private fun scheduleResync(afterMs: Long) {
+    beatHandler.postAtTime(resyncRunnable, wholeVibrationToken, SystemClock.uptimeMillis() + afterMs)
+  }
+
+  private fun resyncWithPhone() {
+    val origin = syncOrigin ?: return
+    if (session == null || paused) return
+    ClockSync.measureNow(this) {
+      beatHandler.post {
+        if (syncOrigin !== origin || session == null || paused) return@post
+        val up = ClockSync.phoneMonoToUptime(this, origin.anchorMono, origin.phoneBootWall)
+        if (up == null) {
+          scheduleResync(RESYNC_EVERY_MS)
+          return@post
+        }
+        val drift = up - syncAnchorUp
+        VzLog.d("resync state drift=${drift}ms")
+        if (kotlin.math.abs(drift) > RESYNC_TOLERANCE_MS) start(origin, syncStartId) else scheduleResync(RESYNC_EVERY_MS)
+      }
+    }
+  }
 
   private fun clearScheduled() {
     beatHandler.removeCallbacksAndMessages(wholeVibrationToken)

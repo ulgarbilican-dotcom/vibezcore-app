@@ -61,6 +61,10 @@ private const val MARGIN_AFTER_CLOCK_MS = PHONE_VIBRATOR_LAG_MS + 20L - ClockSyn
 private const val MAX_LAG_MS = 10 * 60_000L
 /** Stille aanloop vóór een trilpatroon (zie startVibration). */
 private const val PRE_ROLL_MS = 250L
+/** Zelfcorrectie tijdens de sessie (zie resyncWithPhone). */
+private const val RESYNC_FIRST_MS = 3_000L
+private const val RESYNC_EVERY_MS = 15_000L
+private const val RESYNC_TOLERANCE_MS = 40L
 
 private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
 
@@ -191,7 +195,44 @@ class WearBreathSessionService : Service() {
     }
   }
 
-  private fun startSession(sessionJson: String, recvUp: Long = 0L) {
+  /* 29 okt 2026 (operator: "zo is het altijd wel iets") — ZELFCORRECTIE tijdens de sessie, zoals WearStateSessionService.resyncWithPhone:
+     een start kan slecht vallen (gemeten: horloge in diepe slaap, koude verbinding → 1,66 s ernaast). Kort na de start en daarna elke 15 s
+     meet het horloge opnieuw; zit het meer dan RESYNC_TOLERANCE_MS naast de telefoon, dan zet het zich recht op de juiste plek. */
+  private var syncJson: String? = null
+  private var syncRecvUp = 0L
+  private var syncS0 = 0L
+  private var syncL0 = 0L
+
+  private fun scheduleResync(gen: Int, afterMs: Long) {
+    handler?.postDelayed({ if (gen == generation) resyncWithPhone(gen) }, afterMs)
+  }
+
+  private fun resyncWithPhone(gen: Int) {
+    val js = syncJson ?: return
+    val anchorMono: Long
+    val boot: Long
+    try {
+      val j = JSONObject(js)
+      anchorMono = j.optLong("anchorMono", 0L)
+      boot = j.optLong("phoneBootWall", 0L)
+    } catch (_: Exception) {
+      return
+    }
+    ClockSync.measureNow(this) {
+      if (gen != generation || !playing || syncJson !== js) return@measureNow
+      val up = ClockSync.phoneMonoToUptime(this, anchorMono, boot)
+      if (up == null) {
+        scheduleResync(gen, RESYNC_EVERY_MS)
+        return@measureNow
+      }
+      val nowUp = SystemClock.uptimeMillis()
+      val drift = (nowUp - up) - (syncL0 + (nowUp - syncS0))
+      VzLog.d("resync breath drift=${drift}ms")
+      if (kotlin.math.abs(drift) > RESYNC_TOLERANCE_MS) startSession(js, syncRecvUp, resync = true) else scheduleResync(gen, RESYNC_EVERY_MS)
+    }
+  }
+
+  private fun startSession(sessionJson: String, recvUp: Long = 0L, resync: Boolean = false) {
     /* 14 okt 2026 (audit): startForeground meteen, vóór het lezen van de
        sessie — anders crasht het proces na startForegroundService als de
        inhoud onbruikbaar is. */
@@ -235,9 +276,11 @@ class WearBreathSessionService : Service() {
     val startRound = json.optInt("startRound", 1).coerceIn(1, rounds)
     val startPhase = json.optInt("startPhase", 0).coerceIn(0, phases.size - 1)
     val phaseRemainingMs = json.optLong("phaseRemainingMs", -1L)
-    localJson = if (json.optBoolean("local", false)) json else null
-    activeMs = json.optLong("activeMs", 0L)
-    runStartUptime = SystemClock.uptimeMillis()
+    if (!resync) {
+      localJson = if (json.optBoolean("local", false)) json else null
+      activeMs = json.optLong("activeMs", 0L)
+      runStartUptime = SystemClock.uptimeMillis()
+    }
     pausedLocal = null
 
     acquireWakeLock()
@@ -295,7 +338,17 @@ class WearBreathSessionService : Service() {
       finishSession(completed = false)
       return
     }
-    val silentStart = midPhase || skipped
+    val silentStart = midPhase || skipped || resync
+    /* Zelfcorrectie: enkel voor een sessie die de telefoon speelt en die de gedeelde klok kent. */
+    if (sentAt > 0L && json.optLong("anchorMono", 0L) > 0L && !json.optBoolean("local", false)) {
+      syncJson = sessionJson
+      syncRecvUp = recvUp
+      syncS0 = now
+      syncL0 = lag
+      scheduleResync(myGeneration, RESYNC_FIRST_MS)
+    } else {
+      syncJson = null
+    }
     startVibration(myGeneration, phases, rounds, round, idx, left, resumed = midPhase && !skipped, now)
     runPhase(
       myGeneration, phases, rounds, modeName, round = round, phaseIdx = idx,

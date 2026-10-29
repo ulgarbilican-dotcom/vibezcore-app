@@ -1147,6 +1147,7 @@ export function BreathSession() {
   const voiceDefault = true;
   void voiceGlobal;
   const [privateOn, setPrivateOn] = useState(isPrivateMode());
+  const [voiceToggled, setVoiceToggled] = useState(false);
   const hapticDefault = true;
   void hapticGlobal;
   const voiceGenderDefault = pref.voiceGender ?? voiceGenderSetting;
@@ -4585,26 +4586,36 @@ export function BreathSession() {
               You completed {rounds} rounds of {tech.name}.
               {'\n'}Carry the breath with you.
             </Text>
-            {/* 29 okt 2026 (operator): "Private mode" — aan = de afsluitende woorden na een sessie zwijgen, tot de gebruiker het weer
-                uitzet (breath-voice.ts setPrivateMode, bewaard op het toestel). Los van de stem-begeleiding tijdens de sessie. */}
+            {/* 29 okt 2026 (operator: "Private mode is onduidelijk — maak het voice on en off"): de schakelaar zegt wat er gebeurt.
+                Standaard "Voice on" (de afsluitende woorden spreken); "Voice off" geldt voor ALLE eindschermen tot de gebruiker het weer
+                aanzet (operator, 29 okt 2026), bewaard op het toestel (breath-voice.ts setPrivateMode). Na een tik zegt een regel eronder
+                dat het om de afsluitende woorden gaat en blijft gelden ("Closing voice off for all sessions", operator 29 okt). Los van de stem-begeleiding tijdens de sessie. */}
             <View style={s.doneVoiceRow}>
               <View style={s.doneVoiceIcon}>
                 <VibezGlass radius={18} level="raised" style={StyleSheet.absoluteFill} />
-                <VolumeX size={18} color="#ffffff" strokeWidth={1.9} />
+                {privateOn ? (
+                  <VolumeX size={18} color="#ffffff" strokeWidth={1.9} />
+                ) : (
+                  <Volume2 size={18} color="#ffffff" strokeWidth={1.9} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.doneVoiceLabel}>Private mode</Text>
+                <Text style={s.doneVoiceLabel}>{privateOn ? 'Voice off' : 'Voice on'}</Text>
+                {voiceToggled ? (
+                  <Text style={s.doneVoiceHint}>{privateOn ? 'Closing voice off for all sessions' : 'Closing voice on for all sessions'}</Text>
+                ) : null}
               </View>
               <Switch
-                value={privateOn}
-                onValueChange={(on) => {
-                  setPrivateOn(on);
-                  setPrivateMode(on); // aan = de afsluitende woorden zwijgen (ook meteen), tot de gebruiker het weer uitzet
+                value={!privateOn}
+                onValueChange={(voiceOn) => {
+                  setPrivateOn(!voiceOn);
+                  setVoiceToggled(true);
+                  setPrivateMode(!voiceOn); // uit = de afsluitende woorden zwijgen (ook meteen), voor alle sessies tot de gebruiker het weer aanzet
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
                 ios_backgroundColor="#3a3a3a"
-                accessibilityLabel="Private mode, no closing words after a session"
+                accessibilityLabel="Voice for the closing words"
               />
             </View>
 
@@ -5623,6 +5634,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   doneVoiceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24, paddingHorizontal: 4 },
   doneVoiceIcon: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   doneVoiceLabel: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 15 },
+  doneVoiceHint: { color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.regular, fontSize: 13, marginTop: 2 },
   doneCenter: { textAlign: 'center' },
   doneStrip: {
     position: 'absolute',
