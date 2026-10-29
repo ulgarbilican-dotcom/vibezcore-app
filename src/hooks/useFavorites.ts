@@ -22,7 +22,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { SESSIONS } from '@/data/audio-library-data';
-import { urlEq } from '@/utils/url-eq';
+import { safeDecode, urlEq } from '@/utils/url-eq';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -64,8 +64,31 @@ export type FavEntry = {
 export type FavInput = Pick<FavEntry, 'url' | 'title' | 'series'>;
 
 let favoritesState = new Map<string, FavEntry>();
+
+/* 29 okt 2026 (operator: "favorieten staan dubbel en verwijderen werkt niet"): dezelfde sessie kwam binnen met twee adressen — %20-vorm
+   (bibliotheek, SESSIONS) en spatie-vorm (de player krijgt het adres gedecodeerd via de route). Een favoriet had zo twee sleutels: dubbel in
+   de lijst, en het hartje zocht de andere vorm, vond niets en voegde nog eens toe. Nu krijgt elke favoriet EEN vaste sleutel: het adres zoals
+   het in SESSIONS staat (of, voor een onbekend adres, de gedecodeerde vorm). Bestaande dubbels worden bij het laden samengevoegd. */
+function canonUrl(u: string): string {
+  const sess = SESSIONS.find((x) => urlEq(x.url, u));
+  return sess ? sess.url : safeDecode(u);
+}
+function normalizeFavs(list: Iterable<FavEntry>): Map<string, FavEntry> {
+  const out = new Map<string, FavEntry>();
+  for (const e of list) {
+    const key = canonUrl(e.url);
+    const prev = out.get(key);
+    if (!prev || e.ts > prev.ts) out.set(key, { ...e, url: key });
+  }
+  return out;
+}
 let initialized = false;
 let loadPromise: Promise<void> | null = null;
+/* 29 okt 2026 (operator: "Your Journey gewist, favorieten niet"): een verouderde laadactie (gestart vóór een herlaad/bucket-wissel) mag
+   NOOIT later de net teruggezette gegevens overschrijven — anders verving een trage lees van het lege toestel de geschiedenis die de
+   back-up net had teruggezet, en ging die lege lijst daarna ook naar de server. Elke herlaad verhoogt `loadGen`; een lader schrijft enkel
+   als hij nog de actuele is. */
+let loadGen = 0;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -95,6 +118,7 @@ async function loadOnce(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
+    const gen = loadGen;
     try {
       const bucket = await ensureBucketLoaded();
       /* Eerst migreer vzf_v1 → bucket-key (eenmalig per device). */
@@ -103,7 +127,7 @@ async function loadOnce(): Promise<void> {
       if (raw) {
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) {
-          const next = new Map<string, FavEntry>();
+          const valid: FavEntry[] = [];
           for (const e of arr) {
             if (
               e &&
@@ -112,12 +136,15 @@ async function loadOnce(): Promise<void> {
               typeof e.series === 'string' &&
               typeof e.ts === 'number'
             ) {
-              next.set(e.url, e);
+              valid.push(e);
             }
           }
-          favoritesState = next;
-          initialized = true;
-          notify();
+          if (gen === loadGen) favoritesState = normalizeFavs(valid);
+          if (gen === loadGen && favoritesState.size !== valid.length) void save(); // dubbels opgeruimd
+          if (gen === loadGen) {
+            initialized = true;
+            notify();
+          }
           return;
         }
       }
@@ -145,7 +172,7 @@ async function loadOnce(): Promise<void> {
                 ts: now,
               });
             }
-            favoritesState = migrated;
+            if (gen === loadGen) favoritesState = migrated;
             /* Schrijf naar nieuwe bucket-key, oude pre-vzf_v1 key laat staan
                (operator-keuze 2026-05-20: behouden voor rollback). */
             await AsyncStorage.setItem(
@@ -163,6 +190,7 @@ async function loadOnce(): Promise<void> {
     } catch {
       /* corrupt / missing — start met lege Map */
     }
+    if (gen !== loadGen) return;
     initialized = true;
     notify();
   })();
@@ -184,6 +212,7 @@ async function save(): Promise<void> {
 /* Iter 9dq v44: bij bucket-switch (sign-in/out, override change), wis
    in-memory cache en laad uit nieuwe bucket-key. */
 subscribeUserBucket(() => {
+  loadGen++;
   favoritesState = new Map();
   initialized = false;
   loadPromise = null;
@@ -205,14 +234,13 @@ export async function getFavoritesSyncSnapshot(): Promise<FavEntry[]> {
 /** Vervang de lokale favorieten door de samengevoegde versie (zo komt ook een verwijderde favoriet op het andere toestel aan). */
 export async function applyFavoritesSync(list: FavEntry[]): Promise<void> {
   await loadOnce();
-  const next = new Map<string, FavEntry>();
-  for (const e of list) if (isFav(e)) next.set(e.url, e);
-  favoritesState = next;
+  favoritesState = normalizeFavs(list.filter(isFav));
   notify();
   await save();
 }
 
 export async function reloadFavorites(): Promise<void> {
+  loadGen++;
   initialized = false;
   loadPromise = null;
   favoritesState = new Map();
@@ -234,12 +262,13 @@ export function useFavorites() {
 
   const toggle = useCallback((input: FavInput) => {
     if (!input?.url) return;
+    const key = canonUrl(input.url);
     const next = new Map(favoritesState);
-    if (next.has(input.url)) {
-      next.delete(input.url);
+    if (next.has(key)) {
+      next.delete(key);
     } else {
-      next.set(input.url, {
-        url: input.url,
+      next.set(key, {
+        url: key,
         title: input.title,
         series: input.series,
         ts: Date.now(),
@@ -257,7 +286,7 @@ export function useFavorites() {
     save();
   }, []);
 
-  const has = useCallback((url: string) => snapshot.has(url), [snapshot]);
+  const has = useCallback((url: string) => snapshot.has(canonUrl(url)), [snapshot]);
 
   return { favorites: snapshot, toggle, has, clearAll };
 }

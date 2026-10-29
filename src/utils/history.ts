@@ -52,6 +52,11 @@ export type HistoryEntry = {
 let historyState: HistoryEntry[] = [];
 let initialized = false;
 let loadPromise: Promise<void> | null = null;
+/* 29 okt 2026 (operator: "Your Journey gewist, favorieten niet"): een verouderde laadactie (gestart vóór een herlaad/bucket-wissel) mag
+   NOOIT later de net teruggezette gegevens overschrijven — anders verving een trage lees van het lege toestel de geschiedenis die de
+   back-up net had teruggezet, en ging die lege lijst daarna ook naar de server. Elke herlaad verhoogt `loadGen`; een lader schrijft enkel
+   als hij nog de actuele is. */
+let loadGen = 0;
 const listeners = new Set<() => void>();
 
 /* Actieve sessie — module-scope, GEEN React-state. Eén player tegelijk. */
@@ -88,6 +93,7 @@ async function loadOnce(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
+    const gen = loadGen;
     try {
       const bucket = await ensureBucketLoaded();
       await migrateLegacyIfNeeded(bucket);
@@ -95,7 +101,7 @@ async function loadOnce(): Promise<void> {
       if (raw) {
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) {
-          historyState = arr.filter(
+          if (gen === loadGen) historyState = arr.filter(
             (e: any) =>
               e &&
               typeof e.url === 'string' &&
@@ -109,6 +115,7 @@ async function loadOnce(): Promise<void> {
     } catch {
       /* corrupt/missing — start leeg */
     }
+    if (gen !== loadGen) return;
     initialized = true;
     notify();
   })();
@@ -130,6 +137,7 @@ async function persist(): Promise<void> {
 /* Iter 9dq v44: reageer op bucket-switch (sign-in/out, override change)
    door cache te wissen en uit nieuwe bucket te laden. */
 subscribeUserBucket(() => {
+  loadGen++;
   historyState = [];
   initialized = false;
   loadPromise = null;
@@ -159,6 +167,7 @@ export async function applyAudioHistorySync(list: HistoryEntry[]): Promise<void>
 }
 
 export async function reloadAudioHistory(): Promise<void> {
+  loadGen++;
   initialized = false;
   loadPromise = null;
   historyState = [];

@@ -42,6 +42,11 @@ type Positions = Record<string, number>;
 let state: Positions = {};
 let initialized = false;
 let loadPromise: Promise<void> | null = null;
+/* 29 okt 2026 (operator: "Your Journey gewist, favorieten niet"): een verouderde laadactie (gestart vóór een herlaad/bucket-wissel) mag
+   NOOIT later de net teruggezette gegevens overschrijven — anders verving een trage lees van het lege toestel de geschiedenis die de
+   back-up net had teruggezet, en ging die lege lijst daarna ook naar de server. Elke herlaad verhoogt `loadGen`; een lader schrijft enkel
+   als hij nog de actuele is. */
+let loadGen = 0;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -70,6 +75,7 @@ async function loadOnce(): Promise<void> {
   if (initialized) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
+    const gen = loadGen;
     try {
       const bucket = await ensureBucketLoaded();
       await migrateLegacyVzpKey(bucket);
@@ -83,12 +89,13 @@ async function loadOnce(): Promise<void> {
               cleaned[k] = v;
             }
           }
-          state = cleaned;
+          if (gen === loadGen) state = cleaned;
         }
       }
     } catch {
       /* corrupt of leeg → start met {} */
     }
+    if (gen !== loadGen) return;
     initialized = true;
     notify();
   })();
@@ -106,6 +113,7 @@ async function persist(): Promise<void> {
 
 /* Iter 9dq v44: bij bucket-switch wis cache + reload uit nieuwe bucket. */
 subscribeUserBucket(() => {
+  loadGen++;
   state = {};
   initialized = false;
   loadPromise = null;
@@ -133,6 +141,7 @@ export async function applyPositionsSync(p: Record<string, number>): Promise<voi
 }
 
 export async function reloadPositions(): Promise<void> {
+  loadGen++;
   initialized = false;
   loadPromise = null;
   state = {};
