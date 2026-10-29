@@ -487,12 +487,18 @@ class StateHapticsService : Service() {
        Zijn we toch later (heel trage telefoon), dan vallen de eerste tikken
        weg maar blijft de rest op het juiste rooster. */
     val startAtWall = intent?.getLongExtra(EXTRA_START_AT_WALL_MS, 0L) ?: 0L
+    /* 29 okt 2026 (gemeten): de wandklok en de eigen tellers op HETZELFDE ogenblik lezen. Vroeger werd de wachttijd hier berekend en pas
+       ná het opbouwen van melding en trilpatroon bij "nu" opgeteld — alles wat dat opbouwen duurde schoof de hele sessie op (A16: 127 ms;
+       een tragere telefoon meer). Nu valt de eerste slag exact op het gekozen moment, op elk toestel. */
+    val nowWall = System.currentTimeMillis()
+    val nowUp = SystemClock.uptimeMillis()
+    val nowReal = SystemClock.elapsedRealtime()
     val startDelay = if (startAtWall > 0L) {
-      (startAtWall - System.currentTimeMillis()).coerceIn(-60_000L, 2_000L)
+      (startAtWall - nowWall).coerceIn(-60_000L, 2_000L)
     } else {
       0L
     }
-    startRealtime = SystemClock.elapsedRealtime() + startDelay
+    startRealtime = nowReal + startDelay
     sessionElapsedAtStartMs = intent?.getLongExtra(EXTRA_SESSION_ELAPSED_MS, 0L) ?: 0L
     sessionTotalMs = intent?.getLongExtra(EXTRA_SESSION_TOTAL_MS, sessionElapsedAtStartMs + totalMs)
       ?: (sessionElapsedAtStartMs + totalMs)
@@ -509,7 +515,7 @@ class StateHapticsService : Service() {
     beatHandler.removeCallbacksAndMessages(dubToken)
     units = buildUnits(t, a)
     nextUnit = 0
-    startUptime = SystemClock.uptimeMillis() + startDelay
+    startUptime = nowUp + startDelay
     /* Stoppen op dezelfde klok als de tikken, met marge: anders kan de stop
        net vóór de laatste tik van het eindsignaal vallen en die afkappen
        (audit 5 okt 2026). */

@@ -59,6 +59,8 @@ private const val MARGIN_AFTER_CLOCK_MS = PHONE_VIBRATOR_LAG_MS + 20L - ClockSyn
    maar ~0,2 s (netwerktijd), dus de volle vertraging aftrekken is veilig;
    deze grens vangt enkel een kapotte klok op. */
 private const val MAX_LAG_MS = 10 * 60_000L
+/** Stille aanloop vóór een trilpatroon (zie startVibration). */
+private const val PRE_ROLL_MS = 250L
 
 private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
 
@@ -168,7 +170,7 @@ class WearBreathSessionService : Service() {
       ACTION_START -> {
         val sessionJson = intent.getStringExtra(EXTRA_SESSION_JSON) ?: return START_NOT_STICKY
         val recvUp = intent.getLongExtra(EXTRA_RECV_UP, 0L)
-        /* 29 okt 2026: eerst de klok vers meten (max 0,7 s, zie ClockSync.measureNow), dan pas de start uitrekenen. Meteen in de voorgrond:
+        /* 29 okt 2026: eerst de klok vers meten (max 1,5 s, zie ClockSync.measureNow), dan pas de start uitrekenen. Meteen in de voorgrond:
            Android geeft daar maar een paar seconden voor. */
         goForegroundStarting(sessionJson)
         ClockSync.measureNow(this) { startSession(sessionJson, recvUp) }
@@ -269,7 +271,9 @@ class WearBreathSessionService : Service() {
     val monoUp = if (sentAt > 0L) ClockSync.phoneMonoToUptime(this, json.optLong("anchorMono", 0L), json.optLong("phoneBootWall", 0L)) else null
     val relative = sentAt > 0L && leadMs != Long.MIN_VALUE && recvUp > 0L
     val lag = when {
-      monoUp != null -> (SystemClock.uptimeMillis() - monoUp - MARGIN_AFTER_CLOCK_MS).coerceIn(0L, MAX_LAG_MS)
+      /* Gedeelde klok: precies hoe lang de fase op de telefoon al loopt — geen marge op gevoel (die ving een vaste vertraging van één
+         toestel op, zie MARGIN_AFTER_CLOCK_MS; de telefoon trilt bij een fase-overgang meteen, gemeten +6 ms). */
+      monoUp != null -> (SystemClock.uptimeMillis() - monoUp).coerceIn(0L, MAX_LAG_MS)
       relative -> (ClockSync.oneWayMs(this) + (SystemClock.uptimeMillis() - recvUp) - leadMs - MARGIN_AFTER_CLOCK_MS).coerceIn(0L, MAX_LAG_MS)
       sentAt > 0L -> (System.currentTimeMillis() - sentAt - MARGIN_AFTER_CLOCK_MS - ClockSync.aheadMs(this)).coerceIn(0L, MAX_LAG_MS)
       else -> 0L
@@ -329,9 +333,15 @@ class WearBreathSessionService : Service() {
     val onAmp = if (ampControl) (if (amp > 0) amp else 255) else VibrationEffect.DEFAULT_AMPLITUDE
     val pieces = ArrayList<Seg>()
     val curMs = phases[idx].secs * 1000L
+    /* 29 okt 2026 (gemeten, Galaxy Watch4: ~70 ms tussen vibrate() en de motor, per horloge anders): een stille aanloop vooraan, de fase
+       gaat erna verder op de plek waar hij dan hoort te zijn. Android stelt de motor in tijdens de stilte en plant binnen één patroon elke
+       stap op vaste tijden — zonder een getal van één toestel. */
+    val pre = if (leftMs > PRE_ROLL_MS + 150L) PRE_ROLL_MS else 0L
+    if (pre > 0L) pieces.add(silence(pre))
+    val leftAfterPre = leftMs - pre
     pieces.add(
-      if (resumed || leftMs > curMs) silence(leftMs)
-      else trimHead(phaseSeg(phases[idx].pattern, curMs, onAmp), curMs - leftMs),
+      if (resumed || leftMs > curMs) silence(leftAfterPre)
+      else trimHead(phaseSeg(phases[idx].pattern, curMs, onAmp), curMs - leftAfterPre),
     )
     for (i in idx + 1 until phases.size) pieces.add(phaseSeg(phases[i].pattern, phases[i].secs * 1000L, onAmp))
     val headSteps = pieces.sumOf { it.t.size }

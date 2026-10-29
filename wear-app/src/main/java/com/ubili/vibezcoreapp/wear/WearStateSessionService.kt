@@ -155,7 +155,17 @@ private fun buildWaveform(s: StateStart, amplitudeControl: Boolean): Waveform {
  *  patroon van 5–50 min (duizenden stappen) liet de trildienst 0,4 s
  *  nadenken voor hij begon (meting 13 okt 2026). `skipMs` knipt het begin
  *  weg als we te laat starten; het eindsignaal speelt apart. */
-private class VibPattern(val timings: LongArray, val amplitudes: IntArray, val repeat: Int)
+private class VibPattern(val timings: LongArray, val amplitudes: IntArray, val repeat: Int) {
+  /** Dezelfde reeks met een stille aanloop van `ms` vooraan (zie PRE_ROLL_MS). */
+  fun withLeadSilence(ms: Long): VibPattern =
+    if (ms <= 0L) this else VibPattern(longArrayOf(ms) + timings, intArrayOf(0) + amplitudes, if (repeat >= 0) repeat + 1 else repeat)
+}
+
+/** 29 okt 2026 (gemeten, Galaxy Watch4): tussen `vibrate()` en de motor zit ~70 ms, vooral het instellen van de sterkte vóór de eerste stap —
+ *  per horloge anders. Het patroon start daarom zoveel vroeger met een stille aanloop: het instellen gebeurt tijdens de stilte, en binnen één
+ *  patroon plant Android elke stap op vaste tijden (het vangt eigen vertraging zelf op), dus de eerste slag valt op het geplande moment —
+ *  zonder een getal van één toestel. */
+private const val PRE_ROLL_MS = 250L
 
 private fun buildVibPattern(s: StateStart, amplitudeControl: Boolean, skipMs: Long): VibPattern {
   val lubMs = if (amplitudeControl) s.lubMs else s.lubMsNoAmp
@@ -382,7 +392,7 @@ class WearStateSessionService : Service() {
             armed = parsed
             armedId = hsId
             /* 29 okt 2026: eerst de klok VERS meten (het horloge kan sinds de vorige meting geslapen hebben, en dan verspringt zijn teller —
-               zie ClockSync), pas daarna READY. Zo zit er geen slaapmoment tussen de meting en de start. Max 0,7 s. */
+               zie ClockSync), pas daarna READY. Zo zit er geen slaapmoment tussen de meting en de start. Max 1,5 s. */
             ClockSync.measureNow(this) {
               /* Klaar: de dienst draait en de sessie is gelezen. De telefoon wacht hierop en stuurt dan GO. */
               PhoneLink.send(this, PhoneLink.PATH_STATE_READY, hsId.toString().toByteArray(Charsets.UTF_8))
@@ -524,8 +534,12 @@ class WearStateSessionService : Service() {
     nextUnit = 0
     val totalMs = waveform.timings.sum()
     startUptime = targetUp
-    visualUptime = startUptime + if (s.sentAtMs > 0L) VISUAL_AFTER_PHONE_MS else 0L
-    val hapticUptime = startUptime + if (s.sentAtMs > 0L) HAPTIC_AFTER_PHONE_MS else 0L
+    /* 29 okt 2026: met de gedeelde klok (mono) speelt het horloge EXACT op het geplande moment, net als de telefoon (die sinds vandaag zelf
+       ook exact speelt — zijn start schoof 127 ms op door een rekenfout in StateHapticsService). De twee correcties hieronder waren op gevoel
+       afgesteld om die fout op één toestel op te vangen; ze gelden enkel nog voor de oude rekenwijzen (oudere telefoon-app). */
+    val legacy = s.sentAtMs > 0L && monoUp == null
+    visualUptime = startUptime + if (legacy) VISUAL_AFTER_PHONE_MS else 0L
+    val hapticUptime = startUptime + if (legacy) HAPTIC_AFTER_PHONE_MS else 0L
     hapticStartUptime = hapticUptime
     sessionEndUptime = startUptime + (aligned.remainingSec * 1000).roundToLong()
     acquireWakeLock(totalMs + 5_000L)
@@ -541,13 +555,19 @@ class WearStateSessionService : Service() {
       if (session === aligned && !paused) {
         /* Liep deze draad wat achter (melding/scherm opbouwen), dan het al
            verstreken stukje van het begin wegknippen — elke volgende tik
-           valt zo toch exact op het rooster. */
-        val late = (SystemClock.uptimeMillis() - hapticUptime).coerceAtLeast(0L)
-        val pat = buildVibPattern(aligned, amp, late)
-        VzLog.d("vibrate pattern steps=${pat.timings.size} repeat=${pat.repeat} late=${late}ms")
+           valt zo toch exact op het rooster. Op tijd: de rest van de stille aanloop vooraan. */
+        val untilFirst = hapticUptime - SystemClock.uptimeMillis()
+        /* Altijd een volle stille aanloop (gemeten 29 okt: kwam het startsein laat, dan was er geen aanloop en schoof de hele sessie
+           ~70 ms op). Te laat voor de eerste slag: na de aanloop verder op de plek waar het patroon dan hoort te zijn. */
+        val pat = if (untilFirst >= PRE_ROLL_MS) {
+          buildVibPattern(aligned, amp, 0L).withLeadSilence(untilFirst)
+        } else {
+          buildVibPattern(aligned, amp, PRE_ROLL_MS - untilFirst).withLeadSilence(PRE_ROLL_MS)
+        }
+        VzLog.d("vibrate pattern steps=${pat.timings.size} repeat=${pat.repeat} untilFirst=${untilFirst}ms")
         vibrate(pat.timings, pat.amplitudes, pat.repeat)
       }
-    }, wholeVibrationToken, hapticUptime)
+    }, wholeVibrationToken, hapticUptime - PRE_ROLL_MS)
     scheduleNextUnit()
     /* Natuurlijk einde: de curve + het eind-signaal uitspelen, dan stoppen.
        Minstens remainingSec + 1,5 s (protocol). */
@@ -734,7 +754,8 @@ class WearStateSessionService : Service() {
     } catch (_: Exception) {
       false
     }
-    val pat = buildVibPattern(s, amp, late)
+    /* Ook hier de stille aanloop: het patroon gaat verder op de plek waar het over PRE_ROLL_MS hoort te zijn. */
+    val pat = buildVibPattern(s, amp, late + PRE_ROLL_MS).withLeadSilence(PRE_ROLL_MS)
     VzLog.d("rearm after screen off late=${late}ms")
     vibrate(pat.timings, pat.amplitudes, pat.repeat)
   }

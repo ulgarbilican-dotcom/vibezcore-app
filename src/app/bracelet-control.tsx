@@ -35,7 +35,6 @@ import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow, { useWatchStatus } from '@/components/WatchHapticsRow';
 import AsyncStorageLockNotice from '@react-native-async-storage/async-storage';
-import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
 import { GlassSheet, isGlassSheetOpen } from '@/components/GlassSheetHost';
@@ -207,7 +206,6 @@ import {
   useBraceletOwner,
   useDevBraceletActivated,
 } from '@/utils/dev-user-override';
-import { useBraceletNudge, openBraceletWebsite } from '@/services/bracelet-upsell';
 import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
 import { imageSource } from '@/utils/image-source';
 
@@ -1852,11 +1850,8 @@ function CompletionModal({
 }) {
   const meta = getModeMeta(mode);
   const insets = useSafeAreaInsets();
-  /* Bracelet als upgrade (operator, 7 okt 2026): je voelde net het ritme
-     dat de bracelet ook geeft — één rustige link naar de bracelet-pagina. */
-  /* Er zijn nog geen bracelet-eigenaars (operator, 7 okt 2026): iedereen
-     ziet de link, ook Premium. */
-  const showBraceletLink = useBraceletNudge('state-control', true);
+  /* De knop boven de tabbalk/mini-speler als die over dit scherm ligt, anders boven de systeembalk (29 okt 2026: stond eronder). */
+  const tabInset = useTabBarInset();
   const fade = useSharedValue(0);
   const ring = useSharedValue(0);
   const check = useSharedValue(0);
@@ -1983,35 +1978,18 @@ function CompletionModal({
         {minutes !== null && minutes > 0 && (
           <Text style={s.completionDuration}>{minutes} min</Text>
         )}
-        {/* Audit 12 okt 2026: één tik — je merkt het effect en de app leert
-            wat voor jou werkt (utils/feel-checkin.ts). */}
-        <View style={{ marginTop: 28 }}>
-          <FeelCheck session={{ kind: 'state', key: String(mode) }} />
-        </View>
+        {/* 29 okt 2026 (operator: "een riskante vraag"): geen "How do you feel now?" meer na State Control — zelfde regel als na een
+            ademsessie sinds 19 okt (wat als iemand zich hetzelfde of slechter voelt?). */}
       </ReanimatedAnimated.View>
       </ReanimatedAnimated.View>
 
       {/* Op dezelfde hoogte en breedte als "Start session" (6 okt 2026: "knop
           zit te laag") — boven de systeembalk, niet erop. */}
       <ReanimatedAnimated.View
-        style={[s.completionDoneWrap, { bottom: Math.max(insets.bottom, 12) + 26 }, textStyle]}
+        style={[s.completionDoneWrap, { bottom: (tabInset > 0 ? tabInset : Math.max(insets.bottom, 12)) + 26 }, textStyle]}
       >
-        {showBraceletLink ? (
-          <PressScale
-            style={s.completionBraceletLink}
-            scaleTo={0.96}
-            onPress={() => {
-              onDismiss();
-              void openBraceletWebsite();
-            }}
-            accessibilityRole="link"
-            accessibilityLabel="Feel this without your phone. Smart Bead Bracelet"
-          >
-            {/* Twee bewuste regels i.p.v. één die midden in de naam afbreekt. */}
-            <Text style={s.completionBraceletLinkTxt}>Feel this without your phone</Text>
-            <Text style={[s.completionBraceletLinkTxt, s.completionBraceletLinkStrong]}>Smart Bead Bracelet ›</Text>
-          </PressScale>
-        ) : null}
+        {/* 29 okt 2026 (operator): de link "Feel this without your phone · Smart Bead Bracelet" is weg — klopt niet voor wie met een
+            smartwatch speelt, en de bracelet is er nog niet. */}
         <PressScale
           style={[s.completionBtn, s.completionBtnWide]} haptic scaleTo={0.97}
           onPress={onDismiss}
@@ -7967,23 +7945,6 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 26,
     right: 26,
-  },
-  completionBraceletLink: {
-    alignSelf: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    marginBottom: 10,
-  },
-  completionBraceletLinkTxt: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    fontFamily: BrandFonts.medium,
-    textAlign: 'center',
-  },
-  completionBraceletLinkStrong: {
-    color: '#ffffff',
-    fontFamily: BrandFonts.semibold,
   },
   completionBtnWide: {
     backgroundColor: '#ffffff',

@@ -184,7 +184,7 @@ object ClockSync {
     }
   }
 
-  /** Meet METEEN, vlak vóór een start (PREPARE / breath-start): 6 snelle pings, klaar zodra ze terug zijn of na 700 ms. `done` loopt altijd
+  /** Meet METEEN, vlak vóór een start (PREPARE / breath-start): 10 pings (de eerste wekken de verbinding, de latere zijn snel en tellen), klaar zodra ze terug zijn, na 0,6 s met minstens 4, of na 1,5 s. `done` loopt altijd
    *  (ook zonder telefoon of antwoorden) op de hoofdthread. */
   fun measureNow(context: Context, done: () -> Unit) {
     val app = context.applicationContext
@@ -193,13 +193,14 @@ object ClockSync {
     val sent = HashMap<Long, Long>()
     val got = ArrayList<Triple<Long, Long, Long>>()
     var finished = false
+    val began = SystemClock.elapsedRealtime()
     lateinit var listener: MessageClient.OnMessageReceivedListener
     val finish = Runnable {
       if (finished) return@Runnable
       finished = true
       try { client.removeListener(listener) } catch (_: Exception) {}
       val picked = synchronized(got) { got.sortedBy { it.first } }
-      VzLog.d("clock start-measure answers=${picked.size} bestRtt=${picked.firstOrNull()?.first}")
+      VzLog.d("clock start-measure answers=${picked.size} rtts=${picked.joinToString(",") { it.first.toString() }}")
       storeMono(app, picked)
       done()
     }
@@ -216,7 +217,7 @@ object ClockSync {
           got.add(Triple(m1 - m0, (m0 + m1) / 2 - phoneMono, phone - phoneMono))
           got.size
         }
-        if (all >= START_PINGS) main.post(finish)
+        if (all >= START_PINGS || (all >= START_ENOUGH && SystemClock.elapsedRealtime() - began >= START_MEASURE_MIN_MS)) main.post(finish)
       } catch (_: Exception) {
       }
     }
@@ -243,9 +244,13 @@ object ClockSync {
     main.postDelayed(finish, START_MEASURE_MAX_MS)
   }
 
-  private const val START_PINGS = 6
-  private const val START_PING_GAP_MS = 30L
-  private const val START_MEASURE_MAX_MS = 700L
+  private const val START_PINGS = 10
+  private const val START_PING_GAP_MS = 40L
+  /* Gemeten 29 okt: op een trage verbinding kwam binnen 0,9 s geen enkel antwoord (rondreizen 137–466 ms, de eerste trager). Daarom: klaar
+     bij 10 antwoorden, of na 0,6 s met minstens 4, en hoogstens 1,5 s. Komt er niets, dan de vorige meting als die nog geldt. */
+  private const val START_MEASURE_MAX_MS = 1500L
+  private const val START_MEASURE_MIN_MS = 600L
+  private const val START_ENOUGH = 4
 
   private fun run(app: Context, nodeId: String) {
     val client = Wearable.getMessageClient(app)
