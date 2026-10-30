@@ -216,6 +216,29 @@ export function getPlanDay(key: string): PlanDay | null {
 
 export { dayKey };
 
+/** De sessies die op een KALENDERDAG vallen (31 okt 2026, operator: "het is nu 31 oktober 00:37 — 31 oktober staat
+ *  leeg"). Een avondsessie na middernacht staat bewaard bij de dag ervoor als 24:30 (= 1470); ze valt echter op de
+ *  volgende kalenderdag om 00:30. Geeft per sessie de plaats in de template (`index`), het bewaarde item (`stored`) en
+ *  de kloktijd op deze dag (`at`, 0–1439). Voor alles wat "vandaag" of "volgende sessie" toont. */
+export function itemsOnCalendarDay(
+  plan: Pick<ActivePlan, 'days'> | null,
+  date: Date,
+): { index: number; stored: PlannedItem; at: number }[] {
+  if (!plan) return [];
+  const today = plan.days[dayKey(date)];
+  const prev = new Date(date);
+  prev.setDate(prev.getDate() - 1);
+  const yesterday = plan.days[dayKey(prev)];
+  const out: { index: number; stored: PlannedItem; at: number }[] = [];
+  today?.items.forEach((it, index) => {
+    if (it.reminderAt < 1440) out.push({ index, stored: it, at: it.reminderAt });
+  });
+  yesterday?.items.forEach((it, index) => {
+    if (it.reminderAt >= 1440) out.push({ index, stored: it, at: it.reminderAt - 1440 });
+  });
+  return out.sort((a, b) => a.at - b.at);
+}
+
 export function useActivePlan(): {
   plan: ActivePlan | null;
   loaded: boolean;

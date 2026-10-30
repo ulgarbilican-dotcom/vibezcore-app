@@ -17,7 +17,7 @@ import { dayKey, getAllSessions, useBraceletStats } from '@/utils/bracelet-histo
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import { useBreathHistory } from '@/utils/breath-history';
 import { startOfWeekMonday } from '@/utils/locale';
-import { useActivePlan } from '@/utils/plan-store';
+import { useActivePlan, itemsOnCalendarDay } from '@/utils/plan-store';
 import { currentStreak } from '@/utils/streak';
 import { router } from 'expo-router';
 import { ChevronRight, Flame, Radio, Wind } from 'lucide-react-native';
@@ -93,10 +93,11 @@ export default function ThisWeekCard() {
         upcoming.push({ at: it.reminderAt, label: getModeMeta(it.mode as BraceletMode).name, path: '/bracelet-agenda' });
       }
     }
-    for (const it of plan?.days[today]?.items ?? []) {
-      if (it.reminderAt > nowMin) {
+    /* 31 okt 2026: per kalenderdag — een avondsessie na middernacht (bv. 00:35) telt op de dag waarop ze valt. */
+    for (const { stored: it, at } of itemsOnCalendarDay(plan, now)) {
+      if (at > nowMin) {
         const st = BREATH_STATES[it.state as BreathStateKey];
-        upcoming.push({ at: it.reminderAt, label: `${st ? titleCase(st.eyebrow) : 'Breathwork'} breathing`, path: '/agenda' });
+        upcoming.push({ at, label: `${st ? titleCase(st.eyebrow) : 'Breathwork'} breathing`, path: '/agenda' });
       }
     }
     upcoming.sort((a, b) => a.at - b.at);

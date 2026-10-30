@@ -107,3 +107,26 @@ describe('removing a session from a running plan', () => {
     expect(moved[1]).toEqual(template[1]);
   });
 });
+
+describe('calendar day view (evening after midnight)', () => {
+  const { itemsOnCalendarDay } = require('../src/utils/plan-store');
+  const mk = (reminderAt: number) => ({ slot: 'evening', state: 'rest', techniqueKey: 'x', minutes: 3, reason: '', reminderAt });
+  const plan = {
+    days: {
+      '2026-10-30': { dayKey: '2026-10-30', items: [mk(hm(21)), mk(hm(24, 35))] },
+      '2026-10-31': { dayKey: '2026-10-31', items: [mk(hm(21)), mk(hm(24, 35))] },
+    },
+  };
+  it('00:35 of the evening of the 30th shows on the 31st, at 00:35', () => {
+    const on31 = itemsOnCalendarDay(plan, new Date(2026, 9, 31, 12));
+    expect(on31.map((x: { at: number }) => x.at)).toEqual([hm(0, 35), hm(21)]);
+  });
+  it('the 30th itself shows only what falls on the 30th', () => {
+    const on30 = itemsOnCalendarDay(plan, new Date(2026, 9, 30, 12));
+    expect(on30.map((x: { at: number }) => x.at)).toEqual([hm(21)]);
+  });
+  it('the day after the plan still shows its last night session', () => {
+    const on1 = itemsOnCalendarDay(plan, new Date(2026, 10, 1, 12));
+    expect(on1.map((x: { at: number }) => x.at)).toEqual([hm(0, 35)]);
+  });
+});

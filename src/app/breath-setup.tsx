@@ -1933,7 +1933,7 @@ export default function BreathSetupScreen() {
   const [minuteText, setMinuteText] = useState('');
   useEffect(() => {
     if (activePicker !== 'time') return;
-    const h24 = Math.floor(time / 60);
+    const h24 = Math.floor(time / 60) % 24; /* 24:30 → 00:30 in de velden */
     const h12 = ((h24 + 11) % 12) + 1;
     setHourText(String(uses12hClock ? h12 : h24));
     setMinuteText(String(time % 60).padStart(2, '0'));
@@ -1957,7 +1957,10 @@ export default function BreathSetupScreen() {
        dagdeel niet verlaten (`SLOT_WINDOW`, dezelfde grens als het wiel) —
        geklemd i.p.v. genegeerd, zodat een net-buiten-bereik tik toch het
        dichtstbijzijnde geldige moment oplevert i.p.v. niets te doen. */
-    const clamped = Math.max(timeWindowMin, Math.min(timeWindowMax, h24 * 60 + mFinal));
+    /* 31 okt 2026: avond loopt tot 05:00 — "0:30" bij Evening is 00:30 na middernacht (24:30), niet 20:00. */
+    const typed = h24 * 60 + mFinal;
+    const inWindow = typed < timeWindowMin && typed + 1440 <= timeWindowMax ? typed + 1440 : typed;
+    const clamped = Math.max(timeWindowMin, Math.min(timeWindowMax, inWindow));
     hapticTap();
     setTime(clamped);
     /* Operator, 18 september 2026 ("pas na aanklikken Done is handeling
@@ -1968,7 +1971,7 @@ export default function BreathSetupScreen() {
        waarde tonen — anders blijft bv "07:22" op het scherm staan terwijl
        de effectieve tijd (kwartier-geklemd, binnen het venster) iets
        anders is. */
-    const finalH24 = Math.floor(clamped / 60);
+    const finalH24 = Math.floor(clamped / 60) % 24;
     const finalH12 = ((finalH24 + 11) % 12) + 1;
     setHourText(String(uses12hClock ? finalH12 : finalH24));
     setMinuteText(String(clamped % 60).padStart(2, '0'));
@@ -3357,7 +3360,7 @@ export default function BreathSetupScreen() {
                     value={hourText}
                     onChangeText={setHourText}
                     onEndEditing={() =>
-                      commitDigitalTime(hourText, minuteText, Math.floor(time / 60) >= 12)
+                      commitDigitalTime(hourText, minuteText, Math.floor(time / 60) % 24 >= 12)
                     }
                     keyboardType="number-pad"
                     maxLength={2}
@@ -3369,7 +3372,7 @@ export default function BreathSetupScreen() {
                     value={minuteText}
                     onChangeText={setMinuteText}
                     onEndEditing={() =>
-                      commitDigitalTime(hourText, minuteText, Math.floor(time / 60) >= 12)
+                      commitDigitalTime(hourText, minuteText, Math.floor(time / 60) % 24 >= 12)
                     }
                     keyboardType="number-pad"
                     maxLength={2}
@@ -3378,7 +3381,7 @@ export default function BreathSetupScreen() {
                   {uses12hClock && (
                     <View style={s.ampmGroup}>
                       {(['AM', 'PM'] as const).map((label) => {
-                        const on = (label === 'PM') === (Math.floor(time / 60) >= 12);
+                        const on = (label === 'PM') === (Math.floor(time / 60) % 24 >= 12);
                         return (
                           <AmPmButton
                             key={label}
