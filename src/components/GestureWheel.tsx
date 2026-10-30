@@ -181,8 +181,8 @@ export default function GestureWheel({
               gs.pill,
               {
                 top: (height - GESTURE_WHEEL_ITEM_H) / 2 - 3,
+                /* 31 okt 2026 (operator: "omlijning van de pil van tijd moet weg"): enkel de tint. */
                 backgroundColor: `${accent}38`,
-                borderColor: `${accent}B3`,
               },
             ]}
           />
@@ -205,7 +205,6 @@ const gs = StyleSheet.create({
     right: 92,
     height: GESTURE_WHEEL_ITEM_H + 6,
     borderRadius: (GESTURE_WHEEL_ITEM_H + 6) / 2,
-    borderWidth: 1.5,
   },
   track: { position: 'absolute', left: 0, right: 0, height: GESTURE_WHEEL_ITEM_H },
   row: {

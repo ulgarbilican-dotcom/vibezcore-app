@@ -240,8 +240,6 @@ export function DurationWheel({
           {
             top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2,
             backgroundColor: `${accent}38`,
-            borderWidth: 1.5,
-            borderColor: `${accent}B3`,
           },
         ]}
         pointerEvents="none"

@@ -4,11 +4,11 @@
    dagdeel kunnen kiezen en dan de tijd binnen dat dagdeel; dagdeel moet meteen duidelijk zijn tussen welke uren").
    Wisselt het dagdeel, dan toont het blad meteen welke toestand de sessie daar wordt (zelfde regels als bij het
    opbouwen) — er verandert niets stil. Het blad zelf (kop + Done) hoort bij het scherm dat dit gebruikt. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Reveal } from '@/components/Reveal';
-import { isReduceMotion } from '@/constants/motion';
+import { isReduceMotion, SPRING_POP } from '@/constants/motion';
 
 /* De witte pil van de segmentbalk: zelfde strakke veer als de tab-overgangen. */
 const SPRING_SEG = { damping: 22, stiffness: 260, mass: 0.7 } as const;
@@ -107,7 +107,20 @@ export default function SlotTimeEditor({
     pillX.value = isReduceMotion() ? slotIdx * segW : withSpring(slotIdx * segW, SPRING_SEG);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slotIdx, segW]);
-  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.value }] }));
+  /* Protocol: de pil schuift met een veer naar het gekozen dagdeel en het gekozen element popt (SPRING_POP). */
+  const pillPop = useSharedValue(1);
+  const firstSlot = useRef(true);
+  useEffect(() => {
+    if (firstSlot.current) {
+      firstSlot.current = false;
+      return;
+    }
+    if (isReduceMotion()) return;
+    pillPop.value = 0.92;
+    pillPop.value = withSpring(1, SPRING_POP);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotIdx]);
+  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.value }, { scale: pillPop.value }] }));
 
   return (
     /* Volle breedte, ook in bladen die hun inhoud centreren (plan-review, "Your plan"); scrolt enkel op een klein scherm. */
@@ -192,11 +205,22 @@ const es = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   seg: { flex: 1, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center' },
-  segPill: { position: 'absolute', top: 4, bottom: 4, left: 4, borderRadius: 999, backgroundColor: '#ffffff' },
-  segTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: 'rgba(255,255,255,0.78)' },
-  segTxtOn: { color: '#0a0a0a' },
+  /* 31 okt 2026 (operator: "het wit is te fel, check het protocol"): gekozen = lichter glas met een zachte rand
+     (≤ 16 %), witte tekst — zoals de keuzepillen elders, geen fel wit vlak. */
+  segPill: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  segTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: 'rgba(255,255,255,0.55)' },
+  segTxtOn: { color: '#ffffff' },
   segRange: { fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
-  segRangeOn: { color: 'rgba(10,10,10,0.6)' },
+  segRangeOn: { color: 'rgba(255,255,255,0.7)' },
   noteSpacer: { height: 26 },
   removeBtn: { alignSelf: 'center', marginTop: 22, paddingVertical: 10, paddingHorizontal: 16 },
   removeTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ef4444' },
