@@ -49,11 +49,14 @@ describe('moving a planned session', () => {
     expect(after.techniqueKey).toBe(before.techniqueKey);
     expect(after.minutes).toBe(before.minutes);
   });
-  it('another daypart: slot + time change, the state is the one the app picks there', () => {
+  it('another daypart: only daypart + time change, the session stays exactly what the user chose (Sleep in the morning is allowed)', () => {
+    const before = items[0];
     const after = moveTemplateItem(items, 0, 'morning', hm(7, 10), goals, 'beginner')[0];
     expect(after.slot).toBe('morning');
     expect(after.reminderAt).toBe(hm(7, 10));
-    expect(after.state).not.toBe('rest'); // never Sleep in the morning
+    expect(after.state).toBe(before.state);
+    expect(after.techniqueKey).toBe(before.techniqueKey);
+    expect(after.minutes).toBe(before.minutes);
   });
   it('replacing the state keeps a custom time', () => {
     const timed = moveTemplateItem(items, 0, items[0].slot, hm(22, 5), goals, 'beginner');
@@ -94,9 +97,10 @@ describe('removing a session from a running plan', () => {
     const one = removePlanItem(plan as never, 0)!;
     expect(removePlanItem(one, 0)).toBeNull();
   });
-  it('moving into a daypart that already has a session never repeats its state', () => {
+  it('moving into a daypart that already has a session keeps both sessions as they are', () => {
     const moved = moveTemplateItem(template, 0, template[1].slot, template[1].reminderAt + 30, goals, 'beginner');
     expect(moved[0].slot).toBe(template[1].slot);
-    expect(moved[0].state).not.toBe(template[1].state);
+    expect(moved[0].state).toBe(template[0].state);
+    expect(moved[1]).toEqual(template[1]);
   });
 });

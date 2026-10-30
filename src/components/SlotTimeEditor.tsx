@@ -37,9 +37,12 @@ export function draftState(
   /** De andere sessies van die dag — zelfde keuze als moveTemplateItem (geen dubbele toestand in een dagdeel). */
   others: PlannedItem[] = [],
 ): { state: BreathStateKey; techniqueKey: string; moved: boolean } {
-  if (draft.slot === it.slot) return { state: it.state, techniqueKey: it.techniqueKey, moved: false };
-  const m = stateForMovedItem(draft.slot, goals, level, avoidIn(others, draft.slot));
-  return { state: m.state, techniqueKey: m.techniqueKey, moved: true };
+  /* 30 okt 2026 (operator): de sessie blijft dezelfde in elk dagdeel — enkel de tijd verhuist. */
+  void draft;
+  void goals;
+  void level;
+  void others;
+  return { state: it.state, techniqueKey: it.techniqueKey, moved: false };
 }
 
 /** Naam, techniek en kleur van de sessie zoals ze NA Done wordt — voor de kop van het blad. */
@@ -80,7 +83,7 @@ export default function SlotTimeEditor({
   /** De andere sessies van die dag (zonder deze). */
   others?: PlannedItem[];
 }) {
-  const { state, techniqueKey, moved } = draftState(item, draft, goals, level, others);
+  const { state, techniqueKey } = draftState(item, draft, goals, level, others);
   const st = BREATH_STATES[state];
   const durations = durationsFor(state, techniqueKey);
   /* Een persoonlijke duur (bv. 7 min) staat niet altijd in de vaste lijst — dan hoort hij er wel bij, anders toont het
@@ -88,7 +91,6 @@ export default function SlotTimeEditor({
   const durationOptions = durations.options.some((o) => o.value === draft.minutes)
     ? durations.options
     : [...durations.options, { value: draft.minutes, label: `${draft.minutes} min` }].sort((a, b) => a.value - b.value);
-  const slotLabel = SLOTS.find((sl) => sl.slot === draft.slot)?.label ?? '';
 
   return (
     /* Volle breedte, ook in bladen die hun inhoud centreren (plan-review, "Your plan"). */
@@ -106,15 +108,10 @@ export default function SlotTimeEditor({
                 if (on) return;
                 hapticTap();
                 const next = sl.slot as PlanSlot;
-                /* Terug naar het eigen dagdeel = de eigen tijd en duur; een ander dagdeel = zijn aanbevolen tijd en
-                   de aanbevolen duur van de toestand die daar hoort. */
-                if (next === item.slot) onChange(draftFor(item));
-                else
-                  onChange({
-                    slot: next,
-                    time: sl.hour * 60,
-                    minutes: stateForMovedItem(next, goals, level, avoidIn(others, next)).minutes,
-                  });
+                /* Terug naar het eigen dagdeel = de eigen tijd; een ander dagdeel = zijn aanbevolen tijd. De sessie en
+                   haar duur blijven wat de gebruiker koos (30 okt 2026). */
+                if (next === item.slot) onChange({ ...draft, slot: next, time: snapToSlot(next, item.reminderAt) });
+                else onChange({ ...draft, slot: next, time: sl.hour * 60 });
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
@@ -130,13 +127,7 @@ export default function SlotTimeEditor({
           );
         })}
       </View>
-      {moved ? (
-        <Text style={es.movedNote}>
-          In the {slotLabel.toLowerCase()} this session becomes <Text style={{ color: st.accent }}>{st.eyebrow.toUpperCase()}</Text>
-        </Text>
-      ) : (
-        <View style={es.noteSpacer} />
-      )}
+      <View style={es.noteSpacer} />
       <TimeDurationRows
         timeKey={draft.slot}
         time={draft.time}
@@ -181,15 +172,7 @@ const es = StyleSheet.create({
   segTxtOn: { color: '#0a0a0a' },
   segRange: { fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
   segRangeOn: { color: 'rgba(10,10,10,0.6)' },
-  movedNote: {
-    fontFamily: BrandFonts.medium,
-    fontSize: 13.5,
-    color: 'rgba(255,255,255,0.75)',
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  noteSpacer: { height: 16 },
+  noteSpacer: { height: 18 },
   removeBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 8, paddingHorizontal: 16 },
   removeTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ef4444' },
 });

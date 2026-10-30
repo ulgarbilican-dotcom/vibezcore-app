@@ -364,9 +364,10 @@ export function setTemplateItemState(
   return out;
 }
 
-/** Ander tijdstip voor een item (plan-review "Your protocol", operator 30 okt 2026). Blijft het in hetzelfde dagdeel,
- *  dan verandert enkel de tijd. Verhuist het naar een ander dagdeel, dan kiest de app de toestand voor dat dagdeel
- *  volgens dezelfde regels als bij het opbouwen (geen Sleep 's ochtends); de gebruiker kan hem daarna nog vervangen. */
+/** Ander dagdeel en/of tijdstip voor een item (operator, 30 okt 2026). De SESSIE blijft dezelfde — toestand, techniek
+ *  en duur — ook in een ander dagdeel (operator: "gebruiker moet bv. Sleep of eender welke sessie kunnen instellen
+ *  wanneer ze willen — iemand die 's nachts werkt en overdag slaapt"). Enkel bij het opbouwen stelt de app per dagdeel
+ *  een toestand voor; verplaatsen verandert nooit wat iemand zelf koos. */
 export function moveTemplateItem(
   items: PlannedItem[],
   index: number,
@@ -377,13 +378,10 @@ export function moveTemplateItem(
 ): PlannedItem[] {
   const target = items[index];
   if (!target) return items;
+  void goals;
+  void level;
   const out = [...items];
-  if (target.slot === slot) {
-    out[index] = { ...target, reminderAt };
-    return out;
-  }
-  const others = items.filter((it, i) => i !== index && it.slot === slot).map((it) => it.state);
-  out[index] = { ...stateForMovedItem(slot, goals, level, others), reminderAt };
+  out[index] = { ...target, slot, reminderAt };
   return out;
 }
 

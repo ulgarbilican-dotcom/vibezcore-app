@@ -125,14 +125,15 @@ export function snapToSlot(slot: string, mins: number): number {
   return Math.max(w.from * 60, Math.min(w.to * 60 - TIME_STEP_MIN, rounded));
 }
 
-/** Korte uren voor in een segmentbalk: "05–12" (24-uursklok) of "5a–12p" (12-uursklok). */
+/** Korte uren voor in een segmentbalk: "05–12" (24-uursklok, bv. EU) of "5 AM–12 PM" (12-uursklok, bv. VS) — volgt
+ *  het toestel, zoals elke tijd in de app. */
 export function slotRangeShort(slot: string): string {
   const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
   const twelve = /AM|PM/i.test(new Date(2020, 0, 1, 13).toLocaleTimeString());
   const fmt = (h: number) => {
     const hh = h % 24;
     if (!twelve) return String(hh).padStart(2, '0');
-    return `${((hh + 11) % 12) + 1}${hh < 12 ? 'a' : 'p'}`;
+    return `${((hh + 11) % 12) + 1} ${hh < 12 ? 'AM' : 'PM'}`;
   };
   return `${fmt(w.from)}–${fmt(w.to)}`;
 }
@@ -476,7 +477,9 @@ export function reasonForPick(
     if (idx === -1) continue;
     if (!best || idx < best.idx) best = { name: GOAL_NAMES[key], key, idx };
   }
-  if (!best) return `Fits the ${slotLabel.toLowerCase()}`;
-  if (state === 'rest' && best.key !== 'sleep') return `${best.name} · Evening winddown`;
+  /* 30 okt 2026: een sessie mag in elk dagdeel staan (bv. Sleep overdag voor wie 's nachts werkt) — dus geen "fits"
+     of "Evening winddown" meer als dat niet klopt met het dagdeel. */
+  if (!best) return `Your ${slotLabel.toLowerCase()} session`;
+  if (state === 'rest' && best.key !== 'sleep' && slotLabel.toLowerCase() === 'evening') return `${best.name} · Evening winddown`;
   return best.name;
 }
