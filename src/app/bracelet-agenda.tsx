@@ -587,8 +587,12 @@ export default function BraceletAgendaScreen() {
                 return (
                   <Tap
                     style={s.tapStartZone}
-                    onPress={() => tryItem(next.mode as BraceletMode, next.durationMinutes)}
-                    accessibilityLabel={`Start ${getModeMeta(next.mode as BraceletMode).name} now`}
+                    /* 31 okt 2026 (operator): zelfde actieblad als een tik op het bolletje. */
+                    onPress={() => {
+                      hapticTap();
+                      setActionItemIndex((day?.items ?? []).indexOf(next));
+                    }}
+                    accessibilityLabel={`${getModeMeta(next.mode as BraceletMode).name} session options`}
                   >
                     <Text style={s.tapStartTxt}>
                       {modeItems.length > 1 ? `Tap to start · ${fmtTime(next.reminderAt)}` : 'Tap to start'}

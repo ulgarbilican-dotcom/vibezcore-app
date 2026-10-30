@@ -884,17 +884,13 @@ export default function AgendaScreen() {
             return (
               <Tap
                 style={s.tapStartZone}
-                onPress={() =>
-                  openBreathSession({
-                      ...claimFreeSessionParam(),
-                      state: next.state,
-                      technique: next.techniqueKey,
-                      minutes: String(next.minutes),
-                      autostart: '1',
-                      fromPlan: '1',
-                    })
-                }
-                accessibilityLabel={`Start ${titleCase(BREATH_STATES[next.state].eyebrow)} now`}
+                /* 31 okt 2026 (operator: "tap to start moet dezelfde popup openen als de dot in de cirkel"): zelfde
+                   actieblad (Start session · Edit time & duration · Remove from plan) i.p.v. meteen te starten. */
+                onPress={() => {
+                  hapticTap();
+                  setActionItemIndex((selectedDay?.items ?? []).indexOf(next));
+                }}
+                accessibilityLabel={`${titleCase(BREATH_STATES[next.state].eyebrow)} session options`}
               >
                 <Text style={s.tapStartTxt}>
                   {items.length > 1 ? `Tap to start · ${fmtAgendaTime(next.reminderAt)}` : 'Tap to start'}
