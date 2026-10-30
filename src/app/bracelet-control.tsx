@@ -1676,7 +1676,19 @@ export function ColorDurationDial({
       a11yLabel={`${label} duration, ${value} minutes. Drag around the edge to change.`}
       dial={{ size, min, max, value, onChange: (m) => onChange(snap(m)) }}
     >
-      <DurationRing min={min} max={max} value={value} color={color} label={label} size={size} dialHandle dark recommended={recommended} />
+      <DurationRing
+        min={min}
+        max={max}
+        value={value}
+        color={color}
+        label={label}
+        size={size}
+        dialHandle
+        dark
+        recommended={recommended}
+        /* Letters schalen mee met de ring, zodat niets over de rand valt (State Control-scherm = 264). */
+        textScale={Math.min(1, size / 250)}
+      />
     </ModeSwipeRing>
   );
 }
@@ -2440,6 +2452,7 @@ function DurationRing({
   clockOverride,
   subOverride,
   dialHandle,
+  textScale = 1,
 }: {
   /** Operator, 9 okt 2026: boog + witte greep op de rand — sleep de greep
       om de tijd per minuut te kiezen (zie ModeSwipeRing `dial`). */
@@ -2469,6 +2482,9 @@ function DurationRing({
      achter de paarse lijn"): schakelt de dark-specifieke kleuren + de
      ambient RingGlow in, onafhankelijk van de module-brede `light`. */
   dark?: boolean;
+  /** Tekst in de ring mee laten schalen met een kleinere ring (tijd-blad van de agenda's, 30 okt 2026). 1 = zoals
+   *  overal (State Control-scherm ongewijzigd). */
+  textScale?: number;
 }) {
   /* Operator, 27 september 2026 ("als 30 min max is en 15 min minimum,
      moet de cirkel dan niet al halfvol staan?"): was (value-min)/(max-min)
@@ -2643,17 +2659,20 @@ function DurationRing({
             2026: "de gebruiker weet al dat het een preview is en welke
             sessie"). Rijen blijven staan (opacity), zodat niets verspringt. */}
         <View style={[s.ringNameRow, clockOverride ? { opacity: 0 } : null]}>
-          <Text style={[s.ringName, textShadow]} numberOfLines={1}>
+          <Text
+            style={[s.ringName, textShadow, textScale !== 1 && { fontSize: 14 * textScale, lineHeight: 18 * textScale }]}
+            numberOfLines={1}
+          >
             {label}
           </Text>
-          <Info size={13} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
+          <Info size={13 * textScale} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
         </View>
-        <Text style={[s.ringClock, { color: numColor }, textShadow]}>
+        <Text style={[s.ringClock, { color: numColor }, textShadow, textScale !== 1 && { fontSize: 54 * textScale }]}>
           {clockOverride ?? `${value}:00`}
         </Text>
         <View style={[s.ringRecRow, { opacity: !clockOverride && (subOverride || zone || recommended) ? 1 : 0 }]}>
           <View style={[s.ringRecDot, { backgroundColor: color }]} />
-          <Text style={s.ringRecTxt}>{subOverride ?? zone ?? 'Recommended'}</Text>
+          <Text style={[s.ringRecTxt, textScale !== 1 && { fontSize: 12 * textScale }]}>{subOverride ?? zone ?? 'Recommended'}</Text>
         </View>
       </View>
       {/* Boog + greep BOVENOP alles (de zwarte binnenkant en de golf

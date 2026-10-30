@@ -7,10 +7,11 @@ import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import TimeWheel from '@/components/TimeWheel';
 import { BrandFonts } from '@/constants/theme';
 
-/* De duurcirkel in een blad: groeit en krimpt met de schermhoogte (30 okt 2026: op de A16 viel de onderkant van het
-   scherm) — 140 op een klein toestel, tot 190 op een groot. */
+/* De duurcirkel in een blad: groeit en krimpt met de schermhoogte (30 okt 2026, operator: "maak de popup groter,
+   hoger") — 160 op een klein toestel, tot 250 op een groot (bijna State Control-maat, tekst op ware grootte); het
+   blad groeit mee naar boven. Kleiner = de tekst in de ring schaalt mee (ColorDurationDial). */
 const H = Dimensions.get('window').height;
-export const SHEET_DIAL_SIZE = Math.round(Math.max(140, Math.min(190, H - 740)));
+export const SHEET_DIAL_SIZE = Math.round(Math.max(160, Math.min(250, H - 650)));
 /** Hoogste hoogte voor de inhoud van het blad (onder de kop); wat niet past, scrolt. */
 export const SHEET_BODY_MAX_H = Math.round(H - 250);
 
