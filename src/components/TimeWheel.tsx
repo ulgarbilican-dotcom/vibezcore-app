@@ -7,9 +7,9 @@
    toelichtingen over het Android-scrollgedrag staan nu in components/DurationWheel.tsx, dat die fixes al had
    (startpositie bij het monteren, vastleggen na de uitloop, het blad dat de beweging niet mag afpakken). */
 import { useMemo } from 'react';
-import { DurationWheel, DURATION_WHEEL_ITEM_H } from '@/components/DurationWheel';
+import GestureWheel, { GESTURE_WHEEL_ITEM_H } from '@/components/GestureWheel';
 
-export const WHEEL_ITEM_H = DURATION_WHEEL_ITEM_H;
+export const WHEEL_ITEM_H = GESTURE_WHEEL_ITEM_H;
 export const WHEEL_VISIBLE = 3;
 export const WHEEL_H = WHEEL_ITEM_H * WHEEL_VISIBLE;
 
@@ -24,7 +24,7 @@ export default function TimeWheel({
   value,
   onChange,
   accent,
-  trackColor,
+  trackColor: _trackColor,
   blocked = [],
   rows = WHEEL_VISIBLE,
   small = false,
@@ -50,15 +50,15 @@ export default function TimeWheel({
     [options, blocked],
   );
   return (
-    <DurationWheel
+    /* 30 okt 2026: eigen Gesture Handler-wiel (components/GestureWheel.tsx) — het ScrollView-wiel bevroor in bladen
+       bij een rustige vinger. */
+    <GestureWheel
       options={items}
       value={value}
       onChange={onChange}
       accent={accent}
-      trackColor={trackColor}
-      visibleRows={rows}
-      small={small}
-      textMode={blocked.length > 0}
+      rows={rows}
+      fontSize={blocked.length > 0 ? 17 : small ? 22 : 24}
     />
   );
 }

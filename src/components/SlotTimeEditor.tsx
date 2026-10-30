@@ -4,7 +4,14 @@
    dagdeel kunnen kiezen en dan de tijd binnen dat dagdeel; dagdeel moet meteen duidelijk zijn tussen welke uren").
    Wisselt het dagdeel, dan toont het blad meteen welke toestand de sessie daar wordt (zelfde regels als bij het
    opbouwen) — er verandert niets stil. Het blad zelf (kop + Done) hoort bij het scherm dat dit gebruikt. */
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Reveal } from '@/components/Reveal';
+import { isReduceMotion } from '@/constants/motion';
+
+/* De witte pil van de segmentbalk: zelfde strakke veer als de tab-overgangen. */
+const SPRING_SEG = { damping: 22, stiffness: 260, mass: 0.7 } as const;
 import Tap from '@/components/Tap';
 import TimeDurationRows, { SheetBody, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
 import { ColorDurationDial } from '@/app/bracelet-control';
@@ -92,18 +99,32 @@ export default function SlotTimeEditor({
     ? durations.options
     : [...durations.options, { value: draft.minutes, label: `${draft.minutes} min` }].sort((a, b) => a.value - b.value);
 
+  const [trackW, setTrackW] = useState(0);
+  const segW = trackW > 0 ? (trackW - 8 - 2) / SLOTS.length : 0;
+  const slotIdx = Math.max(0, SLOTS.findIndex((sl) => sl.slot === draft.slot));
+  const pillX = useSharedValue(slotIdx * segW);
+  useEffect(() => {
+    pillX.value = isReduceMotion() ? slotIdx * segW : withSpring(slotIdx * segW, SPRING_SEG);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotIdx, segW]);
+  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.value }] }));
+
   return (
     /* Volle breedte, ook in bladen die hun inhoud centreren (plan-review, "Your plan"); scrolt enkel op een klein scherm. */
     <SheetBody>
       {/* 30 okt 2026 (operator: "de dagdelen zien er heel sheet-achtig uit", "niet overzichtelijk"): één segmentbalk,
           het gekozen dagdeel als witte pil met donkere tekst (neutrale knop-regel), de uren kort eronder. */}
-      <View style={es.segTrack}>
+      {/* Animatieprotocol (30 okt 2026): de onderdelen komen gestaffeld binnen (Reveal), en de witte pil schuift met
+          een veer naar het gekozen dagdeel i.p.v. te verspringen. */}
+      <Reveal i={0}>
+      <View style={es.segTrack} onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}>
+        {trackW > 0 && <Animated.View pointerEvents="none" style={[es.segPill, { width: segW }, pillStyle]} />}
         {SLOTS.map((sl) => {
           const on = draft.slot === sl.slot;
           return (
             <Tap
               key={sl.slot}
-              style={[es.seg, on && es.segOn]}
+              style={es.seg}
               onPress={() => {
                 if (on) return;
                 hapticTap();
@@ -127,6 +148,7 @@ export default function SlotTimeEditor({
           );
         })}
       </View>
+      </Reveal>
       <View style={es.noteSpacer} />
       <TimeDurationRows
         timeKey={draft.slot}
@@ -150,9 +172,11 @@ export default function SlotTimeEditor({
         }
       />
       {onRemove && (
-        <Tap style={es.removeBtn} onPress={onRemove} hitSlop={8} accessibilityRole="button">
-          <Text style={es.removeTxt}>Remove from plan</Text>
-        </Tap>
+        <Reveal i={3}>
+          <Tap style={es.removeBtn} onPress={onRemove} hitSlop={8} accessibilityRole="button">
+            <Text style={es.removeTxt}>Remove from plan</Text>
+          </Tap>
+        </Reveal>
       )}
     </SheetBody>
   );
@@ -168,7 +192,7 @@ const es = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   seg: { flex: 1, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center' },
-  segOn: { backgroundColor: '#ffffff' },
+  segPill: { position: 'absolute', top: 4, bottom: 4, left: 4, borderRadius: 999, backgroundColor: '#ffffff' },
   segTxt: { fontFamily: BrandFonts.semibold, fontSize: 13.5, color: 'rgba(255,255,255,0.78)' },
   segTxtOn: { color: '#0a0a0a' },
   segRange: { fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 },

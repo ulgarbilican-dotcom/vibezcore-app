@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import TimeWheel from '@/components/TimeWheel';
+import { Reveal } from '@/components/Reveal';
 import { BrandFonts } from '@/constants/theme';
 
 /* De duurcirkel in een blad: groeit en krimpt met de schermhoogte (30 okt 2026, operator: "maak de popup groter,
@@ -57,15 +58,15 @@ export default function TimeDurationRows({
 }) {
   return (
     <View style={rs.wrap}>
-      <View style={rs.section}>
+      <Reveal i={1} style={rs.section}>
       {/* 30 okt 2026 (operator: "zet de cirkel eerst onder de dagdelen, en de scroll voor time eronder"). */}
       <Text style={rs.label}>Duration</Text>
       {/* Het blad mag de sleepbeweging over de cirkel niet afpakken (zelfde regel als bij de wielen). */}
       <View style={rs.dial} onMoveShouldSetResponder={() => true} onResponderTerminationRequest={() => false}>
         {duration}
       </View>
-      </View>
-      <View style={rs.section}>
+      </Reveal>
+      <Reveal i={2} style={rs.section}>
       <Text style={rs.label}>Time</Text>
       <TimeWheel
         key={timeKey}
@@ -76,7 +77,7 @@ export default function TimeDurationRows({
         onChange={onTime}
         small
       />
-      </View>
+      </Reveal>
     </View>
   );
 }
