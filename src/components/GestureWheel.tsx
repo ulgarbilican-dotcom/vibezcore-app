@@ -70,6 +70,7 @@ export default function GestureWheel({
   accent,
   rows = 3,
   fontSize = 22,
+  loop = false,
 }: {
   options: { value: number; label: string }[];
   value: number;
@@ -78,6 +79,9 @@ export default function GestureWheel({
   /** Zichtbare rijen (oneven). */
   rows?: number;
   fontSize?: number;
+  /** Rondlopend (31 okt 2026, operator: "bij State Control moet het doorscrollen — nu stopt het bij 23:55"): na de
+   *  laatste komt weer de eerste, zoals de wekker van het toestel. Voor een wiel over de hele dag. */
+  loop?: boolean;
 }) {
   const maxIndex = Math.max(0, options.length - 1);
   const indexOf = (v: number) => Math.max(0, options.findIndex((o) => o.value === v));
@@ -98,7 +102,11 @@ export default function GestureWheel({
   /* Waarde van buiten (bv. ander dagdeel) → wiel springt mee. */
   const valueIdx = indexOf(value);
   useEffect(() => {
-    const target = valueIdx * GESTURE_WHEEL_ITEM_H;
+    let target = valueIdx * GESTURE_WHEEL_ITEM_H;
+    if (loop) {
+      const lap = options.length * GESTURE_WHEEL_ITEM_H;
+      target += Math.round((offset.value - target) / lap) * lap;
+    }
     if (Math.abs(offset.value - target) > 1) offset.value = withSpring(target, SNAP);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueIdx, options.length]);
@@ -109,23 +117,26 @@ export default function GestureWheel({
   useAnimatedReaction(
     () => Math.round(offset.value / GESTURE_WHEEL_ITEM_H),
     (idx) => {
-      if (idx !== lastTick.value && idx >= 0 && idx <= maxIndex) {
+      if (idx !== lastTick.value && (loop || (idx >= 0 && idx <= maxIndex))) {
         lastTick.value = idx;
         scheduleOnRN(hapticTick);
         scheduleOnRN(setCenter, idx);
       }
     },
-    [maxIndex],
+    [maxIndex, loop],
   );
   const span = rows + 4;
-  const from = Math.max(0, center - span);
-  const to = Math.min(maxIndex, center + span);
+  const from = loop ? center - span : Math.max(0, center - span);
+  const to = loop ? center + span : Math.min(maxIndex, center + span);
+  const count = options.length;
+  const wrap = (i: number) => ((i % count) + count) % count;
 
   const settle = (fromOffset: number) => {
     'worklet';
-    const idx = Math.max(0, Math.min(maxIndex, Math.round(fromOffset / GESTURE_WHEEL_ITEM_H)));
+    const raw = Math.round(fromOffset / GESTURE_WHEEL_ITEM_H);
+    const idx = loop ? raw : Math.max(0, Math.min(maxIndex, raw));
     offset.value = withSpring(idx * GESTURE_WHEEL_ITEM_H, SNAP);
-    scheduleOnRN(commit, idx);
+    scheduleOnRN(commit, loop ? ((idx % count) + count) % count : idx);
   };
 
   const pan = Gesture.Pan()
@@ -137,9 +148,14 @@ export default function GestureWheel({
     })
     .onUpdate((e) => {
       const next = start.value - e.translationY;
-      /* Rubberband voorbij het begin/einde. */
-      offset.value =
-        next < 0 ? next / 3 : next > maxOffset ? maxOffset + (next - maxOffset) / 3 : next;
+      /* Rubberband voorbij het begin/einde (niet bij een rondlopend wiel). */
+      offset.value = loop
+        ? next
+        : next < 0
+          ? next / 3
+          : next > maxOffset
+            ? maxOffset + (next - maxOffset) / 3
+            : next;
     })
     .onEnd((e) => {
       const v = -e.velocityY;
@@ -148,7 +164,7 @@ export default function GestureWheel({
         return;
       }
       offset.value = withDecay(
-        { velocity: v, deceleration: 0.996, clamp: [0, maxOffset] },
+        loop ? { velocity: v, deceleration: 0.996 } : { velocity: v, deceleration: 0.996, clamp: [0, maxOffset] },
         (finished) => {
           if (finished) settle(offset.value);
         },
@@ -172,7 +188,8 @@ export default function GestureWheel({
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={(e) => {
             const next = valueIdx + (e.nativeEvent.actionName === 'increment' ? 1 : -1);
-            if (next >= 0 && next <= maxIndex) commit(next);
+            if (loop) commit(wrap(next));
+            else if (next >= 0 && next <= maxIndex) commit(next);
           }}
         >
           <View
@@ -187,8 +204,8 @@ export default function GestureWheel({
             ]}
           />
           <View style={[gs.track, { top: (height - GESTURE_WHEEL_ITEM_H) / 2 }]} pointerEvents="none">
-            {options.slice(from, to + 1).map((o, k) => (
-              <Row key={o.value} index={from + k} label={o.label} offset={offset} rows={rows} fontSize={fontSize} />
+            {Array.from({ length: to - from + 1 }, (_, k) => from + k).map((i) => (
+              <Row key={i} index={i} label={options[wrap(i)].label} offset={offset} rows={rows} fontSize={fontSize} />
             ))}
           </View>
         </View>

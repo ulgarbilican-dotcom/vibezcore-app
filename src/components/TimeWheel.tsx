@@ -59,6 +59,8 @@ export default function TimeWheel({
       accent={accent}
       rows={rows}
       fontSize={blocked.length > 0 ? 17 : small ? 22 : 24}
+      /* Hele dag (00:00–23:55) = rondlopend; een dagdeel stopt aan zijn grenzen. */
+      loop={options.length > 0 && options[0] === 0 && options[options.length - 1] >= 1435}
     />
   );
 }
