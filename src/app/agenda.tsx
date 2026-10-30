@@ -465,7 +465,9 @@ export default function AgendaScreen() {
        de sessie; naar een ander dagdeel gaat via "Edit time", dat ook toont welke toestand het daar wordt. */
     const clampToSlot = (slot: string) => {
       const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
-      return Math.max(w.from * 60, Math.min(w.to * 60 - TIME_STEP_MIN, reminderAtRaw));
+      /* De ring geeft 0–23:55; na middernacht hoort bij de avond (00:30 → 24:30). */
+      const raw = reminderAtRaw < w.from * 60 && reminderAtRaw + 1440 < w.to * 60 ? reminderAtRaw + 1440 : reminderAtRaw;
+      return Math.max(w.from * 60, Math.min(w.to * 60 - TIME_STEP_MIN, raw));
     };
     const days = Object.fromEntries(
       Object.entries(plan.days).map(([dk, day]) => [

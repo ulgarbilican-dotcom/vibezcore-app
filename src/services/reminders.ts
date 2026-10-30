@@ -75,7 +75,7 @@ export const SLOT_RANGE: Record<ReminderSlot, [number, number]> = {
   morning: [5, 12],
   midday: [12, 17],
   afterWork: [17, 20],
-  evening: [20, 24],
+  evening: [20, 29],
 };
 
 export const SLOTS: SlotDef[] = [
@@ -310,7 +310,8 @@ function datedPlanDays<T>(days: PlanDaysLike<T>, ongoing: boolean): { key: strin
 
 function dateFor(key: string, minsOfDay: number): Date {
   const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d, Math.floor(minsOfDay / 60) % 24, minsOfDay % 60, 0, 0);
+  /* Geen % 24: een avondsessie na middernacht (24:30 = 1470) valt de VOLGENDE kalenderdag — Date rolt dat zelf door. */
+  return new Date(y, m - 1, d, Math.floor(minsOfDay / 60), minsOfDay % 60, 0, 0);
 }
 
 /** Herinneringen voor een ACTIEF protocol (operator, 13 augustus 2026,

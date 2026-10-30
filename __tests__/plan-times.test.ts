@@ -6,11 +6,11 @@ import { generateTemplate, moveTemplateItem, removePlanItem, setTemplateItemStat
 const hm = (h: number, m = 0) => h * 60 + m;
 
 describe('daypart hours', () => {
-  it('Morning 05-12, Midday 12-17, After work 17-20, Evening 20-00', () => {
+  it('Morning 05-12, Midday 12-17, After work 17-20, Evening 20-05', () => {
     expect(SLOT_WINDOW.morning).toEqual({ from: 5, to: 12 });
     expect(SLOT_WINDOW.midday).toEqual({ from: 12, to: 17 });
     expect(SLOT_WINDOW.afterWork).toEqual({ from: 17, to: 20 });
-    expect(SLOT_WINDOW.evening).toEqual({ from: 20, to: 24 });
+    expect(SLOT_WINDOW.evening).toEqual({ from: 20, to: 29 });
   });
   it('every daypart: 5-minute steps, first = start, last = 5 min before the end', () => {
     for (const slot of ['morning', 'midday', 'afterWork', 'evening']) {
@@ -21,6 +21,8 @@ describe('daypart hours', () => {
       expect(opts.every((m, i) => i === 0 || m - opts[i - 1] === 5)).toBe(true);
     }
     expect(slotTimeOptions('evening')).toContain(hm(21, 35));
+    expect(slotTimeOptions('evening')).toContain(hm(24, 30)); // 00:30 na middernacht
+    expect(slotTimeOptions('evening')[slotTimeOptions('evening').length - 1]).toBe(hm(28, 55));
   });
   it('time of day -> daypart (before 05:00 counts as evening)', () => {
     expect(slotForMinutes(hm(4, 55))).toBe('evening');
@@ -30,7 +32,8 @@ describe('daypart hours', () => {
     expect(slotForMinutes(hm(20))).toBe('evening');
   });
   it('old times snap onto the grid of their daypart', () => {
-    expect(snapToSlot('evening', hm(0, 30) + 24 * 60)).toBe(hm(23, 55)); // old "evening until 04:00"
+    expect(snapToSlot('evening', hm(24, 30))).toBe(hm(24, 30)); // 00:30 stays in the evening
+    expect(snapToSlot('evening', hm(29, 30))).toBe(hm(28, 55));
     expect(snapToSlot('morning', hm(4, 15))).toBe(hm(5)); // old "morning from 04:00"
     expect(snapToSlot('midday', hm(13, 15))).toBe(hm(13, 15)); // quarter-hour stays
     expect(snapToSlot('midday', hm(13, 7))).toBe(hm(13, 5));

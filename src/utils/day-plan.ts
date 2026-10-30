@@ -99,13 +99,15 @@ export const ALL_SLOTS = ['morning', 'midday', 'afterWork', 'evening'] as const;
  *  lopen). `to` mag boven 24 gaan (evening loopt door tot 3:45u de
  *  volgende ochtend) — JS' eigen Date-rekenkunde rolt dat correct om. */
 /* 30 okt 2026 (operator): één indeling, overal dezelfde en zichtbaar voor de gebruiker — Morning 05–12, Midday 12–17,
-   After work 17–20, Evening 20–00. Was morning 4–12 en evening tot 4u 's nachts, terwijl de herinneringen 5–11 en
+   After work 17–20, Evening 20–05 (31 okt). Was morning 4–12 en evening tot 4u 's nachts, terwijl de herinneringen 5–11 en
    20–23 hanteerden. */
 export const SLOT_WINDOW: Record<string, { from: number; to: number }> = {
   morning: { from: 5, to: 12 },
   midday: { from: 12, to: 17 },
   afterWork: { from: 17, to: 20 },
-  evening: { from: 20, to: 24 },
+  /* 31 okt 2026 (operator: "evening moet tot 5 u gaan — wat als ik 00:30 wil?"): avond loopt door tot 05:00 (tijden
+     na middernacht als 24:30 = 1470 minuten, zoals vroeger tot 28); zo dekken de vier dagdelen de hele dag. */
+  evening: { from: 20, to: 29 },
 };
 
 /** Tijden binnen een dagdeel, per 5 minuten (operator, 30 okt 2026: "meer keuzes, om de 5 minuten"). */
