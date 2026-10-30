@@ -2369,7 +2369,7 @@ function AudioScreen({
                               /* Iter 9dq v60 (2026-06-03): 3-tier badge. */
                               const tier = getEffectiveTier(sess);
                               const label = tierBadgeLabel(tier);
-                              if (!label) return null;
+                              if (!label || hasSub) return null; // 30 okt 2026: Premium ziet nergens tier-labels, ook niet in de zoekresultaten
                               return (
                                 <Text
                                   style={[
