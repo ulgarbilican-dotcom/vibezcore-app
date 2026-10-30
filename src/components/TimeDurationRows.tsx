@@ -54,8 +54,8 @@ const rs = StyleSheet.create({
     textTransform: 'uppercase',
     color: '#ffffff',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  labelGap: { marginTop: 12, marginBottom: 6 },
+  labelGap: { marginTop: 28, marginBottom: 12 },
   dial: { alignItems: 'center' },
 });

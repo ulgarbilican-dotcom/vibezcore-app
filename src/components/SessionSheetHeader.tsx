@@ -37,7 +37,8 @@ export default function SessionSheetHeader({
 }
 
 const hs = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', marginTop: 4, marginBottom: 14, gap: 12 },
+  /* 30 okt 2026 (operator: "het hoeft niet zo dicht op elkaar"): royale ruimte onder de kop. */
+  row: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', marginTop: 6, marginBottom: 22, gap: 12 },
   dot: { width: 12, height: 12, borderRadius: 6 },
   title: { fontFamily: BrandFonts.extrabold, fontSize: 20, letterSpacing: 0.4, color: '#ffffff' },
   sub: { fontFamily: BrandFonts.regular, fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 2 },

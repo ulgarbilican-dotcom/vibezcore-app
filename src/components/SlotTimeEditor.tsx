@@ -179,7 +179,7 @@ const es = StyleSheet.create({
   segTxtOn: { color: '#0a0a0a' },
   segRange: { fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
   segRangeOn: { color: 'rgba(10,10,10,0.6)' },
-  noteSpacer: { height: 14 },
-  removeBtn: { alignSelf: 'center', marginTop: 10, paddingVertical: 8, paddingHorizontal: 16 },
+  noteSpacer: { height: 26 },
+  removeBtn: { alignSelf: 'center', marginTop: 22, paddingVertical: 10, paddingHorizontal: 16 },
   removeTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ef4444' },
 });
