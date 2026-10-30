@@ -412,10 +412,41 @@ export default function AgendaScreen() {
   };
 
   const selectedKey = dayKey(selected);
-  const selectedDay: PlanDay | null = plan?.days[selectedKey] ?? null;
+  /* 31 okt 2026 (operator: "het is nu 31 oktober 00:37 — 31 oktober staat leeg en 30 oktober staat 00:30, dat klopt
+     niet"): de agenda toont per KALENDERDAG. Een avondsessie na middernacht (bewaard als 24:30 bij de dag ervoor) staat
+     op de dag waarop ze echt valt, om 00:30. `rawDay` is het plan zoals bewaard (voor bewerken); `selectedDay` is wat je
+     ziet: zelfde posities (index = plaats in de template), sessies van na middernacht van de vorige dag naar hier
+     geschoven, en die van vandaag na middernacht verborgen (die staan op morgen). */
+  const rawDay: PlanDay | null = plan?.days[selectedKey] ?? null;
+  type ViewItem = PlanDay['items'][number] & { hidden?: boolean };
+  const selectedDay = useMemo<{ dayKey: string; items: ViewItem[] } | null>(() => {
+    if (!plan) return null;
+    const prevDate = new Date(selected);
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prev = plan.days[dayKey(prevDate)];
+    const base = rawDay ?? prev;
+    if (!base) return null;
+    const items = base.items.map((it, i): ViewItem => {
+      if (it.reminderAt < 1440) return rawDay ? rawDay.items[i] : { ...it, hidden: true };
+      const p = prev?.items[i];
+      return p && p.reminderAt >= 1440 ? { ...p, reminderAt: p.reminderAt - 1440 } : { ...it, hidden: true };
+    });
+    if (items.every((it) => it.hidden)) return null;
+    return { dayKey: selectedKey, items };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, selectedKey, rawDay]);
   const selectedStatuses = selectedDay
     ? planItemStatuses(selectedDay.items, historyByDay.get(selectedKey) ?? [])
     : [];
+  /* Bewerken gebeurt op het plan zoals bewaard (zelfde template-positie): de dag zelf, of de vorige als deze dag niet in
+     het plan zit maar wel een sessie van na middernacht toont. */
+  const editDay: PlanDay | null = (() => {
+    if (rawDay) return rawDay;
+    if (!plan) return null;
+    const d = new Date(selected);
+    d.setDate(d.getDate() - 1);
+    return plan.days[dayKey(d)] ?? null;
+  })();
 
   /* Index in `selectedDay.items` waarvan de duur-kiezer openstaat. */
   const [durationPicking, setDurationPicking] = useState<number | null>(null);
@@ -829,16 +860,16 @@ export default function AgendaScreen() {
                meerdere sessies van dezelfde staat staat dat nu gewoon
                netjes onder elkaar i.p.v. onleesbaar overlappend op de
                ring-rand. */
-            const ringItems = (selectedDay?.items ?? []).map((it, i) => ({
+            const ringItems = (selectedDay?.items ?? []).flatMap((it, i) => it.hidden ? [] : [{
               key: String(i),
               reminderAt: it.reminderAt,
               minutes: it.minutes,
               color: BREATH_STATES[it.state].accent,
               label: titleCase(BREATH_STATES[it.state].eyebrow),
-            }));
+            }]);
             const filteredItems =
               filterMode !== null
-                ? ringItems.filter((_, i) => (selectedDay?.items ?? [])[i]?.state === filterMode)
+                ? ringItems.filter((r) => (selectedDay?.items ?? [])[Number(r.key)]?.state === filterMode)
                 : null;
             return (
               <RhythmRing
@@ -875,7 +906,7 @@ export default function AgendaScreen() {
               staat erbij; een ander moment start je via zijn bolletje. */}
           {filterMode !== null && (() => {
             const items = (selectedDay?.items ?? [])
-              .filter((it) => it.state === filterMode)
+              .filter((it) => !it.hidden && it.state === filterMode)
               .sort((a, b) => a.reminderAt - b.reminderAt);
             if (items.length === 0) return null;
             const nowM = new Date().getHours() * 60 + new Date().getMinutes();
@@ -938,7 +969,7 @@ export default function AgendaScreen() {
             />
           </View>
 
-          {(!selectedDay || selectedDay.items.length === 0) && (
+          {(!selectedDay || selectedDay.items.every((it) => it.hidden)) && (
             <Text style={[s.emptyB, { marginTop: -8 }]}>Nothing planned this day.</Text>
           )}
         </Reveal>
@@ -1068,18 +1099,18 @@ export default function AgendaScreen() {
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.pickHandle} />
-            {timeEditing !== null && selectedDay && selectedDay.items[timeEditing.index] && (() => {
-              const it = selectedDay.items[timeEditing.index];
+            {timeEditing !== null && editDay && editDay.items[timeEditing.index] && (() => {
+              const it = editDay.items[timeEditing.index];
               const goals = plan?.goals ?? [];
               const level = getSetting('experienceLevel') ?? 'beginner';
-              const others = selectedDay.items.filter((_, idx) => idx !== timeEditing.index);
+              const others = editDay.items.filter((_, idx) => idx !== timeEditing.index);
               const head = draftHeader(it, timeEditing.draft, goals, level, others);
               return (
                 <>
                   <SessionSheetHeader {...head} onDone={() => void applyTimeEdit()} />
                   <SlotTimeEditor
                     item={it}
-                    others={selectedDay.items.filter((_, idx) => idx !== timeEditing.index)}
+                    others={editDay.items.filter((_, idx) => idx !== timeEditing.index)}
                     draft={timeEditing.draft}
                     onChange={(draft) => setTimeEditing((cur) => (cur ? { ...cur, draft } : cur))}
                     goals={goals}
@@ -1167,7 +1198,7 @@ export default function AgendaScreen() {
                     onPress={() => {
                       const idx = actionItemIndex;
                       setActionItemIndex(null);
-                      setTimeEditing({ index: idx, draft: draftFor(it) });
+                      setTimeEditing({ index: idx, draft: draftFor(editDay?.items[idx] ?? it) });
                     }}
                   >
                     <Text style={s.actionEditTxt}>Edit time & duration</Text>
