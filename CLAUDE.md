@@ -154,6 +154,10 @@ Flow per gebruiker:
   knoppen). Vervangt de regel van 7 augustus 2026 ("welkomstscherm voor
   iedereen"). Uitzonderingen blijven: een openstaande auth-deeplink en een
   tik op een herinnering gaan voor.
+  GEWIJZIGD 30 oktober 2026 (operator: "bij premium moet dat welcome scherm
+  niet weg?"): ook wie Premium kocht of herstelde op dit toestel ZONDER
+  account telt als "binnen" — geen welkomstscherm, bij elke start het laatst
+  gebruikte tabblad.
 
 NOOIT een keuzescherm "wat ben jij / wat heb je". Bezit wordt door
 inloggen of activatiecode bepaald, niet aan de gebruiker gevraagd.

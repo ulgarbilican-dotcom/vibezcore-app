@@ -49,6 +49,7 @@ import { Brand } from '@/constants/theme';
 import {
   getAuthUserIdFromToken,
   getToken,
+  GUEST_PURCHASE_RC_ID_KEY,
   linkRevenueCatUser,
   REFRESH_KEY,
 } from '@/services/auth';
@@ -449,16 +450,19 @@ export default function RootLayout() {
       /* Iter 9as (2026-05-31): wacht óók op dev-override cache zodat
          de welcome-redirect-check daar rekening mee kan houden. In prod
          is awaitDevUserOverrideLoaded() een no-op. */
-      const [t, pending, lastTab, refresh] = await Promise.all([
+      const [t, pending, lastTab, refresh, guestPremium] = await Promise.all([
         getToken(),
         hasPendingAuthDeepLink(),
         getLastTabRoute(),
         AsyncStorage.getItem(REFRESH_KEY).catch(() => null),
+        /* 30 okt 2026 (operator: "bij premium moet dat welcome scherm niet weg?"): Premium gekocht of hersteld op dit
+           toestel zonder account = de RevenueCat-marker. Zo iemand opent ook waar hij was, zonder welkomstscherm. */
+        AsyncStorage.getItem(GUEST_PURCHASE_RC_ID_KEY).catch(() => null),
         awaitDevUserOverrideLoaded(),
       ]);
       if (cancelled) return;
       setLastTabRoute(lastTab);
-      setHasStoredSession(!!refresh);
+      setHasStoredSession(!!refresh || !!guestPremium);
       setAuth(t ?? null);
       setPendingAuthLink(pending);
     })();
