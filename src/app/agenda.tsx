@@ -21,7 +21,7 @@ import { FREE_COPY } from '@/constants/free-session-copy';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { calculateStreak, useBreathHistory, useBreathTotals } from '@/utils/breath-history';
 import { dayKey } from '@/utils/bracelet-history';
-import { clearActivePlan, saveActivePlan, useActivePlan, type PlanDay } from '@/utils/plan-store';
+import { clearActivePlan, itemsOnCalendarDay, saveActivePlan, useActivePlan, type PlanDay } from '@/utils/plan-store';
 import ConfirmCard from '@/components/ConfirmCard';
 import { goToTab } from '@/utils/state-control-ui';
 import { syncPlanReminders } from '@/services/reminders';
@@ -400,14 +400,17 @@ export default function AgendaScreen() {
 
   const todayKey = dayKey(new Date());
 
+  /* 31 okt 2026 (operator: "waarom staat het rode bolletje nog op 30 oktober?"): ook de bolletjes per KALENDERDAG — een
+     sessie na middernacht telt op de dag waarop ze valt (itemsOnCalendarDay), zoals de ring. */
   const statusFor = (dk: string): DayStatus => {
-    const day = plan?.days[dk];
-    if (!day || day.items.length === 0) return 'none';
+    const [y, m, d] = dk.split('-').map(Number);
+    const items = itemsOnCalendarDay(plan, new Date(y, m - 1, d, 12)).map((x) => ({ ...x.stored, reminderAt: x.at }));
+    if (items.length === 0) return 'none';
     if (dk > todayKey) return 'future';
-    const statuses = planItemStatuses(day.items, historyByDay.get(dk) ?? []);
+    const statuses = planItemStatuses(items, historyByDay.get(dk) ?? []);
     const matched = statuses.filter((st) => st !== 'none').length;
     if (matched === 0) return dk === todayKey ? 'future' : 'red';
-    if (matched === day.items.length) return 'green';
+    if (matched === items.length) return 'green';
     return 'orange';
   };
 
@@ -879,7 +882,7 @@ export default function AgendaScreen() {
                 continuesTomorrow={(() => {
                   const t = new Date();
                   t.setDate(t.getDate() + 1);
-                  return (plan?.days[dayKey(t)]?.items.length ?? 0) > 0;
+                  return itemsOnCalendarDay(plan, t).length > 0;
                 })()}
                 now={new Date()}
                 onTapItem={(key) => {
