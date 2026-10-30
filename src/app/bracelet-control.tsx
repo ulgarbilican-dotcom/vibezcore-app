@@ -1689,7 +1689,7 @@ export function ColorDurationDial({
         /* Letters schalen mee met de ring, zodat niets over de rand valt (State Control-scherm = 264). */
         textScale={Math.min(1, size / 250)}
         showName={false}
-        lightFill
+        /* 31 okt 2026 (operator): vulling zoals overal (State Control); enkel de tijdpil is lichtste glas. */
       />
     </ModeSwipeRing>
   );
