@@ -1,7 +1,7 @@
 /* Tijden in het ademplan (30 okt 2026, operator): één indeling van de dagdelen, per 5 minuten, en een sessie mag na het
    opbouwen naar een ander dagdeel — dan kiest de app de toestand die daar hoort. */
 import { SLOT_WINDOW, slotForMinutes, slotTimeOptions, snapToSlot, TIME_STEP_MIN } from '../src/utils/day-plan';
-import { generateTemplate, moveTemplateItem, setTemplateItemState } from '../src/utils/protocol';
+import { generateTemplate, moveTemplateItem, removePlanItem, setTemplateItemState } from '../src/utils/protocol';
 
 const hm = (h: number, m = 0) => h * 60 + m;
 
@@ -65,5 +65,38 @@ describe('moving a planned session', () => {
     const two = generateTemplate(['sleep', 'energy'], 'standard', ['morning', 'evening'], 'beginner');
     const after = moveTemplateItem(two, 1, two[1].slot, two[1].reminderAt + 5, ['sleep', 'energy'], 'beginner');
     expect(after[0]).toEqual(two[0]);
+  });
+});
+
+describe('removing a session from a running plan', () => {
+  const goals = ['stress', 'energy'];
+  const template = generateTemplate(goals, 'standard', ['morning', 'evening'], 'beginner');
+  const plan = {
+    id: 't',
+    createdAt: 0,
+    goals,
+    intensity: 'standard' as const,
+    horizon: 'week' as const,
+    startDayKey: '2026-10-30',
+    days: {
+      '2026-10-30': { dayKey: '2026-10-30', items: template },
+      '2026-10-31': { dayKey: '2026-10-31', items: template },
+    },
+  };
+  it('removes the same position on every day and the routine follows the new count', () => {
+    const next = removePlanItem(plan as never, 0)!;
+    expect(next).not.toBeNull();
+    expect(next.days['2026-10-30'].items).toEqual([template[1]]);
+    expect(next.days['2026-10-31'].items).toEqual([template[1]]);
+    expect(next.intensity).toBe('essential');
+  });
+  it('removing the last session = no plan left', () => {
+    const one = removePlanItem(plan as never, 0)!;
+    expect(removePlanItem(one, 0)).toBeNull();
+  });
+  it('moving into a daypart that already has a session never repeats its state', () => {
+    const moved = moveTemplateItem(template, 0, template[1].slot, template[1].reminderAt + 30, goals, 'beginner');
+    expect(moved[0].slot).toBe(template[1].slot);
+    expect(moved[0].state).not.toBe(template[1].state);
   });
 });

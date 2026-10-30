@@ -137,7 +137,7 @@ export default function SlotTimeEditor({
       />
       {onRemove && (
         <Tap style={es.removeBtn} onPress={onRemove} hitSlop={8} accessibilityRole="button">
-          <Text style={es.removeTxt}>Remove session</Text>
+          <Text style={es.removeTxt}>Remove from plan</Text>
         </Tap>
       )}
     </View>

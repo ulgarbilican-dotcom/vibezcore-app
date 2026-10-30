@@ -81,6 +81,9 @@ import Tap from '@/components/Tap';
 import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
+import TimeWheel from '@/components/TimeWheel';
+import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
+import { TIME_STEP_MIN } from '@/utils/day-plan';
 import { planItemStatuses } from '@/utils/plan-status';
 import { getAllSessions } from '@/utils/bracelet-history';
 import { useStartStateControl } from '@/hooks/useStartStateControl';
@@ -273,7 +276,9 @@ export default function BraceletAgendaScreen() {
   const [filterMode, setFilterMode] = useState<BraceletMode | 'all' | null>(null);
   const [actionItemIndex, setActionItemIndex] = useState<number | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [durationEditIndex, setDurationEditIndex] = useState<number | null>(null);
+  /* 30 okt 2026 (operator): tijd en duur samen wijzigen in één blad, zoals de breathwork-agenda — tijd per 5 minuten
+     over de hele dag (State Control kent geen dagdelen). Done past toe, wegvegen verandert niets. */
+  const [timeEdit, setTimeEdit] = useState<{ index: number; time: number; minutes: number } | null>(null);
   const selectedKey = dayKey(selected);
   const todayKey = dayKey(new Date());
   const day: BraceletPlanDay | null = plan?.days[selectedKey] ?? null;
@@ -331,8 +336,45 @@ export default function BraceletAgendaScreen() {
     if (!day || !plan) return;
     const original = day.items[index];
     if (!original) return;
+    /* 30 okt 2026: eerst bevestigen, zoals in de breathwork-agenda — het geldt voor elke komende dag. */
+    const ok = await confirmVibezAlert({
+      title: 'Remove this session?',
+      message: `${getModeMeta(original.mode as BraceletMode).name.toUpperCase()} at ${fmtTime(original.reminderAt)} will be removed from your plan, every day.`,
+      confirmText: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
     hapticTap();
     await applyToComingDays(original, () => null);
+  };
+
+  /** Done in het tijd-blad: geen overlap met een andere sessie die dag (zelfde regel als slepen op de ring). */
+  const applyTimeEdit = async () => {
+    if (!timeEdit || !day) {
+      setTimeEdit(null);
+      return;
+    }
+    const original = day.items[timeEdit.index];
+    if (!original) {
+      setTimeEdit(null);
+      return;
+    }
+    const { index, time, minutes } = timeEdit;
+    const clash = day.items.find(
+      (it, i) => i !== index && rangesOverlap(time, minutes, it.reminderAt, it.durationMinutes),
+    );
+    if (clash) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      void showVibezAlert({
+        title: 'That time is taken',
+        message: `${getModeMeta(clash.mode as BraceletMode).name} runs from ${fmtTime(clash.reminderAt)} to ${fmtTime(clash.reminderAt + clash.durationMinutes)}. Choose a different time.`,
+        buttons: [{ text: 'Got it', style: 'primary' }],
+      });
+      return;
+    }
+    setTimeEdit(null);
+    hapticTap();
+    await applyToComingDays(original, (x) => ({ ...x, reminderAt: time, durationMinutes: minutes }));
   };
 
   /* Operator, 30 september 2026 ("mag nooit aparte states en 2 zelfde
@@ -721,16 +763,21 @@ export default function BraceletAgendaScreen() {
                   onPress={() => {
                     const idx = actionItemIndex;
                     setActionItemIndex(null);
-                    setDurationEditIndex(idx);
+                    setTimeEdit({
+                      index: idx,
+                      time: Math.round(item.reminderAt / TIME_STEP_MIN) * TIME_STEP_MIN % 1440,
+                      minutes: item.durationMinutes,
+                    });
                   }}
                 >
-                  <Text style={s.actionEditTxt}>Edit duration</Text>
+                  <Text style={s.actionEditTxt}>Edit time & duration</Text>
                 </Tap>
                 <Tap
                   style={[s.actionRemoveBtn, { paddingTop: 4 }]}
                   onPress={() => {
-                    void removeItem(actionItemIndex);
+                    const idx = actionItemIndex;
                     setActionItemIndex(null);
+                    void removeItem(idx);
                   }}
                 >
                   <Text style={s.actionRemoveTxt}>Remove from plan</Text>
@@ -740,9 +787,9 @@ export default function BraceletAgendaScreen() {
         );
       })()}
 
-      {/* Duur aanpassen — zelfde blad als in de breathwork-agenda; geldt
-          voor elke dag vanaf vandaag (zie applyToComingDays). */}
-      <GlassSheet visible={durationEditIndex !== null} onClose={() => setDurationEditIndex(null)}>
+      {/* Tijd & duur (30 okt 2026) — zelfde blad als in de breathwork-agenda, zonder dagdelen; geldt voor elke dag vanaf
+          vandaag (zie applyToComingDays). */}
+      <GlassSheet visible={timeEdit !== null} onClose={() => setTimeEdit(null)}>
         <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14 }]}>
           <VibezGlass
             radius={24}
@@ -751,31 +798,50 @@ export default function BraceletAgendaScreen() {
             style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
           />
           <View style={s.pickHandle} />
-          {durationEditIndex !== null && day?.items[durationEditIndex] && (() => {
-            const it = day.items[durationEditIndex];
+          {timeEdit !== null && day?.items[timeEdit.index] && (() => {
+            const it = day.items[timeEdit.index];
             const meta = getModeMeta(it.mode as BraceletMode);
             const options: { value: number; label: string }[] = [];
             for (let m = meta.minMinutes; m <= meta.maxMinutes; m += 1) options.push({ value: m, label: `${m} min` });
+            const timeOptions: number[] = [];
+            for (let m = 0; m < 1440; m += TIME_STEP_MIN) timeOptions.push(m);
             return (
               <>
                 <View style={s.pickHeaderRow}>
-                  <Text style={s.pickHeaderTitle}>{meta.name} duration</Text>
-                  <Tap onPress={() => setDurationEditIndex(null)} hitSlop={10} accessibilityRole="button">
+                  <Text style={s.pickHeaderTitle}>{meta.name} · time</Text>
+                  <Tap onPress={() => void applyTimeEdit()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
                     <Text style={s.pickHeaderDone}>Done</Text>
                   </Tap>
                 </View>
+                <Text style={s.editLabel}>Time</Text>
+                <TimeWheel
+                  options={timeOptions}
+                  value={timeEdit.time}
+                  accent={meta.color}
+                  trackColor="rgba(255,255,255,0.4)"
+                  onChange={(mins) => setTimeEdit((cur) => (cur ? { ...cur, time: mins } : cur))}
+                />
+                <Text style={[s.editLabel, { marginTop: 12 }]}>Duration</Text>
                 <View style={{ width: 266, alignSelf: 'center' }}>
                   <DurationWheel
                     options={options}
-                    value={it.durationMinutes}
+                    value={timeEdit.minutes}
                     accent={meta.color}
                     trackColor="rgba(255,255,255,0.4)"
                     recommendedValue={meta.defaultMinutes}
-                    onChange={(v) => {
-                      void applyToComingDays(it, (x) => ({ ...x, durationMinutes: v }));
-                    }}
+                    onChange={(v) => setTimeEdit((cur) => (cur ? { ...cur, minutes: v } : cur))}
                   />
                 </View>
+                <Tap
+                  style={[s.actionRemoveBtn, { marginTop: 10 }]}
+                  onPress={() => {
+                    const idx = timeEdit.index;
+                    setTimeEdit(null);
+                    void removeItem(idx);
+                  }}
+                >
+                  <Text style={s.actionRemoveTxt}>Remove from plan</Text>
+                </Tap>
               </>
             );
           })()}
@@ -787,6 +853,15 @@ export default function BraceletAgendaScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.bg },
+  editLabel: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
   bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 4 },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   /* Operator, 30 september 2026 ("kan Your bracelet plan naast de pijl?

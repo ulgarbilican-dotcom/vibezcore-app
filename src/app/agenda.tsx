@@ -1178,6 +1178,17 @@ export default function AgendaScreen() {
                   >
                     <Text style={s.actionEditTxt}>Edit time & duration</Text>
                   </Tap>
+                  {/* 30 okt 2026: zelfde als de State Control-agenda — een sessie uit het plan halen (met bevestiging). */}
+                  <Tap
+                    style={s.actionEditBtn}
+                    onPress={() => {
+                      const idx = actionItemIndex;
+                      setActionItemIndex(null);
+                      void removeSession(idx);
+                    }}
+                  >
+                    <Text style={[s.actionEditTxt, { color: '#ef4444' }]}>Remove from plan</Text>
+                  </Tap>
                 </>
               );
             })()}
