@@ -3,7 +3,7 @@
    dezelfde duurcirkel als State Control (met je vinger over de rand slepen). Gedeeld door de breathwork-
    (SlotTimeEditor) en de State Control-agenda; de cirkel zelf geeft het scherm mee (kleur en bereik verschillen). */
 import type { ReactNode } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import TimeWheel from '@/components/TimeWheel';
 import { BrandFonts } from '@/constants/theme';
 
@@ -17,6 +17,26 @@ export const SHEET_BODY_MAX_H = Math.round(H - 180);
 /** 30 okt 2026 (operator: "maak de kaart zelf hoger, niet het tijdwiel"): de kaart is altijd royaal hoog (±¾ van het
  *  scherm); de onderdelen verdelen zich gelijkmatig over die hoogte. */
 export const SHEET_BODY_MIN_H = Math.round(Math.min(SHEET_BODY_MAX_H, H * 0.7));
+
+/** 30 okt 2026 (operator: "het draaiwiel voor tijd draait niet"): een scrollend blad rond het tijdwiel nam de
+ *  draaibeweging over. Enkel op een echt klein scherm (waar de inhoud niet past) scrolt het blad nog; anders is het een
+ *  gewone kaart en heeft het wiel de beweging voor zich alleen. */
+const SHEET_NEEDS_SCROLL = H < 700;
+export function SheetBody({ children }: { children: ReactNode }) {
+  if (SHEET_NEEDS_SCROLL) {
+    return (
+      <ScrollView
+        style={{ alignSelf: 'stretch', maxHeight: SHEET_BODY_MAX_H }}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+      >
+        {children}
+      </ScrollView>
+    );
+  }
+  return <View style={{ alignSelf: 'stretch', minHeight: SHEET_BODY_MIN_H }}>{children}</View>;
+}
 
 export default function TimeDurationRows({
   time,

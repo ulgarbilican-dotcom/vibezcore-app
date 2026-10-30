@@ -81,7 +81,7 @@ import Tap from '@/components/Tap';
 import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
-import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_BODY_MIN_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
+import TimeDurationRows, { SheetBody, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
 import { ColorDurationDial } from '@/app/bracelet-control';
 import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
@@ -281,7 +281,6 @@ export default function BraceletAgendaScreen() {
   /* 30 okt 2026 (operator): tijd en duur samen wijzigen in één blad, zoals de breathwork-agenda — tijd per 5 minuten
      over de hele dag (State Control kent geen dagdelen). Done past toe, wegvegen verandert niets. */
   const [timeEdit, setTimeEdit] = useState<{ index: number; time: number; minutes: number } | null>(null);
-  const [editBodyH, setEditBodyH] = useState(0);
   const selectedKey = dayKey(selected);
   const todayKey = dayKey(new Date());
   const day: BraceletPlanDay | null = plan?.days[selectedKey] ?? null;
@@ -811,16 +810,7 @@ export default function BraceletAgendaScreen() {
             return (
               <>
                 <SessionSheetHeader title={meta.name} subtitle="State Control" accent={meta.color} onDone={() => void applyTimeEdit()} />
-                <ScrollView
-                  style={{ maxHeight: SHEET_BODY_MAX_H }}
-                  bounces={false}
-                  showsVerticalScrollIndicator={false}
-                  nestedScrollEnabled
-                  /* Enkel scrollen als het niet past (anders vecht het blad met het tijdwiel). */
-                  scrollEnabled={editBodyH > SHEET_BODY_MAX_H}
-                  contentContainerStyle={{ minHeight: SHEET_BODY_MIN_H }}
-                  onContentSizeChange={(_w, h) => setEditBodyH(h)}
-                >
+                <SheetBody>
                 <TimeDurationRows
                   time={timeEdit.time}
                   timeOptions={timeOptions}
@@ -849,7 +839,7 @@ export default function BraceletAgendaScreen() {
                 >
                   <Text style={s.actionRemoveTxt}>Remove from plan</Text>
                 </Tap>
-                </ScrollView>
+                </SheetBody>
               </>
             );
           })()}
