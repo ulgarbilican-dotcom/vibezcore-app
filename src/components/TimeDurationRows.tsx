@@ -46,12 +46,13 @@ export default function TimeDurationRows({
 
 const rs = StyleSheet.create({
   wrap: { alignSelf: 'stretch' },
+  /* 30 okt 2026 (operator: "time en duration duidelijker in het wit"). */
   label: {
-    fontFamily: BrandFonts.semibold,
-    fontSize: 11,
+    fontFamily: BrandFonts.bold,
+    fontSize: 13,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.55)',
+    color: '#ffffff',
     textAlign: 'center',
     marginBottom: 4,
   },
