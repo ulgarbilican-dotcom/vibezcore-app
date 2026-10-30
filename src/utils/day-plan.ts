@@ -98,12 +98,41 @@ export const ALL_SLOTS = ['morning', 'midday', 'afterWork', 'evening'] as const;
  *  plan.tsx se lokale `MOMENTS`, met het risico dat ze ooit uit elkaar
  *  lopen). `to` mag boven 24 gaan (evening loopt door tot 3:45u de
  *  volgende ochtend) — JS' eigen Date-rekenkunde rolt dat correct om. */
+/* 30 okt 2026 (operator): één indeling, overal dezelfde en zichtbaar voor de gebruiker — Morning 05–12, Midday 12–17,
+   After work 17–20, Evening 20–00. Was morning 4–12 en evening tot 4u 's nachts, terwijl de herinneringen 5–11 en
+   20–23 hanteerden. */
 export const SLOT_WINDOW: Record<string, { from: number; to: number }> = {
-  morning: { from: 4, to: 12 },
+  morning: { from: 5, to: 12 },
   midday: { from: 12, to: 17 },
   afterWork: { from: 17, to: 20 },
-  evening: { from: 20, to: 28 },
+  evening: { from: 20, to: 24 },
 };
+
+/** Tijden binnen een dagdeel, per 5 minuten (operator, 30 okt 2026: "meer keuzes, om de 5 minuten"). */
+export const TIME_STEP_MIN = 5;
+export function slotTimeOptions(slot: string): number[] {
+  const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
+  const out: number[] = [];
+  for (let m = w.from * 60; m < w.to * 60; m += TIME_STEP_MIN) out.push(m);
+  return out;
+}
+
+/** Het dagdeel waarin een tijdstip (minuten na middernacht) valt; vóór 05:00 telt als avond. */
+export function slotForMinutes(mins: number): string {
+  const h = Math.floor((((mins % 1440) + 1440) % 1440) / 60);
+  return h < 5 ? 'evening' : h < 12 ? 'morning' : h < 17 ? 'midday' : h < 20 ? 'afterWork' : 'evening';
+}
+
+/** "05:00–12:00" (of "5 AM–12 PM" op een 12-uursklok) — de uren van een dagdeel, voor op het scherm. */
+export function slotRangeLabel(slot: string): string {
+  const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
+  const fmt = (h: number) => {
+    const d = new Date();
+    d.setHours(h % 24, 0, 0, 0);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  return `${fmt(w.from)}–${fmt(w.to)}`;
+}
 
 /* Operator, 17 september 2026 (fix, `breath-suggestion.ts` had een eigen
    afwijkende urenindeling die hiermee tegensprak): vóór 6u is nog geen
@@ -111,7 +140,7 @@ export const SLOT_WINDOW: Record<string, { from: number; to: number }> = {
    Valt terug in dezelfde bucket als "vlak voor slapen", zelfde toestanden
    (rest/calm) passen daar evengoed. */
 export const slotForHour = (h: number): string =>
-  h < 6 ? 'evening' : h < 12 ? 'morning' : h < 17 ? 'midday' : h < 20 ? 'afterWork' : 'evening';
+  h < 5 ? 'evening' : h < 12 ? 'morning' : h < 17 ? 'midday' : h < 20 ? 'afterWork' : 'evening';
 
 /** De toestand voor dit moment, gegeven de doelen en wat het vorige moment
  *  al kreeg.

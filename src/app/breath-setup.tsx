@@ -69,7 +69,7 @@ import {
   techniqueForLevel,
 } from '@/utils/breath-level';
 import { isLightColor } from '@/utils/color';
-import { DAY_CANDIDATES, SLOT_WINDOW } from '@/utils/day-plan';
+import { DAY_CANDIDATES, SLOT_WINDOW, slotTimeOptions, TIME_STEP_MIN } from '@/utils/day-plan';
 import { HORIZON_OPTIONS } from '@/data/plan-horizon-options';
 import { setDraftSession } from '@/utils/day-builder-draft';
 import type { PlanHorizon, PlanSlot } from '@/utils/plan-store';
@@ -200,13 +200,9 @@ const ADD_HERO_PHOTO =
    `slotForTime` (hieronder in `BreathSetupScreen`) bepaalt welk venster. */
 /* Operator, 18 september 2026 ("time zou ik per kwartier instellen, niet
    per half uur"): 15 min-stappen i.p.v. 30 — 4 opties per uur i.p.v. 2. */
+/* 30 okt 2026 (operator: "om de 5 minuten"): overal dezelfde stap van 5 minuten (utils/day-plan.ts). */
 function timeOptionsForSlot(slot: PlanSlot): number[] {
-  const window = SLOT_WINDOW[slot];
-  const out: number[] = [];
-  for (let h = window.from; h < window.to; h += 1) {
-    out.push(h * 60, h * 60 + 15, h * 60 + 30, h * 60 + 45);
-  }
-  return out;
+  return slotTimeOptions(slot);
 }
 
 /* Operator, 7 september 2026: "session duration wil ik geanimeerd, iets
@@ -1954,8 +1950,8 @@ export default function BreathSetupScreen() {
        vrije minuten zouden een waarde kunnen opleveren die op het wiel
        (kwartier-stappen) niet bestaat. Rond af naar het dichtstbijzijnde
        kwartier, zelfde 15-min-raster als `timeOptionsForSlot`. */
-    const mSnapped = Math.round(Math.max(0, Math.min(59, mRaw)) / 15) * 15;
-    const mFinal = mSnapped === 60 ? 45 : mSnapped;
+    const mSnapped = Math.round(Math.max(0, Math.min(59, mRaw)) / TIME_STEP_MIN) * TIME_STEP_MIN;
+    const mFinal = mSnapped === 60 ? 60 - TIME_STEP_MIN : mSnapped;
     /* Operator, vervolg ("maar dat tussen vooropgesteld tijdzone... tussen
        welke tijd bijzetten"): de vrije invoer mag het venster van dit
        dagdeel niet verlaten (`SLOT_WINDOW`, dezelfde grens als het wiel) —

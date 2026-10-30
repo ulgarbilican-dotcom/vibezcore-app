@@ -45,7 +45,10 @@ import { rootBlurRef } from '@/utils/root-blur';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { useBreathHistory } from '@/utils/breath-history';
 import { personalOrderForSlot } from '@/utils/behavior-patterns';
-import { pickStatesForDay } from '@/utils/day-plan';
+import { pickStatesForDay, SLOT_WINDOW, slotTimeOptions } from '@/utils/day-plan';
+import SlotTimeEditor, { draftFor, type SlotDraft } from '@/components/SlotTimeEditor';
+import TimeWheel from '@/components/TimeWheel';
+import { moveTemplateItem } from '@/utils/protocol';
 import { useSetting } from '@/utils/settings';
 import { dayKey } from '@/utils/bracelet-history';
 import { saveActivePlan, useActivePlan } from '@/utils/plan-store';
@@ -140,13 +143,14 @@ const momentsWord = (n: number) => MOMENT_WORDS[n] ?? `${n} moments`;
    uit elkaar. Wie er drie wil, kiest zelf een extra sessie; het plan hoeft
    niet je hele dag te vullen. */
 const MOMENTS = [
-  { key: 'morning', label: 'MORNING', hour: 8, from: 4, to: 12 },
+  /* 30 okt 2026: uren uit de gedeelde indeling (utils/day-plan.ts SLOT_WINDOW), niet meer apart herhaald. */
+  { key: 'morning', label: 'MORNING', hour: 8, from: SLOT_WINDOW.morning.from, to: SLOT_WINDOW.morning.to },
   /* MIDDAY verschijnt alleen voor wie hem in de vragenlijst koos (operator,
      8 augustus 2026). Twee momenten blijft de standaard — ochtend zet de
      toon, avond bouwt af — maar wie zei dat hij 's middags wil oefenen,
      hoort dat moment hier terug te zien. Dit is waar de voorkeuren uit de
      vragenlijst zichtbaar worden. */
-  { key: 'midday', label: 'MIDDAY', hour: 13, from: 12, to: 17 },
+  { key: 'midday', label: 'MIDDAY', hour: 13, from: SLOT_WINDOW.midday.from, to: SLOT_WINDOW.midday.to },
   /* Operator, 11 september 2026: nieuw vierde moment, "after work / on
      the way home" — enkel zichtbaar via een ECHT protocol (goal.tsx →
      intensity.tsx) dat dit moment koos, nooit als standaard hier (zie
@@ -154,7 +158,7 @@ const MOMENTS = [
      de live, protocol-loze preview). Zonder dit erbij zou `MOMENTS.find()`
      voor een protocol-item met slot 'afterWork' niets vinden, en dus geen
      label/tijdvenster kunnen tonen (zie `items` hieronder). */
-  { key: 'afterWork', label: 'AFTER WORK', hour: 18, from: 17, to: 20 },
+  { key: 'afterWork', label: 'AFTER WORK', hour: 18, from: SLOT_WINDOW.afterWork.from, to: SLOT_WINDOW.afterWork.to },
   /* to: 24 -> 28 (operator, 10 augustus 2026: "voor sommige users is
      evening misschien 2u, 3u — wij beperken dit toch?"). 24 t/m 27 zijn
      0:00 t/m 3:45 de volgende ochtend — JS' eigen Date-rekenkunde rolt dat
@@ -163,7 +167,7 @@ const MOMENTS = [
      (11 september 2026): dat bereik overlapte met het nieuwe `afterWork`
      hierboven — evening dekt nu enkel nog vanaf 20u, samen met morning
      vanaf 4 blijft de volle 24 uur gedekt. */
-  { key: 'evening', label: 'EVENING', hour: 21, from: 20, to: 28 },
+  { key: 'evening', label: 'EVENING', hour: 21, from: SLOT_WINDOW.evening.from, to: SLOT_WINDOW.evening.to },
 ] as const;
 
 type SlotKey = (typeof MOMENTS)[number]['key'];
@@ -212,6 +216,11 @@ export default function PlanScreen() {
      bedoel je?). Nu een index in de gerenderde `items`-lijst zelf, altijd
      ondubbelzinnig, in beide standen (met of zonder actief protocol). */
   const [picking, setPicking] = useState<number | null>(null);
+  /* 30 okt 2026 (operator: "om de 5 minuten", "ook dagdeel kunnen kiezen"): het tijdblad bewerkt een kladversie —
+     een protocol-sessie via het gedeelde blad (dagdeel, tijd, duur), een losse herinnering via het tijdwiel. Done past
+     toe, wegvegen laat alles zoals het was. */
+  const [pickDraft, setPickDraft] = useState<SlotDraft | null>(null);
+  const [pickMins, setPickMins] = useState(0);
   /* Wat er net is ingesteld, in mensentaal. Blijft staan tot je het scherm
      verlaat — lang genoeg om gelezen te worden, kort genoeg om niet in de
      weg te zitten. */
@@ -341,6 +350,61 @@ export default function PlanScreen() {
     const updated = { ...plan, days };
     await saveActivePlan(updated);
     void syncPlanReminders(updated);
+  };
+
+  const commitPick = async () => {
+    const index = picking;
+    setPicking(null);
+    if (index === null) return;
+    const item = items[index];
+    if (!item) return;
+    const slot = item.moment.key;
+    hapticTap();
+
+    if (plan && item.planIndex !== null && pickDraft) {
+      /* Dezelfde POSITIE op elke dag van het protocol (zie setMinutesForPlanIndex); een ander dagdeel krijgt de
+         toestand die daar hoort (moveTemplateItem). */
+      const planIndex = item.planIndex;
+      const d = pickDraft;
+      const goals = plan.goals ?? [];
+      const level = experienceLevel ?? 'beginner';
+      const days = Object.fromEntries(
+        Object.entries(plan.days).map(([dk, day]) => [
+          dk,
+          {
+            ...day,
+            items: moveTemplateItem(day.items, planIndex, d.slot, d.time, goals, level).map((it, i) =>
+              i === planIndex ? { ...it, minutes: d.minutes } : it,
+            ),
+          },
+        ]),
+      );
+      const updated = { ...plan, days };
+      await saveActivePlan(updated);
+      void syncPlanReminders(updated);
+      const lbl = d.slot.charAt(0).toUpperCase() + d.slot.slice(1);
+      setJustSet(lbl + ' — ' + nextFireText(d.time));
+      return;
+    }
+
+    const mins = pickMins;
+    const next = {
+      ...at,
+      [reminderKey('breath', slot)]: mins,
+    };
+    await setAt(next);
+    /* De tijd zetten schakelt de herinnering METEEN in (operator, 7 augustus 2026): een losse tweede stap miste
+       iedereen. Wie geen herinnering wil, zet hem daarna uit — dat is één tik. */
+    const key = reminderKey('breath', slot);
+    const on2 = { ...reminders, [key]: true };
+    if (!reminders[key]) {
+      if (await ensurePermission()) await setReminders(on2);
+    }
+    void syncReminders(reminders[key] ? reminders : on2, next, goalKeys);
+    /* Met het moment erbij: "First reminder today at 13:00" zónder context las alsof het hele plan om 13:00 begon
+       (operator, 8 augustus 2026). */
+    const lbl = slot.charAt(0).toUpperCase() + slot.slice(1);
+    setJustSet(lbl + ' — ' + nextFireText(mins));
   };
 
   const minsFor = (slot: SlotKey) => {
@@ -690,7 +754,12 @@ export default function PlanScreen() {
 })
             }
             onOpenDuration={() => setDurationPicking(index)}
-            onOpenTime={() => setPicking(index)}
+            onOpenTime={() => {
+              const planItem = it.planIndex !== null ? planDay?.items[it.planIndex] : undefined;
+              setPickDraft(planItem ? draftFor(planItem) : null);
+              setPickMins(it.reminderAt ?? minsFor(it.moment.key));
+              setPicking(index);
+            }}
             fmtTime={fmtTime}
           />
         ))}
@@ -845,7 +914,7 @@ export default function PlanScreen() {
                 gepropt en saai"). */}
             <View style={s.pickHandle} />
             {/* Kiezerblad → Done rechtsboven (protocol, 8 okt 2026). */}
-            <Tap style={s.sheetDoneTopRight} onPress={() => setPicking(null)} hitSlop={10}>
+            <Tap style={s.sheetDoneTopRight} onPress={() => void commitPick()} hitSlop={10}>
               <Text style={s.pickDoneTxt}>Done</Text>
             </Tap>
             {(() => {
@@ -868,114 +937,32 @@ export default function PlanScreen() {
                 </>
               );
             })()}
-            <ScrollView
-              style={s.pickScroll}
-              showsVerticalScrollIndicator={false}
-            >
-            <View style={s.pickGrid}>
-              {picking !== null && items[picking] &&
-                (() => {
-                  const item = items[picking!];
-                  const m = item.moment;
-                  const out: number[] = [];
-                  for (let h = m.from; h < m.to; h += 1) {
-                    out.push(h * 60, h * 60 + 15, h * 60 + 30, h * 60 + 45);
-                  }
-                  const cur = item.reminderAt;
-                  const accent = item.state.accent;
-                  return out.map((mins) => {
-                    const on = mins === cur;
-                    return (
-                      <Tap
-                        key={mins}
-                        onPress={async () => {
-                          const slot = item.moment.key;
-                          setPicking(null);
-
-                          if (plan && item.planIndex !== null) {
-                            /* Zet de tijd voor DIT item (positie
-                               `item.planIndex`) op ELKE dag van het
-                               protocol — de template herhaalt zich toch al
-                               identiek over de hele horizon (protocol.ts),
-                               dus een tijd hoort dat ook te doen. Operator,
-                               17 september 2026: matchte voorheen op
-                               `slot`, wat twee items in hetzelfde dagdeel
-                               allebei zou raken. */
-                            const planIndex = item.planIndex;
-                            const days = Object.fromEntries(
-                              Object.entries(plan.days).map(([dk, day]) => [
-                                dk,
-                                {
-                                  ...day,
-                                  items: day.items.map((it, i) =>
-                                    i === planIndex
-                                      ? { ...it, reminderAt: mins }
-                                      : it,
-                                  ),
-                                },
-                              ]),
-                            );
-                            const updated = { ...plan, days };
-                            await saveActivePlan(updated);
-                            void syncPlanReminders(updated);
-                            const lbl =
-                              slot.charAt(0).toUpperCase() + slot.slice(1);
-                            setJustSet(lbl + ' — ' + nextFireText(mins));
-                            return;
-                          }
-
-                          const next = {
-                            ...at,
-                            [reminderKey('breath', slot)]: mins,
-                          };
-                          await setAt(next);
-                          /* De tijd zetten schakelt de herinnering METEEN in
-                             (operator, 7 augustus 2026): een losse tweede
-                             stap miste iedereen. Wie geen herinnering wil,
-                             zet hem daarna uit — dat is één tik. */
-                          const key = reminderKey('breath', slot);
-                          const on2 = { ...reminders, [key]: true };
-                          if (!reminders[key]) {
-                            if (await ensurePermission())
-                              await setReminders(on2);
-                          }
-                          void syncReminders(
-                            reminders[key] ? reminders : on2,
-                            next,
-                            goalKeys,
-                          );
-                          /* Met het moment erbij: "First reminder today
-                             at 13:00" zónder context las alsof het hele plan
-                             om 13:00 begon (operator, 8 augustus 2026). */
-                          const lbl =
-                            slot.charAt(0).toUpperCase() + slot.slice(1);
-                          setJustSet(lbl + ' — ' + nextFireText(mins));
-                        }}
-                        style={[
-                          s.pickChip,
-                          on && {
-                            borderColor: accent,
-                            backgroundColor: `${accent}1F`,
-                          },
-                        ]}
-                        android_ripple={{
-                          color: 'rgba(255,255,255,0.08)',
-                        }}
-                      >
-                        <Text
-                          style={[
-                            s.pickChipTxt,
-                            on && { color: '#ffffff', fontFamily: BrandFonts.bold },
-                          ]}
-                        >
-                          {fmtTime(mins)}
-                        </Text>
-                      </Tap>
-                    );
-                  });
-                })()}
-            </View>
-            </ScrollView>
+            {picking !== null && items[picking] && (() => {
+              const item = items[picking];
+              const planItem = item.planIndex !== null ? planDay?.items[item.planIndex] : undefined;
+              if (planItem && pickDraft) {
+                return (
+                  <SlotTimeEditor
+                    item={planItem}
+                    draft={pickDraft}
+                    onChange={setPickDraft}
+                    goals={plan?.goals ?? []}
+                    level={experienceLevel ?? 'beginner'}
+                    durationsFor={(state, techniqueKey) => durationOptionsFor(state, techniqueKey)}
+                  />
+                );
+              }
+              return (
+                <TimeWheel
+                  key={item.moment.key}
+                  options={slotTimeOptions(item.moment.key)}
+                  value={pickMins}
+                  accent={item.state.accent}
+                  trackColor="rgba(255,255,255,0.4)"
+                  onChange={setPickMins}
+                />
+              );
+            })()}
           </View>
       </GlassSheet>
 

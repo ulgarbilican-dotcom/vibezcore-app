@@ -7,6 +7,7 @@
    kwartieren. Vroeger was dit op Android het kale systeemvenster en op iOS een draaiwiel.
    ───────────────────────────────────────────────────────────────────────── */
 
+import { TIME_STEP_MIN } from '@/utils/day-plan';
 import { useEffect, useMemo, useState } from 'react';
 import Tap from '@/components/Tap';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -56,7 +57,8 @@ export default function TimePickerSheet({
 
   const options = useMemo(() => {
     const out: number[] = [];
-    for (let m = Math.ceil(min / 15) * 15; m <= max; m += 15) out.push(m);
+    /* 30 okt 2026 (operator: "om de 5 minuten", overal): zelfde stap als elke tijdkiezer in de app. */
+    for (let m = Math.ceil(min / TIME_STEP_MIN) * TIME_STEP_MIN; m <= max; m += TIME_STEP_MIN) out.push(m);
     return out.length ? out : [value];
   }, [min, max, value]);
 
@@ -84,9 +86,9 @@ export default function TimePickerSheet({
     if (Number.isNaN(hRaw) || Number.isNaN(mRaw)) return;
     let h24 = USES_12H ? (hRaw % 12) + (pm ? 12 : 0) : hRaw;
     h24 = Math.max(0, Math.min(23, h24));
-    /* Zelfde kwartier-raster als het wiel. */
-    const mSnap = Math.round(Math.max(0, Math.min(59, mRaw)) / 15) * 15;
-    const total = Math.max(min, Math.min(max, h24 * 60 + (mSnap === 60 ? 45 : mSnap)));
+    /* Zelfde raster als het wiel (5 minuten). */
+    const mSnap = Math.round(Math.max(0, Math.min(59, mRaw)) / TIME_STEP_MIN) * TIME_STEP_MIN;
+    const total = Math.max(min, Math.min(max, h24 * 60 + (mSnap === 60 ? 60 - TIME_STEP_MIN : mSnap)));
     const next = nearest(total);
     hapticTap();
     setDraft(next);

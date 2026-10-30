@@ -39,7 +39,6 @@ import { StepIndicator } from '@/components/StepIndicator';
 import { ProtocolFlowCancel } from '@/components/ProtocolFlowCancel';
 import { Check } from 'lucide-react-native';
 import { BREATH_STATES } from '@/data/breath-states';
-import { DurationWheel } from '@/components/DurationWheel';
 import { DAYPART_PHOTO } from '@/data/daypart-photos';
 import { SLOTS } from '@/services/reminders';
 import StateGlyph from '@/components/StateGlyph';
@@ -50,9 +49,11 @@ import {
   buildPlanFromTemplate,
   generateCustomTemplate,
   generateTemplate,
+  moveTemplateItem,
   removeTemplateItem,
   setTemplateItemState,
 } from '@/utils/protocol';
+import SlotTimeEditor, { draftFor, draftState, type SlotDraft } from '@/components/SlotTimeEditor';
 import { explainProtocol } from '@/utils/protocol-explainer';
 import type { BreathStateKey } from '@/data/breath-states';
 import type { PlannedItem, PlanHorizon, PlanSlot } from '@/utils/plan-store';
@@ -320,7 +321,20 @@ export default function PlanReviewScreen() {
     return generateTemplate(goals, intensity, preferredSlots, level);
   });
   /* Welk item zijn duur-kiezer openstaat, of null. */
-  const [picking, setPicking] = useState<number | null>(null);
+  const [picking, setPickingRaw] = useState<number | null>(null);
+  /* 30 okt 2026 (operator: "als user zelf na het opgestelde protocol wil veranderen moet hij ook dagdeel kunnen
+     kiezen, en dan de tijd binnen dat dagdeel"): het blad bewerkt een kladversie (dagdeel, tijd, duur); Done past
+     ze toe, wegvegen laat alles zoals het was. */
+  const [draft, setDraft] = useState<SlotDraft | null>(null);
+  const setPicking = (i: number | null) => {
+    setPickingRaw(i);
+    if (i === null) {
+      setDraft(null);
+      return;
+    }
+    const it = items[i];
+    if (it) setDraft(draftFor(it));
+  };
   /* Welk item zijn staat-kiezer openstaat, of null (operator, 21 september
      2026: "als gebruiker niet akkoord is met een state, kan die dan uit
      alle andere kiezen"). */
@@ -338,10 +352,21 @@ export default function PlanReviewScreen() {
     hapticPress();
     setItems((cur) => removeTemplateItem(cur, i));
   };
-  const setMinutes = (i: number, minutes: number) => {
+  /** Done in het tijd-blad: dagdeel/tijd (met de toestand die bij een nieuw dagdeel hoort) en duur toepassen. */
+  const applyDraft = () => {
+    if (picking === null || !draft) {
+      setPicking(null);
+      return;
+    }
+    const i = picking;
+    const d = draft;
     hapticTap();
+    setItems((cur) =>
+      moveTemplateItem(cur, i, d.slot, d.time, goals, level).map((it, idx) =>
+        idx === i ? { ...it, minutes: d.minutes } : it,
+      ),
+    );
     setPicking(null);
-    setItems((cur) => cur.map((it, idx) => (idx === i ? { ...it, minutes } : it)));
   };
 
   const totalMinutes = useMemo(
@@ -668,32 +693,33 @@ export default function PlanReviewScreen() {
               style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
             />
             <View style={s.pickHandle} />
-            {picking !== null && (() => {
+            {picking !== null && draft && items[picking] && (() => {
               const it = items[picking];
-              const st = BREATH_STATES[it.state];
-              /* Operator, 1 okt 2026 ("edit duration... lijkt mij nog oud
-                 systeem"): zelfde discrete chip-grid als agenda.tsx/
-                 plan.tsx hadden vóór breath-setup.tsx's wheel-redesign
-                 (24 sept 2026) — nu de gedeelde `DurationWheel`
-                 (components/DurationWheel.tsx). */
+              const st = BREATH_STATES[draftState(it, draft, goals, level).state];
               return (
                 <>
                   <View
                     style={[s.pickAccent, { backgroundColor: st.accent }]}
                   />
                   <View style={s.pickHeadRow}>
-                    <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{st.eyebrow} duration</Text>
-                    <Tap onPress={() => setPicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
+                    <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{st.eyebrow} · time</Text>
+                    <Tap onPress={applyDraft} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
                       <Text style={s.pickDone}>Done</Text>
                     </Tap>
                   </View>
-                  <DurationWheel
-                    options={st.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` }))}
-                    value={it.minutes}
-                    accent={st.accent}
-                    trackColor="rgba(255,255,255,0.4)"
-                    recommendedValue={st.defaultDuration}
-                    onChange={(v) => setMinutes(picking, v)}
+                  <SlotTimeEditor
+                    item={it}
+                    draft={draft}
+                    onChange={setDraft}
+                    goals={goals}
+                    level={level}
+                    durationsFor={(state) => {
+                      const ds = BREATH_STATES[state];
+                      return {
+                        options: ds.durations.map((d) => ({ value: d.minutes, label: `${d.minutes} min` })),
+                        recommended: ds.defaultDuration,
+                      };
+                    }}
                   />
                 </>
               );

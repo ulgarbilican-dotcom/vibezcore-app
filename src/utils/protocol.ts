@@ -358,8 +358,38 @@ export function setTemplateItemState(
   if (!target) return items;
   const updated = itemFor(target.slot, state, goals, level);
   const out = [...items];
-  out[index] = { ...updated, minutes: target.minutes };
+  /* 30 okt 2026: een zelfgekozen tijd blijft staan bij het vervangen van de toestand (itemFor zet de standaardtijd). */
+  out[index] = { ...updated, minutes: target.minutes, reminderAt: target.reminderAt };
   return out;
+}
+
+/** Ander tijdstip voor een item (plan-review "Your protocol", operator 30 okt 2026). Blijft het in hetzelfde dagdeel,
+ *  dan verandert enkel de tijd. Verhuist het naar een ander dagdeel, dan kiest de app de toestand voor dat dagdeel
+ *  volgens dezelfde regels als bij het opbouwen (geen Sleep 's ochtends); de gebruiker kan hem daarna nog vervangen. */
+export function moveTemplateItem(
+  items: PlannedItem[],
+  index: number,
+  slot: PlanSlot,
+  reminderAt: number,
+  goals: string[],
+  level: ExperienceLevel = 'beginner',
+): PlannedItem[] {
+  const target = items[index];
+  if (!target) return items;
+  const out = [...items];
+  if (target.slot === slot) {
+    out[index] = { ...target, reminderAt };
+    return out;
+  }
+  out[index] = { ...stateForMovedItem(slot, goals, level), reminderAt };
+  return out;
+}
+
+/** De toestand + techniek + duur die bij een (nieuw) dagdeel hoort, zoals het opbouwen hem kiest. */
+export function stateForMovedItem(slot: PlanSlot, goals: string[], level: ExperienceLevel = 'beginner'): PlannedItem {
+  const history = getBreathHistory();
+  const pick = pickStatesForDay([slot], goals, (sl) => personalOrderForSlot(history, sl))[slot];
+  return itemFor(slot, pick, goals, level);
 }
 
 /** Verwijder een item uit de template (plan-review.tsx se "remove"). */

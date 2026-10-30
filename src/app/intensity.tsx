@@ -94,7 +94,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { ALL_SLOTS, bestSlotsForCount, SLOT_WINDOW } from '@/utils/day-plan';
+import { ALL_SLOTS, bestSlotsForCount, slotRangeLabel, slotTimeOptions } from '@/utils/day-plan';
+import TimeWheel from '@/components/TimeWheel';
 import { SLOTS } from '@/services/reminders';
 import { generateTemplate, RECOMMENDED_INTENSITY } from '@/utils/protocol';
 import { GOALS } from '@/data/goals';
@@ -663,7 +664,6 @@ export default function IntensityScreen() {
      die overschreven kan worden. */
   const [picked, setPicked] = useState<string[]>([]);
   const [times, setTimes] = useState<Partial<Record<PlanSlot, number>>>({});
-  const [timePicking, setTimePicking] = useState<PlanSlot | null>(null);
 
   useEffect(() => {
     if (count >= ALL_SLOTS.length) {
@@ -1325,25 +1325,32 @@ export default function IntensityScreen() {
                           {recommended.includes(sl.slot) && (
                             <Text style={s.sheetRowBadge}>★ RECOMMENDED</Text>
                           )}
-                          <Text style={s.sheetRowTitle}>{sl.label}</Text>
+                          {/* 30 okt 2026 (operator): de uren van het dagdeel meteen zichtbaar. */}
+                          <Text style={s.sheetRowTitle}>
+                            {sl.label}
+                            <Text style={s.sheetRowRange}>{'  '}{slotRangeLabel(sl.slot)}</Text>
+                          </Text>
                           <Text style={s.sheetRowSub} numberOfLines={1}>
                             {sl.body}
                           </Text>
-                          {on && (
-                            <Tap
-                              onPress={() => setTimePicking(sl.slot)}
-                              hitSlop={6}
-                              style={s.timePickRow}
-                            >
-                              <Clock size={12} color="#ffffff" strokeWidth={2.4} />
-                              <Text style={s.timePickTxt}>
-                                at {fmtTime(times[sl.slot] ?? sl.hour * 60)}
-                              </Text>
-                            </Tap>
-                          )}
                         </View>
                         {on && <Check size={18} color="#ffffff" strokeWidth={2.6} />}
                       </Tap>
+                      {/* 30 okt 2026 (operator: "niet duidelijk dat hij hier ook de tijd moet kiezen", "om de 5 minuten"):
+                          een gekozen dagdeel klapt meteen een tijdwiel open, op onze aanbevolen tijd, per 5 minuten en
+                          enkel binnen de uren van dat dagdeel. Vervangt het kleine "at 21:00"-linkje + aparte popup. */}
+                      {on && (
+                        <View style={s.slotTimeBox}>
+                          <Text style={s.slotTimeLabel}>Time · scroll to change</Text>
+                          <TimeWheel
+                            options={slotTimeOptions(sl.slot)}
+                            value={times[sl.slot] ?? sl.hour * 60}
+                            onChange={(mins) => setTimes((cur) => ({ ...cur, [sl.slot]: mins }))}
+                            accent="#ffffff"
+                            trackColor="rgba(255,255,255,0.4)"
+                          />
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -1352,61 +1359,6 @@ export default function IntensityScreen() {
           </SafeAreaView>
       </GlassSheet>
 
-      {/* Sub-popup voor het exacte uur binnen een gekozen dagdeel — bovenop
-         de Times-sheet, zelfde patroon als daarvoor. */}
-      {/* Onderblad bovenop de Times-sheet (16 okt 2026: de bladen zijn een
-          stapel, dus na sluiten komt Times terug). Done rechtsboven. */}
-      <GlassSheet visible={timePicking !== null} onClose={() => setTimePicking(null)}>
-          <View
-            style={[s.pickSheet, { paddingBottom: Math.max(insets.bottom, 14) + 14, backgroundColor: 'transparent', overflow: 'hidden' }]}
-          >
-            <VibezGlass
-              radius={24}
-              level="sheet"
-              blurTarget={rootBlurRef}
-              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
-            />
-            <View style={s.pickHandle} />
-            {timePicking && (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                  <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>
-                    {SLOTS.find((sl) => sl.slot === timePicking)?.label} time
-                  </Text>
-                  <Tap onPress={() => setTimePicking(null)} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
-                    <Text style={{ fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff', paddingVertical: 12, paddingLeft: 12 }}>Done</Text>
-                  </Tap>
-                </View>
-                <View style={s.pickGrid}>
-                  {(() => {
-                    const window = SLOT_WINDOW[timePicking];
-                    const out: number[] = [];
-                    for (let h = window.from; h < window.to; h += 1) {
-                      out.push(h * 60, h * 60 + 30);
-                    }
-                    return out.map((mins) => {
-                      const on = (times[timePicking] ?? -1) === mins;
-                      return (
-                        <Tap
-                          key={mins}
-                          onPress={() => {
-                            setTimes((cur) => ({ ...cur, [timePicking]: mins }));
-                            setTimePicking(null);
-                          }}
-                          style={[s.pickChip, on && s.pickChipOn]}
-                        >
-                          <Text style={[s.pickChipTxt, on && s.pickChipTxtOn]}>
-                            {fmtTime(mins)}
-                          </Text>
-                        </Tap>
-                      );
-                    });
-                  })()}
-                </View>
-              </>
-            )}
-          </View>
-      </GlassSheet>
     </SafeAreaView>
   );
 }
@@ -1514,6 +1466,26 @@ const s = StyleSheet.create({
     color: '#f4f4f4',
   },
 
+  sheetRowRange: { fontFamily: BrandFonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.55)', letterSpacing: 0 },
+  slotTimeBox: {
+    marginTop: 8,
+    marginBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 6,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  slotTimeLabel: {
+    fontFamily: BrandFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
   timePickRow: {
     flexDirection: 'row',
     alignItems: 'center',

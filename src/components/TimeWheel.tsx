@@ -100,6 +100,9 @@ export default function TimeWheel({
            alle opties (geen clip, dus ook niets om IN te scrollen). Expliciet
            dezelfde `WHEEL_H` als viewport-hoogte. */
         style={{ height: WHEEL_H }}
+        /* 30 okt 2026: het wiel staat nu ook IN een scrollend blad (Times-stap) — op Android moet het eigen scrollen
+           dan voorrang krijgen op het blad. */
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
         snapToInterval={WHEEL_ITEM_H}
         decelerationRate="fast"

@@ -71,10 +71,11 @@ type SlotDef = {
    "ochtend"-herinnering om elf uur 's avonds is geen instelling maar een
    fout, en die hoort de app niet mogelijk te maken. */
 export const SLOT_RANGE: Record<ReminderSlot, [number, number]> = {
-  morning: [5, 11],
-  midday: [11, 17],
+  /* 30 okt 2026: zelfde indeling als SLOT_WINDOW (utils/day-plan.ts). */
+  morning: [5, 12],
+  midday: [12, 17],
   afterWork: [17, 20],
-  evening: [20, 23],
+  evening: [20, 24],
 };
 
 export const SLOTS: SlotDef[] = [

@@ -25,9 +25,13 @@ import { clearActivePlan, saveActivePlan, useActivePlan, type PlanDay } from '@/
 import ConfirmCard from '@/components/ConfirmCard';
 import { goToTab } from '@/utils/state-control-ui';
 import { syncPlanReminders } from '@/services/reminders';
+import { getSetting } from '@/utils/settings';
 import { planItemStatuses } from '@/utils/plan-status';
 import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
+import SlotTimeEditor, { draftFor, draftState, type SlotDraft } from '@/components/SlotTimeEditor';
+import { SLOT_WINDOW, TIME_STEP_MIN } from '@/utils/day-plan';
+import { moveTemplateItem } from '@/utils/protocol';
 import { DurationWheel } from '@/components/DurationWheel';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -453,14 +457,49 @@ export default function AgendaScreen() {
      (elke dag herhaalt dezelfde template, dus de wijziging raakt dezelfde
      ARRAY-POSITIE op elke dag) — enkel voor `reminderAt` i.p.v.
      `minutes`. Aangeroepen vanuit `RhythmRing`'s `onDragEnd`. */
-  const setTimeForIndex = async (index: number, reminderAt: number) => {
+  const setTimeForIndex = async (index: number, reminderAtRaw: number) => {
     if (!plan) return;
+    /* 30 okt 2026 (operator: "tijd binnen dat dagdeel"): slepen op de ring blijft binnen de uren van het dagdeel van
+       de sessie; naar een ander dagdeel gaat via "Edit time", dat ook toont welke toestand het daar wordt. */
+    const clampToSlot = (slot: string) => {
+      const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
+      return Math.max(w.from * 60, Math.min(w.to * 60 - TIME_STEP_MIN, reminderAtRaw));
+    };
     const days = Object.fromEntries(
       Object.entries(plan.days).map(([dk, day]) => [
         dk,
         {
           ...day,
-          items: day.items.map((it, i) => (i === index ? { ...it, reminderAt } : it)),
+          items: day.items.map((it, i) => (i === index ? { ...it, reminderAt: clampToSlot(it.slot) } : it)),
+        },
+      ]),
+    );
+    const updated = { ...plan, days };
+    await saveActivePlan(updated);
+    void syncPlanReminders(updated);
+  };
+
+  /* 30 okt 2026 (operator): tijd wijzigen na het opbouwen = eerst het dagdeel, dan de tijd binnen dat dagdeel, dan de
+     duur (components/SlotTimeEditor.tsx). Zelfde garantie als hierboven: dezelfde POSITIE op elke dag. */
+  const [timeEditing, setTimeEditing] = useState<{ index: number; draft: SlotDraft } | null>(null);
+  const applyTimeEdit = async () => {
+    if (!plan || !timeEditing) {
+      setTimeEditing(null);
+      return;
+    }
+    const { index, draft } = timeEditing;
+    setTimeEditing(null);
+    hapticTap();
+    const goals = plan.goals ?? [];
+    const level = getSetting('experienceLevel') ?? 'beginner';
+    const days = Object.fromEntries(
+      Object.entries(plan.days).map(([dk, day]) => [
+        dk,
+        {
+          ...day,
+          items: moveTemplateItem(day.items, index, draft.slot, draft.time, goals, level).map((it, i) =>
+            i === index ? { ...it, minutes: draft.minutes } : it,
+          ),
         },
       ]),
     );
@@ -983,6 +1022,43 @@ export default function AgendaScreen() {
           </View>
       </GlassSheet>
 
+      {/* Tijd & duur (30 okt 2026): dagdeel met zijn uren, tijd per 5 minuten, duur. Wegvegen = niets gewijzigd. */}
+      <GlassSheet visible={timeEditing !== null} onClose={() => setTimeEditing(null)}>
+          <View style={[s.pickSheet, s.pickSheetGlass, { paddingBottom: Math.max(insets.bottom, 14) + 14, alignItems: 'stretch' }]}>
+            <VibezGlass
+              radius={24}
+              level="sheet"
+              blurTarget={rootBlurRef}
+              style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+            />
+            <View style={s.pickHandle} />
+            {timeEditing !== null && selectedDay && selectedDay.items[timeEditing.index] && (() => {
+              const it = selectedDay.items[timeEditing.index];
+              const goals = plan?.goals ?? [];
+              const level = getSetting('experienceLevel') ?? 'beginner';
+              const st = BREATH_STATES[draftState(it, timeEditing.draft, goals, level).state];
+              return (
+                <>
+                  <View style={s.pickHeader}>
+                    <Text style={[s.pickTitle, s.pickTitleInRow]}>{titleCase(st.eyebrow)} · time</Text>
+                    <Tap onPress={() => void applyTimeEdit()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
+                      <Text style={s.pickDoneTxt}>Done</Text>
+                    </Tap>
+                  </View>
+                  <SlotTimeEditor
+                    item={it}
+                    draft={timeEditing.draft}
+                    onChange={(draft) => setTimeEditing((cur) => (cur ? { ...cur, draft } : cur))}
+                    goals={goals}
+                    level={level}
+                    durationsFor={(state, techniqueKey) => durationOptionsFor(state, techniqueKey)}
+                  />
+                </>
+              );
+            })()}
+          </View>
+      </GlassSheet>
+
       {/* Operator, 1 okt 2026 ("eerst popup met vraag om naar deze sessie
          te gaan, hoe zou apple dat doen"): een actiesheet i.p.v. een
          native Yes/No-alert — Apple's eigen conventie is de knop de
@@ -1057,10 +1133,10 @@ export default function AgendaScreen() {
                     onPress={() => {
                       const idx = actionItemIndex;
                       setActionItemIndex(null);
-                      setDurationPicking(idx);
+                      setTimeEditing({ index: idx, draft: draftFor(it) });
                     }}
                   >
-                    <Text style={s.actionEditTxt}>Edit duration</Text>
+                    <Text style={s.actionEditTxt}>Edit time & duration</Text>
                   </Tap>
                 </>
               );
