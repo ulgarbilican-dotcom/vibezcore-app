@@ -76,3 +76,11 @@ trilmotor verschilt per toestel (op Android ook afhankelijk van de systeeminstel
 - Niet van toepassing: 48 dp (icoon op een opstartscherm) en 24 dp (UI-icoon in een app) zijn andere dingen.
 - **Apple Watch**: vierkant bronbestand (1024 px), watchOS maskert het tot een cirkel; essentie in het midden. De ring/maat is daar NOG NIET op een horloge gemeten.
 - Wijzigt het icoon: opnieuw meten naast de andere tegels, op een Wear OS-horloge én (voor iOS) op een Apple Watch.
+
+## Tijdkiezers (30 okt 2026, operator)
+- **Eén indeling van de dagdelen, overal:** Morning 05:00–12:00 · Midday 12:00–17:00 · After work 17:00–20:00 · Evening 20:00–00:00 (`SLOT_WINDOW` in `utils/day-plan.ts`; geen eigen kopieën per scherm). De uren staan altijd zichtbaar naast het dagdeel.
+- **Elke tijd per 5 minuten** (`TIME_STEP_MIN`), altijd met het gedeelde tijdwiel (`components/TimeWheel.tsx`) — geen knoppenroosters met kwartieren of halve uren.
+- **Kiezen = meteen zichtbaar:** een gekozen dagdeel klapt het tijdwiel open op onze aanbevolen tijd (geen klein linkje).
+- **Wijzigen na het opbouwen:** eerst het dagdeel, dan de tijd binnen dat dagdeel, dan de duur — één gedeeld blad (`components/SlotTimeEditor.tsx`) in "Your protocol", agenda en "Your plan". Ander dagdeel = de toestand die de app daar kiest, vóór Done getoond. Done past toe, wegvegen verandert niets.
+- **Duur** met het gedeelde duurwiel (`components/DurationWheel.tsx`), zelfde look als State Control.
+- State Control-planner ("Set your day") heeft geen dagdelen: hele dag, ook per 5 minuten.
