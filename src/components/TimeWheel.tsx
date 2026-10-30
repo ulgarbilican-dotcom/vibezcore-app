@@ -26,6 +26,8 @@ export default function TimeWheel({
   accent,
   trackColor,
   blocked = [],
+  rows = WHEEL_VISIBLE,
+  small = false,
 }: {
   options: number[];
   value: number;
@@ -34,6 +36,10 @@ export default function TimeWheel({
   trackColor: string;
   /** Reeds bezette tijdsblokken (van andere sessies) — die opties tonen zich als "Taken". */
   blocked?: { reminderAt: number; minutes: number }[];
+  /** Hoeveel tijden tegelijk zichtbaar (oneven): 3 standaard, 5 in het hoge tijd-blad van de agenda's. */
+  rows?: number;
+  /** Iets kleinere cijfers. */
+  small?: boolean;
 }) {
   const items = useMemo(
     () =>
@@ -50,6 +56,8 @@ export default function TimeWheel({
       onChange={onChange}
       accent={accent}
       trackColor={trackColor}
+      visibleRows={rows}
+      small={small}
       textMode={blocked.length > 0}
     />
   );

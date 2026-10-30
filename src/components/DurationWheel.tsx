@@ -44,7 +44,13 @@ function DurationWheelRow({
   viewportHeight,
   dotColor,
   textMode = false,
+  padTop = DURATION_WHEEL_ITEM_H,
+  small = false,
 }: {
+  /** Iets kleinere cijfers (tijdwiel in het tijd-blad, 30 okt 2026). */
+  small?: boolean;
+  /** Ruimte boven de eerste rij: (zichtbare rijen − 1) / 2 rijen, zodat ook de eerste/laatste in het midden kan. */
+  padTop?: number;
   /** Tekstlabels i.p.v. korte getallen (technieken, 10 okt 2026). */
   textMode?: boolean;
   index: number;
@@ -57,7 +63,7 @@ function DurationWheelRow({
   dotColor?: string;
 }) {
   const rowStyle = useAnimatedStyle(() => {
-    const itemOffsetTop = DURATION_WHEEL_ITEM_H + index * DURATION_WHEEL_ITEM_H;
+    const itemOffsetTop = padTop + index * DURATION_WHEEL_ITEM_H;
     const viewportCenter = scrollY.value + viewportHeight / 2;
     const distanceToCenter = itemOffsetTop + DURATION_WHEEL_ITEM_H / 2 - viewportCenter;
     const maxDistance = viewportHeight / 2;
@@ -92,7 +98,7 @@ function DurationWheelRow({
             s.wheelTxt,
             /* Kleur en gewicht liggen vast: het midden licht op via opacity
                en schaal, zodat er aan het einde niets meer verspringt. */
-            { fontSize: textMode ? 19 : 26, color: '#ffffff' },
+            { fontSize: textMode ? 19 : small ? 22 : 26, color: '#ffffff' },
             rowStyle,
           ]}
         >
@@ -118,6 +124,7 @@ export function DurationWheel({
   recommendedValue,
   recommendedAsDot = false,
   textMode = false,
+  small = false,
 }: {
   options: { value: number; label: string }[];
   value: number;
@@ -130,8 +137,12 @@ export function DurationWheel({
   recommendedAsDot?: boolean;
   /** Lange tekstlabels: kleinere letters, oplichtend vlak over de breedte. */
   textMode?: boolean;
+  /** Iets kleinere cijfers. */
+  small?: boolean;
 }) {
   const viewportHeight = DURATION_WHEEL_ITEM_H * visibleRows;
+  /* 30 okt 2026: 5 zichtbare rijen (tijd-blad) — de ruimte boven/onder groeit mee; bij 3 rijen blijft het één rij. */
+  const pad = (DURATION_WHEEL_ITEM_H * (visibleRows - 1)) / 2;
   const listRef = useRef<Animated.ScrollView>(null);
   const settledIndex = Math.max(
     0,
@@ -265,7 +276,7 @@ export function DurationWheel({
         /* "normal" (15 okt 2026): met "fast" stopte een harde veeg na een
            paar regels — nu loopt hij natuurlijk uit en snapt dan. */
         decelerationRate="normal"
-        contentContainerStyle={{ paddingVertical: DURATION_WHEEL_ITEM_H }}
+        contentContainerStyle={{ paddingVertical: pad }}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         onScrollEndDrag={(e) => {
@@ -294,6 +305,8 @@ export function DurationWheel({
             viewportHeight={viewportHeight}
             dotColor={recommendedAsDot && o.value === recommendedValue ? accent : undefined}
             textMode={textMode}
+            padTop={pad}
+            small={small}
           />
         ))}
       </Animated.ScrollView>

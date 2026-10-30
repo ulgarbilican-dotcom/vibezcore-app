@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Tap from '@/components/Tap';
-import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
+import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_BODY_MIN_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
 import { ColorDurationDial } from '@/app/bracelet-control';
 import { BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
@@ -105,6 +105,7 @@ export default function SlotTimeEditor({
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled
       scrollEnabled={bodyH > SHEET_BODY_MAX_H}
+      contentContainerStyle={{ minHeight: SHEET_BODY_MIN_H }}
       onContentSizeChange={(_w, h) => setBodyH(h)}
     >
       {/* 30 okt 2026 (operator: "de dagdelen zien er heel sheet-achtig uit", "niet overzichtelijk"): één segmentbalk,

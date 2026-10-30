@@ -81,7 +81,7 @@ import Tap from '@/components/Tap';
 import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
-import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
+import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_BODY_MIN_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
 import { ColorDurationDial } from '@/app/bracelet-control';
 import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
@@ -818,6 +818,7 @@ export default function BraceletAgendaScreen() {
                   nestedScrollEnabled
                   /* Enkel scrollen als het niet past (anders vecht het blad met het tijdwiel). */
                   scrollEnabled={editBodyH > SHEET_BODY_MAX_H}
+                  contentContainerStyle={{ minHeight: SHEET_BODY_MIN_H }}
                   onContentSizeChange={(_w, h) => setEditBodyH(h)}
                 >
                 <TimeDurationRows
