@@ -214,9 +214,25 @@ export default function PillarFocusScreen() {
   useEffect(() => {
     if (!play || hasTriggeredPlay.current || groups.length === 0) return;
     hasTriggeredPlay.current = true;
+    /* 30 okt 2026: de URL's bevatten %20 en komen via de route-parameter een keer extra gedecodeerd binnen — beide kanten
+       volledig decoderen vóór de vergelijking, anders werd de sessie nooit gevonden (geen speler na een tik). */
+    const fullyDecoded = (u: string) => {
+      let x = u;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const d = decodeURIComponent(x);
+          if (d === x) break;
+          x = d;
+        } catch {
+          break;
+        }
+      }
+      return x;
+    };
+    const wanted = fullyDecoded(play);
     const target = groups
       .flatMap((g) => g.sessions)
-      .find((sess) => sess.url === play);
+      .find((sess) => sess.url === play || fullyDecoded(sess.url) === wanted);
     if (!target) return;
     /* 30 okt 2026 (zoeken: een tik op een sessie opende de pijler maar de speler niet): de speler werd gepusht terwijl
        dit scherm nog binnenschoof, en die tweede push ging verloren. Pas openen als de schuif klaar is (vangnet 900 ms). */
