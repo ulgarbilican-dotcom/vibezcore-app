@@ -229,7 +229,14 @@ export function DurationWheel({
         style={[
           s.wheelPill,
           textMode && { left: 0, right: 0 },
-          { top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2, backgroundColor: `${accent}1F` },
+          /* 30 okt 2026 (operator: "kleuren van cirkel en scrollwiel moeten dezelfde zijn"): duidelijker in de
+             toestandskleur — tint + dunne rand in de volle kleur, zoals de boog van de duurcirkel. */
+          {
+            top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2,
+            backgroundColor: `${accent}38`,
+            borderWidth: 1.5,
+            borderColor: `${accent}B3`,
+          },
         ]}
         pointerEvents="none"
       />
