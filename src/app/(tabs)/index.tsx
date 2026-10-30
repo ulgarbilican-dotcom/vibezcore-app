@@ -438,9 +438,14 @@ function CardBounce({
      navigatie-snelkoppelingen) hadden als kale `Pressable` een eigen
      `hitSlop`, die anders verloren zou gaan bij de overstap. */
   hitSlop,
+  /* 30 okt 2026: layout voor de inhoud zelf. `style` zit op de Pressable, maar de kinderen staan in de Animated.View
+     eronder — een rij-layout (flexDirection: 'row') op `style` bereikte ze nooit, waardoor de zoekresultaten onder
+     elkaar stonden (foto, tekst, hartje). */
+  contentStyle,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
   onPress?: () => void;
   onLongPress?: () => void;
   androidRipple?: { color: string };
@@ -476,7 +481,7 @@ function CardBounce({
       android_ripple={androidRipple}
       accessibilityLabel={accessibilityLabel}
     >
-      <Animated.View style={bounceStyle}>{children}</Animated.View>
+      <Animated.View style={[contentStyle, bounceStyle]}>{children}</Animated.View>
     </Pressable>
   );
 }
@@ -2292,7 +2297,7 @@ function AudioScreen({
                       return (
                         <CardBounce
                           key={'ser:' + ser.name}
-                          style={s.acRow}
+                          contentStyle={s.acRow}
                           onPress={() => openSerieFromSearch(ser.name, false)}
                           androidRipple={{ color: 'rgba(255,255,255,0.04)' }}
                         >
@@ -2343,7 +2348,7 @@ function AudioScreen({
                       return (
                         <CardBounce
                           key={'sess:' + sess.url}
-                          style={s.acRow}
+                          contentStyle={s.acRow}
                           onPress={() =>
                             openSerieFromSearch(sess.series, true, sess.url)
                           }
@@ -2409,7 +2414,7 @@ function AudioScreen({
                       return (
                         <CardBounce
                           key={'insp:' + insp.name}
-                          style={s.acRow}
+                          contentStyle={s.acRow}
                           onPress={() =>
                             openSerieFromSearch(insp.seriesName, false)
                           }

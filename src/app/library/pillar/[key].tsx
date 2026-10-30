@@ -46,7 +46,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { getToken } from '@/services/auth';
 import { useGatedOpenSession } from '@/utils/openSession';
 import { BlurView } from 'expo-blur';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams, useNavigation } from 'expo-router';
 import { ChevronLeft, Lock, Play } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -170,6 +170,7 @@ export default function PillarFocusScreen() {
   const pillar = key as Pillar;
   const meta = PILLAR_META[pillar];
   const openGated = useGatedOpenSession();
+  const navigation = useNavigation();
   /* Zelfde toegangsregel als het openen zelf (resolveAccess). */
   const { isPro, isTrialing } = useSubscription();
   const [signedIn, setSignedIn] = useState(false);
@@ -216,7 +217,21 @@ export default function PillarFocusScreen() {
     const target = groups
       .flatMap((g) => g.sessions)
       .find((sess) => sess.url === play);
-    if (target) openGated(target);
+    if (!target) return;
+    /* 30 okt 2026 (zoeken: een tik op een sessie opende de pijler maar de speler niet): de speler werd gepusht terwijl
+       dit scherm nog binnenschoof, en die tweede push ging verloren. Pas openen als de schuif klaar is (vangnet 900 ms). */
+    let done = false;
+    const open = () => {
+      if (done) return;
+      done = true;
+      openGated(target);
+    };
+    const unsub = navigation.addListener('transitionEnd' as never, open);
+    const fallback = setTimeout(open, 900);
+    return () => {
+      unsub();
+      clearTimeout(fallback);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [play, groups]);
 
