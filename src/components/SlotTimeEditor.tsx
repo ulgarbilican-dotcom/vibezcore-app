@@ -4,6 +4,7 @@
    dagdeel kunnen kiezen en dan de tijd binnen dat dagdeel; dagdeel moet meteen duidelijk zijn tussen welke uren").
    Wisselt het dagdeel, dan toont het blad meteen welke toestand de sessie daar wordt (zelfde regels als bij het
    opbouwen) — er verandert niets stil. Het blad zelf (kop + Done) hoort bij het scherm dat dit gebruikt. */
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Tap from '@/components/Tap';
 import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
@@ -92,6 +93,9 @@ export default function SlotTimeEditor({
     ? durations.options
     : [...durations.options, { value: draft.minutes, label: `${draft.minutes} min` }].sort((a, b) => a.value - b.value);
 
+  /* 30 okt 2026 (operator: "de scroll van time werkt niet correct"): het blad mag enkel scrollen als de inhoud echt
+     niet past (klein scherm) — anders nam het blad soms de beweging van het tijdwiel over. */
+  const [bodyH, setBodyH] = useState(0);
   return (
     /* Volle breedte, ook in bladen die hun inhoud centreren (plan-review, "Your plan"). Past het niet (klein scherm),
        dan scrolt de inhoud in plaats van van het scherm te vallen. */
@@ -100,6 +104,8 @@ export default function SlotTimeEditor({
       bounces={false}
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled
+      scrollEnabled={bodyH > SHEET_BODY_MAX_H}
+      onContentSizeChange={(_w, h) => setBodyH(h)}
     >
       {/* 30 okt 2026 (operator: "de dagdelen zien er heel sheet-achtig uit", "niet overzichtelijk"): één segmentbalk,
           het gekozen dagdeel als witte pil met donkere tekst (neutrale knop-regel), de uren kort eronder. */}

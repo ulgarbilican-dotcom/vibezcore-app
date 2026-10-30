@@ -1688,6 +1688,7 @@ export function ColorDurationDial({
         recommended={recommended}
         /* Letters schalen mee met de ring, zodat niets over de rand valt (State Control-scherm = 264). */
         textScale={Math.min(1, size / 250)}
+        showName={false}
       />
     </ModeSwipeRing>
   );
@@ -2453,6 +2454,7 @@ function DurationRing({
   subOverride,
   dialHandle,
   textScale = 1,
+  showName = true,
 }: {
   /** Operator, 9 okt 2026: boog + witte greep op de rand — sleep de greep
       om de tijd per minuut te kiezen (zie ModeSwipeRing `dial`). */
@@ -2485,6 +2487,8 @@ function DurationRing({
   /** Tekst in de ring mee laten schalen met een kleinere ring (tijd-blad van de agenda's, 30 okt 2026). 1 = zoals
    *  overal (State Control-scherm ongewijzigd). */
   textScale?: number;
+  /** false = enkel de duur in de ring (de naam staat al in de kop van het blad, 30 okt 2026). */
+  showName?: boolean;
 }) {
   /* Operator, 27 september 2026 ("als 30 min max is en 15 min minimum,
      moet de cirkel dan niet al halfvol staan?"): was (value-min)/(max-min)
@@ -2658,7 +2662,7 @@ function DurationRing({
         {/* Tijdens de voorproef enkel de teller — rust (operator, 7 okt
             2026: "de gebruiker weet al dat het een preview is en welke
             sessie"). Rijen blijven staan (opacity), zodat niets verspringt. */}
-        <View style={[s.ringNameRow, clockOverride ? { opacity: 0 } : null]}>
+        <View style={[s.ringNameRow, clockOverride || !showName ? { opacity: 0 } : null]}>
           <Text
             style={[s.ringName, textShadow, textScale !== 1 && { fontSize: 14 * textScale, lineHeight: 18 * textScale }]}
             numberOfLines={1}
