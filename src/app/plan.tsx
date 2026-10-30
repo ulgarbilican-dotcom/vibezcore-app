@@ -48,10 +48,11 @@ import { personalOrderForSlot } from '@/utils/behavior-patterns';
 import { pickStatesForDay, SLOT_WINDOW, slotTimeOptions, snapToSlot } from '@/utils/day-plan';
 import SlotTimeEditor, { draftFor, type SlotDraft } from '@/components/SlotTimeEditor';
 import TimeWheel from '@/components/TimeWheel';
-import { moveTemplateItem } from '@/utils/protocol';
+import { moveTemplateItem, removePlanItem } from '@/utils/protocol';
+import { confirmVibezAlert } from '@/components/VibezAlert';
 import { useSetting } from '@/utils/settings';
 import { dayKey } from '@/utils/bracelet-history';
-import { saveActivePlan, useActivePlan } from '@/utils/plan-store';
+import { clearActivePlan, saveActivePlan, useActivePlan } from '@/utils/plan-store';
 import {
   ensurePermission,
   nextFireText,
@@ -405,6 +406,39 @@ export default function PlanScreen() {
        (operator, 8 augustus 2026). */
     const lbl = slot.charAt(0).toUpperCase() + slot.slice(1);
     setJustSet(lbl + ' — ' + nextFireText(mins));
+  };
+
+  /* 30 okt 2026: één sessie uit het plan halen (zelfde regel als de agenda). */
+  const removeSession = async (planIndex: number) => {
+    if (!plan) return;
+    const it = planDay?.items[planIndex];
+    const label = it ? `${BREATH_STATES[it.state].eyebrow.toUpperCase()} at ${fmtTime(it.reminderAt)}` : '';
+    setPicking(null);
+    const next = removePlanItem(plan, planIndex);
+    const ok = await confirmVibezAlert(
+      next
+        ? {
+            title: 'Remove this session?',
+            message: label ? `${label} will be removed from your plan, every day.` : 'It will be removed from your plan, every day.',
+            confirmText: 'Remove',
+            destructive: true,
+          }
+        : {
+            title: 'Remove your plan?',
+            message: 'This is the only session in your plan, so the whole plan will be removed.',
+            confirmText: 'Remove plan',
+            destructive: true,
+          },
+    );
+    if (!ok) return;
+    hapticTap();
+    if (!next) {
+      await clearActivePlan();
+      await syncPlanReminders(null);
+      return;
+    }
+    await saveActivePlan(next);
+    void syncPlanReminders(next);
   };
 
   const minsFor = (slot: SlotKey) => {
@@ -944,11 +978,13 @@ export default function PlanScreen() {
                 return (
                   <SlotTimeEditor
                     item={planItem}
+                    others={(planDay?.items ?? []).filter((_, idx) => idx !== item.planIndex)}
                     draft={pickDraft}
                     onChange={setPickDraft}
                     goals={plan?.goals ?? []}
                     level={experienceLevel ?? 'beginner'}
                     durationsFor={(state, techniqueKey) => durationOptionsFor(state, techniqueKey)}
+                    onRemove={item.planIndex !== null ? () => void removeSession(item.planIndex!) : undefined}
                   />
                 );
               }

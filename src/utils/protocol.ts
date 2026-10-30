@@ -21,6 +21,7 @@ import { levelForTechnique, personalRecommendedMinutes } from '@/utils/breath-le
 import {
   ALL_SLOTS,
   bestSlotsForCount,
+  DAY_CANDIDATES,
   pickForSlot,
   pickStatesForDay,
   reasonForPick,
@@ -381,15 +382,41 @@ export function moveTemplateItem(
     out[index] = { ...target, reminderAt };
     return out;
   }
-  out[index] = { ...stateForMovedItem(slot, goals, level), reminderAt };
+  const others = items.filter((it, i) => i !== index && it.slot === slot).map((it) => it.state);
+  out[index] = { ...stateForMovedItem(slot, goals, level, others), reminderAt };
   return out;
 }
 
+/** Eén sessie uit een lopend plan halen (operator, 30 okt 2026: "kan ik een sessie verwijderen? nu enkel het volledige
+ *  protocol"). Dezelfde POSITIE op elke dag (elke dag volgt dezelfde template). Het routine-niveau volgt het nieuwe
+ *  aantal (2 → 1 sessie = Essential), zodat het scherm geen "2 sessions a day" meer toont. Geen sessies meer = null:
+ *  dan hoort het hele plan weg. */
+export function removePlanItem(plan: ActivePlan, index: number): ActivePlan | null {
+  const days = Object.fromEntries(
+    Object.entries(plan.days).map(([dk, day]) => [dk, { ...day, items: day.items.filter((_, i) => i !== index) }]),
+  );
+  const left = Math.max(0, ...Object.values(days).map((d) => d.items.length));
+  if (left === 0) return null;
+  const tier = (Object.keys(INTENSITY_SESSION_COUNT) as Intensity[]).find(
+    (k) => k !== 'custom' && INTENSITY_SESSION_COUNT[k] === left,
+  );
+  return { ...plan, days, intensity: plan.intensity === 'custom' || !tier ? plan.intensity : tier };
+}
+
 /** De toestand + techniek + duur die bij een (nieuw) dagdeel hoort, zoals het opbouwen hem kiest. */
-export function stateForMovedItem(slot: PlanSlot, goals: string[], level: ExperienceLevel = 'beginner'): PlannedItem {
+export function stateForMovedItem(
+  slot: PlanSlot,
+  goals: string[],
+  level: ExperienceLevel = 'beginner',
+  /** Toestanden die in dat dagdeel al gepland staan — geen tweede keer dezelfde (30 okt 2026: twee keer SLEEP). */
+  avoid: BreathStateKey[] = [],
+): PlannedItem {
   const history = getBreathHistory();
   const pick = pickStatesForDay([slot], goals, (sl) => personalOrderForSlot(history, sl))[slot];
-  return itemFor(slot, pick, goals, level);
+  const state = avoid.includes(pick)
+    ? ((DAY_CANDIDATES[slot] ?? DAY_CANDIDATES.evening).find((s) => !avoid.includes(s)) ?? pick)
+    : pick;
+  return itemFor(slot, state, goals, level);
 }
 
 /** Verwijder een item uit de template (plan-review.tsx se "remove"). */

@@ -89,7 +89,15 @@ export default function TimeWheel({
      eindpositie) hoort dit te bevestigen. */
 
   return (
-    <View style={[ws.wheelWrap, { height: WHEEL_H }]}>
+    <View
+      style={[ws.wheelWrap, { height: WHEEL_H }]}
+      /* 30 okt 2026 (operator: "het scrollwiel bleef even hangen, bevroren"): in een blad dat je naar beneden kan vegen,
+         pakte het blad de sleepbeweging af zodra je het wiel naar beneden draaide — het wiel stopte midden in zijn
+         beweging. Het wiel houdt de beweging nu zelf (zonder het eigen scrollen te blokkeren); vegen om te sluiten werkt
+         nog op de rest van het blad. */
+      onMoveShouldSetResponder={() => true}
+      onResponderTerminationRequest={() => false}
+    >
       <View style={[ws.wheelWindow, { borderColor: `${accent}55` }]} pointerEvents="none" />
       <ScrollView
         ref={listRef}

@@ -34,11 +34,15 @@ export function draftState(
   draft: SlotDraft,
   goals: string[],
   level: ExperienceLevel,
+  /** De andere sessies van die dag — zelfde keuze als moveTemplateItem (geen dubbele toestand in een dagdeel). */
+  others: PlannedItem[] = [],
 ): { state: BreathStateKey; techniqueKey: string; moved: boolean } {
   if (draft.slot === it.slot) return { state: it.state, techniqueKey: it.techniqueKey, moved: false };
-  const m = stateForMovedItem(draft.slot, goals, level);
+  const m = stateForMovedItem(draft.slot, goals, level, avoidIn(others, draft.slot));
   return { state: m.state, techniqueKey: m.techniqueKey, moved: true };
 }
+
+const avoidIn = (others: PlannedItem[], slot: PlanSlot) => others.filter((o) => o.slot === slot).map((o) => o.state);
 
 export default function SlotTimeEditor({
   item,
@@ -47,6 +51,8 @@ export default function SlotTimeEditor({
   goals,
   level,
   durationsFor,
+  onRemove,
+  others = [],
 }: {
   item: PlannedItem;
   draft: SlotDraft;
@@ -55,8 +61,12 @@ export default function SlotTimeEditor({
   level: ExperienceLevel;
   /** De duurkeuzes van een toestand/techniek — elk scherm houdt zijn eigen bestaande lijst. */
   durationsFor: (state: BreathStateKey, techniqueKey: string) => DurationChoices;
+  /** Een sessie uit een lopend plan halen — onderaan, zoals "Delete Event" in Apple's Agenda. */
+  onRemove?: () => void;
+  /** De andere sessies van die dag (zonder deze). */
+  others?: PlannedItem[];
 }) {
-  const { state, techniqueKey, moved } = draftState(item, draft, goals, level);
+  const { state, techniqueKey, moved } = draftState(item, draft, goals, level, others);
   const st = BREATH_STATES[state];
   const durations = durationsFor(state, techniqueKey);
   /* Een persoonlijke duur (bv. 7 min) staat niet altijd in de vaste lijst — dan hoort hij er wel bij, anders toont het
@@ -82,7 +92,12 @@ export default function SlotTimeEditor({
                 /* Terug naar het eigen dagdeel = de eigen tijd en duur; een ander dagdeel = zijn aanbevolen tijd en
                    de aanbevolen duur van de toestand die daar hoort. */
                 if (next === item.slot) onChange(draftFor(item));
-                else onChange({ slot: next, time: sl.hour * 60, minutes: stateForMovedItem(next, goals, level).minutes });
+                else
+                  onChange({
+                    slot: next,
+                    time: sl.hour * 60,
+                    minutes: stateForMovedItem(next, goals, level, avoidIn(others, next)).minutes,
+                  });
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
@@ -120,6 +135,11 @@ export default function SlotTimeEditor({
         recommendedValue={durations.recommended ?? undefined}
         onChange={(v) => onChange({ ...draft, minutes: v })}
       />
+      {onRemove && (
+        <Tap style={es.removeBtn} onPress={onRemove} hitSlop={8} accessibilityRole="button">
+          <Text style={es.removeTxt}>Remove session</Text>
+        </Tap>
+      )}
     </View>
   );
 }
@@ -147,6 +167,8 @@ const es = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 6,
   },
+  removeBtn: { alignSelf: 'center', marginTop: 14, paddingVertical: 8, paddingHorizontal: 16 },
+  removeTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ef4444' },
   label: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11,

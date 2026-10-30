@@ -31,7 +31,8 @@ import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
 import SlotTimeEditor, { draftFor, draftState, type SlotDraft } from '@/components/SlotTimeEditor';
 import { SLOT_WINDOW, TIME_STEP_MIN } from '@/utils/day-plan';
-import { moveTemplateItem } from '@/utils/protocol';
+import { moveTemplateItem, removePlanItem } from '@/utils/protocol';
+import { confirmVibezAlert } from '@/components/VibezAlert';
 import { DurationWheel } from '@/components/DurationWheel';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { GlassSheet } from '@/components/GlassSheetHost';
@@ -506,6 +507,42 @@ export default function AgendaScreen() {
     const updated = { ...plan, days };
     await saveActivePlan(updated);
     void syncPlanReminders(updated);
+  };
+
+  /* 30 okt 2026 (operator: "kan ik een sessie verwijderen?"): één sessie uit het plan, met bevestiging; de laatste
+     sessie = het hele plan (zelfde afloop als "Remove plan"). */
+  const removeSession = async (index: number) => {
+    if (!plan) return;
+    const it = selectedDay?.items[index];
+    const label = it ? `${BREATH_STATES[it.state].eyebrow.toUpperCase()} at ${fmtAgendaTime(it.reminderAt)}` : '';
+    setTimeEditing(null);
+    const next = removePlanItem(plan, index);
+    const ok = await confirmVibezAlert(
+      next
+        ? {
+            title: 'Remove this session?',
+            message: label ? `${label} will be removed from your plan, every day.` : 'It will be removed from your plan, every day.',
+            confirmText: 'Remove',
+            destructive: true,
+          }
+        : {
+            title: 'Remove your plan?',
+            message: 'This is the only session in your plan, so the whole plan will be removed.',
+            confirmText: 'Remove plan',
+            destructive: true,
+          },
+    );
+    if (!ok) return;
+    hapticTap();
+    if (!next) {
+      await clearActivePlan();
+      await syncPlanReminders(null);
+      if (router.canGoBack()) router.back();
+      else goToTab('/breath');
+      return;
+    }
+    await saveActivePlan(next);
+    void syncPlanReminders(next);
   };
 
   const monthCells = useMemo(() => {
@@ -1036,7 +1073,8 @@ export default function AgendaScreen() {
               const it = selectedDay.items[timeEditing.index];
               const goals = plan?.goals ?? [];
               const level = getSetting('experienceLevel') ?? 'beginner';
-              const st = BREATH_STATES[draftState(it, timeEditing.draft, goals, level).state];
+              const others = selectedDay.items.filter((_, idx) => idx !== timeEditing.index);
+              const st = BREATH_STATES[draftState(it, timeEditing.draft, goals, level, others).state];
               return (
                 <>
                   <View style={s.pickHeader}>
@@ -1047,11 +1085,13 @@ export default function AgendaScreen() {
                   </View>
                   <SlotTimeEditor
                     item={it}
+                    others={selectedDay.items.filter((_, idx) => idx !== timeEditing.index)}
                     draft={timeEditing.draft}
                     onChange={(draft) => setTimeEditing((cur) => (cur ? { ...cur, draft } : cur))}
                     goals={goals}
                     level={level}
                     durationsFor={(state, techniqueKey) => durationOptionsFor(state, techniqueKey)}
+                    onRemove={() => void removeSession(timeEditing.index)}
                   />
                 </>
               );

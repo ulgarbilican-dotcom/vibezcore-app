@@ -219,7 +219,12 @@ export function DurationWheel({
   );
 
   return (
-    <View style={[s.wheelWrap, { height: viewportHeight }]}>
+    <View
+      style={[s.wheelWrap, { height: viewportHeight }]}
+      /* 30 okt 2026: zelfde als TimeWheel — het blad mag de draaibeweging van het wiel niet afpakken (wiel bevroor). */
+      onMoveShouldSetResponder={() => true}
+      onResponderTerminationRequest={() => false}
+    >
       <View
         style={[
           s.wheelPill,

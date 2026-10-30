@@ -695,7 +695,7 @@ export default function PlanReviewScreen() {
             <View style={s.pickHandle} />
             {picking !== null && draft && items[picking] && (() => {
               const it = items[picking];
-              const st = BREATH_STATES[draftState(it, draft, goals, level).state];
+              const st = BREATH_STATES[draftState(it, draft, goals, level, items.filter((_, idx) => idx !== picking)).state];
               return (
                 <>
                   <View
@@ -709,6 +709,7 @@ export default function PlanReviewScreen() {
                   </View>
                   <SlotTimeEditor
                     item={it}
+                    others={items.filter((_, idx) => idx !== picking)}
                     draft={draft}
                     onChange={setDraft}
                     goals={goals}
