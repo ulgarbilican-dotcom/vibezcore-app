@@ -171,6 +171,50 @@ async function clearPersistedCache(): Promise<void> {
   }
 }
 
+/* 30 okt 2026 (audit Free/Premium): een gast die op dit toestel kocht, zag bij elke koude start 1-2 s Free (slotjes,
+   60 s-voorproef bij een tik) tot RevenueCat antwoordde. Zijn laatst door RevenueCat bevestigde status bewaren we
+   apart, vastgemaakt aan de anonieme RevenueCat-ID van de aankoop (de gast-markering): zonder die markering, of met
+   een andere ID, wordt hij nooit gelezen — dus geen oude Premium voor een uitgelogde of andere gebruiker. */
+const GUEST_SUB_CACHE_KEY = 'vz_sub_guest_v1';
+
+async function persistGuestCache(rcId: string, status: SubscriptionStatus): Promise<void> {
+  try {
+    await AsyncStorage.setItem(GUEST_SUB_CACHE_KEY, JSON.stringify({ ...status, rcId, cachedAt: Date.now() }));
+  } catch {
+    /* swallow */
+  }
+}
+
+async function clearGuestCache(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(GUEST_SUB_CACHE_KEY);
+  } catch {
+    /* swallow */
+  }
+}
+
+/** Gast-markering + de daaraan vastgemaakte bewaarde status (enkel als die nog actief en niet verlopen is). */
+async function readGuestCache(): Promise<{ marker: string | null; status: SubscriptionStatus | null }> {
+  try {
+    const marker = await AsyncStorage.getItem(GUEST_PURCHASE_RC_ID_KEY);
+    if (!marker) return { marker: null, status: null };
+    const raw = await AsyncStorage.getItem(GUEST_SUB_CACHE_KEY);
+    const obj = raw ? (JSON.parse(raw) as SubscriptionStatus & { rcId?: string }) : null;
+    if (!obj || obj.rcId !== marker || obj.active !== true) return { marker, status: null };
+    const status = withoutExpired({
+      active: true,
+      tier: obj.tier,
+      status: obj.status,
+      validUntil: obj.validUntil,
+      willRenew: obj.willRenew,
+      isTrialing: obj.isTrialing,
+    });
+    return { marker, status: status.active ? status : null };
+  } catch {
+    return { marker: null, status: null };
+  }
+}
+
 async function loadCacheOnce(): Promise<void> {
   if (cacheLoaded) return;
   if (cacheLoadPromise) return cacheLoadPromise;
@@ -185,7 +229,11 @@ async function loadCacheOnce(): Promise<void> {
       const token = await getToken();
       if (!token) {
         await clearPersistedCache();
-        notifyAll({ active: false });
+        /* 30 okt 2026: gast-koper → meteen zijn bewaarde Premium; markering zonder bewaarde status → nog even
+           "laden" (null) i.p.v. Free, fetchStatus beslist. Zonder markering: Free, zoals altijd. */
+        const guest = await readGuestCache();
+        if (guest.status) notifyAll(guest.status);
+        else if (!guest.marker) notifyAll({ active: false });
         cacheLoaded = true;
         /* Audit 8 okt 2026 (blokkerend): een gast die kocht, moest na een
            koude start ook Premium zijn. fetchStatus kiest zelf: zonder
@@ -242,9 +290,13 @@ async function loadCacheOnce(): Promise<void> {
    verlopen). Maar als RevenueCat zegt PRO → user IS PRO, ongeacht wat
    backend nog van eerdere weet. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* 30 okt 2026: true als de laatste RevenueCat-vraag MISLUKTE (SDK nog niet klaar / geen verbinding) — iets anders dan
+   "geen abonnement". Dan houden we de laatst bekende status i.p.v. iemand onterecht op Free te zetten. */
+let lastRcCallFailed = false;
 async function tryRevenueCatStatus(
   requireAppUserId?: string,
 ): Promise<SubscriptionStatus | null> {
+  lastRcCallFailed = false;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default;
@@ -293,6 +345,7 @@ async function tryRevenueCatStatus(
       billingIssueAt: typeof audioPro.billingIssueDetectedAt === 'string' ? audioPro.billingIssueDetectedAt : undefined,
     };
   } catch {
+    lastRcCallFailed = true;
     return null; /* SDK niet geladen / native module mist — fall back */
   }
 }
@@ -397,8 +450,19 @@ async function fetchStatus(): Promise<void> {
         }
         guestRc = await tryRevenueCatStatus(guestId);
       }
+      const guestRcFailed = !!guestId && lastRcCallFailed;
       if (myGen !== fetchGeneration) return;
       clearPersistedCache();
+      /* 30 okt 2026: RevenueCat even onbereikbaar → laatst bevestigde Premium houden (met eigen einddatum). */
+      if (guestRcFailed && cachedStatus?.active) {
+        const kept = withoutExpired(cachedStatus);
+        if (kept.active) {
+          notifyAll(kept);
+          return;
+        }
+      }
+      if (guestId && guestRc?.active) void persistGuestCache(guestId, guestRc);
+      else void clearGuestCache();
       notifyAll(guestRc?.active ? guestRc : { active: false });
       return;
     }
@@ -407,13 +471,23 @@ async function fetchStatus(): Promise<void> {
       tryRevenueCatStatus(),
       fetchBackendStatus(),
     ]);
+    const rcFailed = lastRcCallFailed;
     if (myGen !== fetchGeneration) return;
+    /* 30 okt 2026 (audit Free/Premium): RevenueCat nog niet klaar bij een koude start → de server kent geen dagpas en
+       loopt soms achter op de store. Dan de laatst bekende Premium houden i.p.v. even Free; de RevenueCat-listener
+       ververst zodra de koppeling klaar is. */
+    const keepLastKnown =
+      !rcStatus?.active && rcFailed && backendStatus?.active !== true && cachedStatus?.active === true
+        ? withoutExpired(cachedStatus)
+        : null;
 
     /* Base: RC audio-state als actief, anders backend, anders cachedStatus
        (transient backend fail → behoud vorige waarheid). */
     const base: SubscriptionStatus = rcStatus?.active
       ? rcStatus
-      : backendStatus
+      : keepLastKnown?.active
+        ? keepLastKnown
+        : backendStatus
         ? /* Ook de server kan achterlopen (8 okt 2026: "active" met einddatum
              juli) — een verlopen einddatum telt nooit als actief. */
           withoutExpired(backendStatus)
@@ -497,7 +571,10 @@ export function refreshSubscription(): Promise<void> {
      met verse data zodra klaar. Persistent cache wordt wel gewist
      zodat een sign-out expliciet setSignedOutStatus({active:false})
      kan zetten zonder oude PRO uit disk te reïncarneren. */
-  clearPersistedCache().catch(() => {});
+  /* 30 okt 2026 (audit Free/Premium): de schijf-cache NIET meer wissen bij elke refresh (elke keer de app naar voren
+     komt). Werd de app gesloten vóór de fetch klaar was, dan startte een Premium-gebruiker de volgende keer zonder
+     cache → even Free. Uitloggen wist de cache zelf (setSignedOutStatus), inloggen ook (setSigningInStatus), en een
+     start zonder token wist hem in loadCacheOnce; fetchStatus overschrijft hem met verse data. */
   return fetchStatus();
 }
 
