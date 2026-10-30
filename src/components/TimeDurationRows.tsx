@@ -34,13 +34,14 @@ export default function TimeDurationRows({
 }) {
   return (
     <View style={rs.wrap}>
-      <Text style={rs.label}>Time</Text>
-      <TimeWheel key={timeKey} options={timeOptions} value={time} accent={accent} trackColor="rgba(255,255,255,0.4)" onChange={onTime} />
-      <Text style={[rs.label, rs.labelGap]}>Duration</Text>
+      {/* 30 okt 2026 (operator: "zet de cirkel eerst onder de dagdelen, en de scroll voor time eronder"). */}
+      <Text style={rs.label}>Duration</Text>
       {/* Het blad mag de sleepbeweging over de cirkel niet afpakken (zelfde regel als bij de wielen). */}
       <View style={rs.dial} onMoveShouldSetResponder={() => true} onResponderTerminationRequest={() => false}>
         {duration}
       </View>
+      <Text style={[rs.label, rs.labelGap]}>Time</Text>
+      <TimeWheel key={timeKey} options={timeOptions} value={time} accent={accent} trackColor="rgba(255,255,255,0.4)" onChange={onTime} />
     </View>
   );
 }
