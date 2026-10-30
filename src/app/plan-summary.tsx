@@ -66,7 +66,8 @@ export default function PlanSummaryScreen() {
   }>();
 
   const goalNames = plan ? goalsByKeys(plan.goals).map((g) => g.name) : [];
-  const today = plan?.days[dayKey(new Date())] ?? null;
+  /* 31 okt 2026: routinedag 05:00–05:00, zoals "Your plan" — na middernacht is het nog de avond van gisteren. */
+  const today = plan?.days[dayKey(new Date(Date.now() - 5 * 3600 * 1000))] ?? plan?.days[dayKey(new Date())] ?? null;
 
   const backScale = useSharedValue(1);
   const onBackPressIn = () => {

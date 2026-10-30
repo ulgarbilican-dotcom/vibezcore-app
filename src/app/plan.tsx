@@ -205,7 +205,11 @@ export default function PlanScreen() {
      vragenlijst (breath-quiz.tsx) hier binnenkomt, ziet nog steeds zijn
      twee momenten op basis van de klok en zijn doelen. */
   const { plan } = useActivePlan();
-  const todayKey = dayKey(new Date());
+  /* 31 okt 2026: de routinedag loopt van 05:00 tot 05:00 (zoals de dagdelen: avond tot 05:00). Om 00:47 is "vandaag" in
+     je routine dus nog de avond van gisteren — anders toonde dit scherm al de routine van morgen. */
+  const ROUTINE_DAY_START_H = 5;
+  const routineNow = new Date(Date.now() - ROUTINE_DAY_START_H * 3600 * 1000);
+  const todayKey = dayKey(routineNow);
   const planDay = plan?.days[todayKey] ?? null;
 
   useEffect(() => {
@@ -501,9 +505,13 @@ export default function PlanScreen() {
        voor hetzelfde moment "Partial" toonde. Nu dezelfde regel als de
        agenda: een volledig afgeronde sessie van DEZE toestand, vandaag en
        sinds het plan bestaat. */
-    const since = Math.max(startOfDay.getTime(), plan?.createdAt ?? 0);
+    /* Sessies van DEZE routinedag: vanaf 05:00 tot morgen 05:00. */
+    const routineStart = new Date(routineNow);
+    routineStart.setHours(ROUTINE_DAY_START_H, 0, 0, 0);
+    const since = Math.max(routineStart.getTime(), plan?.createdAt ?? 0);
+    const until = routineStart.getTime() + 24 * 3600 * 1000;
     const statuses = planDay
-      ? planItemStatuses(planDay.items, history.filter((e) => e.ts >= since))
+      ? planItemStatuses(planDay.items, history.filter((e) => e.ts >= since && e.ts < until))
       : [];
 
     /* MET actief protocol: één rij per ECHT item uit `planDay.items`, niet
@@ -521,7 +529,8 @@ export default function PlanScreen() {
         const tech =
           st.techniques.find((t) => t.key === planItem.techniqueKey) ?? st.techniques[0];
         return {
-          now: h >= m.from && h < m.to,
+          /* Na middernacht (00–05 u) hoort het uur bij de avond (24–29). */
+          now: (h < ROUTINE_DAY_START_H ? h + 24 : h) >= m.from && (h < ROUTINE_DAY_START_H ? h + 24 : h) < m.to,
           moment: m,
           state: st,
           techName: tech.name,
