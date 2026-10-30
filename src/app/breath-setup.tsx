@@ -1245,7 +1245,8 @@ export default function BreathSetupScreen() {
   const sub = useSubscription();
   const [freeSessionUsedAt] = useSetting('breathFreeSessionUsedAt');
   const [testFullSessions] = useSetting('testFullSessions');
-  const locked = !sub.isPro && !!freeSessionUsedAt && !(__DEV__ && testFullSessions);
+  /* 30 okt 2026: tijdens het laden geen "preview"-tekst voor wie misschien Premium is (de sessie zelf beslist pas als het bekend is). */
+  const locked = !sub.isLoading && !sub.isPro && !!freeSessionUsedAt && !(__DEV__ && testFullSessions);
   /* Operator, 19 okt 2026 ("free kondigt de preview ALTIJD vooraf aan"): nog
      geen gratis sessie gebruikt → de start hieronder claimt de ene gratis
      volledige sessie (claimFreeSessionParam), en dat zeggen we vooraf. */

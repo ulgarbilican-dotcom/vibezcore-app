@@ -217,7 +217,7 @@ export default function PlayerScreen() {
      voor auth (preview-flag), isPro voor display (CTA tonen/verbergen).
      Voorheen toonde de "Full library access" CTA in PRO override omdat
      realIsPro=false; nu verbergt-ie correct want isPro=true. */
-  const { isPro: displayIsPro, realIsPro, isTrialing, braceletModel } = useSubscription();
+  const { isPro: displayIsPro, realIsPro, isTrialing, braceletModel, isLoading: subLoading } = useSubscription();
   /* Iter v227 (2026-07-07, audit AU3): bracelet-only owner ziet
      "Add Audio Library" ipv "Get Full Access". Consistent met Account-
      tab (regel 393: upgradeCtaText = isBraceletOwner ? 'Add Audio Library'
@@ -865,7 +865,8 @@ export default function PlayerScreen() {
             CTA staat altijd op vaste afstand van scherm-bottom. Content
             erboven krijgt paddingBottom (zie s.content) zodat de
             favorite-row niet onder de CTA verdwijnt. */}
-        {!displayIsPro && (
+        {/* 30 okt 2026: geen upgrade-knop zolang de Premium-status nog laadt. */}
+        {!displayIsPro && !subLoading && (
           <AnimatedPressable
             style={[
               s.cta,

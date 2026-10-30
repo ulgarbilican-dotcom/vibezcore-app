@@ -2151,7 +2151,9 @@ export function BreathSession() {
      from=onboarding-deeplink, maar dan zonder telkens een URL te moeten
      intikken. Puur lokaal/dev-gebruik, geen echte entitlement. */
   const [testFullSessions] = useSetting('testFullSessions');
-  const locked = !isPro && !isFreeOnboardingSession && !(__DEV__ && testFullSessions);
+  /* 30 okt 2026 (audit Free/Premium): zolang de Premium-status nog laadt (koude start via een herinnering) niet als
+     "op slot" behandelen — anders startte een Premium-gebruiker een voorproef van 30 s met daarna de betaalmuur. */
+  const locked = !sub.isLoading && !isPro && !isFreeOnboardingSession && !(__DEV__ && testFullSessions);
   /* Eenmalige, proactieve uitleg over scherm-op-slot (operator, 14
      augustus 2026: "iemand die gewoon breathwork begint gaat nooit weten
      dat het hierdoor komt... iedereen gaat denken het werkt niet") — dit
@@ -2550,19 +2552,36 @@ export function BreathSession() {
      naar automatisch starten op mount — de "Enjoy your session"-Buddha-
      intro blijft WEL verwijderd (zie proceedToStart/start hierboven),
      dat was een apart, correct verzoek. */
+  /* 30 okt 2026: werd Premium pas bekend NA de start (vangnet hieronder verstreken), dan wordt de lopende voorproef
+     alsnog een volledige sessie — geen betaalmuur voor wie al betaalt. */
+  useEffect(() => {
+    if (isPro && previewRef.current) {
+      previewRef.current = false;
+      effectiveRoundsRef.current = roundsRef.current;
+    }
+  }, [isPro]);
   const autostarted = useRef(false);
+  /* 30 okt 2026: pas automatisch starten als bekend is of de gebruiker Premium heeft (meestal meteen, uit de cache);
+     vangnet 3 s, daarna start hij zoals vroeger. */
+  const [subWaitOver, setSubWaitOver] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSubWaitOver(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (autostarted.current) return;
+    if (sub.isLoading && !subWaitOver) return;
     autostarted.current = true;
     /* 29 okt 2026 (operator): elke sessie start met de trilling op het maximum. */
     resetHapticStrengthForSession();
-    if (locked) {
+    /* Vangnet verstreken en nog steeds onbekend → als Free starten (zoals vroeger), nooit als Premium. */
+    if (locked || (sub.isLoading && !isFreeOnboardingSession && !(__DEV__ && testFullSessions))) {
       startWithBatteryCheck(true);
     } else {
       startWithBatteryCheck();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sub.isLoading, subWaitOver]);
 
   /* Operator, 11 september 2026 (8e ronde): dit scherm droeg zijn EIGEN,
      oudere kies-UI (ritme-chips, duur-chips, START/TRY-knop) uit de tijd
