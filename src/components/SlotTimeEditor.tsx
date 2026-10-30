@@ -11,7 +11,7 @@ import { DurationWheel } from '@/components/DurationWheel';
 import { BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { SLOTS } from '@/services/reminders';
-import { slotRangeLabel, slotTimeOptions } from '@/utils/day-plan';
+import { slotRangeLabel, slotTimeOptions, snapToSlot } from '@/utils/day-plan';
 import { stateForMovedItem } from '@/utils/protocol';
 import { hapticTap } from '@/utils/haptics';
 import type { PlannedItem, PlanSlot } from '@/utils/plan-store';
@@ -22,7 +22,11 @@ export type SlotDraft = { slot: PlanSlot; time: number; minutes: number };
 type DurationChoices = { options: { value: number; label: string }[]; recommended: number | null | undefined };
 
 /** Startwaarde van het blad: de sessie zoals ze nu staat. */
-export const draftFor = (it: PlannedItem): SlotDraft => ({ slot: it.slot, time: it.reminderAt, minutes: it.minutes });
+export const draftFor = (it: PlannedItem): SlotDraft => ({
+  slot: it.slot,
+  time: snapToSlot(it.slot, it.reminderAt),
+  minutes: it.minutes,
+});
 
 /** De toestand die de sessie krijgt met deze kladversie (een ander dagdeel = de keuze van de app daar). */
 export function draftState(
@@ -55,6 +59,11 @@ export default function SlotTimeEditor({
   const { state, techniqueKey, moved } = draftState(item, draft, goals, level);
   const st = BREATH_STATES[state];
   const durations = durationsFor(state, techniqueKey);
+  /* Een persoonlijke duur (bv. 7 min) staat niet altijd in de vaste lijst — dan hoort hij er wel bij, anders toont het
+     wiel een andere waarde dan wat er bewaard wordt. */
+  const durationOptions = durations.options.some((o) => o.value === draft.minutes)
+    ? durations.options
+    : [...durations.options, { value: draft.minutes, label: `${draft.minutes} min` }].sort((a, b) => a.value - b.value);
   const slotLabel = SLOTS.find((sl) => sl.slot === draft.slot)?.label ?? '';
 
   return (
@@ -104,7 +113,7 @@ export default function SlotTimeEditor({
       <Text style={[es.label, { marginTop: 12 }]}>Duration</Text>
       <DurationWheel
         key={`d-${state}`}
-        options={durations.options}
+        options={durationOptions}
         value={draft.minutes}
         accent={st.accent}
         trackColor="rgba(255,255,255,0.4)"

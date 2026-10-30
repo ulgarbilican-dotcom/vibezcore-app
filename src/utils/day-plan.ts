@@ -117,6 +117,14 @@ export function slotTimeOptions(slot: string): number[] {
   return out;
 }
 
+/** Een tijdstip op het raster van een dagdeel: binnen zijn uren en op 5 minuten. Een oude tijd van voor 30 okt 2026
+ *  (bv. een avond om 00:30, of een kwartier-tijd) toont zo altijd een echte stand op het wiel. */
+export function snapToSlot(slot: string, mins: number): number {
+  const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
+  const rounded = Math.round(mins / TIME_STEP_MIN) * TIME_STEP_MIN;
+  return Math.max(w.from * 60, Math.min(w.to * 60 - TIME_STEP_MIN, rounded));
+}
+
 /** Het dagdeel waarin een tijdstip (minuten na middernacht) valt; vóór 05:00 telt als avond. */
 export function slotForMinutes(mins: number): string {
   const h = Math.floor((((mins % 1440) + 1440) % 1440) / 60);

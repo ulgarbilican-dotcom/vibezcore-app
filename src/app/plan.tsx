@@ -45,7 +45,7 @@ import { rootBlurRef } from '@/utils/root-blur';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { useBreathHistory } from '@/utils/breath-history';
 import { personalOrderForSlot } from '@/utils/behavior-patterns';
-import { pickStatesForDay, SLOT_WINDOW, slotTimeOptions } from '@/utils/day-plan';
+import { pickStatesForDay, SLOT_WINDOW, slotTimeOptions, snapToSlot } from '@/utils/day-plan';
 import SlotTimeEditor, { draftFor, type SlotDraft } from '@/components/SlotTimeEditor';
 import TimeWheel from '@/components/TimeWheel';
 import { moveTemplateItem } from '@/utils/protocol';
@@ -757,7 +757,7 @@ export default function PlanScreen() {
             onOpenTime={() => {
               const planItem = it.planIndex !== null ? planDay?.items[it.planIndex] : undefined;
               setPickDraft(planItem ? draftFor(planItem) : null);
-              setPickMins(it.reminderAt ?? minsFor(it.moment.key));
+              setPickMins(snapToSlot(it.moment.key, it.reminderAt ?? minsFor(it.moment.key)));
               setPicking(index);
             }}
             fmtTime={fmtTime}
