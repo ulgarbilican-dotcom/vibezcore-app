@@ -305,6 +305,12 @@ function datedPlanDays<T>(days: PlanDaysLike<T>, ongoing: boolean): { key: strin
   const tk = dayKey(new Date());
   const keys = Object.keys(days).filter((k) => k >= tk).sort();
   if (keys.length > DATED_WINDOW) return null;
+  /* 31 okt 2026: ook gisteren vooraan — een avondsessie na middernacht (bv. 24:30) van gisteren valt VANNACHT. Verleden
+     tijden vallen verderop vanzelf weg (date <= now). Daarom één id-plek extra (cancel-lussen: DATED_WINDOW + 1). */
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yk = dayKey(y);
+  if (days[yk]) keys.unshift(yk);
   return keys.map((k) => ({ key: k, items: days[k].items }));
 }
 
@@ -327,7 +333,7 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
     try {
       await Notifications.cancelScheduledNotificationAsync(planIdFor(i, 1));
       await Notifications.cancelScheduledNotificationAsync(planIdFor(i, 2));
-      for (let d = 0; d < DATED_WINDOW; d += 1) {
+      for (let d = 0; d < DATED_WINDOW + 1; d += 1) {
         await Notifications.cancelScheduledNotificationAsync(datedPlanIdFor(d, i));
       }
     } catch {}
@@ -440,7 +446,7 @@ export async function syncBraceletPlanReminder(
     try {
       await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 1));
       await Notifications.cancelScheduledNotificationAsync(braceletPlanIdFor(i, 2));
-      for (let d = 0; d < DATED_WINDOW; d += 1) {
+      for (let d = 0; d < DATED_WINDOW + 1; d += 1) {
         await Notifications.cancelScheduledNotificationAsync(datedBraceletIdFor(d, i));
       }
     } catch {}
