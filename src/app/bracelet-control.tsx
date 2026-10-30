@@ -1641,12 +1641,53 @@ export function DurationDial({
   );
 }
 
+/** Dezelfde duurcirkel als State Control, maar met een eigen kleur en bereik — voor het tijd-blad van de agenda's
+ *  (operator, 30 okt 2026: "duration als cirkelregelaar, time als draaiwiel, beide gewoon in beeld"). Met `allowed`
+ *  springt de greep naar de dichtstbijzijnde toegelaten duur (bv. 4-7-8: enkel 1 of 3 min). */
+export function ColorDurationDial({
+  color,
+  label,
+  min,
+  max,
+  value,
+  onChange,
+  allowed,
+  recommended,
+  size = 200,
+}: {
+  color: string;
+  label: string;
+  min: number;
+  max: number;
+  value: number;
+  onChange: (minutes: number) => void;
+  allowed?: number[];
+  recommended?: boolean;
+  size?: number;
+}) {
+  const snap = (m: number) =>
+    allowed && allowed.length ? allowed.reduce((a, b) => (Math.abs(b - m) < Math.abs(a - m) ? b : a), allowed[0]) : m;
+  return (
+    <ModeSwipeRing
+      mode={MODES[0].mode}
+      onChange={() => {}}
+      onTap={() => {}}
+      swipe={false}
+      a11yLabel={`${label} duration, ${value} minutes. Drag around the edge to change.`}
+      dial={{ size, min, max, value, onChange: (m) => onChange(snap(m)) }}
+    >
+      <DurationRing min={min} max={max} value={value} color={color} label={label} size={size} dialHandle dark recommended={recommended} />
+    </ModeSwipeRing>
+  );
+}
+
 function ModeSwipeRing({
   mode,
   onChange,
   onTap,
   dial,
   swipe = true,
+  a11yLabel,
   children,
 }: {
   /** false = enkel de duur-greep (Set your plan): geen toestand wisselen,
@@ -1660,6 +1701,8 @@ function ModeSwipeRing({
       op de rand bedient de duur per minuut; in het midden blijft links/
       rechts vegen de toestand wisselen. */
   dial?: { size: number; min: number; max: number; value: number; onChange: (minutes: number) => void };
+  /** Eigen toegankelijkheidslabel (de algemene duurcirkel is geen State Control-modus). */
+  a11yLabel?: string;
   children: ReactNode;
 }) {
   const last = MODES.length - 1;
@@ -1804,7 +1847,7 @@ function ModeSwipeRing({
         <ReanimatedAnimated.View
           style={style}
           accessibilityRole="adjustable"
-          accessibilityLabel={`${getModeMeta(mode).name}. Swipe left or right to change mode, tap for details.`}
+          accessibilityLabel={a11yLabel ?? `${getModeMeta(mode).name}. Swipe left or right to change mode, tap for details.`}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }, { name: 'activate' }]}
           onAccessibilityAction={(e) => {
             if (e.nativeEvent.actionName === 'activate') onTap();

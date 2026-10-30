@@ -7,6 +7,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Tap from '@/components/Tap';
 import TimeDurationRows from '@/components/TimeDurationRows';
+import { ColorDurationDial } from '@/app/bracelet-control';
 import { BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
 import { SLOTS } from '@/services/reminders';
@@ -141,11 +142,20 @@ export default function SlotTimeEditor({
         time={draft.time}
         timeOptions={slotTimeOptions(draft.slot)}
         onTime={(mins) => onChange({ ...draft, time: mins })}
-        minutes={draft.minutes}
-        durationOptions={durationOptions}
-        recommendedMinutes={durations.recommended ?? undefined}
-        onMinutes={(v) => onChange({ ...draft, minutes: v })}
         accent={st.accent}
+        duration={
+          <ColorDurationDial
+            key={state}
+            color={st.accent}
+            label={st.eyebrow}
+            min={durationOptions[0].value}
+            max={durationOptions[durationOptions.length - 1].value}
+            value={draft.minutes}
+            allowed={durationOptions.map((o) => o.value)}
+            recommended={durations.recommended != null && draft.minutes === durations.recommended}
+            onChange={(v) => onChange({ ...draft, minutes: v })}
+          />
+        }
       />
       {onRemove && (
         <Tap style={es.removeBtn} onPress={onRemove} hitSlop={8} accessibilityRole="button">

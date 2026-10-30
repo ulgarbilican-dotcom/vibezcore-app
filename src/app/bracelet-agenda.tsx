@@ -82,6 +82,7 @@ import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
 import TimeDurationRows from '@/components/TimeDurationRows';
+import { ColorDurationDial } from '@/app/bracelet-control';
 import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
 import { TIME_STEP_MIN } from '@/utils/day-plan';
@@ -813,11 +814,18 @@ export default function BraceletAgendaScreen() {
                   time={timeEdit.time}
                   timeOptions={timeOptions}
                   onTime={(mins) => setTimeEdit((cur) => (cur ? { ...cur, time: mins } : cur))}
-                  minutes={timeEdit.minutes}
-                  durationOptions={options}
-                  recommendedMinutes={meta.defaultMinutes}
-                  onMinutes={(v) => setTimeEdit((cur) => (cur ? { ...cur, minutes: v } : cur))}
                   accent={meta.color}
+                  duration={
+                    <ColorDurationDial
+                      color={meta.color}
+                      label={meta.name}
+                      min={meta.minMinutes}
+                      max={meta.maxMinutes}
+                      value={timeEdit.minutes}
+                      recommended={timeEdit.minutes === meta.defaultMinutes}
+                      onChange={(v) => setTimeEdit((cur) => (cur ? { ...cur, minutes: v } : cur))}
+                    />
+                  }
                 />
                 <Tap
                   style={[s.actionRemoveBtn, { marginTop: 10 }]}
