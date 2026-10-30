@@ -251,6 +251,8 @@ export function DurationWheel({
            werd genegeerd. Startpositie meegeven. (Een extra scrollTo in
            onLayout zette het wiel tijdens het draaien steeds terug — weg.) */
         contentOffset={initialOffset}
+        /* 30 okt 2026: ook IN een scrollend blad (plan opbouwen → Times) — op Android krijgt het wiel dan voorrang. */
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
         snapToInterval={DURATION_WHEEL_ITEM_H}
         /* "normal" (15 okt 2026): met "fast" stopte een harde veeg na een

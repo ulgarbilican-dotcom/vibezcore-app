@@ -53,7 +53,8 @@ import {
   removeTemplateItem,
   setTemplateItemState,
 } from '@/utils/protocol';
-import SlotTimeEditor, { draftFor, draftState, type SlotDraft } from '@/components/SlotTimeEditor';
+import SlotTimeEditor, { draftFor, draftHeader, type SlotDraft } from '@/components/SlotTimeEditor';
+import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { explainProtocol } from '@/utils/protocol-explainer';
 import type { BreathStateKey } from '@/data/breath-states';
 import type { PlannedItem, PlanHorizon, PlanSlot } from '@/utils/plan-store';
@@ -695,18 +696,10 @@ export default function PlanReviewScreen() {
             <View style={s.pickHandle} />
             {picking !== null && draft && items[picking] && (() => {
               const it = items[picking];
-              const st = BREATH_STATES[draftState(it, draft, goals, level, items.filter((_, idx) => idx !== picking)).state];
+              const head = draftHeader(it, draft, goals, level, items.filter((_, idx) => idx !== picking));
               return (
                 <>
-                  <View
-                    style={[s.pickAccent, { backgroundColor: st.accent }]}
-                  />
-                  <View style={s.pickHeadRow}>
-                    <Text style={[s.pickTitle, { marginBottom: 0, flex: 1 }]}>{st.eyebrow} · time</Text>
-                    <Tap onPress={applyDraft} hitSlop={14} accessibilityRole="button" accessibilityLabel="Done">
-                      <Text style={s.pickDone}>Done</Text>
-                    </Tap>
-                  </View>
+                  <SessionSheetHeader {...head} onDone={applyDraft} />
                   <SlotTimeEditor
                     item={it}
                     others={items.filter((_, idx) => idx !== picking)}

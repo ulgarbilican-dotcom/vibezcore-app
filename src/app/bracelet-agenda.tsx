@@ -81,7 +81,8 @@ import Tap from '@/components/Tap';
 import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
-import TimeWheel from '@/components/TimeWheel';
+import TimeDurationRows from '@/components/TimeDurationRows';
+import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
 import { TIME_STEP_MIN } from '@/utils/day-plan';
 import { planItemStatuses } from '@/utils/plan-status';
@@ -807,31 +808,17 @@ export default function BraceletAgendaScreen() {
             for (let m = 0; m < 1440; m += TIME_STEP_MIN) timeOptions.push(m);
             return (
               <>
-                <View style={s.pickHeaderRow}>
-                  <Text style={s.pickHeaderTitle}>{meta.name} · time</Text>
-                  <Tap onPress={() => void applyTimeEdit()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
-                    <Text style={s.pickHeaderDone}>Done</Text>
-                  </Tap>
-                </View>
-                <Text style={s.editLabel}>Time</Text>
-                <TimeWheel
-                  options={timeOptions}
-                  value={timeEdit.time}
+                <SessionSheetHeader title={meta.name} subtitle="State Control" accent={meta.color} onDone={() => void applyTimeEdit()} />
+                <TimeDurationRows
+                  time={timeEdit.time}
+                  timeOptions={timeOptions}
+                  onTime={(mins) => setTimeEdit((cur) => (cur ? { ...cur, time: mins } : cur))}
+                  minutes={timeEdit.minutes}
+                  durationOptions={options}
+                  recommendedMinutes={meta.defaultMinutes}
+                  onMinutes={(v) => setTimeEdit((cur) => (cur ? { ...cur, minutes: v } : cur))}
                   accent={meta.color}
-                  trackColor="rgba(255,255,255,0.4)"
-                  onChange={(mins) => setTimeEdit((cur) => (cur ? { ...cur, time: mins } : cur))}
                 />
-                <Text style={[s.editLabel, { marginTop: 12 }]}>Duration</Text>
-                <View style={{ width: 266, alignSelf: 'center' }}>
-                  <DurationWheel
-                    options={options}
-                    value={timeEdit.minutes}
-                    accent={meta.color}
-                    trackColor="rgba(255,255,255,0.4)"
-                    recommendedValue={meta.defaultMinutes}
-                    onChange={(v) => setTimeEdit((cur) => (cur ? { ...cur, minutes: v } : cur))}
-                  />
-                </View>
                 <Tap
                   style={[s.actionRemoveBtn, { marginTop: 10 }]}
                   onPress={() => {

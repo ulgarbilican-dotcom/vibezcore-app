@@ -46,7 +46,8 @@ import { durationOptionsFor } from '@/utils/duration-options';
 import { useBreathHistory } from '@/utils/breath-history';
 import { personalOrderForSlot } from '@/utils/behavior-patterns';
 import { pickStatesForDay, SLOT_WINDOW, slotTimeOptions, snapToSlot } from '@/utils/day-plan';
-import SlotTimeEditor, { draftFor, type SlotDraft } from '@/components/SlotTimeEditor';
+import SlotTimeEditor, { draftFor, draftHeader, type SlotDraft } from '@/components/SlotTimeEditor';
+import SessionSheetHeader from '@/components/SessionSheetHeader';
 import TimeWheel from '@/components/TimeWheel';
 import { moveTemplateItem, removePlanItem } from '@/utils/protocol';
 import { confirmVibezAlert } from '@/components/VibezAlert';
@@ -947,29 +948,23 @@ export default function PlanScreen() {
                 schuift open" (operator, 10 augustus 2026: "zo onderaan
                 gepropt en saai"). */}
             <View style={s.pickHandle} />
-            {/* Kiezerblad → Done rechtsboven (protocol, 8 okt 2026). */}
-            <Tap style={s.sheetDoneTopRight} onPress={() => void commitPick()} hitSlop={10}>
-              <Text style={s.pickDoneTxt}>Done</Text>
-            </Tap>
+            {/* 30 okt 2026 (operator: "zet de naam van de sessie op de popup"): dezelfde kop als in de agenda — de sessie
+                zoals ze na Done wordt, Done rechts (onderblad-protocol). */}
             {(() => {
               const item = picking !== null ? items[picking] : null;
               if (!item) return null;
-              return (
-                <>
-                  <Text style={s.pickTitle}>
-                    {item.moment.label.charAt(0) +
-                      item.moment.label.slice(1).toLowerCase() +
-                      ' time'}
-                  </Text>
-                  {/* De reden erbij — dit IS de toestand die er nu staat,
-                      niet zomaar een uur (operator, dezelfde regel: "saai" —
-                      een sheet die alleen cijfers toont vertelt niets over
-                      WAT er om die tijd gebeurt). */}
-                  <Text style={s.pickSub}>
-                    {item.state.eyebrow} · {item.techName}
-                  </Text>
-                </>
-              );
+              const planItem = item.planIndex !== null ? planDay?.items[item.planIndex] : undefined;
+              const head =
+                planItem && pickDraft
+                  ? draftHeader(
+                      planItem,
+                      pickDraft,
+                      plan?.goals ?? [],
+                      experienceLevel ?? 'beginner',
+                      (planDay?.items ?? []).filter((_, idx) => idx !== item.planIndex),
+                    )
+                  : { title: item.state.eyebrow, subtitle: item.techName, accent: item.state.accent };
+              return <SessionSheetHeader {...head} onDone={() => void commitPick()} />;
             })()}
             {picking !== null && items[picking] && (() => {
               const item = items[picking];

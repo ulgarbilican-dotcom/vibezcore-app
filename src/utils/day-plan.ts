@@ -125,6 +125,18 @@ export function snapToSlot(slot: string, mins: number): number {
   return Math.max(w.from * 60, Math.min(w.to * 60 - TIME_STEP_MIN, rounded));
 }
 
+/** Korte uren voor in een segmentbalk: "05–12" (24-uursklok) of "5a–12p" (12-uursklok). */
+export function slotRangeShort(slot: string): string {
+  const w = SLOT_WINDOW[slot] ?? SLOT_WINDOW.evening;
+  const twelve = /AM|PM/i.test(new Date(2020, 0, 1, 13).toLocaleTimeString());
+  const fmt = (h: number) => {
+    const hh = h % 24;
+    if (!twelve) return String(hh).padStart(2, '0');
+    return `${((hh + 11) % 12) + 1}${hh < 12 ? 'a' : 'p'}`;
+  };
+  return `${fmt(w.from)}–${fmt(w.to)}`;
+}
+
 /** Het dagdeel waarin een tijdstip (minuten na middernacht) valt; vóór 05:00 telt als avond. */
 export function slotForMinutes(mins: number): string {
   const h = Math.floor((((mins % 1440) + 1440) % 1440) / 60);

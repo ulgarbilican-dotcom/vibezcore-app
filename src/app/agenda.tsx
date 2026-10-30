@@ -29,7 +29,8 @@ import { getSetting } from '@/utils/settings';
 import { planItemStatuses } from '@/utils/plan-status';
 import { milestonesReached } from '@/utils/rewards';
 import RhythmRing from '@/components/RhythmRing';
-import SlotTimeEditor, { draftFor, draftState, type SlotDraft } from '@/components/SlotTimeEditor';
+import SlotTimeEditor, { draftFor, draftHeader, type SlotDraft } from '@/components/SlotTimeEditor';
+import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { SLOT_WINDOW, TIME_STEP_MIN } from '@/utils/day-plan';
 import { moveTemplateItem, removePlanItem } from '@/utils/protocol';
 import { confirmVibezAlert } from '@/components/VibezAlert';
@@ -1074,15 +1075,10 @@ export default function AgendaScreen() {
               const goals = plan?.goals ?? [];
               const level = getSetting('experienceLevel') ?? 'beginner';
               const others = selectedDay.items.filter((_, idx) => idx !== timeEditing.index);
-              const st = BREATH_STATES[draftState(it, timeEditing.draft, goals, level, others).state];
+              const head = draftHeader(it, timeEditing.draft, goals, level, others);
               return (
                 <>
-                  <View style={s.pickHeader}>
-                    <Text style={[s.pickTitle, s.pickTitleInRow]}>{titleCase(st.eyebrow)} · time</Text>
-                    <Tap onPress={() => void applyTimeEdit()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
-                      <Text style={s.pickDoneTxt}>Done</Text>
-                    </Tap>
-                  </View>
+                  <SessionSheetHeader {...head} onDone={() => void applyTimeEdit()} />
                   <SlotTimeEditor
                     item={it}
                     others={selectedDay.items.filter((_, idx) => idx !== timeEditing.index)}
