@@ -1689,6 +1689,7 @@ export function ColorDurationDial({
         /* Letters schalen mee met de ring, zodat niets over de rand valt (State Control-scherm = 264). */
         textScale={Math.min(1, size / 250)}
         showName={false}
+        lightFill
       />
     </ModeSwipeRing>
   );
@@ -2397,6 +2398,10 @@ function ModeColorRing({
   );
 }
 
+/** Lichtste glas: twee golflagen van 10 % en 15 % (samen ±24 %) — de tijdpil in het tijd-blad gebruikt dezelfde 24 %. */
+export const LIGHT_GLASS_WAVE = { backOpacity: 0.1, frontOpacity: 0.15 } as const;
+export const LIGHT_GLASS_ALPHA_HEX = '3D';
+
 /* ── WaveFillCircle — golf-vulling binnenin de ring ──
    Operator, 16 september 2026 ("animatie is zelfde als bij breathwork
    golven en stijgt mee naargelang meer minuten"): herbouwde versie van
@@ -2410,12 +2415,15 @@ function WaveFillCircle({
   color,
   size,
   fillOnMount,
+  lightFill,
 }: {
   fillOnMount?: boolean;
   /** 0..1 — hoe vol (aandeel van de langste duur). */
   fraction: number;
   color: string;
   size: number;
+  /** Lichtste glas (tijd-blad, 31 okt 2026): zelfde lichte vulling voor elke toestand, gelijk aan de tijdpil. */
+  lightFill?: boolean;
 }) {
   /* Operator, 6 okt 2026 ("wave overal hetzelfde, supersmooth, mag niet
      haperen"): dezelfde golf als de breath-setup (components/LiquidWave,
@@ -2425,7 +2433,7 @@ function WaveFillCircle({
     <LiquidWave
       size={size}
       level={Math.max(0.08, Math.min(1, fraction))}
-      {...breathWaveLook(color)}
+      {...(lightFill ? { color, ...LIGHT_GLASS_WAVE } : breathWaveLook(color))}
       fillOnMount={fillOnMount}
     />
   );
@@ -2455,6 +2463,7 @@ function DurationRing({
   dialHandle,
   textScale = 1,
   showName = true,
+  lightFill = false,
 }: {
   /** Operator, 9 okt 2026: boog + witte greep op de rand — sleep de greep
       om de tijd per minuut te kiezen (zie ModeSwipeRing `dial`). */
@@ -2489,6 +2498,8 @@ function DurationRing({
   textScale?: number;
   /** false = enkel de duur in de ring (de naam staat al in de kop van het blad, 30 okt 2026). */
   showName?: boolean;
+  /** Lichtste glas als vulling (gelijk aan de tijdpil in het tijd-blad). */
+  lightFill?: boolean;
 }) {
   /* Operator, 27 september 2026 ("als 30 min max is en 15 min minimum,
      moet de cirkel dan niet al halfvol staan?"): was (value-min)/(max-min)
@@ -2650,7 +2661,7 @@ function DurationRing({
           backgroundColor: dark ? '#000000' : 'rgba(10,10,12,0.85)',
         }}
       >
-        <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} fillOnMount={fillOnMount} />
+        <WaveFillCircle fraction={fillFraction} color={color} size={innerSize} fillOnMount={fillOnMount} lightFill={lightFill} />
       </View>
       {/* Operator, 6 okt 2026 ("kijk of de look zelfde is als bij
          breathwork"): dezelfde opbouw en maten als de breath-setup-ring —

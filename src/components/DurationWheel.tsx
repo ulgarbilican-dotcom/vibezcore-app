@@ -239,7 +239,7 @@ export function DurationWheel({
              toestandskleur — tint + dunne rand in de volle kleur, zoals de boog van de duurcirkel. */
           {
             top: (viewportHeight - DURATION_WHEEL_ITEM_H) / 2,
-            backgroundColor: `${accent}38`,
+            backgroundColor: `${accent}3D` /* lichtste glas, gelijk aan de vulling van de duurcirkel (31 okt 2026) */,
           },
         ]}
         pointerEvents="none"

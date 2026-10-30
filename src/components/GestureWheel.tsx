@@ -182,7 +182,7 @@ export default function GestureWheel({
               {
                 top: (height - GESTURE_WHEEL_ITEM_H) / 2 - 3,
                 /* 31 okt 2026 (operator: "omlijning van de pil van tijd moet weg"): enkel de tint. */
-                backgroundColor: `${accent}38`,
+                backgroundColor: `${accent}3D` /* lichtste glas, gelijk aan de vulling van de duurcirkel (31 okt 2026) */,
               },
             ]}
           />
