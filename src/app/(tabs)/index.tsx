@@ -1348,7 +1348,18 @@ function AudioScreen({
      commit klaar is; 2e rAF wacht tot native layout pass klaar is. Op
      dat moment heeft onLayout op de hermounting libList + cards de
      nieuwe Y-waarden geschreven en kunnen we ze veilig optellen. */
-  const openSerieFromSearch = (seriesName: string, expand: boolean) => {
+  const openSerieFromSearch = (seriesName: string, expand: boolean, playUrl?: string) => {
+    /* 30 okt 2026 (gevonden bij de store-screenshots: een tik op een zoekresultaat wiste enkel de zoekopdracht): de series
+       staan sinds de september-herbouw niet meer op deze pagina maar op het pijler-scherm. Daarheen, meteen bij die serie;
+       een tik op een sessie start ook die sessie. */
+    const targetPillar = SERIES_PILLAR[seriesName];
+    if (targetPillar) {
+      setSearchQuery('');
+      setSearchOpen(false);
+      const q = `series=${encodeURIComponent(seriesName)}` + (playUrl ? `&play=${encodeURIComponent(playUrl)}` : '');
+      navigateAway(() => router.push(`/library/pillar/${targetPillar}?${q}` as never));
+      return;
+    }
     if (expand) setExpandedSeries(seriesName);
     setSearchQuery('');
     requestAnimationFrame(() => {
@@ -2334,7 +2345,7 @@ function AudioScreen({
                           key={'sess:' + sess.url}
                           style={s.acRow}
                           onPress={() =>
-                            openSerieFromSearch(sess.series, true)
+                            openSerieFromSearch(sess.series, true, sess.url)
                           }
                           androidRipple={{
                             color: 'rgba(255,255,255,0.04)',

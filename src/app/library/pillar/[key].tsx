@@ -166,7 +166,7 @@ function TrackRow({
 }
 
 export default function PillarFocusScreen() {
-  const { key, play } = useLocalSearchParams<{ key: string; play?: string }>();
+  const { key, play, series } = useLocalSearchParams<{ key: string; play?: string; series?: string }>();
   const pillar = key as Pillar;
   const meta = PILLAR_META[pillar];
   const openGated = useGatedOpenSession();
@@ -220,6 +220,16 @@ export default function PillarFocusScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [play, groups]);
 
+  /* 30 okt 2026 (zoeken in de Audio Library: een tik op een resultaat deed niets): `?series=<naam>` scrollt meteen naar die
+     serie, één keer, zodra haar kop gemeten is. */
+  const scrollRef = useRef<ScrollView>(null);
+  const hasScrolledToSeries = useRef(false);
+  const onGroupLayout = (name: string, y: number) => {
+    if (!series || hasScrolledToSeries.current || name !== series) return;
+    hasScrolledToSeries.current = true;
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 16), animated: true }));
+  };
+
   const goBack = () => {
     if (router.canGoBack()) router.back();
     /* Operator ("bij back moet ik naar de audio library gaan niet naar
@@ -256,6 +266,7 @@ export default function PillarFocusScreen() {
         </Tap>
       </View>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           s.scroll,
           /* + insets.bottom: de standalone mini-speler staat BOVEN de Android-
@@ -332,7 +343,8 @@ export default function PillarFocusScreen() {
            genummerde rijen eronder, geen expand/collapse: dit scherm
            bestaat juist om alles in één keer te tonen. */}
         {groups.map((group, gi) => (
-          <Reveal key={group.name} i={3 + gi}>
+          <View key={group.name} onLayout={(e) => onGroupLayout(group.name, e.nativeEvent.layout.y)}>
+          <Reveal i={3 + gi}>
           <View style={s.group}>
             {/* Operator ("ik mis inspired by / VIBEZCORE Original Series
                in de library, lijkt mij wel belangrijk"): stond al in de
@@ -358,6 +370,7 @@ export default function PillarFocusScreen() {
             </BlurView>
           </View>
           </Reveal>
+          </View>
         ))}
       </ScrollView>
       <MiniPlayer standalone />
