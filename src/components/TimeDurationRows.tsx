@@ -3,9 +3,16 @@
    dezelfde duurcirkel als State Control (met je vinger over de rand slepen). Gedeeld door de breathwork-
    (SlotTimeEditor) en de State Control-agenda; de cirkel zelf geeft het scherm mee (kleur en bereik verschillen). */
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import TimeWheel from '@/components/TimeWheel';
 import { BrandFonts } from '@/constants/theme';
+
+/* De duurcirkel in een blad: groeit en krimpt met de schermhoogte (30 okt 2026: op de A16 viel de onderkant van het
+   scherm) — 140 op een klein toestel, tot 190 op een groot. */
+const H = Dimensions.get('window').height;
+export const SHEET_DIAL_SIZE = Math.round(Math.max(140, Math.min(190, H - 740)));
+/** Hoogste hoogte voor de inhoud van het blad (onder de kop); wat niet past, scrolt. */
+export const SHEET_BODY_MAX_H = Math.round(H - 250);
 
 export default function TimeDurationRows({
   time,
@@ -48,6 +55,6 @@ const rs = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 4,
   },
-  labelGap: { marginTop: 18, marginBottom: 10 },
+  labelGap: { marginTop: 12, marginBottom: 6 },
   dial: { alignItems: 'center' },
 });

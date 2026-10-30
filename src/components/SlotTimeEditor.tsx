@@ -4,9 +4,9 @@
    dagdeel kunnen kiezen en dan de tijd binnen dat dagdeel; dagdeel moet meteen duidelijk zijn tussen welke uren").
    Wisselt het dagdeel, dan toont het blad meteen welke toestand de sessie daar wordt (zelfde regels als bij het
    opbouwen) — er verandert niets stil. Het blad zelf (kop + Done) hoort bij het scherm dat dit gebruikt. */
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Tap from '@/components/Tap';
-import TimeDurationRows from '@/components/TimeDurationRows';
+import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
 import { ColorDurationDial } from '@/app/bracelet-control';
 import { BrandFonts } from '@/constants/theme';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
@@ -93,8 +93,14 @@ export default function SlotTimeEditor({
     : [...durations.options, { value: draft.minutes, label: `${draft.minutes} min` }].sort((a, b) => a.value - b.value);
 
   return (
-    /* Volle breedte, ook in bladen die hun inhoud centreren (plan-review, "Your plan"). */
-    <View style={{ alignSelf: 'stretch' }}>
+    /* Volle breedte, ook in bladen die hun inhoud centreren (plan-review, "Your plan"). Past het niet (klein scherm),
+       dan scrolt de inhoud in plaats van van het scherm te vallen. */
+    <ScrollView
+      style={{ alignSelf: 'stretch', maxHeight: SHEET_BODY_MAX_H }}
+      bounces={false}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+    >
       {/* 30 okt 2026 (operator: "de dagdelen zien er heel sheet-achtig uit", "niet overzichtelijk"): één segmentbalk,
           het gekozen dagdeel als witte pil met donkere tekst (neutrale knop-regel), de uren kort eronder. */}
       <View style={es.segTrack}>
@@ -145,6 +151,7 @@ export default function SlotTimeEditor({
             allowed={durationOptions.map((o) => o.value)}
             recommended={durations.recommended != null && draft.minutes === durations.recommended}
             onChange={(v) => onChange({ ...draft, minutes: v })}
+            size={SHEET_DIAL_SIZE}
           />
         }
       />
@@ -153,7 +160,7 @@ export default function SlotTimeEditor({
           <Text style={es.removeTxt}>Remove from plan</Text>
         </Tap>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -172,7 +179,7 @@ const es = StyleSheet.create({
   segTxtOn: { color: '#0a0a0a' },
   segRange: { fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
   segRangeOn: { color: 'rgba(10,10,10,0.6)' },
-  noteSpacer: { height: 18 },
-  removeBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 8, paddingHorizontal: 16 },
+  noteSpacer: { height: 14 },
+  removeBtn: { alignSelf: 'center', marginTop: 10, paddingVertical: 8, paddingHorizontal: 16 },
   removeTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ef4444' },
 });

@@ -81,7 +81,7 @@ import Tap from '@/components/Tap';
 import { openStateControl } from '@/utils/state-control-ui';
 import ConfirmCard from '@/components/ConfirmCard';
 import { DurationWheel } from '@/components/DurationWheel';
-import TimeDurationRows from '@/components/TimeDurationRows';
+import TimeDurationRows, { SHEET_BODY_MAX_H, SHEET_DIAL_SIZE } from '@/components/TimeDurationRows';
 import { ColorDurationDial } from '@/app/bracelet-control';
 import SessionSheetHeader from '@/components/SessionSheetHeader';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
@@ -810,6 +810,7 @@ export default function BraceletAgendaScreen() {
             return (
               <>
                 <SessionSheetHeader title={meta.name} subtitle="State Control" accent={meta.color} onDone={() => void applyTimeEdit()} />
+                <ScrollView style={{ maxHeight: SHEET_BODY_MAX_H }} bounces={false} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 <TimeDurationRows
                   time={timeEdit.time}
                   timeOptions={timeOptions}
@@ -824,6 +825,7 @@ export default function BraceletAgendaScreen() {
                       value={timeEdit.minutes}
                       recommended={timeEdit.minutes === meta.defaultMinutes}
                       onChange={(v) => setTimeEdit((cur) => (cur ? { ...cur, minutes: v } : cur))}
+                      size={SHEET_DIAL_SIZE}
                     />
                   }
                 />
@@ -837,6 +839,7 @@ export default function BraceletAgendaScreen() {
                 >
                   <Text style={s.actionRemoveTxt}>Remove from plan</Text>
                 </Tap>
+                </ScrollView>
               </>
             );
           })()}
