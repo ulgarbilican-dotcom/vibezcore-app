@@ -158,7 +158,10 @@ export default function GestureWheel({
             : next;
     })
     .onEnd((e) => {
-      const v = -e.velocityY;
+      /* 31 okt 2026: snelheid begrensd — een harde flick draait hooguit een tiental rijen verder (zoals de wekker van
+         het toestel), nooit de hele dag rond. */
+      const MAX_V = 2200;
+      const v = Math.max(-MAX_V, Math.min(MAX_V, -e.velocityY));
       if (Math.abs(v) < 60) {
         settle(offset.value);
         return;
