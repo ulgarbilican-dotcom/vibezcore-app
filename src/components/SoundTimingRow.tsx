@@ -76,7 +76,7 @@ export default function SoundTimingRow({ separatorStyle }: { separatorStyle?: Vi
           <Text style={rs.btnTxt}>{shown.calibrated ? 'Adjust' : 'Set up'}</Text>
         </View>
       </Tap>
-      {open ? <SoundTimingSheet visible output={open} onClose={() => setOpen(null)} /> : null}
+      {open ? <SoundTimingSheet visible fineTune output={open} onClose={() => setOpen(null)} /> : null}
     </>
   );
 }

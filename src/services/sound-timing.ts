@@ -53,9 +53,11 @@ export const CALIBRATION_BPM = 70;
 export const CALIBRATION_PERIOD_MS = Math.round(60000 / CALIBRATION_BPM);
 
 /** Mensen tikken gemiddeld iets VÓÓR de slag die ze horen ("negative mean
- *  asynchrony", 20–80 ms; Repp 2005). Dat tellen we erbij op; de stap
- *  Earlier/Later vangt de rest per persoon op. */
-export const TAP_ANTICIPATION_MS = 30;
+ *  asynchrony": 20–80 ms, niet-muzikanten gemiddeld ~50 ms; Repp 2005,
+ *  Aschersleben 2002). Min ~10 ms omdat de app een tik iets ná het aanraken
+ *  registreert → vast 40 ms. Operator, 31 okt 2026: één stap, de gebruiker
+ *  regelt niets bij; Earlier/Later is enkel optioneel (Audio & Haptics). */
+export const TAP_ANTICIPATION_MS = 40;
 /** Eerste tikken weglaten: dan zoekt iedereen nog de maat. */
 export const DISCARD_FIRST_TAPS = 2;
 export const TAPS_NEEDED = 10;

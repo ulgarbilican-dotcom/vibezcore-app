@@ -2,15 +2,17 @@
    VIBEZCORE — Sound timing (31 okt 2026, operator: "ja" — per Bluetooth-
    toestel het hartslaggeluid gelijk zetten met de trilling).
 
-   Drie stappen in één glazen blad (onderblad-protocol: Done rechtsboven):
-     1. uitleg + Start;
-     2. meetikken: de proefslag (70 bpm, enkel geluid — een trilling zou het
-        tikken sturen) via exact dezelfde weg als een sessie; na 10 tikken
-        (de eerste 2 tellen niet) zet de mediaan de correctie;
-     3. nakijken: geluid + trilling samen, Earlier/Later per 10 ms, Save.
-   Elke wijziging wordt meteen bewaard en is bij de volgende slag hoorbaar.
-   Nooit tijdens een spelend State Control-ritme (twee slagen door elkaar).
-   Berekening en bronnen: docs/VIBEZCORE_SCIENCE_A_TOT_Z.md (Sound timing).
+   Eén stap (operator: "moet gebruiker dat zelf doen?" → enkel meetikken):
+     · uitleg + Start → meetikken op de proefslag (70 bpm, enkel geluid — een
+       trilling zou het tikken sturen), via exact dezelfde weg als een
+       sessie; na 10 tikken (de eerste 2 tellen niet) zet de mediaan + de
+       gemiddelde voorsprong van tikken de correctie → bewaard, klaar.
+     · Fijnregelen (Earlier/Later per 10 ms, geluid + trilling samen) is
+       optioneel en enkel te openen vanuit Audio & Haptics (`fineTune`),
+       nooit in de eerste keer / de tip.
+   Onderblad-protocol: Done rechtsboven. Nooit tijdens een spelend State
+   Control-ritme (twee slagen door elkaar).
+   Berekening en bronnen: docs/VIBEZCORE_SCIENCE_A_TOT_Z.md §3.11.
    ───────────────────────────────────────────────────────────────────────── */
 
 import BalancedText from '@/components/BalancedText';
@@ -24,7 +26,6 @@ import {
   TAPS_NEEDED,
   clampCorrection,
   estimateLateMs,
-  setCalibrationVibrate,
   setSoundCorrection,
   startCalibrationBeat,
   stopCalibrationBeat,
@@ -35,16 +36,19 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type Step = 'intro' | 'tap' | 'retry' | 'check';
+type Step = 'intro' | 'tap' | 'retry' | 'done' | 'fine';
 const NUDGE_MS = 10;
 
 export default function SoundTimingSheet({
   visible,
   output,
+  fineTune = false,
   onClose,
 }: {
   visible: boolean;
   output: SoundOutput;
+  /** Vanuit Audio & Haptics: ook "Fine-tune" aanbieden. */
+  fineTune?: boolean;
   /** `saved`: er is een correctie bewaard voor dit toestel. */
   onClose: (saved: boolean) => void;
 }) {
@@ -74,18 +78,29 @@ export default function SoundTimingSheet({
 
   const close = () => {
     stopCalibrationBeat();
-    onClose(saved.current);
+    onClose(saved.current || output.calibrated);
+  };
+
+  const guardBusy = () => {
+    const b = isStateRhythmPlaying();
+    setBusy(b);
+    return b;
   };
 
   const startTapping = async () => {
-    if (isStateRhythmPlaying()) {
-      setBusy(true);
-      return;
-    }
+    if (guardBusy()) return;
+    stopCalibrationBeat();
     taps.current = [];
     setTapCount(0);
     setStep('tap');
     firstBeat.current = await startCalibrationBeat(false);
+  };
+
+  const startFineTune = async () => {
+    if (guardBusy()) return;
+    stopCalibrationBeat();
+    setStep('fine');
+    await startCalibrationBeat(true);
   };
 
   const onTap = () => {
@@ -97,17 +112,16 @@ export default function SoundTimingSheet({
     const n = taps.current.length;
     setTapCount(n);
     if (n < TAPS_NEEDED) return;
+    stopCalibrationBeat();
     const late = estimateLateMs(taps.current, firstBeat.current);
     if (late === null) {
-      stopCalibrationBeat();
       setStep('retry');
       return;
     }
     correction.current = clampCorrection(correction.current + late);
     setSoundCorrection(output.key, correction.current);
     saved.current = true;
-    setCalibrationVibrate(true);
-    setStep('check');
+    setStep('done');
   };
 
   const nudge = (deltaMs: number) => {
@@ -115,6 +129,8 @@ export default function SoundTimingSheet({
     setSoundCorrection(output.key, correction.current);
     saved.current = true;
   };
+
+  const already = output.calibrated && !saved.current;
 
   return (
     <GlassSheet visible={visible} onClose={close}>
@@ -144,8 +160,9 @@ export default function SoundTimingSheet({
           <View key="intro">
             <Reveal i={0}>
               <BalancedText style={st.body}>
-                Bluetooth headphones play sound slightly late, and each pair is different. Tap along with the
-                heartbeat once and every pulse and sound will land together on this device.
+                {already
+                  ? 'The sound timing is set for these headphones. Tap along again if the heartbeat and the pulse drift apart.'
+                  : 'Bluetooth headphones play sound slightly late, and each pair is different. Tap along with the heartbeat for about ten seconds and every pulse and sound will land together.'}
               </BalancedText>
             </Reveal>
             {busy ? (
@@ -160,9 +177,16 @@ export default function SoundTimingSheet({
                 style={[CTA.container, st.cta, busy && CTA.disabled]}
                 accessibilityRole="button"
               >
-                <Text style={[CTA.label, busy && CTA.labelDisabled]}>Start</Text>
+                <Text style={[CTA.label, busy && CTA.labelDisabled]}>{already ? 'Tap along again' : 'Start'}</Text>
               </Tap>
             </Reveal>
+            {fineTune && already && !busy ? (
+              <Reveal i={3}>
+                <Tap onPress={startFineTune} style={[st.glassPill, st.cta]} accessibilityRole="button">
+                  <Text style={st.glassPillTxt}>Fine-tune</Text>
+                </Tap>
+              </Reveal>
+            ) : null}
           </View>
         ) : null}
 
@@ -207,35 +231,54 @@ export default function SoundTimingSheet({
           </View>
         ) : null}
 
-        {step === 'check' ? (
-          <View key="check">
+        {step === 'done' ? (
+          <View key="done">
+            <Reveal i={0}>
+              <Text style={st.heading}>Sound timing set</Text>
+            </Reveal>
+            <Reveal i={1}>
+              <BalancedText style={[st.body, st.bodyCenter]}>
+                The heartbeat now lands with every pulse on these headphones.
+              </BalancedText>
+            </Reveal>
+            <Reveal i={2}>
+              <Tap onPress={close} style={[CTA.container, st.cta]} accessibilityRole="button">
+                <Text style={CTA.label}>Done</Text>
+              </Tap>
+            </Reveal>
+            {fineTune ? (
+              <Reveal i={3}>
+                <Tap onPress={startFineTune} hitSlop={10} accessibilityRole="button" style={st.linkTouch}>
+                  <Text style={st.link}>Fine-tune</Text>
+                </Tap>
+              </Reveal>
+            ) : null}
+          </View>
+        ) : null}
+
+        {step === 'fine' ? (
+          <View key="fine">
             <Reveal i={0}>
               <Text style={st.heading}>Feel and listen</Text>
             </Reveal>
             <Reveal i={1}>
               <BalancedText style={st.body}>
-                The sound and the pulse should now land together. If the sound still comes before or after the
-                pulse, move it.
+                If the sound still comes before or after the pulse, move it until both land together.
               </BalancedText>
             </Reveal>
             <Reveal i={2}>
               <View style={st.nudgeRow}>
-                <Tap onPress={() => nudge(NUDGE_MS)} style={st.nudge} accessibilityRole="button">
-                  <Text style={st.nudgeTxt}>Earlier</Text>
+                <Tap onPress={() => nudge(NUDGE_MS)} style={[st.glassPill, st.flex]} accessibilityRole="button">
+                  <Text style={st.glassPillTxt}>Earlier</Text>
                 </Tap>
-                <Tap onPress={() => nudge(-NUDGE_MS)} style={st.nudge} accessibilityRole="button">
-                  <Text style={st.nudgeTxt}>Later</Text>
+                <Tap onPress={() => nudge(-NUDGE_MS)} style={[st.glassPill, st.flex]} accessibilityRole="button">
+                  <Text style={st.glassPillTxt}>Later</Text>
                 </Tap>
               </View>
             </Reveal>
             <Reveal i={3}>
               <Tap onPress={close} style={[CTA.container, st.cta]} accessibilityRole="button">
-                <Text style={CTA.label}>Save</Text>
-              </Tap>
-            </Reveal>
-            <Reveal i={4}>
-              <Tap onPress={startTapping} hitSlop={10} accessibilityRole="button" style={st.linkTouch}>
-                <Text style={st.link}>Tap along again</Text>
+                <Text style={CTA.label}>Done</Text>
               </Tap>
             </Reveal>
           </View>
@@ -260,10 +303,12 @@ const st = StyleSheet.create({
   doneTouch: { minHeight: 48, minWidth: 48, paddingHorizontal: 8, marginRight: -8, justifyContent: 'center', alignItems: 'flex-end' },
   done: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   body: { fontFamily: BrandFonts.regular, fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.8)', marginBottom: 24 },
+  bodyCenter: { textAlign: 'center' },
   note: { fontFamily: BrandFonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 14 },
   heading: { fontFamily: BrandFonts.semibold, fontSize: 17, color: '#ffffff', textAlign: 'center', marginBottom: 22 },
-  cta: { marginTop: 4 },
+  cta: { marginTop: 4, marginBottom: 8 },
   center: { alignItems: 'center' },
+  flex: { flex: 1 },
   pad: {
     width: 168,
     height: 168,
@@ -279,8 +324,7 @@ const st = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.22)' },
   dotOn: { backgroundColor: '#ffffff' },
   nudgeRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  nudge: {
-    flex: 1,
+  glassPill: {
     height: 52,
     borderRadius: 999,
     alignItems: 'center',
@@ -289,7 +333,7 @@ const st = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
   },
-  nudgeTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
+  glassPillTxt: { fontFamily: BrandFonts.semibold, fontSize: 15, color: '#ffffff' },
   linkTouch: { alignSelf: 'center', paddingVertical: 14 },
   link: { fontFamily: BrandFonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.6)' },
 });

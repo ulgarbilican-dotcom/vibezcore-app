@@ -370,11 +370,16 @@ pace": meten / zelf invullen / gemiddelde).
   niet; per tik de afwijking t.o.v. de dichtstbijzijnde slag, mediaan van de
   tikken die binnen 120 ms van de mediaan vallen (≥ 75 % moet dat doen,
   anders "opnieuw"). 🟢 Mensen tikken gemiddeld 20–80 ms vóór een gehoorde
-  slag ("negative mean asynchrony", Repp 2005, *Psychon Bull Rev*); wij
-  tellen er 30 ms bij op. 🟡 Een JS-tik wordt een paar ms later geregistreerd
-  dan de vinger het scherm raakt — tegengesteld aan de voorsprong. Beide
-  per persoon anders, daarom daarna stap 2: geluid + trilling samen, met
-  Earlier/Later per 10 ms tot ze samenvallen.
+  slag ("negative mean asynchrony"; Repp 2005, *Psychon Bull Rev*;
+  niet-muzikanten gemiddeld ~50 ms, Aschersleben 2002, *Brain Cogn*).
+  🟡 Een tik wordt in de app ~10 ms ná het aanraken geregistreerd —
+  tegengesteld aan die voorsprong. **Eigen keuze: vast 40 ms** erbij.
+- **Eén stap (operator, 31 okt 2026: "moet gebruiker dat zelf doen?"):**
+  meetikken (~10 s), opslaan, klaar — ook vanuit de tip vóór Play. Per persoon
+  kan de voorsprong 20–30 ms afwijken van 40; wie dat merkt kan vanuit
+  Audio & Haptics → Sound timing optioneel fijnregelen (geluid + trilling
+  samen, Earlier/Later per 10 ms). Eén keer per toestel; de sleutel (adres)
+  blijft gelijk na opnieuw koppelen.
 
 ---
 
@@ -453,6 +458,7 @@ pace": meten / zelf invullen / gemiddelde).
 | Telles et al. 2017 | wisselend-neusgat-ademen en aandacht | 🟡 | gedeeltelijk |
 | Weil — 4-7-8 | traditie; start met 4 cycli | ⚪ | ✔ |
 | Repp 2005, *Psychon Bull Rev* 12:969 | meetikken op een maat: tikken vallen gemiddeld 20–80 ms vóór de slag | 🟢 | ✘ uit kennis, niet herlezen |
+| Aschersleben 2002, *Brain Cogn* 48:66 | negatieve asynchronie bij meetikken, niet-muzikanten ~50 ms | 🟢 | ✘ uit kennis, niet herlezen |
 | Costa 2016; Patchitt 2025; Kim 2025; Zhou 2020; korte yoga-nidra-studie | genoemd in de externe review | — | ✘ niet gelezen — niet als claim gebruiken |
 
 ---
