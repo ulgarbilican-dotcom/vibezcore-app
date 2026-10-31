@@ -36,6 +36,9 @@ export type BeatPlan = {
 type NativeModule = {
   hapticsSupported(): boolean;
   outputExtraMs?(): number;
+  audioOutputDevice?(): IosAudioOutputDevice | null;
+  setAudioCorrection?(key: string, ms: number): void;
+  clearAudioCorrection?(key: string): void;
   begin(owner: string): void;
   end(owner: string): void;
   releaseSession?(): void;
@@ -154,6 +157,39 @@ export function setSessionBeatHaptics(on: boolean): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** Sound timing (31 okt 2026): huidige Bluetooth-uitgang met zijn correctie. */
+export type IosAudioOutputDevice = {
+  key: string;
+  name: string;
+  reportedMs: number;
+  correctionMs: number;
+  calibrated: boolean;
+};
+
+export function getIosAudioOutputDevice(): IosAudioOutputDevice | null {
+  try {
+    return native?.audioOutputDevice?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function setIosAudioCorrection(key: string, ms: number): void {
+  try {
+    native?.setAudioCorrection?.(key, ms);
+  } catch {
+    /* stil */
+  }
+}
+
+export function clearIosAudioCorrection(key: string): void {
+  try {
+    native?.clearAudioCorrection?.(key);
+  } catch {
+    /* stil */
   }
 }
 

@@ -16,6 +16,11 @@ import { Platform } from 'react-native';
 let cachedAt = 0;
 let cached = 0;
 
+/** Na een nieuwe Sound timing-correctie meteen opnieuw vragen (31 okt 2026). */
+export function resetAudioOutputExtraCache(): void {
+  cachedAt = 0;
+}
+
 export function audioOutputExtraMs(): number {
   const now = Date.now();
   if (now - cachedAt < 2000) return cached;
@@ -33,7 +38,8 @@ export function audioOutputExtraMs(): number {
   } catch {
     v = 0;
   }
-  cached = Number.isFinite(v) ? Math.max(0, Math.min(450, v)) : 0;
+  /* 600: gemeten (max 450) + Sound timing-correctie, zelfde grens als native. */
+  cached = Number.isFinite(v) ? Math.max(0, Math.min(600, v)) : 0;
   cachedAt = now;
   return cached;
 }

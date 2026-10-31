@@ -21,43 +21,99 @@ import android.os.SystemClock
 object AudioLatency {
   private const val BLUETOOTH_DEFAULT_MS = 200L
   private const val MAX_MS = 450L
+  /** Totaal (gemeten + correctie) nooit buiten deze grenzen. */
+  private const val TOTAL_MAX_MS = 600L
+  const val CORRECTION_MIN_MS = -200L
+  const val CORRECTION_MAX_MS = 400L
   private const val CACHE_MS = 10_000L
+  private const val PREFS = "vz_audio_latency"
 
   @Volatile private var cachedAt = 0L
   @Volatile private var cached = 0L
+  @Volatile private var cachedReported = 0L
+  @Volatile private var cachedKey: String? = null
+  @Volatile private var cachedName = ""
 
-  /** Extra vertraging (ms) van de huidige media-uitgang t.o.v. de luidspreker. */
+  /* 31 okt 2026 (operator: "het moet voor alle toestellen met bluetooth
+     connectie werken"): de vertraging die oortjes zelf doorgeven klopt niet
+     altijd (gemeten: het geluid kwam NA de trilling). Per Bluetooth-toestel
+     bewaren we daarom een correctie in ms, die de gebruiker één keer instelt
+     met Sound timing (meetikken op de slag). Gemeten + correctie = wat stem,
+     hartslaggeluid en tikken vooruit starten — overal in de app. */
+
+  /** Extra vertraging (ms) van de huidige media-uitgang t.o.v. de
+   *  luidspreker, inclusief de bewaarde correctie van dit toestel. */
   fun extraMs(context: Context): Long {
+    refresh(context)
+    return cached
+  }
+
+  /** Huidige Bluetooth-uitgang, of null (luidspreker/bedraad). */
+  fun currentDevice(context: Context): Map<String, Any>? {
+    refresh(context)
+    val key = cachedKey ?: return null
+    val p = prefs(context)
+    return mapOf(
+      "key" to key,
+      "name" to cachedName,
+      "reportedMs" to cachedReported.toDouble(),
+      "correctionMs" to p.getLong(key, 0L).toDouble(),
+      "calibrated" to p.contains(key),
+    )
+  }
+
+  fun setCorrection(context: Context, key: String, ms: Long) {
+    prefs(context).edit().putLong(key, ms.coerceIn(CORRECTION_MIN_MS, CORRECTION_MAX_MS)).apply()
+    cachedAt = 0L
+  }
+
+  fun clearCorrection(context: Context, key: String) {
+    prefs(context).edit().remove(key).apply()
+    cachedAt = 0L
+  }
+
+  private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+  private fun refresh(context: Context) {
     val now = SystemClock.elapsedRealtime()
-    if (now - cachedAt < CACHE_MS) return cached
+    if (cachedAt != 0L && now - cachedAt < CACHE_MS) return
+    var key: String? = null
+    var name = ""
+    var reported = 0L
     val value = try {
-      if (bluetoothOutput(context)) {
+      val dev = bluetoothDevice(context)
+      if (dev != null) {
+        name = dev.productName?.toString()?.trim().orEmpty()
+        val addr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) dev.address.orEmpty() else ""
+        key = "bt:" + (addr.ifBlank { name.ifBlank { "unknown" } })
         val m = measuredBluetoothMs()
-        if (m in 60L..MAX_MS) m else BLUETOOTH_DEFAULT_MS
+        reported = if (m in 60L..MAX_MS) m else BLUETOOTH_DEFAULT_MS
+        val corr = prefs(context).getLong(key, 0L)
+        (reported + corr).coerceIn(0L, TOTAL_MAX_MS)
       } else {
         0L
       }
     } catch (_: Exception) {
       0L
     }
-    /* Meting 31 okt 2026: volgen of de vertraging van de oortjes tijdens
-       een sessie verandert (operator: eerste ~20 s via oortjes niet gelijk). */
-    if (value != cached || cachedAt == 0L) android.util.Log.d("VZAudio", "extraMs=$value")
+    /* Meting 31 okt 2026: volgen of de vertraging tijdens een sessie verandert. */
+    if (value != cached || cachedAt == 0L) android.util.Log.d("VZAudio", "extraMs=$value reported=$reported device=$key")
+    cachedKey = key
+    cachedName = name
+    cachedReported = reported
     cached = value
     cachedAt = now
-    return value
   }
 
-  /** Media gaat naar Bluetooth zodra er een Bluetooth-media-uitgang is
-   *  (Android routeert media automatisch daarheen). */
-  private fun bluetoothOutput(context: Context): Boolean {
+  /** De Bluetooth-media-uitgang (Android routeert media automatisch daarheen). */
+  private fun bluetoothDevice(context: Context): AudioDeviceInfo? {
     val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     val bt = mutableSetOf(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       bt.add(AudioDeviceInfo.TYPE_BLE_HEADSET)
       bt.add(AudioDeviceInfo.TYPE_BLE_SPEAKER)
     }
-    return am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { it.type in bt }
+    return am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type in bt }
   }
 
   /** Latentie van een media-AudioTrack min zijn eigen buffer = wat de

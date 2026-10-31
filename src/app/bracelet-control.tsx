@@ -34,6 +34,7 @@ import { QaPressable } from '@/components/QaPressable';
 import PremiumNote from '@/components/PremiumNote';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow, { useWatchStatus } from '@/components/WatchHapticsRow';
+import SoundTimingRow, { SoundTimingHint } from '@/components/SoundTimingRow';
 import AsyncStorageLockNotice from '@react-native-async-storage/async-storage';
 import ConfirmCard from '@/components/ConfirmCard';
 import PressScale from '@/components/PressScale';
@@ -3757,6 +3758,10 @@ function ActiveSessionScreen({
            SESSION als rustige tekst eronder (een stop is onomkeerbaar, dus
            niet de knop die opvalt). Wat de knoppen doen is ongewijzigd. */}
         <View style={s.sessionControlColumn}>
+          {/* 31 okt 2026: eenmalige tip per Bluetooth-toestel vóór de eerste
+              Play, als het geluid aan staat en dat toestel nog niet is
+              ingesteld. Blokkeert nooit. */}
+          <SoundTimingHint show={unplayed && sessionHear} />
           {/* Audio-voorrang (19 okt 2026, operator): speelt de Audio Library,
               dan geen hartslaggeluid — haptiek en beeld lopen door. */}
           {sessionLibraryPlaying && sessionHear ? (
@@ -3981,6 +3986,9 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             void setWatchHapticsEnabled(v);
           }}
         />
+        {/* 31 okt 2026 (operator: "ja"): het hartslaggeluid per Bluetooth-
+            toestel gelijk zetten met de trilling. Enkel via Bluetooth. */}
+        <SoundTimingRow separatorStyle={s.avWatchSep} />
       </View>
     </GlassSheet>
   );

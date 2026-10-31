@@ -204,6 +204,33 @@ class StateHapticsModule : Module() {
 
     /** Extra geluidsvertraging van de huidige uitgang t.o.v. de luidspreker
      *  (Bluetooth: gemeten, anders 0) — zie AudioLatency.kt. */
+    /** Sound timing (31 okt 2026): de huidige Bluetooth-uitgang met zijn
+     *  bewaarde correctie, of null (luidspreker/bedraad). */
+    Function("audioOutputDevice") {
+      AudioLatency.currentDevice(context)
+    }
+
+    Function("setAudioCorrection") { key: String, ms: Double ->
+      AudioLatency.setCorrection(context, key, Math.round(ms))
+    }
+
+    Function("clearAudioCorrection") { key: String ->
+      AudioLatency.clearCorrection(context, key)
+    }
+
+    /** Proefslag voor Sound timing; geeft het wandklok-moment van slag 0. */
+    Function("startCalibrationBeat") { periodMs: Double, vibrate: Boolean ->
+      CalibrationBeat.start(context, Math.round(periodMs), vibrate).toDouble()
+    }
+
+    Function("setCalibrationVibrate") { on: Boolean ->
+      CalibrationBeat.setVibrate(on)
+    }
+
+    Function("stopCalibrationBeat") {
+      CalibrationBeat.stop()
+    }
+
     Function("audioOutputExtraMs") {
       AudioLatency.extraMs(context).toDouble()
     }

@@ -346,6 +346,36 @@ pace": meten / zelf invullen / gemiddelde).
   de telefoon stuurt begintempo, eindtempo, glijtijd en resterende tijd.
   Bevestigt het horloge, dan zwijgt de telefoon — één ritme.
 
+### 3.11 Sound timing — hartslaggeluid via Bluetooth (31 okt 2026)
+
+- **Probleem (gemeten op de A16):** oortjes melden zelf hun vertraging
+  (Android AudioTrack-latentie / iPhone outputLatency; hier 220 ms + 36 ms
+  telefoonbuffer = 256 ms). De app start het geluid exact zoveel vroeger,
+  maar het geluid kwam toch NA de trilling (operator). Elke automatische
+  meting (ook `getTimestamp`) leest dezelfde melding van de oortjes — een
+  verkeerde melding is van op de telefoon niet te zien. Een vaste extra
+  marge zou enkel voor één paar oortjes kloppen.
+- **Waarom het vooral bij een traag tempo opvalt:** een vaste fout van
+  bv. 150 ms geeft bij 67 bpm vier losse tikken per slag (tik · boem · tik ·
+  boem); bij 110 bpm valt de tweede tik (dub na 164 ms) bijna samen met de
+  eerste boem — klinkt dan "gelijk". Daarom leek het enkel de eerste ~20 s
+  van Boost (aanloop) te haperen.
+- **Eigen keuze:** per Bluetooth-toestel één correctie in ms, ingesteld door
+  de gebruiker (Audio & Haptics → Sound timing). Bewaard op het toestel
+  (Android SharedPreferences, iPhone UserDefaults), sleutel = adres/uid van
+  de uitgang. Geldt overal: State Control-hartslaggeluid, ademstem,
+  rusthartslag-pagina. Grenzen: correctie −200…+400 ms, totaal 0…600 ms.
+- **Meting:** proefslag 70 bpm via dezelfde weg als een sessie, eerst enkel
+  geluid (een trilling zou het tikken sturen). 10 tikken, de eerste 2 tellen
+  niet; per tik de afwijking t.o.v. de dichtstbijzijnde slag, mediaan van de
+  tikken die binnen 120 ms van de mediaan vallen (≥ 75 % moet dat doen,
+  anders "opnieuw"). 🟢 Mensen tikken gemiddeld 20–80 ms vóór een gehoorde
+  slag ("negative mean asynchrony", Repp 2005, *Psychon Bull Rev*); wij
+  tellen er 30 ms bij op. 🟡 Een JS-tik wordt een paar ms later geregistreerd
+  dan de vinger het scherm raakt — tegengesteld aan de voorsprong. Beide
+  per persoon anders, daarom daarna stap 2: geluid + trilling samen, met
+  Earlier/Later per 10 ms tot ze samenvallen.
+
 ---
 
 ## 4. Audio Library
@@ -422,6 +452,7 @@ pace": meten / zelf invullen / gemiddelde).
 | Laborde et al. 2021 | 5/10/15/20 min traag ademen even goed tijdens de sessie | 🟡 | ✔ |
 | Telles et al. 2017 | wisselend-neusgat-ademen en aandacht | 🟡 | gedeeltelijk |
 | Weil — 4-7-8 | traditie; start met 4 cycli | ⚪ | ✔ |
+| Repp 2005, *Psychon Bull Rev* 12:969 | meetikken op een maat: tikken vallen gemiddeld 20–80 ms vóór de slag | 🟢 | ✘ uit kennis, niet herlezen |
 | Costa 2016; Patchitt 2025; Kim 2025; Zhou 2020; korte yoga-nidra-studie | genoemd in de externe review | — | ✘ niet gelezen — niet als claim gebruiken |
 
 ---

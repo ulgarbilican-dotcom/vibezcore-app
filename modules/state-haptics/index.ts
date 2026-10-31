@@ -26,6 +26,12 @@ type StateHapticsNativeModule = {
   stopSession(): Promise<void>;
   hasVibrator(): boolean;
   audioOutputExtraMs?(): number;
+  audioOutputDevice?(): AudioOutputDevice | null;
+  setAudioCorrection?(key: string, ms: number): void;
+  clearAudioCorrection?(key: string): void;
+  startCalibrationBeat?(periodMs: number, vibrate: boolean): number;
+  setCalibrationVibrate?(on: boolean): void;
+  stopCalibrationBeat?(): void;
   sessionStatus(): NativeSessionStatus;
   dismissCompletionNotice(): void;
   addListener(
@@ -212,6 +218,66 @@ export function setNativeSessionHaptics(on: boolean): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** Huidige Bluetooth-uitgang met zijn Sound timing-correctie (31 okt 2026). */
+export type AudioOutputDevice = {
+  key: string;
+  name: string;
+  /** Wat het toestel zelf meldt (zonder correctie). */
+  reportedMs: number;
+  correctionMs: number;
+  /** Ooit ingesteld met Sound timing (ook als de correctie 0 is). */
+  calibrated: boolean;
+};
+
+export function getNativeAudioOutputDevice(): AudioOutputDevice | null {
+  try {
+    return native?.audioOutputDevice?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function setNativeAudioCorrection(key: string, ms: number): void {
+  try {
+    native?.setAudioCorrection?.(key, ms);
+  } catch {
+    /* stil */
+  }
+}
+
+export function clearNativeAudioCorrection(key: string): void {
+  try {
+    native?.clearAudioCorrection?.(key);
+  } catch {
+    /* stil */
+  }
+}
+
+/** Proefslag; geeft het wandklok-moment van slag 0, of 0 zonder native. */
+export function startNativeCalibrationBeat(periodMs: number, vibrate: boolean): number {
+  try {
+    return native?.startCalibrationBeat?.(periodMs, vibrate) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function setNativeCalibrationVibrate(on: boolean): void {
+  try {
+    native?.setCalibrationVibrate?.(on);
+  } catch {
+    /* stil */
+  }
+}
+
+export function stopNativeCalibrationBeat(): void {
+  try {
+    native?.stopCalibrationBeat?.();
+  } catch {
+    /* stil */
   }
 }
 

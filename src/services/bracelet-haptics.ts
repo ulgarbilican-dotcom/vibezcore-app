@@ -1217,6 +1217,13 @@ let previewRun: { mode: BraceletMode; startedAt: number } | null = null;
 export function isModePreviewRunning(): boolean {
   return previewRun !== null;
 }
+
+/** Speelt er nu een State Control-ritme (sessie niet gepauzeerd, of een
+ *  voorproef)? Sound timing start dan geen tweede slag (31 okt 2026). */
+export function isStateRhythmPlaying(): boolean {
+  if (previewRun !== null) return true;
+  return !!session && session.pausedAt === null && sessionEndsAt !== null && Date.now() < sessionEndsAt;
+}
 subscribeHapticStrength(() => {
   const run = previewRun;
   if (!run || session) return;

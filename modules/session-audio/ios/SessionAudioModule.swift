@@ -636,7 +636,9 @@ final class SessionAudioEngine {
     let volume = hp ? p.headphonesVolume : p.speakerVolume
     /* Uitvoervertraging van de luidspreker/oortjes: het geluid zoveel
        vroeger inplannen, zodat het samen met de tik en de cirkel valt. */
-    let outLatencyMs = AVAudioSession.sharedInstance().outputLatency * 1000
+    /* 31 okt 2026: plus de Sound timing-correctie van het huidige
+       Bluetooth-toestel (oortjes melden hun vertraging niet altijd juist). */
+    let outLatencyMs = AVAudioSession.sharedInstance().outputLatency * 1000 + SoundTiming.correctionMs()
     let withHaptics = p.haptics && appActive && ensureHaptic()
 
     while nextAtMs < horizon {
@@ -769,6 +771,57 @@ final class SessionAudioEngine {
   }
 }
 
+/// Sound timing (31 okt 2026, operator: "het moet voor alle toestellen met
+/// bluetooth connectie werken"): per Bluetooth-uitgang een correctie in ms
+/// bovenop wat het toestel meldt, ingesteld door meetikken op de slag.
+enum SoundTiming {
+  private static let defaultsKey = "vz.audioCorrections"
+  private static let btPorts: Set<AVAudioSession.Port> = [.bluetoothA2DP, .bluetoothLE, .bluetoothHFP]
+
+  static func currentBluetooth() -> AVAudioSessionPortDescription? {
+    return AVAudioSession.sharedInstance().currentRoute.outputs.first { btPorts.contains($0.portType) }
+  }
+
+  static func key(for port: AVAudioSessionPortDescription) -> String {
+    return "bt:" + port.uid
+  }
+
+  private static func all() -> [String: Double] {
+    return (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: Double]) ?? [:]
+  }
+
+  /// Correctie van de huidige uitgang (0 op luidspreker/bedraad of zonder instelling).
+  static func correctionMs() -> Double {
+    guard let port = currentBluetooth() else { return 0 }
+    return all()[key(for: port)] ?? 0
+  }
+
+  static func device() -> [String: Any]? {
+    guard let port = currentBluetooth() else { return nil }
+    let k = key(for: port)
+    let stored = all()[k]
+    return [
+      "key": k,
+      "name": port.portName,
+      "reportedMs": max(0, min(450, AVAudioSession.sharedInstance().outputLatency * 1000)),
+      "correctionMs": stored ?? 0,
+      "calibrated": stored != nil,
+    ]
+  }
+
+  static func set(_ k: String, _ ms: Double) {
+    var d = all()
+    d[k] = max(-200, min(400, ms))
+    UserDefaults.standard.set(d, forKey: defaultsKey)
+  }
+
+  static func clear(_ k: String) {
+    var d = all()
+    d.removeValue(forKey: k)
+    UserDefaults.standard.set(d, forKey: defaultsKey)
+  }
+}
+
 public class SessionAudioModule: Module {
   public func definition() -> ModuleDefinition {
     Name("SessionAudio")
@@ -783,7 +836,19 @@ public class SessionAudioModule: Module {
       let builtIn: Set<AVAudioSession.Port> = [.builtInSpeaker, .builtInReceiver, .headphones, .lineOut, .usbAudio]
       let outs = s.currentRoute.outputs
       if outs.isEmpty || outs.allSatisfy({ builtIn.contains($0.portType) }) { return 0 }
-      return max(0, min(450, s.outputLatency * 1000))
+      return max(0, min(600, min(450, s.outputLatency * 1000) + SoundTiming.correctionMs()))
+    }
+
+    Function("audioOutputDevice") { () -> [String: Any]? in
+      return SoundTiming.device()
+    }
+
+    Function("setAudioCorrection") { (key: String, ms: Double) in
+      SoundTiming.set(key, ms)
+    }
+
+    Function("clearAudioCorrection") { (key: String) in
+      SoundTiming.clear(key)
     }
 
     Function("hapticsSupported") { () -> Bool in
