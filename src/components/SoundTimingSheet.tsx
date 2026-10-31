@@ -20,9 +20,11 @@ import { GlassSheet } from '@/components/GlassSheetHost';
 import Reveal from '@/components/Reveal';
 import Tap from '@/components/Tap';
 import VibezGlass from '@/components/VibezGlass';
+import { SPRING_SETTLE, isReduceMotion } from '@/constants/motion';
 import { BrandFonts, CTA } from '@/constants/theme';
 import { isStateRhythmPlaying } from '@/services/bracelet-haptics';
 import {
+  CALIBRATION_PERIOD_MS,
   TAPS_NEEDED,
   clampCorrection,
   estimateLateMs,
@@ -31,13 +33,25 @@ import {
   stopCalibrationBeat,
   type SoundOutput,
 } from '@/services/sound-timing';
+import { hapticTap } from '@/utils/haptics';
 import { rootBlurRef } from '@/utils/root-blur';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Step = 'intro' | 'tap' | 'retry' | 'done' | 'fine';
 const NUDGE_MS = 10;
+/* Fine-tune-schaal: het puntje staat in het midden bij de ingestelde waarde
+   en schuift per tik; de rand = zoveel ms verschoven. */
+const TRACK_RANGE_MS = 150;
+const DOT = 14;
+
+/** "20 ms earlier" / "20 ms later" / "In sync" (t.o.v. de ingestelde waarde). */
+function fineLabel(deltaMs: number): string {
+  if (deltaMs === 0) return 'In sync';
+  return `${Math.abs(deltaMs)} ms ${deltaMs > 0 ? 'earlier' : 'later'}`;
+}
 
 export default function SoundTimingSheet({
   visible,
@@ -60,6 +74,44 @@ export default function SoundTimingSheet({
   const firstBeat = useRef(0);
   const correction = useRef(output.correctionMs);
   const saved = useRef(false);
+  /* Fine-tune: verschuiving t.o.v. de waarde bij het openen (zichtbaar op de
+     schaal), en het moment van slag 0 voor het meekloppende puntje. */
+  const [fineDelta, setFineDelta] = useState(0);
+  const [fineFirst, setFineFirst] = useState(0);
+  const [trackW, setTrackW] = useState(0);
+  const dotX = useSharedValue(0);
+  const dotScale = useSharedValue(1);
+  const dotStyle = useAnimatedStyle(() => ({ transform: [{ translateX: dotX.value }, { scale: dotScale.value }] }));
+
+  /* Het puntje schuift met een veer naar de nieuwe waarde: Earlier = naar
+     links (zelfde kant als de knop), Later = naar rechts. */
+  useEffect(() => {
+    const half = Math.max(0, (trackW - DOT) / 2);
+    const k = Math.max(-1, Math.min(1, fineDelta / TRACK_RANGE_MS));
+    const x = half - k * half;
+    /* eerste plaatsing (net gemeten) zonder schuiven vanaf de linkerrand */
+    dotX.value = isReduceMotion() || fineDelta === 0 ? x : withSpring(x, SPRING_SETTLE);
+  }, [fineDelta, trackW, dotX]);
+
+  /* Het puntje klopt zacht mee op elke slag (op het moment van de trilling),
+     zodat het ritme ook zichtbaar is. */
+  useEffect(() => {
+    if (step !== 'fine' || fineFirst <= 0 || isReduceMotion()) return;
+    const pulse = () => {
+      dotScale.value = withSequence(withTiming(1.45, { duration: 90 }), withSpring(1, SPRING_SETTLE));
+    };
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const now = Date.now();
+    const k = Math.max(0, Math.ceil((now - fineFirst) / CALIBRATION_PERIOD_MS));
+    const first = setTimeout(() => {
+      pulse();
+      interval = setInterval(pulse, CALIBRATION_PERIOD_MS);
+    }, Math.max(0, fineFirst + k * CALIBRATION_PERIOD_MS - now));
+    return () => {
+      clearTimeout(first);
+      if (interval) clearInterval(interval);
+    };
+  }, [step, fineFirst, dotScale]);
 
   /* Bij openen: vers beginnen; bij sluiten of weggaan: de proefslag stoppen. */
   useEffect(() => {
@@ -99,8 +151,10 @@ export default function SoundTimingSheet({
   const startFineTune = async () => {
     if (guardBusy()) return;
     stopCalibrationBeat();
+    setFineDelta(0);
+    setFineFirst(0);
     setStep('fine');
-    await startCalibrationBeat(true);
+    setFineFirst(await startCalibrationBeat(true));
   };
 
   const onTap = () => {
@@ -128,9 +182,14 @@ export default function SoundTimingSheet({
   };
 
   const nudge = (deltaMs: number) => {
-    correction.current = clampCorrection(correction.current + deltaMs);
-    setSoundCorrection(output.key, correction.current);
+    hapticTap();
+    const next = clampCorrection(correction.current + deltaMs);
+    const moved = next - correction.current;
+    if (moved === 0) return;
+    correction.current = next;
+    setSoundCorrection(output.key, next);
     saved.current = true;
+    setFineDelta((d) => d + moved);
   };
 
   const already = output.calibrated && !saved.current;
@@ -267,14 +326,26 @@ export default function SoundTimingSheet({
         {step === 'fine' ? (
           <View key="fine">
             <Reveal i={0}>
-              <Text style={st.heading}>Feel and listen</Text>
+              <Text style={st.heading}>Fine-tune</Text>
             </Reveal>
             <Reveal i={1}>
-              <BalancedText style={st.body}>
-                If the sound still comes before or after the pulse, move it until both land together.
+              <BalancedText style={[st.body, st.bodyCenter]}>
+                Sound after the pulse? Tap Earlier. Before the pulse? Tap Later.
               </BalancedText>
             </Reveal>
             <Reveal i={2}>
+              <View style={st.scale}>
+                <View style={st.track} onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}>
+                  <View style={st.trackLine} />
+                  <View style={st.trackMid} />
+                  <Animated.View style={[st.trackDot, dotStyle]} />
+                </View>
+                <Text style={st.scaleLabel} accessibilityLiveRegion="polite">
+                  {fineLabel(fineDelta)}
+                </Text>
+              </View>
+            </Reveal>
+            <Reveal i={3}>
               <View style={st.nudgeRow}>
                 <Tap onPress={() => nudge(NUDGE_MS)} style={[st.glassPill, st.flex]} accessibilityRole="button">
                   <Text style={st.glassPillTxt}>Earlier</Text>
@@ -283,11 +354,6 @@ export default function SoundTimingSheet({
                   <Text style={st.glassPillTxt}>Later</Text>
                 </Tap>
               </View>
-            </Reveal>
-            <Reveal i={3}>
-              <Tap onPress={close} style={[CTA.container, st.cta]} accessibilityRole="button">
-                <Text style={CTA.label}>Done</Text>
-              </Tap>
             </Reveal>
           </View>
         ) : null}
@@ -332,6 +398,12 @@ const st = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.22)' },
   dotOn: { backgroundColor: '#ffffff' },
   nudgeRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  scale: { alignItems: 'center', marginBottom: 22 },
+  track: { alignSelf: 'stretch', height: DOT, justifyContent: 'center' },
+  trackLine: { position: 'absolute', left: DOT / 2, right: DOT / 2, height: 2, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.18)' },
+  trackMid: { position: 'absolute', left: '50%', marginLeft: -1, width: 2, height: 10, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
+  trackDot: { position: 'absolute', left: 0, width: DOT, height: DOT, borderRadius: DOT / 2, backgroundColor: '#ffffff' },
+  scaleLabel: { fontFamily: BrandFonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 12 },
   glassPill: {
     height: 52,
     borderRadius: 999,
