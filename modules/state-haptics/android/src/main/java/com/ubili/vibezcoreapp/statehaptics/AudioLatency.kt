@@ -40,6 +40,9 @@ object AudioLatency {
     } catch (_: Exception) {
       0L
     }
+    /* Meting 31 okt 2026: volgen of de vertraging van de oortjes tijdens
+       een sessie verandert (operator: eerste ~20 s via oortjes niet gelijk). */
+    if (value != cached || cachedAt == 0L) android.util.Log.d("VZAudio", "extraMs=$value")
     cached = value
     cachedAt = now
     return value
