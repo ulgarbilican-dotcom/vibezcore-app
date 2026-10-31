@@ -10,5 +10,12 @@
 	<array>
 		<string>mindfulness</string>
 	</array>
+	<!-- 31 okt 2026: App Store weigerde build 67 (ITMS-90683): de Watch-app heeft het HealthKit-entitlement
+	     (zie expo-target.config.js, startWatchApp) en dan zijn deze twee uitlegzinnen verplicht.
+	     Zelfde tekst als de iPhone-app (app.json). -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>VIBEZCORE does not read your health data. Access is only used to open its Apple Watch app when you start a session on your iPhone.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>VIBEZCORE uses this only to open its Apple Watch app when you start a session on your iPhone. No health data is read or saved.</string>
 </dict>
 </plist>
