@@ -36,6 +36,40 @@ export function goToTab(href: string | { pathname: string; params?: Record<strin
   else router.dismissTo(href as never);
 }
 
+/* 31 okt 2026 (operator: "na de melding zag ik heel kort de Your State Control plan-pagina"): bij een tik op een
+   melding moeten de schermen erboven (plan, agenda …) zonder schuifanimatie verdwijnen — anders flitst het bovenste
+   scherm nog even voorbij. De root-stack leest deze vlag (useInstantNav) en zet de animatie kort uit. */
+let instantNav = false;
+const instantListeners = new Set<(on: boolean) => void>();
+export function subscribeInstantNav(l: (on: boolean) => void): () => void {
+  instantListeners.add(l);
+  return () => {
+    instantListeners.delete(l);
+  };
+}
+export function isInstantNav(): boolean {
+  return instantNav;
+}
+/** Naar een tabblad zonder de schermen erboven zichtbaar te laten wegschuiven (melding). */
+export function goToTabInstant(href: string | { pathname: string; params?: Record<string, string> }): void {
+  if (tabsOnTop) {
+    router.navigate(href as never);
+    return;
+  }
+  instantNav = true;
+  instantListeners.forEach((l) => l(true));
+  /* Twee frames: de stack moet de nieuwe (animatieloze) opties gerenderd hebben vóór het sluiten. */
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      router.dismissTo(href as never);
+      setTimeout(() => {
+        instantNav = false;
+        instantListeners.forEach((l) => l(false));
+      }, 700);
+    }),
+  );
+}
+
 /* Liggen de tabbladen bovenaan (geen plan/protocol/… erboven)? Gezet door
    (tabs)/_layout.tsx via de focus van de tab-groep. */
 let tabsOnTop = false;

@@ -32,7 +32,7 @@ import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
 import { getLastTabRoute } from '@/utils/last-tab';
 import { BreathMiniControl } from '@/components/BreathMiniControl';
-import { goToTab } from '@/utils/state-control-ui';
+import { goToTabInstant, isInstantNav, subscribeInstantNav } from '@/utils/state-control-ui';
 import { BreathSessionHost } from '@/components/BreathSessionHost';
 import { getBreathHost, openBreathSession, restoreBreathSession } from '@/services/breath-session-host';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -353,6 +353,9 @@ export default function RootLayout() {
   const [auth, setAuth] = useState<AuthState>(undefined);
   /* Laatst gebruikte tabblad — waar een ingelogde gebruiker opent. */
   const [lastTabRoute, setLastTabRoute] = useState<string>('/breath');
+  /* Melding-tik: schermen boven de tabbladen verdwijnen zonder animatie (goToTabInstant). */
+  const [instantNavOn, setInstantNavOn] = useState(isInstantNav());
+  useEffect(() => subscribeInstantNav(setInstantNavOn), []);
   /* Was de app geopend via een auth-deep-link (magic link, password
      recovery, invite)? Dan slaan we de welcome-redirect over zodat de
      deep-link-handler ongestoord naar /auth-callback of /reset-password
@@ -425,7 +428,8 @@ export default function RootLayout() {
       /* dismissTo i.p.v. navigate (audit 5 okt 2026): stond er een scherm
          boven de tabbladen open (plan, protocol …), dan zette navigate een
          tweede set tabbladen op de stapel. */
-      goToTab({
+      /* Zonder schuifanimatie: geen flits van het plan/agenda-scherm dat erboven lag (31 okt 2026). */
+      goToTabInstant({
         pathname: reminderRoute(t),
         params: { from: 'reminder', ...reminderParams(t) },
       });
@@ -899,7 +903,7 @@ export default function RootLayout() {
         screenOptions={{
           /* 23 okt 2026 (animatie-optimalisatie): iOS-achtige schuif op Android, en op iOS terugvegen vanaf
              overal (onderbreekbaar, volgt je vinger). */
-          animation: Platform.OS === 'android' ? 'ios_from_right' : 'default',
+          animation: instantNavOn ? 'none' : Platform.OS === 'android' ? 'ios_from_right' : 'default',
           fullScreenGestureEnabled: true,
           gestureEnabled: true,
           headerStyle: { backgroundColor: Brand.bg },
