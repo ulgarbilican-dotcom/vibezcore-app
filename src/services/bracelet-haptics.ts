@@ -102,6 +102,7 @@ import {
   type BeatPlan,
 } from '../../modules/session-audio';
 import { getStateHear, getStateHearNow, subscribeStateHear } from './state-sound-pref';
+import { audioOutputExtraMs } from './audio-latency';
 import { isLibraryPlaying, subscribeLibraryPlaying } from './library-priority';
 import { endLiveSession, showLiveSession } from '../../modules/live-activity';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -420,7 +421,12 @@ refreshWearWatchLink();
 setInterval(refreshWearWatchLink, 20_000);
 AppState.addEventListener('change', (st) => { if (st === 'active') refreshWearWatchLink(); });
 function nativeStartLeadMs(): number {
-  return wearWatchLinked && getSetting('watchHaptics') ? WATCH_START_LEAD_MS : NATIVE_START_LEAD_MS;
+  if (wearWatchLinked && getSetting('watchHaptics')) return WATCH_START_LEAD_MS;
+  /* 31 okt 2026 (gemeten op de A16): via Bluetooth start het geluid van een
+     slag zoveel vroeger als de oortjes trager zijn (~250 ms) — met 300 ms
+     vooruit viel de eerste lub dan vóór de Bluetooth-stroom liep. Zoveel
+     extra vooruit, zodat de dienst de stroom eerst kan wekken. */
+  return NATIVE_START_LEAD_MS + (getStateHearNow() ? audioOutputExtraMs() : 0);
 }
 /** Startmoment (wandklok) van de laatst gestarte curve op de telefoon —
  *  het horloge krijgt EXACT dit moment (17 okt 2026: het werd pas na het

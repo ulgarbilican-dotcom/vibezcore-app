@@ -528,6 +528,21 @@ class StateHapticsService : Service() {
     acquireWakeLock()
     beatHandler.removeCallbacksAndMessages(dubToken)
     soundHandler.removeCallbacksAndMessages(dubToken)
+    /* 31 okt 2026 (gemeten op de A16 met Bluetooth-oortjes): de Bluetooth-
+       audiostroom start pas bij het eerste geluid en heeft ~0,2 s nodig —
+       de eerste lub klonk vóór de stroom liep (laat of afgekapt). Daarom nu
+       meteen één onhoorbaar geluid (volume 0): de stroom draait als de
+       eerste slag komt. Enkel via Bluetooth, en enkel dit ene geluid — we
+       houden de audio van het toestel niet vast. */
+    if (soundEnabled && AudioLatency.extraMs(this) > 0L) {
+      soundHandler.post {
+        try {
+          val pool = soundPool
+          if (pool != null && soundSpeakerLub != 0) pool.play(soundSpeakerLub, 0f, 0f, 0, 0, 1f)
+        } catch (_: Exception) {
+        }
+      }
+    }
     units = buildUnits(t, a)
     nextUnit = 0
     startUptime = nowUp + startDelay
