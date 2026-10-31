@@ -478,15 +478,14 @@ export default function SettingsScreen() {
             style={s.row}
             /* Operator, 4 okt 2026 (smoothness-audit): `void` i.p.v. `await` — de navigatie wacht
                niet op de AsyncStorage-schrijfactie. */
-            onPress={() => {
-              void setSetting('breathOnboardingCompletedAt', null);
-              router.push({ pathname: '/breath-welcome', params: { replay: '1', fromTab: '1' } } as never);
-            }}
-            accessibilityLabel="Watch the Breathwork intro again"
+            /* 31 okt 2026 (operator: "How Breathwork works" — dan moet het ook echt met info en beeld tonen hoe het
+               werkt): eigen uitlegscherm (app/how-breathwork.tsx) i.p.v. de onboarding opnieuw af te spelen. */
+            onPress={() => router.push('/how-breathwork' as never)}
+            accessibilityLabel="How Breathwork works"
           >
             <View style={s.rowText}>
-              <Text style={s.rowTitle}>Watch the intro again</Text>
-              <BalancedText style={s.rowSub}>How Breathwork works, step by step.</BalancedText>
+              <Text style={s.rowTitle}>How Breathwork works</Text>
+              <BalancedText style={s.rowSub}>Sessions, states and your routine, explained.</BalancedText>
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>
@@ -527,12 +526,13 @@ export default function SettingsScreen() {
              knop in settings"): zelfde rij als bij Breathwork. */}
           <PressFeedback
             style={s.row}
-            onPress={() => router.push('/state-onboarding' as never)}
-            accessibilityLabel="Watch the State Control intro again"
+            /* 31 okt 2026: eigen uitlegscherm (app/how-state-control.tsx), zie Breathwork hierboven. */
+            onPress={() => router.push('/how-state-control' as never)}
+            accessibilityLabel="How State Control works"
           >
             <View style={s.rowText}>
-              <Text style={s.rowTitle}>Watch the intro again</Text>
-              <BalancedText style={s.rowSub}>How State Control works, step by step.</BalancedText>
+              <Text style={s.rowTitle}>How State Control works</Text>
+              <BalancedText style={s.rowSub}>The rhythm, the five states and your devices, explained.</BalancedText>
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>

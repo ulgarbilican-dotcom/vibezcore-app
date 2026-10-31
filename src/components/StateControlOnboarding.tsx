@@ -117,7 +117,8 @@ const FILL_MS = 800;
    uitleg geven he"), kloppend met het echte eindtempo (Science A tot Z
    §3.4: Focus 90 %, Calm 80 %, Clarity 70 %, Sleep 55 % van je rust,
    Boost 110 bpm). Welzijnstaal, geen claim. */
-const FEEL_LINE: Record<BraceletMode, string> = {
+/* 31 okt 2026: ook gelezen door de "How State Control works"-schermen (components/HowItWorks.tsx). */
+export const FEEL_LINE: Record<BraceletMode, string> = {
   [BraceletMode.Gamma]: 'Faster than your heart. For a lift when your energy is low.',
   [BraceletMode.Beta]: 'Just under your heart. For steady attention and deep work.',
   [BraceletMode.Alpha]: 'Clearly slower than your heart. For staying composed under pressure.',

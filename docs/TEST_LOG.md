@@ -510,3 +510,5 @@ ingang (welcome, alle tabs, breathwork alle 15 technieken, State Control
 alle 5 + Quick, voorproeven, paywall/abonnement/restore, account in/uit,
 Activity, Profile, legal, meldingen, minimaliseren, horloge, iPhone) en
 hier af te vinken.
+| T355 | Settings → "How Breathwork works": 4 pagina's (foto · twee telefoons: saleskaart + lopende ademsessie · vijf toestanden · routine), Back/Next/Done, Close terug naar Settings; onboarding ongewijzigd. Emulator-screenshots goedgekeurd door operator. | ⏳ operator op A16 | — |
+| T356 | Settings → "How State Control works": idem; pagina 2 = saleskaart (foto pagina 1) + kloppende Boost-cirkel + horloge, aftellende tijd; tik op een toestand op pagina 3 laat het ritme voelen (niet tijdens een lopende sessie). | ⏳ operator op A16 | — |

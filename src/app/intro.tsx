@@ -118,7 +118,8 @@ const STEPS: Step[] = [
 /* Telefoon met schermen van de app: staat stil. State Control en Breathwork zijn LEVENDE nabootsingen van de echte schermen (tijd instellen, dan pulseren /
    ademen); de Audio Library toont echte schermen met een tik op The Inner Child. Het frame is bewust neutraal (geen Dynamic Island of ander Apple-ontwerp) en er
    staat niets in dat de app niet echt doet. Alles blijft onder 1 Hz en staat stil bij "beweging verminderen". */
-function PhoneMockup({ mock, height: heightIn }: { mock: NonNullable<Step['mock']>; height: number }) {
+/* 31 okt 2026: ook gebruikt door de "How it works"-schermen (components/HowItWorks.tsx) — hier niets aan veranderd. */
+export function PhoneMockup({ mock, height: heightIn }: { mock: NonNullable<Step['mock']>; height: number }) {
   const { width: winW } = useWindowDimensions();
   /* Telefoon + smartwatch vormen één groep die altijd binnen de veilige zone (28 dp links en rechts) past, op elk scherm. */
   const SAFE = 28;
