@@ -166,48 +166,41 @@ function StateSession({ left }: { left: number }) {
   );
 }
 
-/* Generiek horloge (geen kroon, geen merkontwerp), op de plek van het horloge op de website: over de twee telefoons heen. */
+/* Horloge zoals op de website (operator 31 okt: "de armband van de smartwatch is echt niet goed"): de gefotografeerde
+   smartwatch van vibezcore.com (assets/how/watch.png, kroon weggewerkt — geen merkontwerp), met het app-scherm erachter
+   door het transparante venster. Zelfde plek en maten als op de website (230 × 361, scherm 12,86 % / 21,8 % / 74,1 % / 56,25 %). */
+const WATCH_IMG = require('../../assets/how/watch.png');
 function WatchMock({ left }: { left: number }) {
   const W = 230;
   const H = 361;
-  const cw = 196;
-  const ch = 232;
   const ring = 104;
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: 312, top: 269, width: W, height: H, alignItems: 'center' }}>
-      {/* bandjes (operator 31 okt: "ik mis de armband van de smartwatch"): volle band boven en onder, loopt onder de kast door,
-          enkel het uiteinde vervaagt; gaatjes in de onderste band zoals bij het horloge in de app-intro */}
-      <LinearGradient
-        colors={['rgba(44,44,50,0)', '#2c2c32', '#34343b']}
-        locations={[0, 0.3, 1]}
-        style={{ position: 'absolute', top: -40, width: 150, height: (H - ch) / 2 + 70, borderTopLeftRadius: 26, borderTopRightRadius: 26 }}
-      />
-      <LinearGradient
-        colors={['#34343b', '#2c2c32', 'rgba(44,44,50,0)']}
-        locations={[0, 0.7, 1]}
-        style={{ position: 'absolute', bottom: -40, width: 150, height: (H - ch) / 2 + 70, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 }}
-      />
-      <View style={{ position: 'absolute', bottom: -4, alignItems: 'center', gap: 16 }}>
-        {[0, 1, 2].map((i) => (
-          <View key={i} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#121215', opacity: 1 - i * 0.3 }} />
-        ))}
+    <View pointerEvents="none" style={{ position: 'absolute', left: 312, top: 269, width: W, height: H }}>
+      <View
+        style={{
+          position: 'absolute',
+          left: W * 0.1286,
+          top: H * 0.218,
+          width: W * 0.741,
+          height: H * 0.5625,
+          borderRadius: 30,
+          backgroundColor: '#000',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: BOOST }} />
+          <Text style={{ color: '#fff', fontFamily: BrandFonts.semibold, fontSize: 14 }}>Boost</Text>
+        </View>
+        <View style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }}>
+          <HeartbeatScale size={ring}>
+            <View style={{ width: ring, height: ring, borderRadius: ring / 2, borderWidth: 6, borderColor: BOOST, backgroundColor: 'rgba(245,165,36,0.14)' }} />
+          </HeartbeatScale>
+          <Text style={{ position: 'absolute', color: '#fff', fontFamily: BrandFonts.bold, fontSize: 28, letterSpacing: -1 }}>{mss(left)}</Text>
+        </View>
       </View>
-      <View style={{ position: 'absolute', top: (H - ch) / 2, width: cw, height: ch, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 20, shadowOffset: { width: 0, height: 12 }, elevation: 14 }}>
-        <LinearGradient colors={['#4b4b50', '#17171a', '#0e0e10', '#3a3a3f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 52, padding: 9 }}>
-          <View style={{ flex: 1, borderRadius: 44, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: BOOST }} />
-              <Text style={{ color: '#fff', fontFamily: BrandFonts.semibold, fontSize: 14 }}>Boost</Text>
-            </View>
-            <View style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }}>
-              <HeartbeatScale size={ring}>
-                <View style={{ width: ring, height: ring, borderRadius: ring / 2, borderWidth: 6, borderColor: BOOST, backgroundColor: 'rgba(245,165,36,0.14)' }} />
-              </HeartbeatScale>
-              <Text style={{ position: 'absolute', color: '#fff', fontFamily: BrandFonts.bold, fontSize: 28, letterSpacing: -1 }}>{mss(left)}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </View>
+      <Image source={WATCH_IMG} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H }} resizeMode="contain" />
     </View>
   );
 }
