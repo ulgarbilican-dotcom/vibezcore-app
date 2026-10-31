@@ -31,7 +31,7 @@ object CalibrationBeat {
   private const val PLAN_AHEAD_MS = 700L
   private const val LUB_MS = 60L
   private const val DUB_MS = 46L
-  private const val VOLUME = 0.7f // zelfde als de sessie via oortjes (31 okt 2026)
+  private const val VOLUME = 0.9f // zelfde als de sessie via oortjes (31 okt 2026)
 
   private var thread: HandlerThread? = null
   private var handler: Handler? = null

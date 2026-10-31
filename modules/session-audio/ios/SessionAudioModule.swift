@@ -51,7 +51,7 @@ struct BeatPlanRecord: Record {
   @Field var endAtMs: Double = 0
   @Field var sound: Bool = false
   @Field var speakerVolume: Double = 1
-  @Field var headphonesVolume: Double = 0.7
+  @Field var headphonesVolume: Double = 0.9
   /// Het geluid start zoveel vóór de tik (inzet van de opname).
   @Field var soundLeadMs: Double = 25
   @Field var haptics: Bool = true
