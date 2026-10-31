@@ -22,15 +22,25 @@ const STEPS: HowStep[] = [
     title: 'Body first.\nMind follows',
     sub: 'Your body influences your mind, and this rhythm works from the body up.',
     /* 31 okt (operator: "opmeten hartslag"): hoe de rusthartslag gemeten wordt (PulseMeter = camera 20 s, Health = horloge). */
-    body: 'It starts at your resting heart rate, then glides to the tempo of your state. Measure it in 20 seconds with your phone camera, or let your smartwatch read it.',
-    chips: ['Phone camera', 'Smartwatch'],
+    body: 'The rhythm starts at your resting heart rate, then glides to the tempo of your state. Built on research, bottom-up by design.',
     scene: { kind: 'duo', mode: 'state', accent: '#F5A524' },
+  },
+  {
+    /* 31 okt 2026 (operator: "ik mis het heartrateverhaal"): eigen pagina. Woorden uit Science A tot Z §3.4 en de
+       hartslag-keuzes van de onboarding (Measure now / Enter it yourself / Use an average, bpm-pil vóór een sessie). */
+    key: 'heart',
+    eyebrow: 'YOUR HEART RATE',
+    title: 'Tuned to\nyour own heart',
+    sub: 'The rhythm of every session starts at your own resting heart rate, then glides to the tempo of your state.',
+    body: 'Measure it in 20 seconds with your phone camera, let your smartwatch read it, or enter it yourself. Feeling stressed? Measure right before a session and it starts from there.',
+    chips: ['Phone camera · 20 s', 'Smartwatch', 'Enter it yourself'],
+    scene: { kind: 'heart' },
   },
   {
     key: 'states',
     eyebrow: 'FIVE STATES',
     title: 'Five states,\nfive tempos',
-    sub: 'Each state has its own tempo, set against your own heart rate.',
+    sub: 'Each state has its own rhythm, set relative to your own heart rate.',
     body: 'Tap a state to feel its rhythm.',
     scene: { kind: 'states', mode: 'state' },
   },

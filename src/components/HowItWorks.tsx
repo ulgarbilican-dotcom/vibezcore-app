@@ -24,6 +24,7 @@ import StateGlyph from '@/components/StateGlyph';
 import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings';
 import { PhoneMockup } from '@/app/intro';
 import { HowPhonesDuo } from '@/components/HowPhones';
+import { HeartbeatHero } from '@/components/RestingHeartRatePage';
 import { Brand, BrandFonts, CTA_GLASS, CTA_GLOW, TypeScale } from '@/constants/theme';
 import { SPRING_POP, isReduceMotion, reveal } from '@/constants/motion';
 import { BREATH_STATES, type BreathStateKey } from '@/data/breath-states';
@@ -58,6 +59,8 @@ export type HowScene =
   | { kind: 'phone'; mock: 'breath' | 'state'; accent: string }
   /* 31 okt 2026 (operator: "gebruik de schermen zoals op de website"): saleskaart + lopende sessie, zie HowPhones.tsx */
   | { kind: 'duo'; mode: 'breath' | 'state'; accent: string }
+  /* 31 okt 2026 (operator: "ik mis het hartslagverhaal"): het kloppende hart met de hartlijn van "Your Resting Heart Rate" (zonder geluid/trillen) */
+  | { kind: 'heart' }
   | { kind: 'states'; mode: 'breath' | 'state' }
   | { kind: 'day'; mode: 'breath' | 'state' };
 
@@ -213,8 +216,8 @@ function TempoChart({ active }: { active: BreathStateKey }) {
   return (
     <View style={{ width: W, marginTop: 22 }}>
       <View style={{ height: 34 }}>
-        <Animated.Text key={active} entering={FadeIn.duration(300)} style={[s.chartVal, { left: Math.max(0, Math.min(W - 64, x(t) - 32)), color: col }]}>
-          {`${Math.round(t)} bpm`}
+        <Animated.Text key={active} entering={FadeIn.duration(300)} style={[s.chartVal, { left: Math.max(0, Math.min(W - 120, x(t) - 60)), color: col }]}>
+          {`Rhythm ${Math.round(t)} bpm`}
         </Animated.Text>
       </View>
       <View style={{ height: 22, justifyContent: 'center' }}>
@@ -233,7 +236,7 @@ function TempoChart({ active }: { active: BreathStateKey }) {
           <Text key={b} style={[s.chartTick, { left: x(b) - 16 }]}>{b}</Text>
         ))}
       </View>
-      <Text style={s.chartCap}>{`Example with a resting heart rate of ${REST_EX} (white line). In the app, it starts from your own`}</Text>
+      <Text style={s.chartCap}>{`Tempo of the haptic rhythm, shown for a resting heart rate of ${REST_EX} (white line). In the app, it starts from your own`}</Text>
     </View>
   );
 }
@@ -423,12 +426,25 @@ function SceneView({ scene, height, top }: { scene: HowScene; height: number; to
       ? scene.accent
       : scene.kind === 'states'
         ? '#6E86AB'
-        : BREATH_STATES[(scene.mode === 'breath' ? DAY_BREATH : DAY_STATE).slice(-1)[0].key].glow;
+        : scene.kind === 'day'
+          ? BREATH_STATES[(scene.mode === 'breath' ? DAY_BREATH : DAY_STATE).slice(-1)[0].key].glow
+          : '#E85252';
   if (body) {
     return (
       <View style={{ height: height + top }}>
         <LinearGradient colors={[rgba(glow, 0.3), 'rgba(10,10,10,0)']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round((height + top) * 0.8) }} />
         <View style={{ position: 'absolute', top, left: 0, right: 0 }}>{body}</View>
+      </View>
+    );
+  }
+  if (scene.kind === 'heart') {
+    const stage = Math.round(Math.min(height * 0.62, 260));
+    return (
+      <View style={{ height: height + top, overflow: 'hidden' }}>
+        <LinearGradient colors={['rgba(232,82,82,0.18)', 'rgba(10,10,10,0)']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height + top }} />
+        <View style={{ position: 'absolute', top, left: 0, right: 0, height, alignItems: 'center', justifyContent: 'center' }}>
+          <HeartbeatHero stage={stage} />
+        </View>
       </View>
     );
   }
@@ -587,7 +603,7 @@ const s = StyleSheet.create({
   chartTrack: { height: 2, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.12)' },
   chartSeg: { position: 'absolute', height: 2, borderRadius: 1, opacity: 0.85 },
   chartRest: { position: 'absolute', top: 1, width: 2, height: 20, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.8)' },
-  chartVal: { position: 'absolute', bottom: 2, width: 64, textAlign: 'center', fontFamily: BrandFonts.bold, fontSize: 15 },
+  chartVal: { position: 'absolute', bottom: 2, width: 120, textAlign: 'center', fontFamily: BrandFonts.bold, fontSize: 15 },
   chartTick: { position: 'absolute', width: 32, textAlign: 'center', fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.35)' },
   chartCap: { marginTop: 8, textAlign: 'center', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(255,255,255,0.45)' },
   dayHour: { position: 'absolute', width: 44, textAlign: 'center', fontFamily: BrandFonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.35)' },
