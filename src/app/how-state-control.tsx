@@ -12,7 +12,6 @@ const STEPS: HowStep[] = [
        de website zegt nog 8–50). */
     title: 'Shift your state',
     sub: 'Research-based haptic pulses help guide you toward calm, focus, energy or sleep.',
-    body: 'Nothing to follow, nothing to watch: you simply feel it.',
     chips: ['5–50 min', 'Phone', 'Smartwatch'],
     note: 'Smart Bead Bracelet · Launching Early 2027',
     scene: { kind: 'photo', uri: 'https://vibezcore-audio.b-cdn.net/images/Pic%20hero%20state%20control%20app%20.png', accent: '#B478FF' },
@@ -22,7 +21,9 @@ const STEPS: HowStep[] = [
     eyebrow: 'HOW IT WORKS',
     title: 'Body first.\nMind follows',
     sub: 'Your body influences your mind, and this rhythm works from the body up.',
-    body: 'It starts at your resting heart rate, then glides to the tempo of your state. Built on research, bottom-up by design.',
+    /* 31 okt (operator: "opmeten hartslag"): hoe de rusthartslag gemeten wordt (PulseMeter = camera 20 s, Health = horloge). */
+    body: 'It starts at your resting heart rate, then glides to the tempo of your state. Measure it in 20 seconds with your phone camera, or let your smartwatch read it.',
+    chips: ['Phone camera', 'Smartwatch'],
     scene: { kind: 'duo', mode: 'state', accent: '#F5A524' },
   },
   {
@@ -37,9 +38,8 @@ const STEPS: HowStep[] = [
     key: 'yourway',
     eyebrow: 'YOUR WAY',
     title: 'Phone, smartwatch\nor both',
-    sub: 'Feel it on your phone or let your smartwatch take over. Add the heartbeat sound, or keep it to touch alone.',
+    sub: 'Feel it on your phone or let your smartwatch take over, with or without the heartbeat sound.',
     body: 'Plan your day and get a reminder when it is time.',
-    note: 'Smart Bead Bracelet · Launching Early 2027',
     scene: { kind: 'day', mode: 'state' },
   },
 ];

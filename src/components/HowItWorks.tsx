@@ -98,10 +98,21 @@ function PhotoScene({ uri, height }: { uri: string; height: number }) {
     return () => cancelAnimation(zoom);
   }, [zoom]);
   const st = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
+  /* 31 okt 2026 (operator: "bovenkant hoofd meisje afgesneden, dat mag niet"): de foto hangt aan de BOVENKANT — volle breedte,
+     eigen verhouding, enkel onderaan valt iets weg (daar loopt hij toch uit in zwart). De zoom vertrekt ook vanaf de bovenrand. */
+  const [ratio, setRatio] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Image.getSize(uri, (w, h) => alive && w > 0 && setRatio(h / w), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [uri]);
+  const imgH = ratio ? Math.max(height, Math.round(width * ratio)) : height;
   return (
     <View style={{ width, height, overflow: 'hidden' }}>
-      <Animated.View style={[StyleSheet.absoluteFill, st]}>
-        <Image source={imageSource(uri)} style={{ width, height }} resizeMode="cover" />
+      <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width, height: imgH, transformOrigin: 'top' }, st]}>
+        <Image source={imageSource(uri)} style={{ width, height: imgH }} resizeMode="cover" />
       </Animated.View>
       <LinearGradient colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0)']} locations={[0, 0.55, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }} />
       <LinearGradient
@@ -178,6 +189,55 @@ function StateOrb({
   );
 }
 
+/* ── State Control: horizontale tempo-grafiek (operator 31 okt: "horizontaal grafiekachtig, enkel als het professioneel kan").
+   Eén as van 40 tot 120 bpm. Je rusthartslag (voorbeeld 70) is de verticale lijn; elke toestand is een stip op zijn eigen
+   eindtempo (rhythmFor, zelfde berekening als de sessie). De gekozen toestand licht op en een lijn glijdt van je hartslag
+   naar zijn tempo — zoals de sessie zelf: start op je hartslag, glijdt dan naar het tempo van de toestand. ── */
+const BPM_MIN = 40;
+const BPM_MAX = 120;
+const REST_EX = 70;
+function TempoChart({ active }: { active: BreathStateKey }) {
+  const { width } = useWindowDimensions();
+  const W = Math.min(width - 60, 360);
+  const x = (bpm: number) => ((bpm - BPM_MIN) / (BPM_MAX - BPM_MIN)) * W;
+  const target = (k: BreathStateKey) => rhythmFor(MODE_OF[k], REST_EX).targetBpm;
+  const t = target(active);
+  const from = useSharedValue(x(REST_EX));
+  const to = useSharedValue(x(t));
+  useEffect(() => {
+    to.value = isReduceMotion() ? x(t) : withTiming(x(t), { duration: 700, easing: Easing.out(Easing.cubic) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, W]);
+  const seg = useAnimatedStyle(() => ({ left: Math.min(from.value, to.value), width: Math.abs(to.value - from.value) }));
+  const col = active === 'clarity' ? '#ffffff' : BREATH_STATES[active].accent;
+  return (
+    <View style={{ width: W, marginTop: 22 }}>
+      <View style={{ height: 34 }}>
+        <Animated.Text key={active} entering={FadeIn.duration(300)} style={[s.chartVal, { left: Math.max(0, Math.min(W - 64, x(t) - 32)), color: col }]}>
+          {`${Math.round(t)} bpm`}
+        </Animated.Text>
+      </View>
+      <View style={{ height: 22, justifyContent: 'center' }}>
+        <View style={s.chartTrack} />
+        <Animated.View style={[s.chartSeg, { backgroundColor: col }, seg]} />
+        <View style={[s.chartRest, { left: x(REST_EX) - 1 }]} />
+        {ORDER.map((k) => {
+          const on = k === active;
+          const c = k === 'clarity' ? '#ffffff' : BREATH_STATES[k].accent;
+          const d = on ? 14 : 8;
+          return <View key={k} style={{ position: 'absolute', left: x(target(k)) - d / 2, width: d, height: d, borderRadius: d / 2, backgroundColor: c, opacity: on ? 1 : 0.55, borderWidth: on ? 2 : 0, borderColor: '#0a0a0a' }} />;
+        })}
+      </View>
+      <View style={{ height: 18, marginTop: 6 }}>
+        {[40, 60, 80, 100, 120].map((b) => (
+          <Text key={b} style={[s.chartTick, { left: x(b) - 16 }]}>{b}</Text>
+        ))}
+      </View>
+      <Text style={s.chartCap}>{`Example with a resting heart rate of ${REST_EX} (white line). In the app, it starts from your own`}</Text>
+    </View>
+  );
+}
+
 function StatesScene({ mode, height }: { mode: 'breath' | 'state'; height: number }) {
   const { width } = useWindowDimensions();
   const [idx, setIdx] = useState(2);
@@ -242,6 +302,7 @@ function StatesScene({ mode, height }: { mode: 'breath' | 'state'; height: numbe
         <Text style={[s.orbName, { color: key === 'clarity' ? '#ffffff' : st.accent }]}>{st.eyebrow}</Text>
         <BalancedText style={s.orbLine}>{line}</BalancedText>
       </Animated.View>
+      {mode === 'state' ? <TempoChart active={key} /> : null}
     </View>
   );
 }
@@ -257,6 +318,8 @@ const DAY_STATE: { at: number; key: BreathStateKey; label: string }[] = [
   { at: 15 * 60 + 30, key: 'calm', label: 'Calm Control' },
   { at: 22 * 60 + 30, key: 'rest', label: 'Sleep' },
 ];
+/* Tijden volgen het toestel: 24 u in Europa, AM/PM waar dat de gewoonte is (operator 31 okt: "enkel EU-tijd of ook AM/PM?"). */
+const USES_12H = /[AaPp]\.?\s?[Mm]/.test(new Date(2000, 0, 1, 13, 0).toLocaleTimeString([], { hour: 'numeric' }));
 const hhmm = (m: number) => {
   const d = new Date();
   d.setHours(Math.floor(m / 60), m % 60, 0, 0);
@@ -287,7 +350,7 @@ function DayScene({ mode, height }: { mode: 'breath' | 'state'; height: number }
   const d = Math.round(Math.min(width * 0.62, height * 0.66));
   const r = d / 2 - 10;
   const cx = width / 2;
-  const cy = height * 0.55;
+  const cy = height * 0.6; // operator 31 okt: "te hoog, laten zakken"
   const ring = Skia.Path.Make();
   ring.addCircle(cx, cy, r);
   /* 24 u bovenaan (zoals de agenda), met de klok mee. */
@@ -312,12 +375,12 @@ function DayScene({ mode, height }: { mode: 'breath' | 'state'; height: number }
         <Path path={ring} style="stroke" strokeWidth={8} color="rgba(255,255,255,0.09)" />
         <Circle cx={cx} cy={cy} r={r - 22} color="rgba(255,255,255,0.025)" />
       </Canvas>
-      {(['24', '6', '12', '18'] as const).map((lbl, i) => {
+      {(USES_12H ? ['12 AM', '6 AM', '12 PM', '6 PM'] : ['24', '6', '12', '18']).map((lbl, i) => {
         const p = pos(i * 360);
         const dx = (p.x - cx) * 0.78;
         const dy = (p.y - cy) * 0.78;
         return (
-          <Text key={lbl} style={[s.dayHour, { left: cx + dx - 16, top: cy + dy - 9 }]}>
+          <Text key={lbl} style={[s.dayHour, { left: cx + dx - 22, top: cy + dy - 9 }]}>
             {lbl}
           </Text>
         );
@@ -410,8 +473,13 @@ export default function HowItWorks({ steps, a11yName }: { steps: HowStep[]; a11y
   const next = () => (last ? close() : setStep((s0) => s0 + 1));
   const back = () => (step === 0 ? close() : setStep((s0) => s0 - 1));
   /* Beeld: ruim de helft van het scherm onder de bovenbalk; de tekst staat eronder op de achtergrond. */
-  const sceneH = Math.round(winH * 0.46); // 31 okt: iets lager, zodat kop, zin, kenmerken en noot zonder scrollen passen
+  /* Beeld: 46% van het scherm; enkel kleiner als de tekst anders niet past (operator 31 okt: "alle teksten op alle schermen
+     zonder scroll direct leesbaar; foto mag kleiner als het moet"). De tekst wordt per pagina gemeten; minimum 28%. */
+  const [textH, setTextH] = useState<Record<string, number>>({});
   const sceneTop = insets.top + 44;
+  const avail = winH - sceneTop - insets.bottom - 82;
+  const measured = textH[cur.key];
+  const sceneH = Math.round(measured ? Math.max(winH * 0.28, Math.min(winH * 0.46, avail - measured + 8)) : winH * 0.46);
   return (
     <View style={s.root}>
       <Stack.Screen options={{ headerShown: false, animation: 'fade' }} />
@@ -442,6 +510,14 @@ export default function HowItWorks({ steps, a11yName }: { steps: HowStep[]; a11y
         </View>
         <View style={{ height: sceneH - 8 }} pointerEvents="box-none" />
         <ScrollView key={step} style={{ flex: 1 }} contentContainerStyle={s.content} alwaysBounceVertical={false} showsVerticalScrollIndicator={false}>
+          <View
+            style={{ gap: 10 }}
+            onLayout={(e) => {
+              const h = Math.ceil(e.nativeEvent.layout.height) + 12;
+              const k = cur.key;
+              setTextH((m) => (m[k] === h ? m : { ...m, [k]: h }));
+            }}
+          >
           <Animated.View entering={enter(1)}>
             <Text style={s.eyebrow}>{cur.eyebrow}</Text>
             <Text style={s.title}>{cur.title}</Text>
@@ -464,6 +540,7 @@ export default function HowItWorks({ steps, a11yName }: { steps: HowStep[]; a11y
               {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
             </Animated.View>
           ) : null}
+          </View>
         </ScrollView>
         <View style={s.footer}>
           <Animated.View key={step} entering={enter(4)}>
@@ -492,7 +569,7 @@ const s = StyleSheet.create({
   fill: { height: '100%', borderRadius: 0.75, backgroundColor: '#ffffff' },
   skipWrap: { paddingVertical: 6, paddingHorizontal: 8 },
   skipTxt: { color: 'rgba(255,255,255,0.92)', fontFamily: BrandFonts.semibold, fontSize: 15 },
-  content: { flexGrow: 1, justifyContent: 'flex-start', paddingHorizontal: 26, paddingBottom: 12, gap: 10 },
+  content: { flexGrow: 1, justifyContent: 'flex-start', paddingHorizontal: 26, paddingBottom: 12 },
   eyebrow: { fontFamily: BrandFonts.bold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
   title: { ...TypeScale.pageHeader, fontFamily: BrandFonts.bold, fontSize: 25, lineHeight: 31, textAlign: 'left', color: Brand.text },
   sub: { marginTop: 2, fontFamily: BrandFonts.semibold, fontSize: 17, lineHeight: 24, textAlign: 'left', color: 'rgba(255,255,255,0.92)' },
@@ -507,7 +584,13 @@ const s = StyleSheet.create({
   ctaTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
   orbName: { fontFamily: BrandFonts.bold, fontSize: 13, letterSpacing: 1.6 },
   orbLine: { marginTop: 6, fontFamily: BrandFonts.medium, fontSize: 14, lineHeight: 20, textAlign: 'center', color: 'rgba(255,255,255,0.7)' },
-  dayHour: { position: 'absolute', width: 32, textAlign: 'center', fontFamily: BrandFonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.35)' },
+  chartTrack: { height: 2, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.12)' },
+  chartSeg: { position: 'absolute', height: 2, borderRadius: 1, opacity: 0.85 },
+  chartRest: { position: 'absolute', top: 1, width: 2, height: 20, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.8)' },
+  chartVal: { position: 'absolute', bottom: 2, width: 64, textAlign: 'center', fontFamily: BrandFonts.bold, fontSize: 15 },
+  chartTick: { position: 'absolute', width: 32, textAlign: 'center', fontFamily: BrandFonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.35)' },
+  chartCap: { marginTop: 8, textAlign: 'center', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(255,255,255,0.45)' },
+  dayHour: { position: 'absolute', width: 44, textAlign: 'center', fontFamily: BrandFonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.35)' },
   dayNext: { fontFamily: BrandFonts.semibold, fontSize: 11, letterSpacing: 1.4, color: 'rgba(255,255,255,0.5)' },
   dayName: { marginTop: 4, fontFamily: BrandFonts.bold, fontSize: 20, color: '#ffffff' },
   dayTime: { marginTop: 2, fontFamily: BrandFonts.medium, fontSize: 15, color: 'rgba(255,255,255,0.65)' },

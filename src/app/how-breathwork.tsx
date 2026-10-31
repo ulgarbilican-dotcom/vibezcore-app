@@ -19,7 +19,9 @@ const STEPS: HowStep[] = [
     eyebrow: 'DURING A SESSION',
     title: 'Follow one breath\nat a time',
     sub: 'The figure grows as you breathe in and settles as you breathe out.',
-    body: 'A calm voice names each phase, a soft tap marks every change and the arc counts down the seconds, on your phone or your smartwatch.',
+    /* 31 okt (operator: "geven we alle info door?"): de vijf manieren van begeleiden, zoals op de website. */
+    body: 'Choose how you are guided:',
+    chips: ['Voice', 'Haptics', 'Voice + Haptics', 'Silent', 'Smartwatch'],
     scene: { kind: 'duo', mode: 'breath', accent: '#00A3A3' },
   },
   {
@@ -34,8 +36,9 @@ const STEPS: HowStep[] = [
     key: 'routine',
     eyebrow: 'YOUR ROUTINE',
     title: 'Make it part\nof your day',
-    sub: 'Build a plan in a minute and get a reminder at the right moment.',
-    body: 'Minimize a session and it keeps guiding you. Change a time or a session whenever you like.',
+    /* 31 okt (operator): zelf een plan maken of door VIBEZCORE laten maken (build-choice.tsx). */
+    sub: 'Build your own plan or let VIBEZCORE build one for you, with a reminder at the right moment.',
+    chips: ['Build it yourself', 'Let VIBEZCORE build it'],
     scene: { kind: 'day', mode: 'breath' },
   },
 ];
