@@ -175,8 +175,23 @@ function WatchMock({ left }: { left: number }) {
   const ring = 104;
   return (
     <View pointerEvents="none" style={{ position: 'absolute', left: 312, top: 269, width: W, height: H, alignItems: 'center' }}>
-      <LinearGradient colors={['rgba(58,58,66,0)', '#2c2c32']} style={{ position: 'absolute', top: 0, width: 138, height: 100, borderTopLeftRadius: 20, borderTopRightRadius: 20 }} />
-      <LinearGradient colors={['#2c2c32', 'rgba(58,58,66,0)']} style={{ position: 'absolute', bottom: 0, width: 138, height: 100, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }} />
+      {/* bandjes (operator 31 okt: "ik mis de armband van de smartwatch"): volle band boven en onder, loopt onder de kast door,
+          enkel het uiteinde vervaagt; gaatjes in de onderste band zoals bij het horloge in de app-intro */}
+      <LinearGradient
+        colors={['rgba(44,44,50,0)', '#2c2c32', '#34343b']}
+        locations={[0, 0.3, 1]}
+        style={{ position: 'absolute', top: -40, width: 150, height: (H - ch) / 2 + 70, borderTopLeftRadius: 26, borderTopRightRadius: 26 }}
+      />
+      <LinearGradient
+        colors={['#34343b', '#2c2c32', 'rgba(44,44,50,0)']}
+        locations={[0, 0.7, 1]}
+        style={{ position: 'absolute', bottom: -40, width: 150, height: (H - ch) / 2 + 70, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 }}
+      />
+      <View style={{ position: 'absolute', bottom: -4, alignItems: 'center', gap: 16 }}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#121215', opacity: 1 - i * 0.3 }} />
+        ))}
+      </View>
       <View style={{ position: 'absolute', top: (H - ch) / 2, width: cw, height: ch, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 20, shadowOffset: { width: 0, height: 12 }, elevation: 14 }}>
         <LinearGradient colors={['#4b4b50', '#17171a', '#0e0e10', '#3a3a3f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 52, padding: 9 }}>
           <View style={{ flex: 1, borderRadius: 44, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
@@ -296,7 +311,7 @@ const CARD_BREATH: Card = {
   ],
   cta: 'Start Clarity & Relax',
   ctaIcon: 'play',
-  sub: '48 sessions · 15 techniques',
+  sub: '15 techniques · 5 states',
   imgTop: 0,
   imgH: 0.8,
 };

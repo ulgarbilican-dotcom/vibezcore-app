@@ -20,9 +20,9 @@ const STEPS: HowStep[] = [
     key: 'feel',
     eyebrow: 'HOW IT WORKS',
     title: 'Body first.\nMind follows',
-    sub: 'Your body influences your mind, and this rhythm works from the body up.',
-    /* 31 okt (operator: "opmeten hartslag"): hoe de rusthartslag gemeten wordt (PulseMeter = camera 20 s, Health = horloge). */
-    body: 'The rhythm starts at your resting heart rate, then glides to the tempo of your state. Built on research, bottom-up by design.',
+    sub: 'A steady heartbeat rhythm you feel, not follow.',
+    /* 31 okt: wat je doet en voelt (zonder het hartslagverhaal te herhalen — dat staat op de volgende pagina). */
+    body: 'Pick a state and a duration, press start. Your phone or smartwatch does the rest.',
     scene: { kind: 'duo', mode: 'state', accent: '#F5A524' },
   },
   {
@@ -31,16 +31,19 @@ const STEPS: HowStep[] = [
     key: 'heart',
     eyebrow: 'YOUR HEART RATE',
     title: 'Tuned to\nyour own heart',
-    sub: 'The rhythm of every session starts at your own resting heart rate, then glides to the tempo of your state.',
-    body: 'Measure it in 20 seconds with your phone camera, let your smartwatch read it, or enter it yourself. Feeling stressed? Measure right before a session and it starts from there.',
-    chips: ['Phone camera · 20 s', 'Smartwatch', 'Enter it yourself'],
+    /* Feitelijk (bracelet-haptics: 10 s op de rusthartslag, dan rampSec geleidelijk naar het eindtempo). Operator 31 okt:
+       nooit "tempo of your state" (dubbelzinnig: gevoel ≠ gekozen toestand) en nooit "je hartslag daalt naar X bpm". */
+    sub: 'The rhythm starts at your own measured heart rate, then shifts to the tempo of the state you picked.',
+    /* operator 31 okt: "hoe measuren?" + smartwatch-lezen niet meer van toepassing → enkel camera (PulseMeter) of zelf invullen */
+    body: 'Fingertip on the back camera for 20 seconds. Best in the morning, before you get up. Stressed? Measure right before a session.',
+    chips: ['Measure · 20 s', 'Enter it yourself'],
     scene: { kind: 'heart' },
   },
   {
     key: 'states',
     eyebrow: 'FIVE STATES',
     title: 'Five states,\nfive tempos',
-    sub: 'Each state has its own rhythm, set relative to your own heart rate.',
+    sub: 'From Sleep, the slowest, to Boost, the fastest.',
     body: 'Tap a state to feel its rhythm.',
     scene: { kind: 'states', mode: 'state' },
   },
@@ -48,8 +51,8 @@ const STEPS: HowStep[] = [
     key: 'yourway',
     eyebrow: 'YOUR WAY',
     title: 'Phone, smartwatch\nor both',
-    sub: 'Feel it on your phone or let your smartwatch take over, with or without the heartbeat sound.',
-    body: 'Plan your day and get a reminder when it is time.',
+    sub: 'Feel it on your phone or hand it to your smartwatch. Heartbeat sound optional.',
+    body: 'Plan your day. Get a reminder when it is time.',
     scene: { kind: 'day', mode: 'state' },
   },
 ];
