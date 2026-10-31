@@ -687,8 +687,26 @@ export default function IntensityScreen() {
 
   const locked = count >= ALL_SLOTS.length;
 
+  /* 31 okt 2026 (operator: "na kiezen tijd moet user bevestigen zodat de dropdown dichtgaat, anders verwarrend als dat
+     allemaal openstaat"): telkens maar één tijdwiel open — het dagdeel dat je net koos. "Set time" klapt het dicht; de
+     gekozen tijd blijft zichtbaar als "08:00 · Change", en een tik daarop opent het wiel opnieuw. */
+  const [editingSlot, setEditingSlot] = useState<PlanSlot | null>(null);
+  /* 31 okt 2026 (operator: "de onderkant is verborgen als ik een kaart aantik — pas bij scrollen komt het tevoorschijn,
+     amateuristisch"): het blad scrolt vanzelf zodat het gekozen dagdeel bovenaan staat en het tijdwiel met "Set time"
+     helemaal in beeld komt. */
+  const timesScrollRef = useRef<ScrollView>(null);
+  const slotY = useRef<Partial<Record<PlanSlot, number>>>({});
+  const revealEditor = (slot: PlanSlot) => {
+    timesScrollRef.current?.scrollTo({ y: Math.max(0, (slotY.current[slot] ?? 0) - 6), animated: true });
+  };
+
   const tapSlot = (slot: PlanSlot) => {
     if (locked) return;
+    if (picked.includes(slot)) {
+      if (editingSlot === slot) setEditingSlot(null);
+    } else if (picked.length < count) {
+      setEditingSlot(slot);
+    }
     setPicked((cur) => {
       if (cur.includes(slot)) return cur.filter((s) => s !== slot);
       if (cur.length >= count) return cur;
@@ -718,10 +736,12 @@ export default function IntensityScreen() {
       setPicked(timesSnapshot.current.picked);
       setTimes(timesSnapshot.current.times);
     }
+    setEditingSlot(null);
     setActivePicker(null);
   };
   const closeTimes = () => {
     if (picked.length === count) {
+      setEditingSlot(null);
       setActivePicker(null);
       return;
     }
@@ -1041,7 +1061,7 @@ export default function IntensityScreen() {
       {/* Echt glas, ook op Android: in hetzelfde venster als de app
           (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
       <GlassSheet visible={activePicker === 'state'} onClose={() => setActivePicker(null)}>
-          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+          <SafeAreaView style={[s.sheetContainer, s.sheetContainerScroll]} edges={[]}>
             {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
             <VibezGlass
               radius={24}
@@ -1089,7 +1109,7 @@ export default function IntensityScreen() {
       {/* Echt glas, ook op Android: in hetzelfde venster als de app
           (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
       <GlassSheet visible={activePicker === 'routine'} onClose={() => setActivePicker(null)}>
-          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+          <SafeAreaView style={[s.sheetContainer, s.sheetContainerScroll]} edges={[]}>
             {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
             <VibezGlass
               radius={24}
@@ -1267,7 +1287,7 @@ export default function IntensityScreen() {
       {/* Echt glas, ook op Android: in hetzelfde venster als de app
           (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
       <GlassSheet visible={activePicker === 'times'} onClose={cancelTimes}>
-          <SafeAreaView style={[s.sheetContainer, { backgroundColor: 'transparent', overflow: 'hidden' }]} edges={['bottom']}>
+          <SafeAreaView style={[s.sheetContainer, s.sheetContainerScroll]} edges={[]}>
             {/* VIBEZCORE-glas, echt vervaagd (7 okt 2026). */}
             <VibezGlass
               radius={24}
@@ -1300,6 +1320,7 @@ export default function IntensityScreen() {
               Choose {count} time{count === 1 ? '' : 's'} — {picked.length}/{count} selected
             </Text>
             <SheetScroll
+              ref={timesScrollRef}
               
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
@@ -1309,7 +1330,12 @@ export default function IntensityScreen() {
                   const on = picked.includes(sl.slot);
                   const disabled = locked || (!on && picked.length >= count);
                   return (
-                    <View key={sl.slot}>
+                    <View
+                      key={sl.slot}
+                      onLayout={(e) => {
+                        slotY.current[sl.slot] = e.nativeEvent.layout.y;
+                      }}
+                    >
                       <Tap
                         style={[s.sheetRow, on && s.sheetRowOn, disabled && !on && { opacity: 0.4 }]}
                         disabled={locked}
@@ -1339,17 +1365,40 @@ export default function IntensityScreen() {
                       {/* 30 okt 2026 (operator: "niet duidelijk dat hij hier ook de tijd moet kiezen", "om de 5 minuten"):
                           een gekozen dagdeel klapt meteen een tijdwiel open, op onze aanbevolen tijd, per 5 minuten en
                           enkel binnen de uren van dat dagdeel. Vervangt het kleine "at 21:00"-linkje + aparte popup. */}
-                      {on && (
-                        <View style={s.slotTimeBox}>
-                          <Text style={s.slotTimeLabel}>Time · scroll to change</Text>
-                          <TimeWheel
-                            options={slotTimeOptions(sl.slot)}
-                            value={times[sl.slot] ?? sl.hour * 60}
-                            onChange={(mins) => setTimes((cur) => ({ ...cur, [sl.slot]: mins }))}
-                            accent="#ffffff"
-                            trackColor="rgba(255,255,255,0.4)"
-                          />
-                        </View>
+                      {on && editingSlot === sl.slot && (
+                        <Reveal i={0}>
+                          <View style={s.slotTimeBox} onLayout={() => revealEditor(sl.slot)}>
+                            <Text style={s.slotTimeLabel}>Time · scroll to change</Text>
+                            <TimeWheel
+                              options={slotTimeOptions(sl.slot)}
+                              value={times[sl.slot] ?? sl.hour * 60}
+                              onChange={(mins) => setTimes((cur) => ({ ...cur, [sl.slot]: mins }))}
+                              accent="#ffffff"
+                              trackColor="rgba(255,255,255,0.4)"
+                            />
+                            <Tap
+                              style={[CTA.container, s.slotTimeSet]}
+                              onPress={() => {
+                                hapticTap();
+                                setEditingSlot(null);
+                              }}
+                            >
+                              <Text style={CTA.label}>Set time</Text>
+                            </Tap>
+                          </View>
+                        </Reveal>
+                      )}
+                      {on && editingSlot !== sl.slot && (
+                        <Tap
+                          style={s.slotTimeChip}
+                          onPress={() => {
+                            hapticTap();
+                            setEditingSlot(sl.slot);
+                          }}
+                        >
+                          <Text style={s.slotTimeChipTime}>{fmtTime(times[sl.slot] ?? sl.hour * 60)}</Text>
+                          <Text style={s.slotTimeChipEdit}>Change</Text>
+                        </Tap>
                       )}
                     </View>
                   );
@@ -1477,6 +1526,21 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
   },
+  slotTimeSet: { marginHorizontal: 16, marginTop: 10, marginBottom: 8 },
+  slotTimeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+    height: 40,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  slotTimeChipTime: { fontFamily: BrandFonts.semibold, fontSize: 16, color: '#ffffff' },
+  slotTimeChipEdit: { fontFamily: BrandFonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.6)' },
   slotTimeLabel: {
     fontFamily: BrandFonts.semibold,
     fontSize: 11,
@@ -1544,6 +1608,10 @@ const s = StyleSheet.create({
        één keer, ook de niet-scrollende. */
     paddingBottom: 24,
   },
+  /* 31 okt 2026 (operator: lege strook onder de lijst, laatste kaart afgeknipt): een blad met een scrollende lijst
+     krijgt geen vaste onderruimte en geen veilige-zone-rand eronder — de lijst loopt door tot de rand van het scherm en
+     houdt zelf ademruimte onderaan (paddingBottom van de SheetScroll-inhoud). */
+  sheetContainerScroll: { backgroundColor: 'transparent', overflow: 'hidden', paddingBottom: 0 },
   sheetHandle: {
     alignSelf: 'center',
     width: 36,

@@ -168,6 +168,9 @@ type MonitorState = {
    *  vanzelf, zodat een vergeten pauze geen melding/Live Activity/motor
    *  blijft vasthouden (19 okt 2026; zelfde grens als het horloge). */
   pausedAtMs?: number;
+  /** Ooit op Play gedrukt (31 okt 2026). Een sessie uit het plan of via "Start" landt gepauzeerd en is pas ACTIEF na
+   *  de eerste Play (UI_EN_BEWEGINGSREGELS §4) — daarvoor is terug = weg, geen pil. Ontbreekt (oude opslag) = gespeeld. */
+  played?: boolean;
 };
 
 const MAX_PAUSE_MS = 60 * 60 * 1000;
@@ -625,6 +628,7 @@ export function startBraceletSessionMonitor(opts: {
     runStartedAt: Date.now(),
     elapsedBeforeRunSec: opts.elapsedSec ?? 0,
     startedAtIso: new Date().toISOString(),
+    played: false,
   };
   pendingCompletion = null;
   /* De snapshot/pill-kant werkt sowieso ongeacht toestemming — publish nu
@@ -689,6 +693,9 @@ export function pauseBraceletSessionMonitor(): void {
     elapsedBeforeRunSec: state.elapsedBeforeRunSec === 0 && elapsed < 1 ? 0 : elapsed,
     runStartedAt: null,
     pausedAtMs: Date.now(),
+    /* Wie al een seconde of meer liep (snelle sessie, start vanaf het horloge …) heeft gespeeld — enkel "start en
+       meteen pauzeren" blijft ongespeeld. */
+    played: state.played !== false || elapsed >= 1,
   };
   persist();
   syncHaptics();
@@ -698,7 +705,7 @@ export function pauseBraceletSessionMonitor(): void {
 /** Aanroepen vanuit onResume. Hervat de projectie vanaf het pauze-moment. */
 export function resumeBraceletSessionMonitor(): void {
   if (!state) return;
-  state = { ...state, paused: false, runStartedAt: Date.now(), pausedAtMs: undefined };
+  state = { ...state, paused: false, runStartedAt: Date.now(), pausedAtMs: undefined, played: true };
   persist();
   syncHaptics();
   void publish(true);
@@ -917,6 +924,12 @@ export async function startStateControlNow(
     /* Geen bracelet bereikbaar — de haptiek op de telefoon loopt al. */
   }
   return true;
+}
+
+/** Klaargezet maar nog nooit op Play gedrukt (31 okt 2026, operator: "niet op play gedrukt = sessie niet gestart, dus
+ *  bij back niet minimaliseren"). Een lopende sessie telt altijd als gespeeld. */
+export function isBraceletSessionUnplayed(): boolean {
+  return !!state && state.paused && state.played === false;
 }
 
 export function isBraceletSessionMonitorActive(): boolean {

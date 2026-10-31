@@ -3428,7 +3428,7 @@ export default function BreathSetupScreen() {
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
           <GlassSheet visible={activePicker === 'state'} onClose={() => { setStateTouched(true); setActivePicker(null); }}>
-              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={[]} /* lijst loopt door tot de schermrand; ruimte onderaan zit in de SheetScroll (31 okt 2026) */>
                 <VibezGlass
                   radius={24}
                   level="sheet"
@@ -3512,7 +3512,7 @@ export default function BreathSetupScreen() {
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
           <GlassSheet visible={activePicker === 'technique'} onClose={() => setActivePicker(null)}>
-              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={[]} /* lijst loopt door tot de schermrand; ruimte onderaan zit in de SheetScroll (31 okt 2026) */>
                 <VibezGlass
                   radius={24}
                   level="sheet"
@@ -3618,7 +3618,7 @@ export default function BreathSetupScreen() {
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
           <GlassSheet visible={activePicker === 'duration'} onClose={() => { setDurationTouched(true); setActivePicker(null); }}>
-              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={[]} /* lijst loopt door tot de schermrand; ruimte onderaan zit in de SheetScroll (31 okt 2026) */>
                 <VibezGlass
                   radius={24}
                   level="sheet"
@@ -3728,7 +3728,7 @@ export default function BreathSetupScreen() {
           {/* Echt glas, ook op Android: in hetzelfde venster als de app
               (components/GlassSheetHost.tsx), niet als Modal (7 okt 2026). */}
           <GlassSheet visible={activePicker === 'horizon'} onClose={() => { setHorizonTouched(true); setActivePicker(null); }}>
-              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={['bottom']}>
+              <SafeAreaView style={[s.sheetContainer, s.sheetGlass]} edges={[]} /* lijst loopt door tot de schermrand; ruimte onderaan zit in de SheetScroll (31 okt 2026) */>
                 <VibezGlass
                   radius={24}
                   level="sheet"

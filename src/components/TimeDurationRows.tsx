@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import TimeWheel from '@/components/TimeWheel';
 import { Reveal } from '@/components/Reveal';
+import { useWheelScrollLock, WheelScrollLockContext } from '@/components/WheelScrollLock';
 import { BrandFonts } from '@/constants/theme';
 
 /* De duurcirkel in een blad: groeit en krimpt met de schermhoogte (30 okt 2026, operator: "maak de popup groter,
@@ -24,16 +25,22 @@ export const SHEET_BODY_MIN_H = Math.round(Math.min(SHEET_BODY_MAX_H, H * 0.7));
  *  gewone kaart en heeft het wiel de beweging voor zich alleen. */
 const SHEET_NEEDS_SCROLL = H < 700;
 export function SheetBody({ children }: { children: ReactNode }) {
+  /* 31 okt 2026 (operator: "moet voor alle toestellen correct werken"): ook op een klein scherm, waar het blad wel
+     scrolt, draait het wiel — het blad scrolt niet zolang de vinger op het wiel staat (WheelScrollLock). */
+  const wheel = useWheelScrollLock();
   if (SHEET_NEEDS_SCROLL) {
     return (
-      <ScrollView
-        style={{ alignSelf: 'stretch', maxHeight: SHEET_BODY_MAX_H }}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
-      >
-        {children}
-      </ScrollView>
+      <WheelScrollLockContext.Provider value={wheel.lock}>
+        <ScrollView
+          style={{ alignSelf: 'stretch', maxHeight: SHEET_BODY_MAX_H }}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          scrollEnabled={wheel.scrollEnabled}
+        >
+          {children}
+        </ScrollView>
+      </WheelScrollLockContext.Provider>
     );
   }
   return <View style={{ alignSelf: 'stretch', minHeight: SHEET_BODY_MIN_H }}>{children}</View>;

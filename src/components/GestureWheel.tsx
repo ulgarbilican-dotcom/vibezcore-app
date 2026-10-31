@@ -9,7 +9,7 @@
 
    Zelfde look als DurationWheel (UIPickerView-gevoel): gevulde pil in de toestandskleur, rijen die naar de rand
    kleiner worden, vervagen en wegdraaien; een tik per rij die voorbijkomt. */
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -25,6 +25,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { BrandFonts } from '@/constants/theme';
 import { hapticTick } from '@/utils/haptics';
+import { WheelScrollLockContext } from '@/components/WheelScrollLock';
 
 export const GESTURE_WHEEL_ITEM_H = 44;
 const SNAP = { damping: 26, stiffness: 260, mass: 0.6 } as const;
@@ -94,6 +95,13 @@ export default function GestureWheel({
   onChangeRef.current = onChange;
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  /* 31 okt 2026: in een scrollend blad zet de vinger op het wiel het scrollen van het blad even uit (WheelScrollLock),
+     anders pakt de ScrollView de veeg af en staat het wiel stil. */
+  const scrollLock = useContext(WheelScrollLockContext);
+  const scrollLockRef = useRef(scrollLock);
+  scrollLockRef.current = scrollLock;
+  const hasScrollLock = scrollLock !== null;
+  const setScrollLock = (v: boolean) => scrollLockRef.current?.(v);
   const commit = (idx: number) => {
     const o = optionsRef.current[idx];
     if (o) onChangeRef.current(o.value);
@@ -145,6 +153,10 @@ export default function GestureWheel({
     .failOffsetX([-24, 24])
     .onBegin(() => {
       start.value = offset.value;
+      if (hasScrollLock) scheduleOnRN(setScrollLock, true);
+    })
+    .onFinalize(() => {
+      if (hasScrollLock) scheduleOnRN(setScrollLock, false);
     })
     .onUpdate((e) => {
       const next = start.value - e.translationY;

@@ -78,6 +78,7 @@ import {
   getBraceletMonitorRemainingSec,
   getBraceletMonitorSession,
   isBraceletSessionMonitorActive,
+  isBraceletSessionUnplayed,
   subscribeSessionCompletion,
   type SessionCompletion,
   pauseBraceletSessionMonitor,
@@ -3413,6 +3414,8 @@ function ActiveSessionScreen({
   onMinimize,
 }: ActiveSessionScreenProps) {
   const [avOpen, setAvOpen] = useState(false);
+  /* Klaargezet, nog nooit op Play gedrukt (31 okt 2026). */
+  const unplayed = isPaused && isBraceletSessionUnplayed();
   const sessionLibraryPlaying = useLibraryPlaying();
   const sessionHear = useStateHear();
   const isPushedRoute = usePathname() === '/bracelet-control';
@@ -3598,9 +3601,14 @@ function ActiveSessionScreen({
             }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
-            accessibilityLabel="Minimize — session keeps running"
+            accessibilityLabel={unplayed ? 'Back' : 'Minimize — session keeps running'}
           >
-            <ChevronDown size={30} color="#ffffff" strokeWidth={2.2} />
+            {/* 31 okt 2026 (UI-regels §4): vóór de eerste Play is er niets te minimaliseren — een terugpijl. */}
+            {unplayed ? (
+              <ChevronLeft size={28} color="#ffffff" strokeWidth={2.2} />
+            ) : (
+              <ChevronDown size={30} color="#ffffff" strokeWidth={2.2} />
+            )}
           </Tap>
           <View style={s.activeModeRow}>
             <View style={[s.activeDot, { backgroundColor: activeMeta.color }]} />
@@ -5337,7 +5345,16 @@ function BraceletControlScreen({
      sessie (bv. Boost, gestart vanuit het plan) — anders toonde Session
      Control een andere toestand met "Switch to …" en zag je nergens dat er
      iets liep. Nu verschijnt de "Boost · x left"-balk. */
+  /* 31 okt 2026 (operator: "niet op play gedrukt = die sessie is niet gestart, dus bij back niet minimaliseren"): een
+     sessie uit het plan landt gepauzeerd en wacht op Play. Terug (chevron of telefoon) vóór de eerste Play = de
+     klaargezette sessie weg (niets in de geschiedenis, geen pil) en terug naar de pagina waar je vandaan kwam. */
+  const discardUnplayedRef = useRef<() => void>(() => {});
+  const linkFromRef = useRef<string | null>(null);
   const minimizeSession = useCallback(() => {
+    if (isBraceletSessionUnplayed()) {
+      discardUnplayedRef.current();
+      return;
+    }
     const snap = getBraceletSessionSnapshot();
     if (snap.active) setSelectedMode(snap.mode as BraceletMode);
     setMinimized(true);
@@ -5798,6 +5815,8 @@ function BraceletControlScreen({
       return;
     }
     lastLinkTokenRef.current = token;
+    /* Een sessie die al via "Tap to start" klaarstaat (useStartStateControl): onthoud waar de gebruiker vandaan kwam. */
+    linkFromRef.current = typeof params.from === 'string' && params.from.startsWith('/') ? params.from : null;
     if (Number.isFinite(modeNum) && !isBraceletSessionMonitorActive() && params.breathwork !== '1') {
       const m = modeNum as BraceletMode;
       setSelectedMode(m);
@@ -5907,6 +5926,24 @@ function BraceletControlScreen({
     }
   };
   onStopRef.current = onStop;
+
+  discardUnplayedRef.current = () => {
+    const from = linkFromRef.current;
+    linkFromRef.current = null;
+    /* Nooit gespeeld: niet in de geschiedenis (finishSession overslaan). */
+    sessionStartedAtRef.current = null;
+    sessionRealStartedAtRef.current = null;
+    setEndedLocally(true);
+    setStatus((prev) => (prev ? { ...prev, sessionActive: false, remainingMinutes: 0 } : prev));
+    pausedAtElapsedMsRef.current = 0;
+    setPausedAt(null);
+    const runMode = (getBraceletMonitorSession()?.mode ?? selectedMode) as BraceletMode;
+    void stopBraceletSessionMonitor();
+    void bleBestEffort(async () => {
+      await bracelet.sendCommand({ mode: runMode, duration: 0, command: BleCommand.Stop });
+    });
+    if (from) router.push(from as never);
+  };
 
   /* Pause — sla resterende tijd op en zet de bracelet stop. UI blijft
      op active-screen via de isPaused-check.

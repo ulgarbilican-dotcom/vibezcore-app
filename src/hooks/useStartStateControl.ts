@@ -12,6 +12,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 import * as Haptics from 'expo-haptics';
+import { usePathname } from 'expo-router';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { BraceletMode } from '@/services/ble-contract';
 import { startStateControlNow } from '@/services/bracelet-session-monitor';
@@ -24,6 +25,8 @@ export function useStartStateControl() {
   const subscription = useSubscription();
   const ownsBracelet = useBraceletOwner();
   const [testFullSessions] = useSetting('testFullSessions');
+  /* 31 okt 2026: waar je vandaan kwam — drukt de gebruiker niet op Play maar op terug, dan keert hij hierheen terug. */
+  const pathname = usePathname();
 
   const start = (mode: BraceletMode, minutes: number) => {
     hapticTap();
@@ -33,7 +36,7 @@ export function useStartStateControl() {
       openStateControl({ plan: 1, mode, duration: minutes });
       return;
     }
-    void startStateControlNow(mode, minutes).then(() => openStateControl());
+    void startStateControlNow(mode, minutes).then(() => openStateControl({ from: pathname }));
   };
 
   return { start };
