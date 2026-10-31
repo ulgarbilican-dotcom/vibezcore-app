@@ -122,6 +122,9 @@ export default function SoundTimingSheet({
     setSoundCorrection(output.key, correction.current);
     saved.current = true;
     setStep('done');
+    /* Operator, 31 okt 2026: aan het einde VRAGEN of het klopt — de slag
+       loopt door met geluid + trilling, zodat je het meteen voelt en hoort. */
+    void startCalibrationBeat(true);
   };
 
   const nudge = (deltaMs: number) => {
@@ -234,20 +237,25 @@ export default function SoundTimingSheet({
         {step === 'done' ? (
           <View key="done">
             <Reveal i={0}>
-              <Text style={st.heading}>Sound timing set</Text>
+              <Text style={st.heading}>Do the sound and the pulse land together?</Text>
             </Reveal>
             <Reveal i={1}>
               <BalancedText style={[st.body, st.bodyCenter]}>
-                The heartbeat now lands with every pulse on these headphones.
+                Listen and feel for a few beats.
               </BalancedText>
             </Reveal>
             <Reveal i={2}>
               <Tap onPress={close} style={[CTA.container, st.cta]} accessibilityRole="button">
-                <Text style={CTA.label}>Done</Text>
+                <Text style={CTA.label}>Yes, done</Text>
+              </Tap>
+            </Reveal>
+            <Reveal i={3}>
+              <Tap onPress={startTapping} style={[st.glassPill, st.cta]} accessibilityRole="button">
+                <Text style={st.glassPillTxt}>Tap along again</Text>
               </Tap>
             </Reveal>
             {fineTune ? (
-              <Reveal i={3}>
+              <Reveal i={4}>
                 <Tap onPress={startFineTune} hitSlop={10} accessibilityRole="button" style={st.linkTouch}>
                   <Text style={st.link}>Fine-tune</Text>
                 </Tap>

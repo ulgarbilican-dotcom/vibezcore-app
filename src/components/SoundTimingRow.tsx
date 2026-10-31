@@ -50,16 +50,49 @@ export function useSoundOutput(): SoundOutput | null {
   return out;
 }
 
+/* Het instelblad staat in de root (SoundTimingHost, naast GlassSheetHost),
+   niet in het scherm of blad dat het opent (31 okt 2026, operator: "Adjust
+   doet niets"): GlassSheetHost tekent enkel het BOVENSTE blad — een blad
+   dat binnen Audio & Haptics woonde verdween zodra het zelf bovenaan kwam,
+   en sloot zo meteen weer. */
+type OpenRequest = { output: SoundOutput; fineTune: boolean; onClose?: (saved: boolean) => void };
+let openListener: ((r: OpenRequest | null) => void) | null = null;
+
+export function openSoundTiming(output: SoundOutput, fineTune: boolean, onClose?: (saved: boolean) => void): void {
+  openListener?.({ output, fineTune, onClose });
+}
+
+export function SoundTimingHost() {
+  const [req, setReq] = useState<OpenRequest | null>(null);
+  useEffect(() => {
+    openListener = setReq;
+    return () => {
+      if (openListener === setReq) openListener = null;
+    };
+  }, []);
+  if (!req) return null;
+  return (
+    <SoundTimingSheet
+      visible
+      fineTune={req.fineTune}
+      output={req.output}
+      onClose={(saved) => {
+        req.onClose?.(saved);
+        setReq(null);
+      }}
+    />
+  );
+}
+
 export default function SoundTimingRow({ separatorStyle }: { separatorStyle?: ViewStyle }) {
   const out = useSoundOutput();
-  const [open, setOpen] = useState<SoundOutput | null>(null);
-  if (!out && !open) return null;
-  const shown = out ?? open!;
+  if (!out) return null;
+  const shown = out;
   return (
     <>
       {separatorStyle ? <View style={separatorStyle} /> : null}
       <Tap
-        onPress={() => setOpen(shown)}
+        onPress={() => openSoundTiming(shown, true)}
         style={rs.row}
         accessibilityRole="button"
         accessibilityLabel={`Sound timing for ${shown.name}`}
@@ -76,7 +109,6 @@ export default function SoundTimingRow({ separatorStyle }: { separatorStyle?: Vi
           <Text style={rs.btnTxt}>{shown.calibrated ? 'Adjust' : 'Set up'}</Text>
         </View>
       </Tap>
-      {open ? <SoundTimingSheet visible fineTune output={open} onClose={() => setOpen(null)} /> : null}
     </>
   );
 }
@@ -85,7 +117,6 @@ export default function SoundTimingRow({ separatorStyle }: { separatorStyle?: Vi
 export function SoundTimingHint({ show }: { show: boolean }) {
   const out = useSoundOutput();
   const [dismissed, setDismissed] = useState<boolean | null>(null);
-  const [open, setOpen] = useState<SoundOutput | null>(null);
   const key = out?.key ?? null;
   useEffect(() => {
     let alive = true;
@@ -117,25 +148,23 @@ export function SoundTimingHint({ show }: { show: boolean }) {
               >
                 <Text style={rs.hintLater}>Not now</Text>
               </Tap>
-              <Tap onPress={() => setOpen(out)} style={rs.btn} accessibilityRole="button">
+              <Tap
+                onPress={() =>
+                  openSoundTiming(out, false, (saved) => {
+                    if (saved) {
+                      void dismissHint(out.key);
+                      setDismissed(true);
+                    }
+                  })
+                }
+                style={rs.btn}
+                accessibilityRole="button"
+              >
                 <Text style={rs.btnTxt}>Set up</Text>
               </Tap>
             </View>
           </View>
         </Reveal>
-      ) : null}
-      {open ? (
-        <SoundTimingSheet
-          visible
-          output={open}
-          onClose={(saved) => {
-            if (saved) {
-              void dismissHint(open.key);
-              setDismissed(true);
-            }
-            setOpen(null);
-          }}
-        />
       ) : null}
     </>
   );

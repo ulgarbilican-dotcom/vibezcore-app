@@ -27,6 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurTargetView } from 'expo-blur';
 import { rootBlurRef } from '@/utils/root-blur';
 import { GlassSheetHost } from '@/components/GlassSheetHost';
+import { SoundTimingHost } from '@/components/SoundTimingRow';
 import LaunchReveal, { revealApp } from '@/components/LaunchReveal';
 import { AccountWallModal } from '@/components/AccountWallModal';
 import { BraceletUpsellModal } from '@/components/BraceletUpsellModal';
@@ -1059,6 +1060,8 @@ export default function RootLayout() {
           left untouched (we have no control over those). */}
       </BlurTargetView>
       <GlassSheetHost />
+      {/* 31 okt 2026: Sound timing-blad, buiten elk ander blad (zie SoundTimingRow). */}
+      <SoundTimingHost />
       <VibezAlertHost />
       {/* Punt 25 (operator, 19 okt 2026): bevestigingsmoment "het is gelukt". */}
       <ConfirmMomentHost />
