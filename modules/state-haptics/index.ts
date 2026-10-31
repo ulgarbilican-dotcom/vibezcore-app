@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 
 type StateHapticsNativeModule = {
   setSessionSound?(on: boolean): void;
+  setSessionHaptics?(on: boolean): void;
   hasAmplitudeControl(): boolean;
   play(timings: number[], amplitudes: number[], repeat: number, maxMs: number): void;
   stop(): void;
@@ -195,6 +196,19 @@ export function setNativeSessionSound(on: boolean): boolean {
   if (!native?.setSessionSound) return false;
   try {
     native.setSessionSound(on);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** De lopende native sessie trilt (niet) mee — geluid en beeld lopen door
+ *  (31 okt 2026, het horloge neemt de trilling over). Oudere build zonder
+ *  deze functie → false (de app herstart dan stil, zoals vroeger). */
+export function setNativeSessionHaptics(on: boolean): boolean {
+  if (!native?.setSessionHaptics) return false;
+  try {
+    native.setSessionHaptics(on);
     return true;
   } catch {
     return false;

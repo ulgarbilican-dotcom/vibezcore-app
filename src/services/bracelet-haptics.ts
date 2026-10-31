@@ -62,6 +62,7 @@ import {
   pauseNativeSession,
   playNativeWaveform,
   setNativeSessionSound,
+  setNativeSessionHaptics,
   startNativeSession,
   stopNativeSession,
   stopNativeWaveform,
@@ -97,6 +98,7 @@ import {
   prepareHeartbeatSounds,
   startSessionBeats,
   stopSessionBeats,
+  setSessionBeatHaptics,
   type BeatPlan,
 } from '../../modules/session-audio';
 import { getStateHear, getStateHearNow, subscribeStateHear } from './state-sound-pref';
@@ -678,6 +680,18 @@ function refreshIosBeatSound(): void {
     stopSessionBeats();
   }
 }
+/** iPhone: het lopende plan zonder trilling verder (het horloge trilt) —
+ *  zelfde rooster, de geluidsmotor plant vanaf de eerstvolgende slag
+ *  (31 okt 2026, zie onWatchTookOver). */
+function muteIosPlanHaptics(): boolean {
+  const cur = lastIosPlan;
+  if (!cur || cur.generation !== generation || !cur.clocked) return false;
+  if (cur.plan.endAtMs > 0 && Date.now() >= cur.plan.endAtMs) return false;
+  if (!cur.plan.haptics) return true;
+  if (!setSessionBeatHaptics(false)) return false;
+  lastIosPlan = { ...cur, plan: { ...cur.plan, haptics: false } };
+  return true;
+}
 subscribeLibraryPlaying(() => refreshIosBeatSound());
 subscribeStateHear(() => refreshIosBeatSound());
 
@@ -1055,6 +1069,14 @@ function onWatchTookOver(watchdogOn = false): void {
     if (!watchHasRhythm) return stopWatchdog();
     if (Date.now() - lastWatchAckAt > WATCH_ACK_TIMEOUT_MS) phoneTakesRhythmBack();
   }, 5_000);
+  /* 31 okt 2026 (gemeten op de A16, operator: "de eerste seconde hapert"):
+     een stille HERSTART brak de lopende slag af — de bevestiging kwam
+     ~1,6 s na de start, midden in slag 2: lub zonder dub, dan een gat tot
+     slag 3. Daarom eerst zonder herstart: de lopende sessie trilt gewoon niet
+     meer mee, geluid en beeld lopen ongestoord door op hetzelfde rooster als
+     het horloge. Enkel een oudere build zonder die mogelijkheid herstart. */
+  if (hasNativeWaveform() && isNativeSessionAlive() && setNativeSessionHaptics(false)) return;
+  if (Platform.OS === 'ios' && muteIosPlanHaptics()) return;
   /* Zelfde plek in de curve, nu stil — sessie, timer en melding blijven.
      31 okt 2026 (operator: "geluid (telefoon) en haptics (horloge) moeten
      ALTIJD perfect synchroon zijn", ook bij een horloge dat midden in de

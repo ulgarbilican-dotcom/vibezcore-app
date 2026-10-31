@@ -92,6 +92,13 @@ class StateHapticsModule : Module() {
       StateHapticsService.soundEnabled = on
     }
 
+    /** 31 okt 2026: het horloge trilt — deze sessie trilt niet meer mee,
+     *  maar loopt door (geluid + beeld op hetzelfde rooster). Een nieuwe
+     *  sessie trilt weer zelf. */
+    Function("setSessionHaptics") { on: Boolean ->
+      StateHapticsService.hapticsMuted = !on
+    }
+
     Function("hasAmplitudeControl") {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && (vibrator()?.hasAmplitudeControl() ?: false)
     }

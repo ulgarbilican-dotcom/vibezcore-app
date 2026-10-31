@@ -99,6 +99,13 @@ class StateHapticsService : Service() {
        geluid, precies op de tik — ook met het scherm op slot. De app zet dit
        aan/uit (ook tijdens een lopende sessie). */
     @Volatile var soundEnabled = false
+    /* 31 okt 2026 (gemeten op de A16: "de eerste seconde hapert"): neemt het
+       horloge de trilling over, dan trilt deze dienst niet meer mee maar
+       loopt hij GEWOON DOOR — geluid en beeld op exact hetzelfde rooster.
+       Vroeger startte de app hier een nieuwe, stille sessie: dat brak de
+       lopende slag af (lub zonder dub, dan een gat). Elke nieuwe sessie
+       (applySession) trilt weer zelf. */
+    @Volatile var hapticsMuted = false
     const val EXTRA_TIMINGS = "timings"
     const val EXTRA_AMPLITUDES = "amplitudes"
     const val EXTRA_TITLE = "title"
@@ -173,6 +180,12 @@ class StateHapticsService : Service() {
      tikken) — gemeten tot ±90 ms afwijking. */
   private val beatThread = HandlerThread("vibezcore-beats", Process.THREAD_PRIORITY_URGENT_AUDIO).apply { start() }
   private val beatHandler = Handler(beatThread.looper)
+  /* 31 okt 2026 (gemeten op de A16): de eerste trilopdracht van een sessie
+     hield deze thread ~150 ms bezig — de dub van slag 0 klonk zo laat. Het
+     hartslaggeluid krijgt daarom een eigen thread: een trage trilopdracht
+     kan geen geluid meer verschuiven. */
+  private val soundThread = HandlerThread("vibezcore-beat-sound", Process.THREAD_PRIORITY_URGENT_AUDIO).apply { start() }
+  private val soundHandler = Handler(soundThread.looper)
   private var timings = LongArray(0)
   private var amplitudes = IntArray(0)
   private var totalMs = 0L
@@ -374,7 +387,7 @@ class StateHapticsService : Service() {
     val u = units[nextUnit]
     /* Te laat (bv. CPU was even bezet)? Die tik overslaan i.p.v. hem uit de
        maat te spelen. */
-    if (now - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
+    if (!hapticsMuted && now - (startUptime + u.offsetMs) <= LATE_SKIP_MS) {
       try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
           vibrateForSession(this, vibratorOf(this), VibrationEffect.createWaveform(u.t, u.a, -1))
@@ -401,7 +414,7 @@ class StateHapticsService : Service() {
     val lubAt = startUptime + u.offsetMs - lead
     val dubAt = startUptime + u.offsetMs + u.t[0] + u.t[1] - lead
     if (lubAt >= now - LATE_SKIP_MS) {
-      beatHandler.postAtTime({
+      soundHandler.postAtTime({
         if (soundEnabled) {
           try {
             playHeartSound(dub = false)
@@ -412,7 +425,7 @@ class StateHapticsService : Service() {
     }
     /* De dub op exact hetzelfde moment als de tweede tik (lub + pauze). */
     if (dubAt >= now - LATE_SKIP_MS) {
-      beatHandler.postAtTime({
+      soundHandler.postAtTime({
         if (soundEnabled) {
           try {
             playHeartSound(dub = true)
@@ -473,6 +486,7 @@ class StateHapticsService : Service() {
    *  service niet opnieuw STARTEN (Android 12+), wel een draaiende bijsturen. */
   fun applySession(intent: Intent?) {
     paused = false
+    hapticsMuted = false
     title = intent?.getStringExtra(EXTRA_TITLE) ?: "State Control"
     isPreview = intent?.getBooleanExtra(EXTRA_PREVIEW, false) ?: false
     val t = intent?.getLongArrayExtra(EXTRA_TIMINGS) ?: LongArray(0)
@@ -513,6 +527,7 @@ class StateHapticsService : Service() {
 
     acquireWakeLock()
     beatHandler.removeCallbacksAndMessages(dubToken)
+    soundHandler.removeCallbacksAndMessages(dubToken)
     units = buildUnits(t, a)
     nextUnit = 0
     startUptime = nowUp + startDelay
@@ -533,7 +548,9 @@ class StateHapticsService : Service() {
     soundPool = null
     handler.removeCallbacksAndMessages(null)
     beatHandler.removeCallbacksAndMessages(null)
+    soundHandler.removeCallbacksAndMessages(null)
     beatThread.quitSafely()
+    soundThread.quitSafely()
     try {
       vibratorOf(this)?.cancel()
     } catch (_: Exception) {
@@ -548,6 +565,7 @@ class StateHapticsService : Service() {
     if (instance === this) instance = null
     handler.removeCallbacksAndMessages(null)
     beatHandler.removeCallbacksAndMessages(null)
+    soundHandler.removeCallbacksAndMessages(null)
     try {
       vibratorOf(this)?.cancel()
     } catch (_: Exception) {
@@ -585,6 +603,7 @@ class StateHapticsService : Service() {
     paused = true
     beatHandler.removeCallbacks(beatRunnable)
     beatHandler.removeCallbacksAndMessages(dubToken)
+    soundHandler.removeCallbacksAndMessages(dubToken)
     handler.removeCallbacks(endRunnable)
     handler.removeCallbacks(tickRunnable)
     try {

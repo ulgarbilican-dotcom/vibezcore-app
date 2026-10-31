@@ -557,6 +557,23 @@ final class SessionAudioEngine {
     }
   }
 
+  /// 31 okt 2026: het horloge neemt de trilling over — de tikken van dit
+  /// plan stoppen, het geluid loopt ongestoord door op hetzelfde rooster
+  /// (opnieuw inplannen brak de lopende slag af: lub zonder dub).
+  func setBeatHaptics(_ on: Bool) {
+    q.async {
+      guard var p = self.plan else { return }
+      p.haptics = on
+      self.plan = p
+      if !on {
+        for pl in self.beatHapticPlayers {
+          try? pl.stop(atTime: CHHapticTimeImmediate)
+        }
+        self.beatHapticPlayers = []
+      }
+    }
+  }
+
   func stopBeats() {
     q.async {
       self.clearBeats()
@@ -809,6 +826,10 @@ public class SessionAudioModule: Module {
 
     Function("stopBeats") { () in
       SessionAudioEngine.shared.stopBeats()
+    }
+
+    Function("setBeatHaptics") { (on: Bool) in
+      SessionAudioEngine.shared.setBeatHaptics(on)
     }
 
     Function("playTaps") { (startAtMs: Double, taps: [SessionTapRecord]) in

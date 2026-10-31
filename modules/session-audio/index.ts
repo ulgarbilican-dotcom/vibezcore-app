@@ -45,6 +45,7 @@ type NativeModule = {
   stopVoice(): void;
   startBeats(plan: BeatPlan): void;
   stopBeats(): void;
+  setBeatHaptics?(on: boolean): void;
   playTaps(startAtMs: number, taps: SessionTap[]): void;
   stopTaps(): void;
 };
@@ -141,6 +142,18 @@ export function stopSessionBeats(): void {
     native?.stopBeats();
   } catch {
     /* stil */
+  }
+}
+
+/** Het lopende plan trilt (niet) mee; het geluid loopt door (31 okt 2026,
+ *  het horloge neemt de trilling over). Oudere build → false. */
+export function setSessionBeatHaptics(on: boolean): boolean {
+  if (!native?.setBeatHaptics) return false;
+  try {
+    native.setBeatHaptics(on);
+    return true;
+  } catch {
+    return false;
   }
 }
 
