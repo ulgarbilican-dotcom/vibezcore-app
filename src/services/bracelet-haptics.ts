@@ -602,11 +602,12 @@ function playIos(
   totalSec: number | undefined,
   clock: SessionClock | undefined,
   silent: boolean,
+  anchorWallMs?: number,
 ): void {
   /* Audio-voorrang (19 okt 2026): speelt de Audio Library, dan geen
      hartslaggeluid — haptiek en beeld lopen gewoon. */
   const withSound = !!clock && getStateHear() && heartbeatSoundAllowed() && !isLibraryPlaying();
-  const firstAt = Date.now() + IOS_FIRST_BEAT_MS;
+  const firstAt = anchorWallMs ?? Date.now() + IOS_FIRST_BEAT_MS;
   lastAnchorWallMs = firstAt;
   lastAnchorCurveSec = offsetSec;
   const lub = tapFor(strengthStyle(spec.lubStyle));
@@ -723,6 +724,10 @@ function play(
   restingBpm: number = getRestingPulse().bpm,
   startBpm: number = getSessionStartBpm(),
   strength?: HapticStrength,
+  /** Exact startmoment (wandklok) van slag `offsetSec` — enkel voor de
+   *  stille herstart als het horloge overneemt: dan valt het geluid op het
+   *  rooster van het horloge i.p.v. op "nu + opstarttijd" (31 okt 2026). */
+  anchor?: { wallMs: number },
 ): void {
   silence(!!clock && hasNativeWaveform());
   strengthOverride = strength ?? null;
@@ -746,7 +751,7 @@ function play(
        moment dat de eerste tik ECHT voelbaar is — zo vallen cirkel,
        trilling, geluid en pols samen (operator: "horloge loopt een fractie
        vooruit"). */
-    const anchorWallMs = Date.now() + (clock ? nativeStartLeadMs() : 0);
+    const anchorWallMs = anchor ? anchor.wallMs : Date.now() + (clock ? nativeStartLeadMs() : 0);
     lastAnchorWallMs = anchorWallMs;
     lastAnchorCurveSec = offsetSec;
     if (clock) {
@@ -809,7 +814,7 @@ function play(
       !clock && totalSec !== undefined ? anchorWallMs + totalSec * 1000 : Infinity,
     );
   } else if (Platform.OS === 'ios' && isSessionAudioAvailable()) {
-    playIos(mode, spec, timing, offsetSec, totalSec, clock, silent);
+    playIos(mode, spec, timing, offsetSec, totalSec, clock, silent, anchor?.wallMs);
   } else if (!silent) {
     if (clock) {
       jsSoundOn = true;
@@ -1051,38 +1056,45 @@ function onWatchTookOver(watchdogOn = false): void {
     if (Date.now() - lastWatchAckAt > WATCH_ACK_TIMEOUT_MS) phoneTakesRhythmBack();
   }, 5_000);
   /* Zelfde plek in de curve, nu stil — sessie, timer en melding blijven.
-     13 okt 2026 (meting: tikken van horloge en telefoon vielen ~0,63 s
-     naast elkaar): de stille herstart (die het hartslaggeluid speelt) begint
-     op de eerstvolgende slag van HETZELFDE rooster als het horloge, niet op
-     het moment van de bevestiging. Tot dan loopt de huidige curve door. */
+     31 okt 2026 (operator: "geluid (telefoon) en haptics (horloge) moeten
+     ALTIJD perfect synchroon zijn", ook bij een horloge dat midden in de
+     sessie aansluit): het horloge speelt het rooster van het laatste
+     ANKER (lastAnchorWallMs/lastAnchorCurveSec — exact wat relayToWatch
+     meestuurde). De stille herstart, die het hartslaggeluid speelt, valt
+     op de eerstvolgende slag van DAT rooster, met dat exacte moment als
+     anker. Vroeger telde het rooster vanaf lastClock.at (een opstarttijd
+     van 300/1500 ms ernaast) en ankerde de herstart op "nu + opstarttijd"
+     (nog eens verschoven, plus timer-speling): geluid en pols vielen een
+     fractie naast elkaar. */
   const clock = lastClock;
   const sess = session;
   const timing = { holdSec: SESSION_HOLD_SECONDS, rampSec: SPECS[clock.mode].rampSec };
   const spec = resolveSpec(clock.mode, sess.restingBpm, sess.startBpm);
-  const originCurve = Math.max(0, clock.elapsedSec - sess.curveZeroSec);
-  const nowCurve = originCurve + (Date.now() - clock.at) / 1000;
-  let gridCurve = originCurve;
-  while (gridCurve < nowCurve + 0.05) gridCurve += beatAt(spec, gridCurve, timing).cycleMs / 1000;
-  const myGeneration = generation;
-  const startAt = clock.at + (gridCurve - originCurve) * 1000;
-  pendingTimeouts.push(
-    setTimeout(() => {
-      if (myGeneration !== generation || !session || session.pausedAt !== null) return;
-      const ahead = gridCurve - originCurve;
-      const elapsedSec = clock.elapsedSec + ahead;
-      const remainingSec = Math.max(0, clock.remainingSec - ahead);
-      if (remainingSec <= 1) return;
-      play(
-        clock.mode,
-        timing,
-        gridCurve,
-        remainingSec,
-        { elapsedSec, totalSec: elapsedSec + remainingSec },
-        true,
-        sess.restingBpm,
-        sess.startBpm,
-      );
-    }, Math.max(0, startAt - Date.now())),
+  /* De motor (Android-trildienst / iPhone-geluidsmotor) moet het patroon
+     op tijd krijgen: minstens zijn opstarttijd vóór de slag. */
+  const lead = (Platform.OS === 'ios' ? IOS_FIRST_BEAT_MS : NATIVE_START_LEAD_MS) + 50;
+  let beatCurve = lastAnchorCurveSec;
+  let beatWall = lastAnchorWallMs;
+  const earliest = Date.now() + lead;
+  while (beatWall < earliest) {
+    const { cycleMs } = beatAt(spec, beatCurve, timing);
+    beatCurve += cycleMs / 1000;
+    beatWall += cycleMs;
+  }
+  const elapsedSec = clock.elapsedSec + (beatWall - clock.at) / 1000;
+  const remainingSec = Math.max(0, clock.remainingSec - (beatWall - clock.at) / 1000);
+  if (remainingSec <= 1) return;
+  play(
+    clock.mode,
+    timing,
+    beatCurve,
+    remainingSec,
+    { elapsedSec, totalSec: elapsedSec + remainingSec },
+    true,
+    sess.restingBpm,
+    sess.startBpm,
+    undefined,
+    { wallMs: beatWall },
   );
 }
 onWearStateAck(() => onWatchTookOver(true));
