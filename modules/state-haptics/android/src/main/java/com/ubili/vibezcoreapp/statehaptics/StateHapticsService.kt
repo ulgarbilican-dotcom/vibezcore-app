@@ -377,7 +377,7 @@ class StateHapticsService : Service() {
       dub -> soundSpeakerDub
       else -> soundSpeakerLub
     }
-    val vol = if (hp) 0.3f else 1f
+    val vol = if (hp) 0.7f else 1f // oortjes 70% (operator, 31 okt 2026), gelijk aan heartbeat-sound.ts
     if (id != 0) pool.play(id, vol, vol, 1, 0, 1f)
   }
 

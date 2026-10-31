@@ -41,7 +41,10 @@ import { invalidateAudioModeSet, isKeepAliveActive } from './session-keepalive';
 import { isHeadphonesOutput } from '../../modules/audio-route';
 
 const VOLUME_SPEAKER = 1; // operator, 9 okt 2026: "op de telefoon mag het luider"
-const VOLUME_HEADPHONES = 0.3; // operator, 9 okt 2026: 100% → 70% → 50% bleef "veel te luid en onzuiver" bij vol telefoonvolume → 30%
+/* Operator, 9 okt 2026: 100% → 70% → 50% bleef "veel te luid en onzuiver" bij vol telefoonvolume → 30%.
+   Operator, 31 okt 2026 ("ik hoor de hartslag op max te zacht — zet eens op 70%"): 70%. Zelfde waarde in de
+   Android-dienst (StateHapticsService, CalibrationBeat) en de iPhone-standaard (SessionAudioModule). */
+const VOLUME_HEADPHONES = 0.7;
 /** Zelfde volumes voor de iPhone-BeatEngine (bracelet-haptics.ts). */
 export const HEARTBEAT_VOLUME = { speaker: VOLUME_SPEAKER, headphones: VOLUME_HEADPHONES } as const;
 
