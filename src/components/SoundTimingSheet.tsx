@@ -5,7 +5,7 @@
    Eén stap (operator: "moet gebruiker dat zelf doen?" → enkel meetikken):
      · uitleg + Start → meetikken op de proefslag (70 bpm, enkel geluid — een
        trilling zou het tikken sturen), via exact dezelfde weg als een
-       sessie; na 10 tikken (de eerste 2 tellen niet) zet de mediaan + de
+       sessie; na 12 tikken (de eerste 4 tellen niet) zet de mediaan + de
        gemiddelde voorsprong van tikken de correctie → bewaard, klaar.
      · Fijnregelen (Earlier/Later per 10 ms, geluid + trilling samen) is
        optioneel en enkel te openen vanuit Audio & Haptics (`fineTune`),

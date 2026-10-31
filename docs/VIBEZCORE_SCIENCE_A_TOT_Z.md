@@ -355,6 +355,12 @@ pace": meten / zelf invullen / gemiddelde).
   meting (ook `getTimestamp`) leest dezelfde melding van de oortjes — een
   verkeerde melding is van op de telefoon niet te zien. Een vaste extra
   marge zou enkel voor één paar oortjes kloppen.
+- **Afstand lub–dub NIET gewijzigd (31 okt 2026):** de operator hoorde via
+  oortjes in het begin "om de beurt een andere sound". Via de luidspreker
+  (zelfde afstand) gebeurt dat niet, dus het ligt aan de Bluetooth-keten, niet
+  aan de afstand. Die afstand (30 % van de slag: 270 ms bij 67 bpm, 164 ms bij
+  110 bpm) volgt de echte hartslag: S1–S2 ≈ 300 ms in rust (Weissler 1968,
+  LVET ≈ 413 − 1,7 × HR ms). 🟡 uit kennis, niet herlezen.
 - **Waarom het vooral bij een traag tempo opvalt:** een vaste fout van
   bv. 150 ms geeft bij 67 bpm vier losse tikken per slag (tik · boem · tik ·
   boem); bij 110 bpm valt de tweede tik (dub na 164 ms) bijna samen met de
@@ -366,8 +372,10 @@ pace": meten / zelf invullen / gemiddelde).
   de uitgang. Geldt overal: State Control-hartslaggeluid, ademstem,
   rusthartslag-pagina. Grenzen: correctie −200…+400 ms, totaal 0…600 ms.
 - **Meting:** proefslag 70 bpm via dezelfde weg als een sessie, eerst enkel
-  geluid (een trilling zou het tikken sturen). 10 tikken, de eerste 2 tellen
-  niet; per tik de afwijking t.o.v. de dichtstbijzijnde slag, mediaan van de
+  geluid (een trilling zou het tikken sturen). 12 tikken, de eerste 4 tellen
+  niet (zoeken naar de maat + een verse Bluetooth-stroom heeft de eerste
+  seconden een andere vertraging: twee instellingen op dezelfde oortjes gaven
+  127 en 249 ms, 31 okt); per tik de afwijking t.o.v. de dichtstbijzijnde slag, mediaan van de
   tikken die binnen 120 ms van de mediaan vallen (≥ 75 % moet dat doen,
   anders "opnieuw"). 🟢 Mensen tikken gemiddeld 20–80 ms vóór een gehoorde
   slag ("negative mean asynchrony"; Repp 2005, *Psychon Bull Rev*;

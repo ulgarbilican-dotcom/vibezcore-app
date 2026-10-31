@@ -58,9 +58,12 @@ export const CALIBRATION_PERIOD_MS = Math.round(60000 / CALIBRATION_BPM);
  *  registreert → vast 40 ms. Operator, 31 okt 2026: één stap, de gebruiker
  *  regelt niets bij; Earlier/Later is enkel optioneel (Audio & Haptics). */
 export const TAP_ANTICIPATION_MS = 40;
-/** Eerste tikken weglaten: dan zoekt iedereen nog de maat. */
-export const DISCARD_FIRST_TAPS = 2;
-export const TAPS_NEEDED = 10;
+/** Eerste tikken weglaten: dan zoekt iedereen nog de maat, en een verse
+ *  Bluetooth-stroom heeft de eerste seconden een andere vertraging (gemeten
+ *  31 okt 2026: twee instellingen op dezelfde oortjes, 127 en 249 ms). 4 van
+ *  12 weg ≈ de eerste 3,4 s; de 8 tellende tikken vallen op de gezette stroom. */
+export const DISCARD_FIRST_TAPS = 4;
+export const TAPS_NEEDED = 12;
 
 /** De huidige Bluetooth-uitgang, of null (luidspreker / bedrade oortjes:
  *  daar is geen correctie nodig). */

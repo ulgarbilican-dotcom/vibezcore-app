@@ -32,7 +32,7 @@ describe('estimateLateMs', () => {
     expect(estimateLateMs(taps(-80 - TAP_ANTICIPATION_MS), FIRST)).toBe(-80);
   });
   it('median: ignores the first taps and a single stray tap', () => {
-    const jitter = [400, -300, 5, -8, 3, 0, 250, -4, 6, 2];
+    const jitter = [400, -300, 220, -180, 5, -8, 3, 0, 250, -4, 6, 2];
     expect(estimateLateMs(taps(60, jitter), FIRST)).toBe(60 + 2 + TAP_ANTICIPATION_MS);
   });
   it('taps late in the cycle are assigned to the nearest beat', () => {
@@ -40,7 +40,7 @@ describe('estimateLateMs', () => {
     expect(estimateLateMs(taps(400), FIRST)).toBe(400 + TAP_ANTICIPATION_MS);
   });
   it('uneven tapping → null (ask again)', () => {
-    const jitter = [0, 0, 0, 300, -250, 200, -180, 260, -220, 190];
+    const jitter = [0, 0, 0, 0, 300, -250, 200, -180, 260, -220, 190, -150];
     expect(estimateLateMs(taps(0, jitter), FIRST)).toBeNull();
   });
   it('too few taps → null', () => {
