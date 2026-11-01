@@ -277,9 +277,6 @@ export function useWatchCatalogSync(): void {
   const sub = useSubscription();
   const strength = useHapticStrength();
   const [experience] = useSetting('experienceLevel');
-  const [freeUsedAt] = useSetting('breathFreeSessionUsedAt');
-  const [stateFreeUsedAt] = useSetting('stateFreeSessionUsedAt');
-  const [stateFreeMode] = useSetting('stateFreeMode');
   const [techByState] = useSetting('breathTechByState');
   const history = useBreathHistory();
   const ownsBracelet = useBraceletOwner();
@@ -302,17 +299,19 @@ export function useWatchCatalogSync(): void {
        anders kon een gratis gebruiker State Control open krijgen op het
        horloge (en bleef dat zo als de app daarna sloot). */
     if (sub.isLoading) return;
-    const locked = !sub.isPro && !!freeUsedAt;
+    /* 1 nov 2026 (operator, Apple Watch: "bij State Control staat Try 30 sec, bij Breathwork gewoon Start en de sessie speelt door — moet
+       consistent zijn: Free is beide op slot met 30 s, Premium beide open"): op het horloge geen gratis volledige sessie meer (die hing
+       af van de onboarding op de telefoon en verschilde per sessietype). Free = 30 s-proef voor Breathwork én State Control; Premium
+       (of een bracelet voor State Control) = alles open. Geldt voor Apple Watch en Galaxy Watch (zelfde catalogus). */
+    const locked = !sub.isPro;
     /* zelfde regel als het State Control-scherm (bracelet-control.tsx) */
     const stateLocked = !sub.isPro && !ownsBracelet;
-    /* de ene gratis State Control-sessie: zelfde regel als useStateFreeStart (na de onboarding, nog niet gebruikt) */
-    const stateFreeOnce = stateLocked && stateFreeUsedAt === null && stateFreeMode !== null;
     const entitledUntil = watchEntitledUntil(sub.isPro, sub.validUntil, sub.willRenew);
-    const json = buildWatchCatalog(locked, stateLocked, !sub.isPro && !freeUsedAt, stateFreeOnce, entitledUntil, ownsBracelet);
-    if (QA_ENABLED) console.log(`[QA-WATCH] ${JSON.stringify({ isPro: sub.isPro, stateLocked, stateFreeOnce, stateFreeUsedAt, stateFreeMode, breathFree: !sub.isPro && !freeUsedAt, platform: Platform.OS })}`);
+    const json = buildWatchCatalog(locked, stateLocked, false, false, entitledUntil, ownsBracelet);
+    if (QA_ENABLED) console.log(`[QA-WATCH] ${JSON.stringify({ isPro: sub.isPro, locked, stateLocked, platform: Platform.OS })}`);
     if (Platform.OS === 'android') syncWatchCatalog(json);
     else if (Platform.OS === 'ios') syncAppleWatchCatalog(json);
-  }, [sub.isPro, sub.validUntil, sub.willRenew, sub.isLoading, ownsBracelet, freeUsedAt, stateFreeUsedAt, stateFreeMode, strength, experience, history.length, techByState, restingBpm, resyncTick]);
+  }, [sub.isPro, sub.validUntil, sub.willRenew, sub.isLoading, ownsBracelet, strength, experience, history.length, techByState, restingBpm, resyncTick]);
 
   useEffect(() => {
     if (Platform.OS === 'ios') return onAppleWatchLog(importAppleWatchRecord);
