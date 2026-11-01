@@ -44,7 +44,9 @@ private enum Rhythm {
   static let lubDubFraction = 0.3
   static let lubDubMaxMs = 350.0
   /** Onder deze afstand speelt de sessie enkel de lub (zie boven). */
-  static let minDubGapMs = 200.0
+  /* 1 nov 2026 (operator: "strong pulses als die ook effectief ons ritme weergeven"): 200 → 130 ms. Apple laat een nieuwe tik toe na
+     100 ms (WKInterfaceDevice.play); zo krijgt ook Boost (dub na ±164 ms) zijn tweede klop. */
+  static let minDubGapMs = 130.0
   static let endSilenceMs = 600.0
   /** Protocol: 70 ms tik · 120 ms stilte · 90 ms tik · 120 ms stilte · 160 ms tik. */
   static let endTapOffsetsMs: [Double] = [0, 190, 400]
@@ -475,7 +477,8 @@ final class StateSessionController: ObservableObject {
     if playDub && WatchSettings.shared.playsDub {
       dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000 - Self.hapticLeadSec)) { [weak self] in
         guard let self = self, gen == self.generation else { return }
-        WKInterfaceDevice.current().play(.click)
+        /* 1 nov 2026: de dub als STEVIGE klop (was het stille .click, nauwelijks voelbaar) — zo voel je het lub-dub-ritme. */
+        WKInterfaceDevice.current().play(.start)
         self.beats.send(false)
       }
     }
