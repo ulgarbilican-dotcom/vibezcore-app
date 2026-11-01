@@ -19,7 +19,7 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 |---|---|---|---|
 | 3 | Bij het starten van State Control neemt de smartwatch soms wel en soms niet over. | ⏳ | |
 | 4 | Het scherm van de smartwatch springt niet aan vanuit het vergrendelscherm (de app opent niet vanzelf). | ⏳ | startWatchApp (HealthKit, 29 okt). |
-| 5 | Ping-geluid op de smartwatch (bij de trillingen). | ⏳ | WKInterfaceDevice.play speelt soms geluid mee. |
+| 5 | Ping-geluid op de smartwatch (bij de trillingen) — in Free én Premium. Mag niet: enkel trillen. | ⏳ | WKInterfaceDevice.play speelt soms geluid mee. |
 | 6 | Haptiek is ok maar niet heel hard. | ⏳ | |
 | 7 | Eerst verschijnt een gedimd scherm ("Sharp Focus · 1 min" in een blauwe ring, foto operator); na bewegen het gewone scherm, kort daarna weer het gedimde scherm. | ⏳ | Always-on / verminderde helderheid (isLuminanceReduced). |
 | 8 | Het gedimde scherm blijft altijd op "1 min" staan (telt niet af). | ⏳ | |
