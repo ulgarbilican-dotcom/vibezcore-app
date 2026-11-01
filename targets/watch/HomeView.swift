@@ -598,7 +598,7 @@ struct WatchSettingsView: View {
 
   private func sub(_ s: String) -> String? {
     /* 1 nov 2026 (build 68): het horloge tikt enkel nog stil (.click, zie WatchSettings.play); het niveau bepaalt de tweede slag. */
-    s == "soft" ? "One tap per beat" : "Two taps per beat"
+    s == "soft" ? "Silent taps" : (s == "strong" ? "Strongest taps" : "Stronger taps")
   }
 
   var body: some View {
@@ -615,7 +615,7 @@ struct WatchSettingsView: View {
             settings.play(.beat)
           }
         }
-        Text("Taps without sound. Also changes the setting on your iPhone.")
+        Text("Turn on Silent Mode to feel the taps without sound. Also changes the setting on your iPhone.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)

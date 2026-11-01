@@ -288,9 +288,8 @@ final class BreathSessionController: NSObject, ObservableObject {
          inademen   = DICHTE tikken, elke 0,5 s, zolang je inademt (het "opbouwen")
          uitademen  = TRAGE tikken, elke 1,2 s, zolang je uitademt (het "wegstromen")
          vasthouden = één tik bij de start, dan STILTE (je houdt stil)
-       1 nov 2026 (build 68, operator: "ping mag niet"): ook de eerste tik van elke fase is nu het stille .click (WatchSettings.play) — de
-       fase herken je aan het ritme: dicht = in, één tik en stilte = vast, traag = uit. */
-    func repeating(every interval: TimeInterval) {
+       1 nov 2026: eerst alles stil .click (build 69, "ping mag niet") — te zwak; zie hieronder, nu sterke tikken + Stille modus-tip. */
+    func repeating(every interval: TimeInterval, tap: WatchSettings.Tap) {
       var elapsed: TimeInterval = 0
       let t = Timer(timeInterval: interval, repeats: true) { timer in
         elapsed += interval
@@ -298,18 +297,23 @@ final class BreathSessionController: NSObject, ObservableObject {
           timer.invalidate()
           return
         }
-        s.play(.tick)
+        s.play(tap)
       }
       t.tolerance = 0
       RunLoop.main.add(t, forMode: .common)
       tickTimer = t
     }
+    /* 1 nov 2026 (operator op build 69: "bijna niets voelbaar, geen duidelijk ritme voor inhale, exhale en hold"): de stille .click-tikken
+       tussendoor waren niet te voelen. Nu elke tik een STERKE tik van de fase zelf, met een eigen tempo:
+         inademen   = omhoog-tik (.directionUp) elke 1,0 s
+         vasthouden = één stevige tik (.start), dan stilte
+         uitademen  = omlaag-tik (.directionDown) elke 1,5 s */
     if key.hasPrefix("inhale") {
       s.play(.inhale)
-      repeating(every: 0.5)
+      repeating(every: 1.0, tap: .inhale)
     } else if key.hasPrefix("exhale") {
       s.play(.exhale)
-      repeating(every: 1.2)
+      repeating(every: 1.5, tap: .exhale)
     } else {
       s.play(.hold)
     }

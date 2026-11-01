@@ -131,9 +131,13 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
       </View>
       {/* 28 okt 2026 (operator): algemene hint, bewust zonder instellingsnamen — die verschillen per horloge
           (Apple: "Haptics", Pixel Watch 2+: trilintensiteit, sommige horloges hebben niets). */}
+      {/* 1 nov 2026 (iOS build 69, operator: "de haptics zijn heel belangrijk"): de Apple Watch speelt bij elke sterke tik een
+          toontje mee, tenzij het horloge op Stille modus staat — een app kan dat niet zelf dempen. */}
       {w.status === 'ready' && on ? (
         <Text style={s.hint}>
-          Feels too soft? If your watch has a vibration or haptics strength setting, turn it up.
+          {Platform.OS === 'ios'
+            ? 'Turn on Silent Mode on your Apple Watch to feel the taps without sound. For stronger taps: Settings › Sounds & Haptics › Prominent Haptic.'
+            : 'Feels too soft? If your watch has a vibration or haptics strength setting, turn it up.'}
         </Text>
       ) : null}
     </>

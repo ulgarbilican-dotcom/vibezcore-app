@@ -263,8 +263,22 @@ final class WatchSettings: ObservableObject {
      .directionUp en .directionDown spelen een toon mee zolang het horloge niet op stil staat; daar kan een app niets aan doen. Daarom
      ALLEEN nog de stille tik (.click), op elk niveau. De fasen herken je aan het ritme (BreathSessionController.playHaptics), niet
      meer aan een ander type tik. Strength bepaalt nog of de hartslag een tweede slag heeft (playsDub). */
+  /* 1 nov 2026 (later, operator op build 69: "de haptics zijn echt niet goed voelbaar, dat moet opgelost worden"): enkel .click was te
+     zwak om te voelen. Terug naar Apple's sterke tikken; het toontje valt weg met Stille modus op het horloge (tip in de app, Audio &
+     Haptics). Soft blijft het stille .click. */
   func play(_ t: Tap) {
-    WKInterfaceDevice.current().play(.click)
+    let d = WKInterfaceDevice.current()
+    if strength == "soft" {
+      d.play(.click)
+      return
+    }
+    switch t {
+    case .beat: d.play(.start)
+    case .inhale: d.play(.directionUp)
+    case .exhale: d.play(.directionDown)
+    case .hold: d.play(.start)
+    case .tick: d.play(.click)
+    }
   }
 
   /// Tweede slag van de hartslag (Soft: geen).
