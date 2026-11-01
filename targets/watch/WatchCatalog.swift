@@ -234,8 +234,10 @@ final class WatchSettings: ObservableObject {
   init() {
     /* 27 okt 2026 (operator: "altijd op max beginnen"): standaard het sterkste niveau. */
     strength = UserDefaults.standard.string(forKey: key) ?? "strong"
-    /* 1 nov 2026 (operator: "is er geen niveau dat zonder ping werkt?"): standaard Light = stille stroom, nooit een toon. */
-    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "stream"
+    /* 1 nov 2026 (later, operator: "bij Breathwork zijn de haptics nooit goed voelbaar", terwijl State Control wel voelbaar is): standaard
+       dezelfde stevige .start-tik als State Control (Pulse). Light (stil .click) en de zachte omhoog/omlaag-patronen bleken op de pols nauwelijks
+       voelbaar. Toon valt weg met Stille modus (uitleg in de app). */
+    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "pulse"
   }
 
   /* ── Ademtextuur (1 nov 2026) ────────────────────────────────────────────
@@ -258,7 +260,7 @@ final class WatchSettings: ObservableObject {
   func breathTexture() -> (inEvery: Double, outEvery: Double, inTap: WKHapticType, outTap: WKHapticType) {
     switch breathStyle {
     case "strong": return (0.5, 0.9, .directionUp, .directionDown)
-    case "pulse": return (0.4, 0.8, .start, .start)
+    case "pulse": return (0.5, 1.0, .start, .start)
     default: return (0.3, 0.6, .click, .click)
     }
   }
@@ -328,8 +330,9 @@ final class WatchSettings: ObservableObject {
     }
     switch t {
     case .beat: d.play(.start)
-    case .inhale: d.play(.directionUp)
-    case .exhale: d.play(.directionDown)
+    /* fase-tik: in de standaard (Pulse) de stevige .start; enkel de variant Strong gebruikt de zachtere omhoog/omlaag-patronen */
+    case .inhale: d.play(breathStyle == "strong" ? .directionUp : .start)
+    case .exhale: d.play(breathStyle == "strong" ? .directionDown : .start)
     /* vasthouden: .stop (eigen, dubbele stop-tik), anders dan de hartslag/.start — zo voelt "stil houden" als een duidelijk ander signaal */
     case .hold: d.play(.stop)
     case .tick: d.play(.click)

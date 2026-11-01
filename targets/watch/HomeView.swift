@@ -627,9 +627,9 @@ struct WatchSettingsView: View {
           .foregroundColor(.white)
           .padding(.top, 10)
           .padding(.bottom, 4)
-        ForEach(WatchSettings.breathStyles, id: \.self) { (st: String) in
+        ForEach(["pulse", "strong", "stream"], id: \.self) { (st: String) in
           PickRow(
-            title: st == "stream" ? "Light" : (st == "strong" ? "Strong" : "Pulse"),
+            title: st == "stream" ? "Light" : (st == "strong" ? "Glide" : "Firm"),
             sub: st == "stream" ? "No sound" : "Tone unless Silent Mode",
             subColor: dim, current: st == settings.breathStyle, color: teal
           ) {
