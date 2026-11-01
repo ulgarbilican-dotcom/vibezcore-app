@@ -17,8 +17,6 @@ Three instruments. One goal: personal growth.
 • Guided Breathwork: 15 techniques with voice, visuals and haptics.
 • The Audio Library: built around timeless theories, principles and ideas from history's greatest minds, including Carl Jung, Friedrich Nietzsche, Marcus Aurelius and many others whose work continues to shape our understanding of human nature, behavior and personal development.
 
-Together, they combine long-term personal development with support for your state during moments of stress, focus and recovery.
-
 — STATE CONTROL —
 SHIFT YOUR STATE IN THE MOMENT
 Pick a state and a duration, press start. A heartbeat rhythm, felt as gentle taps, starts at your own resting heart rate and moves toward the tempo of the state you chose. Nothing to follow, nothing to watch: you simply feel it.
@@ -103,7 +101,7 @@ Privacy Policy: https://www.vibezcore.com/privacy-policy
 
 ## Keywords (max 100, komma's zonder spaties)
 
-breathwork,focus,calm,sleep,energy,haptic,heartbeat,breathing,stoic,jung,mindset,discipline,wellbeing
+breathwork,focus,calm,sleep,energy,haptic,heartbeat,breathing,stoic,jung,mindset,discipline
 
 ## URLs
 
