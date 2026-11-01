@@ -132,6 +132,7 @@ import {
   Settings as SettingsIcon,
   Share2,
   UserPlus,
+  Watch,
 } from 'lucide-react-native';
 
 /* Deelteksten (APP_LINK_URL, BRAND_PITCH, uitnodigen) staan sinds 29 okt 2026 in utils/share.ts — één bron voor elke deelknop. */
@@ -164,6 +165,7 @@ import {
 } from '@/services/social-auth';
 import { hapticPress } from '@/utils/haptics';
 import { dateLocale, formatClock } from '@/utils/locale';
+import { showWatchSetupInfo } from '@/utils/watch-setup-tip';
 
 type Mode = 'login' | 'signup';
 
@@ -730,6 +732,16 @@ function SupportGroup() {
   return (
     <Group title="Settings & support">
       <Row icon={SettingsIcon} title="Settings" onPress={() => router.navigate('/settings' as never)} accessibilityLabel="Open settings" />
+      {/* 1 nov 2026 (operator: "niet onder Settings, gewoon direct zichtbaar"): de drie horloge-instellingen voor voelbare tikken zonder toon. */}
+      {Platform.OS === 'ios' ? (
+        <Row
+          icon={Watch}
+          title="Apple Watch: Silent & Haptics"
+          subtitle="Feel every tap, without sound"
+          onPress={showWatchSetupInfo}
+          accessibilityLabel="Apple Watch silent and haptics settings"
+        />
+      ) : null}
       <Row icon={UserPlus} title="Invite a friend" onPress={() => void shareInvite()} accessibilityLabel="Invite a friend to VIBEZCORE" />
       <Row icon={HelpCircle} title="FAQ" onPress={() => router.navigate('/faq' as never)} accessibilityLabel="Browse frequently asked questions" />
       <Row icon={MessageCircle} title="Contact support" onPress={() => router.navigate('/support' as never)} accessibilityLabel="Contact VIBEZCORE support" />

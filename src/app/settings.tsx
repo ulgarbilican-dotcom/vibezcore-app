@@ -84,7 +84,6 @@ import Animated, {
 import { SafeAreaView } from '@/utils/safe-area';
 import { confirmVibezAlert, showVibezAlert } from '@/components/VibezAlert';
 import { hapticTap } from '@/utils/haptics';
-import { showWatchSetupInfo } from '@/utils/watch-setup-tip';
 
 /* Operator, 28 september 2026 ("bij lockscreen zie ik geen scherm voor
    breathwork, dit is wel belangrijk... moet gecommuniceerd worden... als
@@ -537,19 +536,6 @@ export default function SettingsScreen() {
             </View>
             <Text style={s.versionText}>›</Text>
           </PressFeedback>
-          {/* 1 nov 2026 (operator: "misschien ook in Profile, met info"): de instellingen voor voelbare tikken op de Apple Watch, altijd terug te vinden. */}
-          {Platform.OS === 'ios' ? (
-            <>
-              <View style={s.divider} />
-              <PressFeedback style={s.row} onPress={showWatchSetupInfo} accessibilityLabel="Feel it on your Apple Watch">
-                <View style={s.rowText}>
-                  <Text style={s.rowTitle}>Feel it on your Apple Watch</Text>
-                  <BalancedText style={s.rowSub}>Three watch settings for strong taps without sound.</BalancedText>
-                </View>
-                <Text style={s.versionText}>›</Text>
-              </PressFeedback>
-            </>
-          ) : null}
         </View>
         </Reveal>
 
