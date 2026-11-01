@@ -4720,7 +4720,11 @@ function IdleScreen({
               )}
             </PressScale>
             <Tap
-              onPress={() => stopTrial(false)}
+              onPress={() => {
+                /* 1 nov 2026 (operator, iOS: "bij State Control geen popup bij vroegtijdig stoppen"): zoals Breathwork het aanbod tonen. */
+                stopTrial(false);
+                onTrialEnd();
+              }}
               hitSlop={12}
               style={s.trialEndBtn}
               accessibilityRole="button"
@@ -4734,7 +4738,7 @@ function IdleScreen({
             style={[s.primaryBtn, s.chooseCta, stateGlass(meta.color), (busy || criticalBattery) && s.btnDisabled]}
             onPress={
               /* 27 okt 2026 (operator): de voorproef start meteen, geen blad ertussen. */
-              startLocked ? (trialRunning ? () => stopTrial(false) : withRhythm(startTrial)) : withRhythm(onStart)
+              startLocked ? (trialRunning ? () => { stopTrial(false); onTrialEnd(); } : withRhythm(startTrial)) : withRhythm(onStart)
             }
             disabled={busy || criticalBattery}
             accessibilityLabel={
