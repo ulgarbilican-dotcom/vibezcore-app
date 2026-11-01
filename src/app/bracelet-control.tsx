@@ -210,6 +210,7 @@ import {
 } from '@/utils/dev-user-override';
 import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
 import { imageSource } from '@/utils/image-source';
+import { STRENGTH_NOTE } from '@/utils/watch-setup-tip';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -3977,7 +3978,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           })}
         </View>
         {/* 1 nov 2026 (operator: "ook dit moet duidelijk gecommuniceerd worden"): Strong = standaard, de keuze blijft bewaard (telefoon + horloge). */}
-        <Text style={s.avStrengthNote}>Strong is the default. Your choice stays, on your phone and watch.</Text>
+        <Text style={s.avStrengthNote}>{STRENGTH_NOTE}</Text>
         {/* 14 okt 2026 (operator): Smartwatch aan/uit — het ritme op je pols,
             of de telefoon trilt zelf. Ook midden in een sessie. Enkel
             zichtbaar met een horloge. */}

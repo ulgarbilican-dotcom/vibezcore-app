@@ -220,6 +220,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { hapticPress, hapticTap } from '@/utils/haptics';
 import { imageSource } from '@/utils/image-source';
+import { STRENGTH_NOTE } from '@/utils/watch-setup-tip';
 
 /* Gedeelde druk-schaal-animatie voor ELK tikbaar element op dit scherm
    (kaarten, CTA's, icoon-only knoppen) — zelfde recept als `StartCard` in
@@ -4431,7 +4432,7 @@ export function BreathSession() {
             ) : null}
             {/* 1 nov 2026 (operator: "ook dit moet duidelijk gecommuniceerd worden"): Strong = standaard, de keuze blijft bewaard (telefoon + horloge). */}
             {hapticsOn || watchOn ? (
-              <Text style={s.strengthNote}>Strong is the default. Your choice stays, on your phone and watch.</Text>
+              <Text style={s.strengthNote}>{STRENGTH_NOTE}</Text>
             ) : null}
 
             {/* 14 okt 2026: Smartwatch aan/uit — het ritme op je pols, of

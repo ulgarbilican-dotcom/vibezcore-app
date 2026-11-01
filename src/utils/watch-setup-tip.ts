@@ -13,6 +13,13 @@ import { getSetting } from '@/utils/settings';
 import { getAppleWatchStatus, getWorkoutPermission, requestWorkoutPermission } from '../../modules/watch-breath';
 
 const KEY = 'vz_watch_setup_tip_v1';
+
+/** Onder de sterkte-keuze (Audio & Haptics). 1 nov 2026 (operator: "ook op de telefoon duidelijk maken waar die sterktes op de smartwatch
+ *  staan, ik wist dat zelf niet te vinden"): Apple Watch heeft een eigen pagina; de Galaxy Watch volgt gewoon de telefoon. */
+export const STRENGTH_NOTE =
+  Platform.OS === 'ios'
+    ? 'Strong is the default. Your choice stays, on your phone and watch. On your Apple Watch: open VIBEZCORE › Haptics.'
+    : 'Strong is the default. Your choice stays, and your watch follows it.';
 let busy = false;
 let deniedShownThisLaunch = false;
 
