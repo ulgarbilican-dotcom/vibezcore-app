@@ -24,7 +24,7 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 | 7 | Eerst verschijnt een gedimd scherm ("Sharp Focus · 1 min" in een blauwe ring, foto operator); na bewegen het gewone scherm, kort daarna weer het gedimde scherm. | ⏳ | Always-on / verminderde helderheid (isLuminanceReduced). |
 | 8 | Het gedimde scherm blijft altijd op "1 min" staan (telt niet af). | ⏳ | |
 | 9 | Het app-icoon op het horloge: de rand is veel te wit en erg lelijk. | ⏳ | targets/watch/icon.png (zelfde V op grafiet als Galaxy Watch). |
-| 10 | Breathwork-haptics werken helemaal niet op de smartwatch: enkel een ping bij het starten van een cyclus. | ⏳ | Ernstig. BreathHapticPlayer.swift (metronoom-vertaling van breath-haptics.ts). Mogelijk zelfde oorzaak als #5 (ping = WKInterfaceDevice.play met geluid). |
+| 10 | Breathwork-haptics werken helemaal niet op de smartwatch: enkel een ping bij het starten van een cyclus. Ook in Premium: de animatie klopt, maar enkel een ping bij het begin van de sessie en GEEN haptics tijdens de lopende sessie. Operator: "zonder geluid of kijken weet niemand wat te doen" — de trilling MOET elke fase (in/vast/uit) aangeven. | ⏳ | Ernstig. BreathHapticPlayer.swift (metronoom-vertaling van breath-haptics.ts). Mogelijk zelfde oorzaak als #5 (ping = WKInterfaceDevice.play met geluid). |
 
 ## iPhone (vervolg)
 
