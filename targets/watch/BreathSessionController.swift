@@ -312,33 +312,29 @@ final class BreathSessionController: NSObject, ObservableObject {
          uitademen  = TRAGE tikken, elke 1,2 s, zolang je uitademt (het "wegstromen")
          vasthouden = één tik bij de start, dan STILTE (je houdt stil)
        1 nov 2026: eerst alles stil .click (build 69, "ping mag niet") — te zwak; zie hieronder, nu sterke tikken + Stille modus-tip. */
-    func repeating(every interval: TimeInterval, tap: WatchSettings.Tap) {
+    func repeating(every interval: TimeInterval, tap: WKHapticType) {
       var elapsed: TimeInterval = 0
       let t = Timer(timeInterval: interval, repeats: true) { timer in
         elapsed += interval
-        guard elapsed < TimeInterval(secs) - 0.6 else {
+        guard elapsed < TimeInterval(secs) - 0.25 else {
           timer.invalidate()
           return
         }
-        s.play(tap)
+        s.playRaw(tap)
       }
       t.tolerance = 0
       RunLoop.main.add(t, forMode: .common)
       tickTimer = t
     }
-    /* 1 nov 2026 (operator op build 69: "bijna niets voelbaar, geen duidelijk ritme"; daarna: "de tikken bij inhale, hold en exhale hebben
-       nooit correct gewerkt — de gebruiker moet zonder kijken, enkel op gevoel, kunnen volgen"). Vroeger verschilden de fasen enkel in het
-       soort tik en een klein tempoverschil (1,0 vs 1,5 s): blind niet te onderscheiden. Nu drie grof verschillende texturen, elk met een
-       sterke tik (het toontje valt weg met Stille modus):
-         inademen   = doorlopend tikken, elke 1,0 s (omhoog-tik)      → "zolang het tikt, adem je in"
-         vasthouden = één dubbele stop-tik, dan VOLLEDIGE stilte     → stilte = niets doen
-         uitademen  = omlaag-tik, dan TRAAG tikken, elke 2,0 s        → traag = rustig uitblazen */
+    /* 1 nov 2026 (operator op build 72: "veel te weinig tikken, doe totaal iets anders"): elke fase een DOORLOPENDE stroom van begin tot
+       einde (zie WatchSettings.breathTexture): inademen snel, vasthouden stil, uitademen rustiger; elke fase begint met haar eigen sterke tik. */
+    let tex = s.breathTexture()
     if key.hasPrefix("inhale") {
       s.play(.inhale)
-      repeating(every: 1.0, tap: .inhale)
+      repeating(every: tex.inEvery, tap: tex.inTap)
     } else if key.hasPrefix("exhale") {
       s.play(.exhale)
-      repeating(every: 2.0, tap: .exhale)
+      repeating(every: tex.outEvery, tap: tex.outTap)
     } else {
       s.play(.hold)
     }

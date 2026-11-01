@@ -620,6 +620,27 @@ struct WatchSettingsView: View {
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
           .padding(.top, 4)
+        /* 1 nov 2026 (operator: "doe totaal iets anders"): ademtextuur kiezen door te VOELEN — tik = 10 s in / vast / uit. */
+        Text("Breath taps")
+          .font(.system(size: 14, weight: .bold))
+          .foregroundColor(.white)
+          .padding(.top, 10)
+          .padding(.bottom, 4)
+        ForEach(WatchSettings.breathStyles, id: \.self) { (st: String) in
+          PickRow(
+            title: st == "stream" ? "Light" : (st == "strong" ? "Strong" : "Pulse"),
+            sub: st == "stream" ? "Silent, fast stream" : (st == "strong" ? "Up and down taps" : "Firm pulses"),
+            subColor: dim, current: st == settings.breathStyle, color: teal
+          ) {
+            settings.setBreathStyle(st)
+            settings.previewBreath()
+          }
+        }
+        Text("Tap one to feel 4 s in, 2 s hold, 4 s out.")
+          .font(.system(size: 10))
+          .foregroundColor(dim)
+          .multilineTextAlignment(.center)
+          .padding(.top, 4)
         /* 1 nov 2026: zonder toestemming voor Workouts speelt het horloge geen tikken met de pols omlaag (Apple). */
         if RuntimeSessionManager.shared.workoutPermissionMissing {
           Text("To feel the taps with your wrist down, allow Workouts for VIBEZCORE: iPhone Settings › Health › Data Access & Devices.")

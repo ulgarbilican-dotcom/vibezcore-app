@@ -234,6 +234,59 @@ final class WatchSettings: ObservableObject {
   init() {
     /* 27 okt 2026 (operator: "altijd op max beginnen"): standaard het sterkste niveau. */
     strength = UserDefaults.standard.string(forKey: key) ?? "strong"
+    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "strong"
+  }
+
+  /* ── Ademtextuur (1 nov 2026) ────────────────────────────────────────────
+     Operator op build 72: "veel te weinig tikken, bv. voor exhale maar 2 tikken — doe totaal iets anders". Losse tikken met stiltes ertussen
+     zeggen blind niets. Nu is elke fase een DOORLOPEND gevoel van begin tot einde: inademen = snelle stroom, vasthouden = stil, uitademen =
+     rustigere stroom; elke fase begint met haar eigen sterke tik (omhoog / stop / omlaag). Apple laat een nieuwe tik toe na min. 100 ms
+     (WKInterfaceDevice.play-documentatie), dus 0,3 s is veilig. Hoe sterk een stroom op de pols aanvoelt is niet van op afstand te meten,
+     daarom drie varianten om te VOELEN in Settings › Breath taps (previewBreath); de gekozen variant blijft bewaard. */
+  static let breathStyles = ["stream", "strong", "pulse"]
+  @Published private(set) var breathStyle: String
+  private let breathKey = "vz_watch_breath_style_v1"
+
+  func setBreathStyle(_ s: String) {
+    guard WatchSettings.breathStyles.contains(s) else { return }
+    breathStyle = s
+    UserDefaults.standard.set(s, forKey: breathKey)
+  }
+
+  /// Tempo en soort tik van de stroom per fase.
+  func breathTexture() -> (inEvery: Double, outEvery: Double, inTap: WKHapticType, outTap: WKHapticType) {
+    switch breathStyle {
+    case "strong": return (0.5, 0.9, .directionUp, .directionDown)
+    case "pulse": return (0.4, 0.8, .start, .start)
+    default: return (0.3, 0.6, .click, .click)
+    }
+  }
+
+  func playRaw(_ t: WKHapticType) {
+    WKInterfaceDevice.current().play(t)
+  }
+
+  private var previewTimers: [Timer] = []
+
+  /** 10 s om te voelen: 4 s in, 2 s vast, 4 s uit — exact zoals in een sessie. */
+  func previewBreath() {
+    previewTimers.forEach { $0.invalidate() }
+    previewTimers = []
+    let tex = breathTexture()
+    var events: [(Double, () -> Void)] = [(0, { self.play(.inhale) })]
+    var t = tex.inEvery
+    while t < 4 - 0.25 { events.append((t, { self.playRaw(tex.inTap) })); t += tex.inEvery }
+    events.append((4, { self.play(.hold) }))
+    events.append((6, { self.play(.exhale) }))
+    t = 6 + tex.outEvery
+    while t < 10 - 0.25 { events.append((t, { self.playRaw(tex.outTap) })); t += tex.outEvery }
+    let start = Date()
+    for (at, fire) in events {
+      let timer = Timer(fire: start.addingTimeInterval(at), interval: 0, repeats: false) { _ in fire() }
+      timer.tolerance = 0
+      RunLoop.main.add(timer, forMode: .common)
+      previewTimers.append(timer)
+    }
   }
 
   func adoptFromPhone(_ s: String) {
