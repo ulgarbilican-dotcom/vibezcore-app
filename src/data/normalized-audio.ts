@@ -1,14 +1,12 @@
 /* 1 nov 2026 (iOS build 68 #12): Audio Library-bestanden waarvan een genormaliseerde kopie (-16 LUFS, 192 kbps) op Bunny staat onder
    /app-16lufs/<zelfde pad>. Paden ONGECODEERD (zoals decodeURIComponent ze geeft). Enkel bestanden die echt versterkt/verzacht moesten
-   worden (> 0,5 dB), plus 07-focus-theta-arabic en 18-ambient-forest-sanctuary: die bestonden enkel als .mp3.m4a op Bunny (de app-URL
-   gaf 404) en staan nu als mp3 op het app-pad. Gegenereerd uit de normalisatie-run; niet met de hand aanvullen zonder upload. */
+   worden (> 0,5 dB); de .m4a-soundscapes (07-focus-theta-arabic, 18-ambient-forest-sanctuary) spelen het origineel. Gegenereerd uit de normalisatie-run; niet met de hand aanvullen zonder upload. */
 export const NORMALIZED_AUDIO_PATHS: ReadonlySet<string> = new Set<string>([
   "/audio-new/1. CARL JUNG 01. The Inner Child New.mp3",
   "/02-focus-theta-reverie.mp3.mp3",
   "/04-focus-theta-pulse.mp3.mp3",
   "/05-focus-theta-heartbeat.mp3.mp3",
   "/06-focus-theta-cosmos.mp3.mp3",
-  "/07-focus-theta-arabic.mp3",
   "/08-sleep-delta-descent.mp3.mp3",
   "/09-sleep-delta-surrender.mp3.mp3",
   "/10-sleep-delta-drift.mp3.mp3",
@@ -19,7 +17,6 @@ export const NORMALIZED_AUDIO_PATHS: ReadonlySet<string> = new Set<string>([
   "/15-meditation-piano.mp3.mp3",
   "/16-meditation-general.mp3.mp3",
   "/17-meditation-background.mp3.mp3",
-  "/18-ambient-forest-sanctuary.mp3",
   "/19-ambient-yoga.mp3.mp3",
   "/Andrew_Huberman_1._Neural_State_Control_How_to_Direct_Your_Mind_Instead_of_Chasing_It_osg0uy.mp3.mp3",
   "/Andrew_Huberman_2._Dopamine_Drive_Why_Motivation_is_a_System_Not_a_Personality_Trait_ba9rjm.mp3.mp3",
