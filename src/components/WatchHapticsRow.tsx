@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import { getAppleWatchStatus } from '../../modules/watch-breath';
 import { getWatchStatus, openStoreOnWatch, type WatchAppStatus } from '../../modules/wear-breath';
+import { showWatchSetupInfo } from '@/utils/watch-setup-tip';
 
 const SEEN_KEY = 'vz_watch_seen_v1';
 
@@ -134,11 +135,16 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
       {/* 1 nov 2026 (iOS build 69, operator: "de haptics zijn heel belangrijk"): de Apple Watch speelt bij elke sterke tik een
           toontje mee, tenzij het horloge op Stille modus staat — een app kan dat niet zelf dempen. */}
       {w.status === 'ready' && on ? (
-        <Text style={s.hint}>
-          {Platform.OS === 'ios'
-            ? 'Feel every tap: on your Apple Watch, Settings › Sounds & Haptics › Silent Mode on, Haptics Prominent, System Haptics on.'
-            : 'Feels too soft? If your watch has a vibration or haptics strength setting, turn it up.'}
-        </Text>
+        Platform.OS === 'ios' ? (
+          /* 1 nov 2026 (operator: "ook in Audio & Haptics als tip, met link naar de uitleg"): zelfde uitleg als Profile › Apple Watch. */
+          <Tap onPress={showWatchSetupInfo} hitSlop={6} accessibilityRole="button" accessibilityLabel="Apple Watch silent and haptics settings">
+            <Text style={s.hint}>
+              Feel every tap, without sound. <Text style={s.hintLink}>Apple Watch: Silent & Haptics ›</Text>
+            </Text>
+          </Tap>
+        ) : (
+          <Text style={s.hint}>Feels too soft? If your watch has a vibration or haptics strength setting, turn it up.</Text>
+        )
       ) : null}
     </>
   );
@@ -149,6 +155,7 @@ const s = StyleSheet.create({
   title: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16 },
   sub: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.regular, fontSize: 13, marginTop: 2 },
   hint: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, paddingBottom: 8 },
+  hintLink: { color: '#ffffff', fontFamily: BrandFonts.semibold },
   btn: { backgroundColor: '#ffffff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   btnTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 13 },
 });
