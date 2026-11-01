@@ -598,7 +598,8 @@ struct WatchSettingsView: View {
 
   private func sub(_ s: String) -> String? {
     /* 1 nov 2026 (build 68): het horloge tikt enkel nog stil (.click, zie WatchSettings.play); het niveau bepaalt de tweede slag. */
-    s == "soft" ? "Silent taps" : (s == "strong" ? "Strongest taps" : "Stronger taps")
+    /* 1 nov 2026: zeggen wat je hoort — enkel Soft is altijd stil. */
+    s == "soft" ? "No sound" : "Tone unless Silent Mode"
   }
 
   var body: some View {
