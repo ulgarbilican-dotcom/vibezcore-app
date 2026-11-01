@@ -629,7 +629,7 @@ struct WatchSettingsView: View {
         ForEach(WatchSettings.breathStyles, id: \.self) { (st: String) in
           PickRow(
             title: st == "stream" ? "Light" : (st == "strong" ? "Strong" : "Pulse"),
-            sub: st == "stream" ? "Silent, fast stream" : (st == "strong" ? "Up and down taps" : "Firm pulses"),
+            sub: st == "stream" ? "No sound" : "Tone unless Silent Mode",
             subColor: dim, current: st == settings.breathStyle, color: teal
           ) {
             settings.setBreathStyle(st)

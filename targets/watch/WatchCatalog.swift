@@ -234,7 +234,8 @@ final class WatchSettings: ObservableObject {
   init() {
     /* 27 okt 2026 (operator: "altijd op max beginnen"): standaard het sterkste niveau. */
     strength = UserDefaults.standard.string(forKey: key) ?? "strong"
-    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "strong"
+    /* 1 nov 2026 (operator: "is er geen niveau dat zonder ping werkt?"): standaard Light = stille stroom, nooit een toon. */
+    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "stream"
   }
 
   /* ── Ademtextuur (1 nov 2026) ────────────────────────────────────────────
