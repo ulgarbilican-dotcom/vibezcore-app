@@ -23,14 +23,28 @@ export const STRENGTH_NOTE =
 let busy = false;
 let deniedShownThisLaunch = false;
 
-/** De uitleg zelf, op elk moment op te roepen. */
+/** De uitleg zelf, op elk moment op te roepen (Profile, Audio & Haptics, eerste sessie). 1 nov 2026 (operator: "wie iets wegklikt bij de
+ *  eerste sessie, moet de info nadien gemakkelijk en duidelijk kunnen vinden"): ontbreekt de toestemming voor Workouts, dan staat die als
+ *  eerste stap bovenaan, met Open Settings. */
 export function showWatchSetupInfo(): void {
-  void showVibezAlert({
-    title: 'Feel every tap on your wrist',
-    message:
-      'On your Apple Watch, open Settings › Sounds & Haptics:\n\n1. Silent Mode: on\n2. Haptics: Prominent\n3. System Haptics: on\n\nSilent Mode keeps the taps and drops the sound.\n\nIn VIBEZCORE on your watch, tap Haptics to choose Strong or Medium and to feel the taps. Strong is the default; your choice stays until you change it.',
-    buttons: [{ text: 'Got it', style: 'primary' }],
-  });
+  void (async () => {
+    const perm = Platform.OS === 'ios' ? await getWorkoutPermission() : 'unavailable';
+    const needsWorkouts = perm === 'denied' || perm === 'notDetermined';
+    const watchSteps =
+      'On your Apple Watch, open Settings › Sounds & Haptics:\n1. Silent Mode: on\n2. Haptics: Prominent\n3. System Haptics: on\n\nSilent Mode keeps the taps and drops the sound.\n\nIn VIBEZCORE on your watch, tap Haptics to choose Strong or Medium and to feel the taps. Strong is the default; your choice stays until you change it.';
+    const workoutsStep =
+      'First, so your watch keeps tapping with the screen dimmed:\niPhone Settings › Privacy & Security › Health › VIBEZCORE › Workouts: on\n(No workout or health data is read or saved.)\n\n';
+    void showVibezAlert({
+      title: 'Feel every tap on your wrist',
+      message: (needsWorkouts ? workoutsStep : '') + watchSteps,
+      buttons: needsWorkouts
+        ? [
+            { text: 'Open Settings', style: 'primary', onPress: () => void Linking.openSettings().catch(() => {}) },
+            { text: 'Got it', style: 'cancel' },
+          ]
+        : [{ text: 'Got it', style: 'primary' }],
+    });
+  })();
 }
 
 function showWorkoutsDenied(): void {
