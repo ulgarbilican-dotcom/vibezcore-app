@@ -38,7 +38,7 @@ import { DurationWheel } from '@/components/DurationWheel';
 import { durationOptionsFor } from '@/utils/duration-options';
 import { GlassSheet } from '@/components/GlassSheetHost';
 import { rootBlurRef } from '@/utils/root-blur';
-import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
+import { getFirstWeekday, leadingBlanks, weekdayLabels, dateLocale } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { openBreathSession } from '@/services/breath-session-host';
@@ -761,8 +761,10 @@ export default function AgendaScreen() {
           onPressIn={onDateRowPressIn}
           onPressOut={onDateRowPressOut}
         >
+          {/* 1 nov 2026 (operator: "bij State Control staat Today, bij Breathwork de datum — moet beide Today zijn"): zelfde als
+              bracelet-agenda.tsx. */}
           <Text style={s.dateRowTxt}>
-            {selected.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+            {selectedKey === todayKey ? 'Today' : selected.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}
           </Text>
           <ChevronDown
             size={16}
@@ -802,7 +804,7 @@ export default function AgendaScreen() {
                 <ChevronLeft size={18} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
               </AnimatedPressable>
               <Text style={s.dayNavTxt}>
-                {selected.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                {selected.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' })}
               </Text>
               <AnimatedPressable
                 onPress={() => {

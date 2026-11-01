@@ -23,6 +23,7 @@ import { router } from 'expo-router';
 import { ChevronRight, Flame, Radio, Wind } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { formatClock } from '@/utils/locale';
 
 const ink = (a: number) => `rgba(255,255,255,${a})`;
 
@@ -30,8 +31,11 @@ function titleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/* 1 nov 2026: volgt de 12/24-uurinstelling van het toestel (was altijd 24 u). */
 function hhmm(min: number): string {
-  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  const d = new Date();
+  d.setHours(Math.floor(min / 60) % 24, min % 60, 0, 0);
+  return formatClock(d);
 }
 
 /** Langste reeks ooit uit een set dagsleutels (YYYY-MM-DD). */

@@ -31,10 +31,11 @@ import { ChevronRight, HeartPulse, PencilLine, Timer, Watch } from 'lucide-react
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from '@/utils/safe-area';
+import { dateLocale } from '@/utils/locale';
 
 function fmtWhen(at: number): string {
   const d = new Date(at);
-  const date = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const date = d.toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
   const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   return `${date} · ${time}`;
 }

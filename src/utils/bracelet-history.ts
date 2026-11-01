@@ -53,6 +53,7 @@ import {
   getDevUserOverride,
   subscribeDevUserOverride,
 } from '@/utils/dev-user-override';
+import { dateLocale } from './locale';
 
 const LEGACY_KEY = 'vzbc_sessions_v1';
 const KEY_PREFIX = 'vzbc_sessions_';
@@ -677,7 +678,7 @@ function buildLast7Days(
     const label =
       k === todayK
         ? 'Today'
-        : d.toLocaleDateString('en-GB', { weekday: 'short' });
+        : d.toLocaleDateString(dateLocale(), { weekday: 'short' });
     days.push({ dayKey: k, dayLabel: label, minutes: 0 });
   }
   for (const r of records) {

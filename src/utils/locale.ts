@@ -60,3 +60,33 @@ export function daysOfThisWeek(now: Date = new Date()): Date[] {
     return d;
   });
 }
+
+/* 1 nov 2026 (operator: "Amerikaanse gebruikers zien EU-stijl"): datums stonden overal vast op 'en-GB' ("1 November", 24 u). De app is
+   Engels, dus enkel de NOTATIE volgt het toestel: regio VS → Amerikaans ("November 1", 5:30 PM), elders Brits zoals voorheen. De tijd volgt
+   de 12/24-uurinstelling van het toestel. */
+const US_STYLE_REGIONS = new Set(['US', 'PR', 'GU', 'VI', 'AS', 'MP', 'UM', 'PH']);
+
+/** Locale voor datums in de app: 'en-US' of 'en-GB'. */
+export function dateLocale(): 'en-US' | 'en-GB' {
+  try {
+    const region = Localization.getLocales()[0]?.regionCode ?? '';
+    if (US_STYLE_REGIONS.has(region.toUpperCase())) return 'en-US';
+  } catch {
+    /* geen toestel-info: Brits, zoals voorheen */
+  }
+  return 'en-GB';
+}
+
+/** Gebruikt het toestel een 24-uursklok? */
+export function uses24hClock(): boolean {
+  try {
+    const v = Localization.getCalendars()[0]?.uses24hourClock;
+    if (typeof v === 'boolean') return v;
+  } catch {}
+  return dateLocale() === 'en-GB';
+}
+
+/** Kloktijd zoals het toestel hem toont: "17:30" of "5:30 PM". */
+export function formatClock(d: Date): string {
+  return d.toLocaleTimeString(dateLocale(), { hour: uses24hClock() ? '2-digit' : 'numeric', minute: '2-digit', hour12: !uses24hClock() });
+}

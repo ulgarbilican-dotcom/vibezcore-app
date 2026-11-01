@@ -31,6 +31,7 @@ import { dayKey } from '@/utils/bracelet-history';
 import type { ActivePlan } from '@/utils/plan-store';
 import { ensureSettingsLoaded, getSetting } from '@/utils/settings';
 import { getModeMeta, type BraceletMode } from '@/services/ble-contract';
+import { dateLocale } from '@/utils/locale';
 
 /* Operator, 11 september 2026: nieuw vierde moment "after work / on the
    way home" — zie utils/day-plan.ts se `DAY_CANDIDATES` voor de volledige
@@ -739,7 +740,7 @@ export function nextFireText(minsOfDay: number, days?: number[]): string {
     const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     if (i === 0) return `First reminder today at ${t}`;
     if (i === 1) return `First reminder tomorrow at ${t}`;
-    return `First reminder ${d.toLocaleDateString('en-GB', { weekday: 'long' })} at ${t}`;
+    return `First reminder ${d.toLocaleDateString(dateLocale(), { weekday: 'long' })} at ${t}`;
   }
   return 'No day selected yet';
 }

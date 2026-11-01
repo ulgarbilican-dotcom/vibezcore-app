@@ -100,7 +100,7 @@ import {
   rangesOverlap,
   type BraceletPlanDay,
 } from '@/utils/bracelet-plan-store';
-import { getFirstWeekday, leadingBlanks, weekdayLabels } from '@/utils/locale';
+import { getFirstWeekday, leadingBlanks, weekdayLabels, dateLocale } from '@/utils/locale';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import {
@@ -470,7 +470,7 @@ export default function BraceletAgendaScreen() {
               <Text style={s.dateRowTxt}>
                 {selectedKey === todayKey
                   ? 'Today'
-                  : selected.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+                  : selected.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}
               </Text>
               <Text style={s.dateRowSub}> · {HORIZON_LABEL[plan.horizon] ?? plan.horizon}</Text>
               <ChevronDown
@@ -501,7 +501,7 @@ export default function BraceletAgendaScreen() {
                     <ChevronLeft size={18} color="rgba(255,255,255,0.6)" strokeWidth={2.2} />
                   </Tap>
                   <Text style={s.monthNavTxt}>
-                    {selected.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                    {selected.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' })}
                   </Text>
                   <Tap
                     onPress={() => {

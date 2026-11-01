@@ -28,6 +28,7 @@ import {
   getCurrentBucket,
   subscribeUserBucket,
 } from '@/utils/user-bucket';
+import { dateLocale } from './locale';
 
 /* Iter 9dq v44 (2026-06-03): per-user bucketed storage.
    - HISTORY_KEY blijft als legacy-key voor backward compat / migratie.
@@ -329,9 +330,9 @@ export function dayLabel(ts: number): string {
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
   if (diff < 7) {
-    return new Date(ts).toLocaleDateString('en-GB', { weekday: 'long' });
+    return new Date(ts).toLocaleDateString(dateLocale(), { weekday: 'long' });
   }
-  return new Date(ts).toLocaleDateString('en-GB', {
+  return new Date(ts).toLocaleDateString(dateLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

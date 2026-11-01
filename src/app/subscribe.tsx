@@ -97,6 +97,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { hapticPress } from '@/utils/haptics';
 import { markSalesCardShown, recordPlansDismissed, recordPurchase } from '@/services/sales-nudges';
+import { dateLocale, formatClock } from '@/utils/locale';
 
 const AnimatedPressable = QaAnimatedPressable;
 
@@ -1159,7 +1160,7 @@ Create a free account to keep Premium on all your devices.`,
     const passEnd = currentTier === 'day' && currentValidUntil ? new Date(currentValidUntil) : null;
     const passEndLabel =
       passEnd && !isNaN(passEnd.getTime())
-        ? `${passEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${passEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+        ? `${passEnd.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}, ${formatClock(passEnd)}`
         : null;
     /* Iter v175 (2026-06-30): betekenisvol welkomstscherm ipv 1.2s flash.
        Operator-feedback: post-purchase moment moet dankbaarheid + wat je

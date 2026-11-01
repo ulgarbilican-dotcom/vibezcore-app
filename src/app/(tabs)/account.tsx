@@ -163,6 +163,7 @@ import {
     signInWithGoogle,
 } from '@/services/social-auth';
 import { hapticPress } from '@/utils/haptics';
+import { dateLocale, formatClock } from '@/utils/locale';
 
 type Mode = 'login' | 'signup';
 
@@ -390,14 +391,14 @@ function Row({
 function fmtDateTime(iso: string): string | null {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+  return `${d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}, ${formatClock(d)}`;
 }
 
 function fmtDate(iso?: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 /** Korte status voor de kop en de Membership-rij. */

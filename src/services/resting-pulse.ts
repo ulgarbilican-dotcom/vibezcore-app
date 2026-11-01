@@ -14,6 +14,7 @@
 
 import { HEALTH_INTEGRATION_ENABLED } from '@/constants/features';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { dateLocale } from '@/utils/locale';
 
 /** Gemiddelde rusthartslag van een volwassene — voor wie overslaat. */
 export const AVERAGE_RESTING_BPM = 70;
@@ -261,7 +262,7 @@ export function importHealthRestingPulse(bpm: number, at: number): boolean {
 
 /** Korte bronregel onder het getal — overal dezelfde woorden. */
 export function pulseSourceLabel(p: RestingPulse, healthName: string): string {
-  const when = p.at ? new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  const when = p.at ? new Date(p.at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }) : '';
   if (p.source === 'average') return 'Average — not measured yet';
   if (p.source === 'manual') return `Entered by you${when ? ` · ${when}` : ''}`;
   if (p.source === 'health') return `From ${healthName}${when ? ` · ${when}` : ''}`;
