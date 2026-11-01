@@ -71,6 +71,7 @@ import {
 } from '@/data/breath-states';
 import { useSubscription } from '@/hooks/useSubscription';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import { maybeShowWatchSetupTip } from '@/utils/watch-setup-tip';
 import { endStateControlSession, isBraceletSessionMonitorActive } from '@/services/bracelet-session-monitor';
 import { stopModePreviewHaptic } from '@/services/bracelet-haptics';
 import { stopHeartbeatSound } from '@/services/heartbeat-sound';
@@ -2249,6 +2250,8 @@ export function BreathSession() {
   const start = useCallback((preview = false, startPaused = false) => {
     if (startingRef.current) return;
     startingRef.current = true;
+    /* 1 nov 2026: eerste sessie met een Apple Watch → één keer de instellingen voor voelbare tikken zonder toon. */
+    void maybeShowWatchSetupTip();
     /* Eén sessie tegelijk (operator, 19 okt 2026: "na de onboarding hoor ik
        de hartslag van State Control"): een lopende State Control-sessie,
        -voorproef of het hartslaggeluid stopt zodra je ademsessie start. De

@@ -203,6 +203,7 @@ import { setSetting, useSetting } from '@/utils/settings';
 import { isLightColor } from '@/utils/color';
 import { useSubscription } from '@/hooks/useSubscription';
 import PremiumPaywallModal from '@/components/PremiumPaywallModal';
+import { maybeShowWatchSetupTip } from '@/utils/watch-setup-tip';
 import {
   useBraceletOwner,
   useDevBraceletActivated,
@@ -5882,6 +5883,8 @@ function BraceletControlScreen({
   const onStart = async () => {
     /* 29 okt 2026 (operator: "trillingen op max starten, ook State Control"): elke sessie begint op Strong. */
     resetHapticStrengthForSession();
+    /* 1 nov 2026: eerste sessie met een Apple Watch → één keer de instellingen voor voelbare tikken zonder toon. */
+    void maybeShowWatchSetupTip();
     setBusy(true);
     /* Iter v197 (2026-07-04): endedLocally reset — nieuwe sessie mag niet
        geblokkeerd worden door de flag van een vorige End. */

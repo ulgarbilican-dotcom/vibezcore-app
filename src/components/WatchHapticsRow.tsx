@@ -136,7 +136,7 @@ export default function WatchHapticsRow({ onToggle, separatorStyle, labelStyle }
       {w.status === 'ready' && on ? (
         <Text style={s.hint}>
           {Platform.OS === 'ios'
-            ? 'Turn on Silent Mode on your Apple Watch to feel the taps without sound. For stronger taps: Settings › Sounds & Haptics › Prominent Haptic.'
+            ? 'Feel every tap: on your Apple Watch, Settings › Sounds & Haptics › Silent Mode on, Haptics Prominent, System Haptics on.'
             : 'Feels too soft? If your watch has a vibration or haptics strength setting, turn it up.'}
         </Text>
       ) : null}
