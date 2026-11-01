@@ -68,7 +68,7 @@ import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import Svg, { Path } from 'react-native-svg';
 import { needsPreview } from '@/utils/access-tier';
 import { MoreHorizontal } from 'lucide-react-native';
-import { showVibezAlert } from '@/components/VibezAlert';
+import { VibezAlertHost, showVibezAlert } from '@/components/VibezAlert';
 import { shareFreeSession } from '@/utils/share';
 import Animated, {
   Easing,
@@ -1136,6 +1136,9 @@ export default function PlayerScreen() {
           </View>
         </View>
       ) : null}
+      {/* 1 nov 2026 (iOS build 68): de speler is op iOS een eigen modaal venster; meldingen (⋯ → favorieten) moeten
+          hierin openen, anders weigert iOS ze en bevriest de app. Zie VibezAlert.tsx. */}
+      <VibezAlertHost />
     </View>
   );
 }

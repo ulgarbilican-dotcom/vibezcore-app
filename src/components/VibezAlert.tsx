@@ -8,8 +8,9 @@
    Replacement contract:
      showVibezAlert({ title, message, buttons })
    Mirrors Alert.alert's API but renders an in-app modal styled in
-   Brand colors with BrandFonts. Mount <VibezAlertHost /> once at root
-   (already done in _layout.tsx); each showVibezAlert() call queues a
+   Brand colors with BrandFonts. Mount <VibezAlertHost /> at root
+   (already done in _layout.tsx) and in every natively presented modal screen
+   (player.tsx); each showVibezAlert() call queues a
    dialog and waits for the user to tap a button.
 
    `confirmDestructive` helper for the common "delete X — Cancel / Delete"
@@ -64,7 +65,12 @@ export type VibezAlertConfig = {
 type QueueEntry = VibezAlertConfig & { resolve: (idx: number) => void };
 
 let queue: QueueEntry[] = [];
-let listener: ((entry: QueueEntry | null) => void) | null = null;
+/* 1 nov 2026 (iOS build 68, operator: "app bevriest bij de drie puntjes in de speler"): op iOS is de speler een
+   echt modaal venster. Een React Native <Modal> uit de root kan daar niet bovenop: iOS weigert het stil
+   ("already presenting") en de app reageert niet meer. Daarom meerdere hosts: wie een eigen modaal scherm
+   heeft (de speler) zet er ook een <VibezAlertHost /> in, en de laatst gemounte host toont de meldingen. */
+const listeners: ((entry: QueueEntry | null) => void)[] = [];
+const topListener = () => listeners[listeners.length - 1];
 
 /** Staat er nu een melding open? (19 okt 2026: geen saleskaart erbovenop.) */
 export function isVibezAlertOpen(): boolean {
@@ -76,7 +82,7 @@ export function showVibezAlert(config: VibezAlertConfig): Promise<number> {
   return new Promise((resolve) => {
     const entry: QueueEntry = { ...config, resolve };
     queue.push(entry);
-    if (queue.length === 1 && listener) listener(entry);
+    if (queue.length === 1) topListener()?.(entry);
   });
 }
 
@@ -107,10 +113,15 @@ export function VibezAlertHost() {
   const [current, setCurrent] = useState<QueueEntry | null>(null);
 
   useEffect(() => {
-    listener = setCurrent;
+    /* Nieuwe host bovenaan: de vorige host laat een openstaande melding los, deze toont ze. */
+    topListener()?.(null);
+    listeners.push(setCurrent);
     if (queue.length > 0) setCurrent(queue[0]);
     return () => {
-      listener = null;
+      const i = listeners.lastIndexOf(setCurrent);
+      if (i >= 0) listeners.splice(i, 1);
+      /* Deze host verdwijnt (bv. speler dicht): de host eronder neemt een openstaande melding over. */
+      if (queue.length > 0) topListener()?.(queue[0]);
     };
   }, []);
 
@@ -122,7 +133,7 @@ export function VibezAlertHost() {
     entry.resolve(idx);
     /* Defer next entry to next tick so dismissal animation can play. */
     setTimeout(() => {
-      if (queue.length > 0) setCurrent(queue[0]);
+      if (queue.length > 0) topListener()?.(queue[0]);
     }, 50);
   };
 
