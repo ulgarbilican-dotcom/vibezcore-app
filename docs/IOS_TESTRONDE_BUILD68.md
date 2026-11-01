@@ -32,7 +32,7 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 | # | Bevinding (operator) | Status | Notitie |
 |---|---|---|---|
 | 11 | De app blokkeert bij het aantikken van een audiosessie (Audio Library) en blijft bevroren. | ⏳ | Ernstig (app hangt). Crashlog/Sentry nakijken; mogelijk speler + horloge/Sound timing-code (nieuw in deze build). |
-| 12 | Het geluid van de audio moet beter. | ⏳ | Vraag operator: luider, helderder, of de kwaliteit van de opname? |
+| 12 | Het geluid van de audio moet beter: klinkt niet heel luid en de kwaliteit lijkt ook niet heel goed (iPhone). | ⏳ | Na te kijken: volume/ducking (audio-sessie iOS, mogelijk nog "ducked" door hartslag-/stem-sessie), bitrate van de MP3's op Bunny, en of iOS de stream in lage kwaliteit afspeelt. Vergelijken met Android op dezelfde sessie. |
 
 ## Nog door te geven door de operator
 
