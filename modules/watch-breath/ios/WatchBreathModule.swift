@@ -219,8 +219,10 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   private func launchWatchAppIfNeeded() {
     ensureWorkoutAuthorization()
     let s = WCSession.default
+    /* 1 nov 2026: ook als de horloge-app bereikbaar is (half wakker op de achtergrond). startWatchApp levert het horloge altijd
+       handle(workoutConfiguration) → de workout start ook met de pols omlaag; enkel vanaf de voorgrond kan het horloge dat zelf. */
     guard HKHealthStore.isHealthDataAvailable(), s.activationState == .activated, s.isPaired, s.isWatchAppInstalled,
-      !s.isReachable, Date().timeIntervalSince(lastWatchLaunch) > 5
+      Date().timeIntervalSince(lastWatchLaunch) > 5
     else { return }
     lastWatchLaunch = Date()
     let config = HKWorkoutConfiguration()

@@ -128,6 +128,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     colorHex = message["colorHex"] as? String ?? "#00A3A3"
     running = true
     paused = false
+    pauseReleaseWork?.cancel()
     RuntimeSessionManager.shared.acquire(.breath)
 
     /* Hervatten (6 okt 2026): verder op exact de plek waar de iPhone
@@ -469,8 +470,18 @@ final class BreathSessionController: NSObject, ObservableObject {
     level = levelFrom + (levelTo - levelFrom) * k
     levelFrom = level
     levelTo = level
-    RuntimeSessionManager.shared.release(.breath)
+    /* 1 nov 2026 (operator: "bij Breathwork stoppen de haptics soms volledig als het scherm in slaap gaat, soms niet"): pauze liet de
+       workout los, en een hervatting met de pols omlaag mocht hem niet opnieuw starten (enkel met de app vooraan) → geen tikken meer. Nu
+       blijft de runtime lopen tijdens een pauze (zoals bij State Control); na 10 min pauze toch loslaten, voor de batterij. */
+    pauseReleaseWork?.cancel()
+    let work = DispatchWorkItem { [weak self] in
+      guard let self = self, self.paused, !self.running else { return }
+      RuntimeSessionManager.shared.release(.breath)
+    }
+    pauseReleaseWork = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + 600, execute: work)
   }
+  private var pauseReleaseWork: DispatchWorkItem?
 
   func stop() {
     leadTimer?.invalidate()
