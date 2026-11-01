@@ -612,7 +612,7 @@ struct WatchSettingsView: View {
             settings.play(.beat)
           }
         }
-        Text("Every session starts on Strong. Turn on Silent Mode to feel the taps without sound.")
+        Text("Strong is the default. Your choice stays until you change it. Silent Mode drops the sound.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)

@@ -39,19 +39,24 @@ export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1
 export const STATE_MS_FACTOR: Record<HapticStrength, number> = { ...MS_FACTOR, strong: 1.8 };
 export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR, strong: 3 };
 
-/* 29 okt 2026 (operator: "trillingen ook op max starten, geldt ook voor State Control"): ELKE sessie (Breathwork en State Control)
-   start op het maximum (Strong). Lager zetten tijdens een sessie geldt enkel voor die sessie — er wordt niets meer bewaard
-   (vervangt 27 okt: "wie bewust Medium koos, houdt die keuze"). Een oude bewaarde keuze wordt genegeerd. */
+/* 1 nov 2026 (operator, vervangt 29 okt "elke sessie op Strong"): "wie de app downloadt staat standaard op Strong; enkel als de gebruiker
+   zelf Medium instelt, blijft dat zo tot hij zelf terug Strong zet." Strong = standaard, de keuze wordt bewaard (nieuwe sleutel: oude
+   bewaarde waarden van vóór 29 okt tellen niet mee). Soft bestaat niet meer (wordt Medium). */
+const KEY_V2 = 'vibezcore.hapticStrength.v2';
 let strength: HapticStrength = 'strong';
 const listeners = new Set<(v: HapticStrength) => void>();
 void AsyncStorage.removeItem(KEY).catch(() => {});
+void AsyncStorage.getItem(KEY_V2)
+  .then((v) => {
+    if (v === 'medium' && strength === 'strong') {
+      strength = 'medium';
+      listeners.forEach((l) => l('medium'));
+    }
+  })
+  .catch(() => {});
 
-/** Aan het begin van elke sessie: terug naar het maximum. */
-export function resetHapticStrengthForSession(): void {
-  if (strength === 'strong') return;
-  strength = 'strong';
-  listeners.forEach((l) => l('strong'));
-}
+/** Was: terug naar Strong bij elke sessie. Sinds 1 nov 2026 blijft de keuze van de gebruiker staan — bewust leeg gelaten. */
+export function resetHapticStrengthForSession(): void {}
 
 export function getHapticStrength(): HapticStrength {
   return strength;
@@ -61,6 +66,7 @@ export function setHapticStrength(vIn: HapticStrength): void {
   const v: HapticStrength = vIn === 'soft' ? 'medium' : vIn;
   if (v === strength) return;
   strength = v;
+  void AsyncStorage.setItem(KEY_V2, v).catch(() => {});
   listeners.forEach((l) => l(v));
 }
 

@@ -3976,6 +3976,8 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
             );
           })}
         </View>
+        {/* 1 nov 2026 (operator: "ook dit moet duidelijk gecommuniceerd worden"): Strong = standaard, de keuze blijft bewaard (telefoon + horloge). */}
+        <Text style={s.avStrengthNote}>Strong is the default. Your choice stays, on your phone and watch.</Text>
         {/* 14 okt 2026 (operator): Smartwatch aan/uit — het ritme op je pols,
             of de telefoon trilt zelf. Ook midden in een sessie. Enkel
             zichtbaar met een horloge. */}
@@ -6976,6 +6978,7 @@ const s = StyleSheet.create({
     marginLeft: 4,
   },
   avWatchSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.14)', marginTop: 18 },
+  avStrengthNote: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, marginTop: 8 },
   avSeg: {
     flexDirection: 'row',
     padding: 4,

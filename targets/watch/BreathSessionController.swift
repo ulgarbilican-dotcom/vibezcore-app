@@ -359,7 +359,6 @@ final class BreathSessionController: NSObject, ObservableObject {
   }
 
   func startLocal(_ entry: CatalogBreath, technique: CatalogTechnique, duration: CatalogDuration, free: Bool) {
-    WatchSettings.shared.resetForSession()
     if isLocal { finishLocal(completed: false) }
     localIsPreview = false
     localKey = entry.key

@@ -344,12 +344,6 @@ final class WatchSettings: ObservableObject {
   /// Tweede slag van de hartslag (altijd, sinds Soft weg is — 1 nov 2026).
   var playsDub: Bool { true }
 
-  /** Elke sessie begint op het krachtigste niveau (operator 29 okt + 1 nov 2026); Medium kies je daarna zelf. */
-  func resetForSession() {
-    guard strength != "strong" else { return }
-    strength = "strong"
-    UserDefaults.standard.set("strong", forKey: key)
-  }
 }
 
 /* Meetinstrument voor de timing (19 okt 2026, operator: "geen gokwerk — een

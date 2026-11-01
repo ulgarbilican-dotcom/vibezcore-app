@@ -4429,6 +4429,10 @@ export function BreathSession() {
                 })}
               </View>
             ) : null}
+            {/* 1 nov 2026 (operator: "ook dit moet duidelijk gecommuniceerd worden"): Strong = standaard, de keuze blijft bewaard (telefoon + horloge). */}
+            {hapticsOn || watchOn ? (
+              <Text style={s.strengthNote}>Strong is the default. Your choice stays, on your phone and watch.</Text>
+            ) : null}
 
             {/* 14 okt 2026: Smartwatch aan/uit — het ritme op je pols, of
                de telefoon trilt zelf. Enkel zichtbaar met een horloge. */}
@@ -5852,6 +5856,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   /* 13 okt 2026 (operator, Apple-stijl): gesegmenteerde keuze — één blok,
      gelijke vlakken, de gekozen stand wit met donkere tekst. Exact dezelfde
      look als VIBRATION STRENGTH in State Control (bracelet-control avSeg). */
+  strengthNote: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, marginTop: -6, marginBottom: 14 },
   levelRow: {
     flexDirection: 'row',
     padding: 4,
