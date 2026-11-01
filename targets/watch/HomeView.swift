@@ -626,8 +626,9 @@ struct WatchSettingsView: View {
           .padding(.bottom, 4)
         ForEach(WatchSettings.breathStyles, id: \.self) { (st: String) in
           PickRow(
-            title: st == "strong" ? "Strong" : "Pulse",
-            sub: st == "strong" ? "Up and down taps" : "Firm single taps",
+            /* 1 nov 2026 (operator: "waarom bij de ene Pulse en bij de andere niet?"): beide secties Strong / Medium. */
+            title: st == "strong" ? "Strong" : "Medium",
+            sub: st == "strong" ? "Up and down taps" : "Lighter, single taps",
             subColor: dim, current: st == settings.breathStyle, color: teal
           ) {
             settings.setBreathStyle(st)
