@@ -88,6 +88,8 @@ type WatchBreathNativeModule = {
   stopStateSession(): void;
   watchStatus?(): Promise<{ status: 'none' | 'noApp' | 'ready'; name: string; diag?: string }>;
   syncCatalog?(json: string): void;
+  workoutPermission?(): Promise<string>;
+  requestWorkoutPermission?(): Promise<string>;
   addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): Subscription;
   addListener(eventName: 'onStateAck', listener: () => void): Subscription;
   addListener(eventName: 'onWatchLog', listener: (event: { record: string }) => void): Subscription;
@@ -127,6 +129,23 @@ export async function getAppleWatchStatus(): Promise<{ status: 'none' | 'noApp' 
     return (await native?.watchStatus?.()) ?? { status: 'none', name: '' };
   } catch {
     return { status: 'none', name: '' };
+  }
+}
+
+/** 1 nov 2026: HealthKit-toestemming voor Workouts (iPhone). Zonder die tikt de Apple Watch niet met het scherm gedimd. */
+export type WorkoutPermission = 'granted' | 'denied' | 'notDetermined' | 'unavailable';
+export async function getWorkoutPermission(): Promise<WorkoutPermission> {
+  try {
+    return ((await native?.workoutPermission?.()) as WorkoutPermission) ?? 'unavailable';
+  } catch {
+    return 'unavailable';
+  }
+}
+export async function requestWorkoutPermission(): Promise<WorkoutPermission> {
+  try {
+    return ((await native?.requestWorkoutPermission?.()) as WorkoutPermission) ?? 'unavailable';
+  } catch {
+    return 'unavailable';
   }
 }
 

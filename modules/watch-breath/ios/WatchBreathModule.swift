@@ -45,6 +45,25 @@ public class WatchBreathModule: Module {
       }
     }
 
+    /* 1 nov 2026: toestemming voor Workouts (zonder die geen workout op het horloge = geen tikken met het scherm gedimd). */
+    AsyncFunction("workoutPermission") { () -> String in
+      guard HKHealthStore.isHealthDataAvailable() else { return "unavailable" }
+      switch HKHealthStore().authorizationStatus(for: HKObjectType.workoutType()) {
+      case .sharingAuthorized: return "granted"
+      case .sharingDenied: return "denied"
+      default: return "notDetermined"
+      }
+    }
+
+    AsyncFunction("requestWorkoutPermission") { (promise: Promise) in
+      guard HKHealthStore.isHealthDataAvailable() else { promise.resolve("unavailable"); return }
+      let store = HKHealthStore()
+      store.requestAuthorization(toShare: [HKObjectType.workoutType()], read: nil) { _, _ in
+        let st = store.authorizationStatus(for: HKObjectType.workoutType())
+        promise.resolve(st == .sharingAuthorized ? "granted" : (st == .sharingDenied ? "denied" : "notDetermined"))
+      }
+    }
+
     AsyncFunction("isWatchReachable") { () -> Bool in
       WCSession.isSupported() && WCSession.default.isReachable
     }
