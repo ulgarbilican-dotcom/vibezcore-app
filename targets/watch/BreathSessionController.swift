@@ -303,17 +303,19 @@ final class BreathSessionController: NSObject, ObservableObject {
       RunLoop.main.add(t, forMode: .common)
       tickTimer = t
     }
-    /* 1 nov 2026 (operator op build 69: "bijna niets voelbaar, geen duidelijk ritme voor inhale, exhale en hold"): de stille .click-tikken
-       tussendoor waren niet te voelen. Nu elke tik een STERKE tik van de fase zelf, met een eigen tempo:
-         inademen   = omhoog-tik (.directionUp) elke 1,0 s
-         vasthouden = één stevige tik (.start), dan stilte
-         uitademen  = omlaag-tik (.directionDown) elke 1,5 s */
+    /* 1 nov 2026 (operator op build 69: "bijna niets voelbaar, geen duidelijk ritme"; daarna: "de tikken bij inhale, hold en exhale hebben
+       nooit correct gewerkt — de gebruiker moet zonder kijken, enkel op gevoel, kunnen volgen"). Vroeger verschilden de fasen enkel in het
+       soort tik en een klein tempoverschil (1,0 vs 1,5 s): blind niet te onderscheiden. Nu drie grof verschillende texturen, elk met een
+       sterke tik (het toontje valt weg met Stille modus):
+         inademen   = doorlopend tikken, elke 1,0 s (omhoog-tik)      → "zolang het tikt, adem je in"
+         vasthouden = één dubbele stop-tik, dan VOLLEDIGE stilte     → stilte = niets doen
+         uitademen  = omlaag-tik, dan TRAAG tikken, elke 2,0 s        → traag = rustig uitblazen */
     if key.hasPrefix("inhale") {
       s.play(.inhale)
       repeating(every: 1.0, tap: .inhale)
     } else if key.hasPrefix("exhale") {
       s.play(.exhale)
-      repeating(every: 1.5, tap: .exhale)
+      repeating(every: 2.0, tap: .exhale)
     } else {
       s.play(.hold)
     }

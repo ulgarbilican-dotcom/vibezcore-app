@@ -276,7 +276,8 @@ final class WatchSettings: ObservableObject {
     case .beat: d.play(.start)
     case .inhale: d.play(.directionUp)
     case .exhale: d.play(.directionDown)
-    case .hold: d.play(.start)
+    /* vasthouden: .stop (eigen, dubbele stop-tik), anders dan de hartslag/.start — zo voelt "stil houden" als een duidelijk ander signaal */
+    case .hold: d.play(.stop)
     case .tick: d.play(.click)
     }
   }
