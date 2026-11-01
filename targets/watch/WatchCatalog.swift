@@ -250,7 +250,8 @@ final class WatchSettings: ObservableObject {
      (WKInterfaceDevice.play-documentatie), dus 0,3 s is veilig. Hoe sterk een stroom op de pols aanvoelt is niet van op afstand te meten,
      daarom drie varianten om te VOELEN in Settings › Breath taps (previewBreath); de gekozen variant blijft bewaard. */
   /* 1 nov 2026 (operator: "Light mag eruit"): enkel Strong (standaard) en Pulse. */
-  static let breathStyles = ["strong", "pulse"]
+  /* 1 nov 2026: enkel Strong (zie HomeView: een lichtere voelbare ademtik bestaat niet). */
+  static let breathStyles = ["strong"]
   @Published private(set) var breathStyle: String
   private let breathKey = "vz_watch_breath_style_v1"
 
@@ -330,9 +331,9 @@ final class WatchSettings: ObservableObject {
   func play(_ t: Tap) {
     let d = WKInterfaceDevice.current()
     switch t {
-    /* 1 nov 2026 (operator: "State Control is een hartslag — beter Pulse?"): ja, elke klop is de stevige .start (lub). Strong = lub + lichte
-       dub erna (zie playsDub), Medium = enkel de lub: lichter, maar nog altijd een hartslag (de glijdende .directionUp voelde niet als een klop). */
-    case .beat: d.play(.start)
+    /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen, niet de techniek"): zelfde lub-dub op hetzelfde tempo; Strong met
+       de stevigste klop (.start), Medium met Apple's middelzware tik (.directionUp). Een volumeknop voor trillingen heeft watchOS niet. */
+    case .beat: d.play(beatTap)
     /* fase-tik: Strong (standaard) en Light de omhoog/omlaag-tik; Pulse de .start van State Control */
     case .inhale: d.play(breathStyle == "pulse" ? .start : .directionUp)
     case .exhale: d.play(breathStyle == "pulse" ? .start : .directionDown)
@@ -342,8 +343,11 @@ final class WatchSettings: ObservableObject {
     }
   }
 
-  /// Tweede slag van de hartslag: enkel op Strong (Medium = enkel de lub, 1 nov 2026).
-  var playsDub: Bool { strength == "strong" }
+  /// Tweede slag van de hartslag: altijd (Medium = zelfde ritme, lichtere tik).
+  var playsDub: Bool { true }
+
+  /// De tik voor lub én dub van State Control.
+  var beatTap: WKHapticType { strength == "medium" ? .directionUp : .start }
 
 }
 

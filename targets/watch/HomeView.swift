@@ -595,7 +595,7 @@ struct WatchSettingsView: View {
 
   private func sub(_ s: String) -> String? {
     /* 1 nov 2026 (operator): Soft weg; Strong = standaard, Medium = lichter. */
-    s == "strong" ? "Full heartbeat" : "Lighter, single beat"
+    s == "strong" ? "Firmest heartbeat" : "Same rhythm, lighter"
   }
 
   var body: some View {
@@ -613,7 +613,7 @@ struct WatchSettingsView: View {
             settings.play(.beat)
           }
         }
-        Text("Strong is the default. Your choice stays until you change it. Silent Mode drops the sound.")
+        Text("Strong is the default; your choice stays until you change it. Medium keeps the same rhythm, lighter. Silent Mode drops the sound.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
@@ -624,25 +624,14 @@ struct WatchSettingsView: View {
           .foregroundColor(.white)
           .padding(.top, 10)
           .padding(.bottom, 4)
-        ForEach(WatchSettings.breathStyles, id: \.self) { (st: String) in
-          PickRow(
-            /* 1 nov 2026 (operator: "waarom bij de ene Pulse en bij de andere niet?"): beide secties Strong / Medium. */
-            title: st == "strong" ? "Strong" : "Medium",
-            sub: st == "strong" ? "Up and down taps" : "Lighter, single taps",
-            subColor: dim, current: st == settings.breathStyle, color: teal
-          ) {
-            settings.setBreathStyle(st)
-            settings.previewBreath()
-          }
+        /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen, niet de techniek"): bij Breathwork bestaat er geen lichtere
+           tik die nog voelbaar is (enkel het stille .click), dus geen keuze — altijd Strong; enkel een knop om het te voelen. */
+        PickRow(title: "Feel it", sub: "4 s in, 2 s hold, 4 s out", subColor: dim, current: false, color: teal) {
+          settings.previewBreath()
         }
-        Text("Tap one to feel it: 4 s in, 2 s hold, 4 s out.")
-          .font(.system(size: 10))
-          .foregroundColor(dim)
-          .multilineTextAlignment(.center)
-          .padding(.top, 4)
         /* 1 nov 2026: zonder toestemming voor Workouts speelt het horloge geen tikken met de pols omlaag (Apple). */
         if RuntimeSessionManager.shared.workoutPermissionMissing {
-          Text("To feel the taps with your wrist down, allow Workouts for VIBEZCORE: iPhone Settings › Health › Data Access & Devices.")
+          Text("To feel the taps with your wrist down, allow Workouts: iPhone Settings › Privacy & Security › Health › VIBEZCORE.")
             .font(.system(size: 10))
             .foregroundColor(.orange)
             .multilineTextAlignment(.center)
