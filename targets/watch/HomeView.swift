@@ -595,40 +595,42 @@ struct WatchSettingsView: View {
 
   private func sub(_ s: String) -> String? {
     /* 1 nov 2026 (operator): Soft weg; Strong = standaard, Medium = lichter. */
-    s == "strong" ? "Firmest heartbeat" : "Same rhythm, lighter"
+    s == "strong" ? "Firmest taps" : "Same rhythm, lighter"
   }
 
   var body: some View {
     ScrollView {
       VStack(spacing: 6) {
         Eyebrow(text: "Haptics").padding(.bottom, 2)
-        /* 1 nov 2026 (operator: "is haptic strength voor State Control of ook Breathwork?"): kop = wat het regelt. */
-        Text("State Control")
+        /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen" + UX-nazicht): één sterkte voor State Control én Breathwork,
+           gedeeld met de iPhone; daaronder voelen. */
+        Text("Strength")
           .font(.system(size: 14, weight: .bold))
           .foregroundColor(.white)
           .padding(.bottom, 4)
         ForEach(WatchSettings.levels, id: \.self) { (lv: String) in
           PickRow(title: label(lv), sub: sub(lv), subColor: dim, current: lv == settings.strength, color: teal) {
             settings.setFromWatch(lv)
-            settings.play(.beat)
+            settings.previewHeartbeat()
           }
         }
-        Text("Strong is the default; your choice stays until you change it. Medium keeps the same rhythm, lighter. Silent Mode drops the sound.")
+        Text("For State Control and Breathwork. Strong is the default; your choice stays until you change it.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
           .padding(.top, 4)
-        /* 1 nov 2026 (operator: "doe totaal iets anders"): ademtextuur kiezen door te VOELEN — tik = 10 s in / vast / uit. */
-        Text("Breathwork")
-          .font(.system(size: 14, weight: .bold))
-          .foregroundColor(.white)
-          .padding(.top, 10)
-          .padding(.bottom, 4)
-        /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen, niet de techniek"): bij Breathwork bestaat er geen lichtere
-           tik die nog voelbaar is (enkel het stille .click), dus geen keuze — altijd Strong; enkel een knop om het te voelen. */
-        PickRow(title: "Feel it", sub: "4 s in, 2 s hold, 4 s out", subColor: dim, current: false, color: teal) {
+        PickRow(title: "Feel State Control", sub: "A few heartbeats", subColor: dim, current: false, color: teal) {
+          settings.previewHeartbeat()
+        }
+        .padding(.top, 8)
+        PickRow(title: "Feel Breathwork", sub: "4 s in, 2 s hold, 4 s out", subColor: dim, current: false, color: teal) {
           settings.previewBreath()
         }
+        Text("Silent Mode on your watch drops the sound and keeps the taps.")
+          .font(.system(size: 10))
+          .foregroundColor(dim)
+          .multilineTextAlignment(.center)
+          .padding(.top, 4)
         /* 1 nov 2026: zonder toestemming voor Workouts speelt het horloge geen tikken met de pols omlaag (Apple). */
         if RuntimeSessionManager.shared.workoutPermissionMissing {
           Text("To feel the taps with your wrist down, allow Workouts: iPhone Settings › Privacy & Security › Health › VIBEZCORE.")

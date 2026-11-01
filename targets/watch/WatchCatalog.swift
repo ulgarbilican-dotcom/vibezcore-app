@@ -262,12 +262,11 @@ final class WatchSettings: ObservableObject {
   }
 
   /// Tempo en soort tik van de stroom per fase.
+  /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen, niet de techniek" + "waarom ging dat niet voor Breathwork?"):
+     één sterkte voor de hele app (zoals op de iPhone). Zelfde tempo's; Strong = de omhoog/omlaag-tik (door de operator als sterkst gevoeld),
+     Medium = de lichtere enkele .start-tik. */
   func breathTexture() -> (inEvery: Double, outEvery: Double, inTap: WKHapticType, outTap: WKHapticType) {
-    switch breathStyle {
-    case "strong": return (0.5, 0.9, .directionUp, .directionDown)
-    case "pulse": return (0.5, 1.0, .start, .start)
-    default: return (0.5, 0.9, .directionUp, .directionDown)
-    }
+    strength == "medium" ? (0.5, 0.9, .start, .start) : (0.5, 0.9, .directionUp, .directionDown)
   }
 
   func playRaw(_ t: WKHapticType) {
@@ -275,6 +274,26 @@ final class WatchSettings: ObservableObject {
   }
 
   private var previewTimers: [Timer] = []
+
+  /** Een paar hartslagen om te voelen (70 bpm, lub-dub zoals in een sessie). */
+  func previewHeartbeat() {
+    previewTimers.forEach { $0.invalidate() }
+    previewTimers = []
+    let cycle = 60.0 / 70.0
+    let start = Date()
+    for i in 0..<5 {
+      let lub = Double(i) * cycle
+      for at in [lub, lub + cycle * 0.3] {
+        let timer = Timer(fire: start.addingTimeInterval(at), interval: 0, repeats: false) { [weak self] _ in
+          guard let self = self else { return }
+          self.playRaw(self.beatTap)
+        }
+        timer.tolerance = 0
+        RunLoop.main.add(timer, forMode: .common)
+        previewTimers.append(timer)
+      }
+    }
+  }
 
   /** 10 s om te voelen: 4 s in, 2 s vast, 4 s uit — exact zoals in een sessie. */
   func previewBreath() {
@@ -334,9 +353,9 @@ final class WatchSettings: ObservableObject {
     /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen, niet de techniek"): zelfde lub-dub op hetzelfde tempo; Strong met
        de stevigste klop (.start), Medium met Apple's middelzware tik (.directionUp). Een volumeknop voor trillingen heeft watchOS niet. */
     case .beat: d.play(beatTap)
-    /* fase-tik: Strong (standaard) en Light de omhoog/omlaag-tik; Pulse de .start van State Control */
-    case .inhale: d.play(breathStyle == "pulse" ? .start : .directionUp)
-    case .exhale: d.play(breathStyle == "pulse" ? .start : .directionDown)
+    /* fase-tik: Strong de omhoog/omlaag-tik, Medium de lichtere .start (zelfde ritme) */
+    case .inhale: d.play(strength == "medium" ? .start : .directionUp)
+    case .exhale: d.play(strength == "medium" ? .start : .directionDown)
     /* vasthouden: .stop (eigen, dubbele stop-tik), anders dan de hartslag/.start — zo voelt "stil houden" als een duidelijk ander signaal */
     case .hold: d.play(.stop)
     case .tick: d.play(.click)
