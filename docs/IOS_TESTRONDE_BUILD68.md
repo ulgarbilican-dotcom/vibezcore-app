@@ -34,6 +34,8 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 | 11 | De app blokkeert bij het aantikken van een audiosessie (Audio Library) en blijft bevroren. | ⏳ | Ernstig (app hangt). Crashlog/Sentry nakijken; mogelijk speler + horloge/Sound timing-code (nieuw in deze build). |
 | 12 | Het geluid van de audio moet beter: klinkt niet heel luid en de kwaliteit lijkt ook niet heel goed (iPhone). | ⏳ | Na te kijken: volume/ducking (audio-sessie iOS, mogelijk nog "ducked" door hartslag-/stem-sessie), bitrate van de MP3's op Bunny, en of iOS de stream in lage kwaliteit afspeelt. Vergelijken met Android op dezelfde sessie. |
 
+| 13 | Knoppen in de Audio Library werken niet correct: Favorites gaat niet open, en daarna bevriest alles. De audio speelt wel door, maar pauzeren, minimaliseren, sluiten of eender wat lukt niet meer. | ⏳ | Ernstig, hangt samen met #11: de JS-thread lijkt vast te zitten (audio = native, speelt door; UI reageert niet). Eerst de oorzaak van de blokkade zoeken (lus/zware render/await op native call die niet terugkomt op iOS). |
+
 ## Nog door te geven door de operator
 
 (volgende bevindingen hieronder toevoegen)
