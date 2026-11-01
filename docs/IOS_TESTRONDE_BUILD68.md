@@ -25,6 +25,8 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 | 8 | Het gedimde scherm blijft altijd op "1 min" staan (telt niet af). | ⏳ | |
 | 9 | Het app-icoon op het horloge: de rand is veel te wit en erg lelijk. | ⏳ | targets/watch/icon.png (zelfde V op grafiet als Galaxy Watch). |
 
+| 10 | Breathwork-haptics werken helemaal niet op de smartwatch: enkel een ping bij het starten van een cyclus. | ⏳ | Ernstig. BreathHapticPlayer.swift (metronoom-vertaling van breath-haptics.ts). Mogelijk zelfde oorzaak als #5 (ping = WKInterfaceDevice.play met geluid). |
+
 ## Nog door te geven door de operator
 
 (volgende bevindingen hieronder toevoegen)
