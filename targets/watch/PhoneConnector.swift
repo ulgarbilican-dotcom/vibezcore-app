@@ -51,11 +51,19 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
   private var lastClockStart: TimeInterval = 0
 
   /** Klokverschil Watch − iPhone in ms (0 zolang er geen recente meting is). */
+  /* 1 nov 2026 (operator: "State Control liep eerst goed en nu weer achter — pas een correcte formule toe"): de meting via WatchConnectivity
+     heeft een rondreis van 100–400 ms en is dus tot ±200 ms onnauwkeurig; samen met de herijking elke 20 s (tolerantie 40 ms) verschoof het
+     ritme telkens met die ruis. Apple houdt de klok van de Watch zelf gelijk met de gekoppelde iPhone (orde tientallen ms) — nauwkeuriger dan
+     elke Bluetooth-meting. Formule: systeemklok (0), tenzij een NAUWKEURIGE meting (rondreis ≤ 120 ms) een ECHTE afwijking (> 150 ms) toont. */
+  private let clockRttKey = "vz_clock_rtt_ms"
   func clockAheadMs() -> Double {
     let d = UserDefaults.standard
     let at = d.double(forKey: clockAtKey)
     guard at > 0, Date().timeIntervalSince1970 - at < 6 * 3600 else { return 0 }
-    return d.double(forKey: clockAheadKey)
+    let rtt = d.double(forKey: clockRttKey)
+    guard rtt > 0, rtt <= 120 else { return 0 }
+    let ahead = d.double(forKey: clockAheadKey)
+    return abs(ahead) > 150 ? ahead : 0
   }
 
   func measureClock() {
@@ -87,6 +95,7 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
       if let ahead = bestAhead {
         UserDefaults.standard.set(ahead, forKey: self.clockAheadKey)
+        UserDefaults.standard.set(bestRtt, forKey: self.clockRttKey)
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: self.clockAtKey)
       }
       self.measuringClock = false
