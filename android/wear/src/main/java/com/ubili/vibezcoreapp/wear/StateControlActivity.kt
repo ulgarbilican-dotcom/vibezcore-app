@@ -202,6 +202,6 @@ internal fun startLocalStateSession(context: Context, e: JSONObject, minutesIn: 
   context.startActivity(
     Intent(context, MainActivity::class.java).addFlags(
       Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP,
-    ),
+    ).putExtra(MainActivity.EXTRA_OPENING, true),
   )
 }

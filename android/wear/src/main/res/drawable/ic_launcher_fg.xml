@@ -4,7 +4,7 @@
      een eigen cirkel gezet; adaptief vult het de volle cirkel zoals elke
      andere app. De V staat binnen de veilige zone. 14 okt 2026 (operator:
      "die van ons is nu de kleinste"): V groter, inset 36% → 32% (V = de
-     helft van het vlak, binnen de veilige zone van 61%). -->
+     helft van het vlak, binnen de veilige zone van 61%). 1 nov 2026 (operator: "witte cirkel en zwarte V"): zwarte V. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/vz_vmark"
+    android:drawable="@drawable/vz_vmark_dark"
     android:inset="32%" />

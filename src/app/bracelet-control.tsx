@@ -68,7 +68,6 @@ import {
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
 import { useTabBarInset } from '@/utils/tab-bar-inset';
-import { useAppleWatchOpenHint, WATCH_OPEN_HINT } from '@/hooks/useWatchOpenHint';
 import { setPremiumPillSuppressed } from '@/utils/premium-pill-slot';
 import {
   startSessionKeepAlive,
@@ -4951,10 +4950,10 @@ const handledLinkTokens = new Set<string>();
    instantie). Elk startlink-token werkt nu precies één keer, app-breed. */
 const startedLinkTokens = new Set<string>();
 
-/** iPhone-regel onder END SESSION: de iPhone trilt enkel in beeld; en kan de Watch-app niet zelf openen (28 okt 2026, zie useWatchOpenHint). */
+/** iPhone-regel onder END SESSION: de iPhone trilt enkel in beeld. 1 nov 2026: de hint "Open VIBEZCORE on your watch" is weg — de iPhone
+ *  opent de Watch-app nu zelf (startWatchApp + workoutsessie, RuntimeSessionManager.swift). */
 function IosRhythmNote() {
-  const hint = useAppleWatchOpenHint(true);
-  return <Text style={s.iosKeepOpen}>{hint ? WATCH_OPEN_HINT : 'Keep VIBEZCORE open to feel the rhythm'}</Text>;
+  return <Text style={s.iosKeepOpen}>Keep VIBEZCORE open to feel the rhythm</Text>;
 }
 
 export default function BraceletControl(props: { autoConnect?: boolean; onMinimize?: () => void } = {}) {
