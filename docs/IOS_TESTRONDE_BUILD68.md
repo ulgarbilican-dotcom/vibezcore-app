@@ -36,6 +36,9 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 
 | 13 | Knoppen in de Audio Library werken niet correct: Favorites gaat niet open, en daarna bevriest alles. De audio speelt wel door, maar pauzeren, minimaliseren, sluiten of eender wat lukt niet meer. | ⏳ | Ernstig, hangt samen met #11: de JS-thread lijkt vast te zitten (audio = native, speelt door; UI reageert niet). Eerst de oorzaak van de blokkade zoeken (lus/zware render/await op native call die niet terugkomt op iOS). |
 
+| 14 | In Premium neemt de smartwatch niets over tot de operator het horloge ontgrendelt. | ⏳ | Hoort bij #3/#4: zolang het horloge vergrendeld is, start de Watch-app niet (startWatchApp/WKExtendedRuntimeSession). |
+| 15 | State Control (Free én Premium): de haptische pulsen van telefoon en horloge lopen niet gelijk; de secondenteller wel. | ⏳ | Pulsrooster horloge vs iPhone (Apple Watch-zelfcorrectie 29 okt, klokverschil). Op Android/Watch4 wel gemeten en synchroon. |
+
 ## Nog door te geven door de operator
 
 (volgende bevindingen hieronder toevoegen)
