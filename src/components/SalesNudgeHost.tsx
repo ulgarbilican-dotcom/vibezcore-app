@@ -73,6 +73,8 @@ import { isAnySessionRunning } from '@/utils/onboarding-gate';
 import { rootBlurRef } from '@/utils/root-blur';
 
 /** Hoe vaak we tellen en kijken of het moment rustig is. */
+/** Welcome Back pas na zoveel ms op de app (1 nov 2026). */
+const WIN_BACK_AFTER_OPEN_MS = 20_000;
 const TICK_MS = 5000;
 /** Prijs zolang de store nog niet geantwoord heeft (operator-goedgekeurd). */
 const DAY_PASS_FALLBACK_PRICE = '€1.29';
@@ -166,7 +168,11 @@ export function SalesNudgeHost() {
   const [openSeq, setOpenSeq] = useState(1);
   const lapseCheckedForRef = useRef(0);
 
+  /* 1 nov 2026 (operator, iOS build 69: "Welcome Back verschijnt onmiddellijk, is dat de bedoeling?"): niet meteen bij het openen,
+     pas na 20 s op de app (zoals de Day Pass-kaart, die na 60 s komt). */
+  const openedAtRef = useRef(Date.now());
   const onAppOpen = useCallback(() => {
+    openedAtRef.current = Date.now();
     reshowArmedRef.current = hasDismissedPlansEnough();
     winBackKeyRef.current = null;
     setOpenSeq((n) => n + 1);
@@ -235,6 +241,8 @@ export function SalesNudgeHost() {
 
     const winKey = winBackKeyRef.current;
     if (winKey && winKey !== getWinBackShownFor()) {
+      /* Nog te vroeg: wachten (ook geen Day Pass-kaart ervoor in de plaats). */
+      if (Date.now() - openedAtRef.current < WIN_BACK_AFTER_OPEN_MS) return;
       winBackKeyRef.current = null;
       markWinBackShown(winKey);
       setCard('win-back');
