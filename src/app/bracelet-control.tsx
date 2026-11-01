@@ -6065,6 +6065,16 @@ function BraceletControlScreen({
   useEffect(() => {
     if (sessionActive && freeSessionAvailable) void setSetting('stateFreeSessionUsedAt', Date.now());
   }, [sessionActive, freeSessionAvailable]);
+  /* 1 nov 2026 (operator, iOS: "bij free sessies krijg ik na vroegtijdig eindigen geen sales-popup"): na de 30 s-proef kwam het aanbod
+     wel, na de ene gratis volledige sessie niet. Nu: eindigt die gratis sessie (vroegtijdig gestopt of afgelopen), dan het aanbod. */
+  const freeRunRef = useRef(false);
+  useEffect(() => {
+    if (sessionActive && freeSessionAvailable && premiumLocked) freeRunRef.current = true;
+    if (!monitorSnap.active && freeRunRef.current) {
+      freeRunRef.current = false;
+      if (premiumLocked) setPaywallOpen(true);
+    }
+  }, [sessionActive, monitorSnap.active, freeSessionAvailable, premiumLocked]);
   /* Geen sessie meer → niets om "geminimaliseerd" te houden. */
   useEffect(() => {
     if (!sessionActive && !isPaused) setMinimized(false);

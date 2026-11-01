@@ -3950,9 +3950,12 @@ export function BreathSession() {
                    environment" — de belangrijkste plek waar het foute
                    scherm zichtbaar was. */
                 setEndTrialConfirm(false);
-                setSessionEnded(true);
-                stop();
-                leaveSession();
+                /* 1 nov 2026 (operator, iOS: "na vroegtijdig eindigen van een free sessie geen sales-popup"): zoals na de 30 s-proef
+                   eerst het aanbod (sessie gepauzeerd achter het glas); bij het sluiten ervan stopt de sessie echt en vertrek je (onClose
+                   van het betaalscherm). */
+                pauseSession();
+                stopScape(false);
+                setPaywall(true);
               }}
             >
               <Text style={s.modalBtnTxt}>End session</Text>
