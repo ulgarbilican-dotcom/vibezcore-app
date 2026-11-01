@@ -914,6 +914,36 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
     session.restingBpm,
     session.startBpm,
   );
+  scheduleWatchRelayRetries();
+}
+
+/* 1 nov 2026 (operator: "na een nieuwe opstart met platte batterij nam de smartwatch de sessies niet direct over, pas na een paar
+   pogingen"): een horloge dat net opgestart is, start de app en de klokmeting trager dan de handdruk wacht, of mist het eerste
+   bericht. Zonder bevestiging (`state-ack`) stuurt de telefoon de sessie daarom zelf opnieuw, op de plek waar hij NU is — de
+   gebruiker hoeft niet opnieuw te starten. De telefoon trilt intussen gewoon door. */
+const WATCH_RELAY_RETRY_MS = [6_000, 14_000, 25_000];
+let watchRetryTimers: ReturnType<typeof setTimeout>[] = [];
+function clearWatchRelayRetries(): void {
+  watchRetryTimers.forEach(clearTimeout);
+  watchRetryTimers = [];
+}
+function scheduleWatchRelayRetries(): void {
+  clearWatchRelayRetries();
+  const sess = session;
+  WATCH_RELAY_RETRY_MS.forEach((ms) => {
+    watchRetryTimers.push(
+      setTimeout(() => {
+        if (watchHasRhythm || !session || session !== sess || session.pausedAt !== null || !lastClock) return;
+        if (!getSetting('watchHaptics')) return;
+        const clock = lastClock;
+        const passed = (Date.now() - clock.at) / 1000;
+        const elapsedSec = clock.elapsedSec + passed;
+        const remainingSec = Math.max(0, clock.remainingSec - passed);
+        if (remainingSec <= 5) return;
+        relayToWatch(clock.mode, Math.max(0, elapsedSec - session.curveZeroSec), remainingSec, session.restingBpm, session.startBpm);
+      }, ms),
+    );
+  });
 }
 
 /* ── Het ritme op de pols: smartwatch (6 okt 2026) ─────────────────────
@@ -1068,6 +1098,7 @@ function phoneTakesRhythmBack(): void {
  *  Watch sinds 15 okt 2026, StateSessionController.startAckLoop). */
 function onWatchTookOver(watchdogOn = false): void {
   lastWatchAckAt = Date.now();
+  clearWatchRelayRetries();
   if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
   watchHasRhythm = true;
   stopWatchdog();

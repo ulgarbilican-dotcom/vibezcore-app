@@ -33,6 +33,7 @@
    ─────────────────────────────────────────────────────────────────────── */
 
 import { apiCall, ApiError } from './api';
+import { NORMALIZED_AUDIO_PATHS } from '@/data/normalized-audio';
 
 const ENDPOINT_PATH = '/api/audio-url';
 
@@ -106,6 +107,17 @@ export async function getSignedAudioUrl(
      - PRO gating werkt NU NIET — elke user kan alle content afspelen
      ════════════════════════════════════════════════════════════════════════ */
   if (/^https?:\/\/vibezcore-audio\.b-cdn\.net\//.test(rawUrl)) {
+    /* 1 nov 2026 (iOS build 68, operator: "klinkt niet heel luid, kwaliteit niet goed"): de gesproken sessies stonden op ±-20,5 LUFS,
+       4–6 dB stiller dan podcasts/Spotify. Een genormaliseerde KOPIE (-16 LUFS, 192 kbps) staat in /app-16lufs/ met hetzelfde pad;
+       de originelen (en de webapp) blijven ongewijzigd. De sessie-URL zelf blijft de sleutel voor favorieten/voortgang — enkel het
+       afspelen gaat naar de kopie, en enkel voor bestanden die echt genormaliseerd zijn (data/normalized-audio.ts). */
+    let plainPath = pathname;
+    try {
+      plainPath = decodeURIComponent(pathname);
+    } catch {}
+    if (NORMALIZED_AUDIO_PATHS.has(plainPath)) {
+      return `https://vibezcore-audio.b-cdn.net/app-16lufs${pathname}`;
+    }
     return rawUrl;
   }
 

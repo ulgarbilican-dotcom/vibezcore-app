@@ -21,6 +21,21 @@ import android.widget.ImageButton
 import android.widget.TextView
 
 class MainActivity : androidx.activity.ComponentActivity() {
+  companion object {
+    /** Gezet door de start-helpers hieronder: de sessie wordt net gestart (zie [openingUntil]). */
+    const val EXTRA_OPENING = "vz_opening_session"
+  }
+
+  /* 1 nov 2026 (operator: "als ik op Start druk zie ik even het beginscherm alvorens de sessie start"): de dienst meldt de lopende sessie
+     pas een fractie NA het openen van dit scherm. Tot dan (max. 3 s) een zwart scherm i.p.v. het beginscherm. */
+  private var openingUntil = 0L
+
+  private fun noteOpening(intent: Intent?) {
+    if (intent?.getBooleanExtra(EXTRA_OPENING, false) != true) return
+    intent.removeExtra(EXTRA_OPENING)
+    openingUntil = android.os.SystemClock.uptimeMillis() + 3000
+    window.decorView.postDelayed({ render() }, 3050)
+  }
   /* 12 okt 2026: ambient-modus (zoals Apple's Workout) — pols omlaag =
      ons scherm blijft gedimd staan i.p.v. terug naar de wijzerplaat; pols
      omhoog = meteen weer de ring. De golf staat stil in ambient (batterij). */
@@ -87,12 +102,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ) {
       requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 41)
     }
+    noteOpening(intent)
     runDemo(intent)
   }
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
+    noteOpening(intent)
     runDemo(intent)
   }
 
@@ -258,6 +275,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
     when {
       st.active -> renderState(st)
       b.running || b.paused -> renderBreath(b)
+      android.os.SystemClock.uptimeMillis() < openingUntil -> {
+        sessionContainer.visibility = View.GONE
+        idleContainer.visibility = View.GONE
+      }
       else -> {
         sessionContainer.visibility = View.GONE
         idleContainer.visibility = View.VISIBLE
@@ -620,7 +641,7 @@ internal fun startPreviewSession(context: android.content.Context, e: org.json.J
   context.startActivity(
     Intent(context, MainActivity::class.java).addFlags(
       Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP,
-    ),
+    ).putExtra(MainActivity.EXTRA_OPENING, true),
   )
 }
 
@@ -640,6 +661,6 @@ internal fun startLocalSession(context: android.content.Context, e: org.json.JSO
   context.startActivity(
     Intent(context, MainActivity::class.java).addFlags(
       Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP,
-    ),
+    ).putExtra(MainActivity.EXTRA_OPENING, true),
   )
 }
