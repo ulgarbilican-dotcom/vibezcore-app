@@ -595,7 +595,7 @@ struct WatchSettingsView: View {
 
   private func sub(_ s: String) -> String? {
     /* 1 nov 2026 (operator): Soft weg; Strong = standaard, Medium = lichter. */
-    s == "strong" ? "Firmest taps" : "Lighter taps"
+    s == "strong" ? "Full heartbeat" : "Lighter, single beat"
   }
 
   var body: some View {

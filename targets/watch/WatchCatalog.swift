@@ -330,8 +330,9 @@ final class WatchSettings: ObservableObject {
   func play(_ t: Tap) {
     let d = WKInterfaceDevice.current()
     switch t {
-    /* Medium = een lichtere hartslag (.directionUp), Strong = de krachtigste (.start). */
-    case .beat: d.play(strength == "medium" ? .directionUp : .start)
+    /* 1 nov 2026 (operator: "State Control is een hartslag — beter Pulse?"): ja, elke klop is de stevige .start (lub). Strong = lub + lichte
+       dub erna (zie playsDub), Medium = enkel de lub: lichter, maar nog altijd een hartslag (de glijdende .directionUp voelde niet als een klop). */
+    case .beat: d.play(.start)
     /* fase-tik: Strong (standaard) en Light de omhoog/omlaag-tik; Pulse de .start van State Control */
     case .inhale: d.play(breathStyle == "pulse" ? .start : .directionUp)
     case .exhale: d.play(breathStyle == "pulse" ? .start : .directionDown)
@@ -341,8 +342,8 @@ final class WatchSettings: ObservableObject {
     }
   }
 
-  /// Tweede slag van de hartslag (altijd, sinds Soft weg is — 1 nov 2026).
-  var playsDub: Bool { true }
+  /// Tweede slag van de hartslag: enkel op Strong (Medium = enkel de lub, 1 nov 2026).
+  var playsDub: Bool { strength == "strong" }
 
 }
 
