@@ -27,6 +27,13 @@ Status: ⏳ = genoteerd, nog niet onderzocht · 🔍 = oorzaak gevonden · ✅ =
 
 | 10 | Breathwork-haptics werken helemaal niet op de smartwatch: enkel een ping bij het starten van een cyclus. | ⏳ | Ernstig. BreathHapticPlayer.swift (metronoom-vertaling van breath-haptics.ts). Mogelijk zelfde oorzaak als #5 (ping = WKInterfaceDevice.play met geluid). |
 
+## iPhone (vervolg)
+
+| # | Bevinding (operator) | Status | Notitie |
+|---|---|---|---|
+| 11 | De app blokkeert bij het aantikken van een audiosessie (Audio Library) en blijft bevroren. | ⏳ | Ernstig (app hangt). Crashlog/Sentry nakijken; mogelijk speler + horloge/Sound timing-code (nieuw in deze build). |
+| 12 | Het geluid van de audio moet beter. | ⏳ | Vraag operator: luider, helderder, of de kwaliteit van de opname? |
+
 ## Nog door te geven door de operator
 
 (volgende bevindingen hieronder toevoegen)
