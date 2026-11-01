@@ -433,6 +433,9 @@ export default function TabLayout() {
             elevation: 0,
             shadowOpacity: 0,
             paddingTop: 4,
+            /* 1 nov 2026 (iOS build 68, operator: "tabnamen links en rechts dicht tegen de rand"): de buitenste labels
+               ("State Control", "Profile") kregen de volle breedte tot de schermrand. Zijmarge zoals Apple's tab bar. */
+            paddingHorizontal: 10,
             /* GEEN `paddingBottom` — @react-navigation/bottom-tabs plakt
                intern zelf `paddingBottom: insets.bottom` bovenop deze stijl
                (zie BottomTabBar.js): de iconen blijven zo boven de Android-

@@ -216,8 +216,10 @@ private struct StateFace: View {
   /* 19 okt 2026 (operator: "pols omlaag: de tijd blijft staan"): in Always On
      tekent watchOS zelf een aftellende teller — onze eigen klok staat dan stil. */
   private var timerText: Text {
-    if ambient && !state.paused {
-      return Text("\(max(1, Int((remaining / 60).rounded(.up)))) min")
+    /* 1 nov 2026 (iOS build 68, operator: "blijft altijd op 1 min staan"): de eigen minutenteller hing aan de app, die met de pols
+       omlaag niet (altijd) wakker is. Nu telt het systeem zelf af (zoals de Live Activity), ook als de app even slaapt. */
+    if ambient && !state.paused, let end = state.endDate {
+      return Text(timerInterval: now...max(now, end), countsDown: true, showsHours: false)
     }
     return Text(clockText(remaining, roundUp: false))
   }
@@ -555,7 +557,8 @@ private struct BreathFace: View {
         }
         if !paused && ambient {
           /* Always On: minuten, elke minuut bijgewerkt (19 okt 2026) */
-          Text("\(max(1, Int((sessionLeft / 60).rounded(.up)))) min left")
+          /* 1 nov 2026: systeemteller (zie StateFace) i.p.v. een eigen minutenteller die kon blijven hangen */
+          (Text(timerInterval: now...max(now, controller.sessionEnd), countsDown: true, showsHours: false) + Text(" left"))
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(Color.white.opacity(0.59))
         }

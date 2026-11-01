@@ -31,6 +31,8 @@ module.exports = {
   /* 15 okt 2026: App Store weigerde build 19 (ITMS-90391/90713: geen
      icoon voor de Watch-app). 1024 px, ondoorzichtig, zelfde V op grafiet
      als de Galaxy Watch (ic_launcher_bg + vz_vmark). */
+  /* 1 nov 2026 (iOS build 68, operator: "de rand is veel te wit en erg lelijk"): de ring viel op de rand van het ronde
+     masker van watchOS. Nu hetzelfde icoon als de iPhone (assets/vibezcore_icon_ios_1024.png): zwart vlak, witte V, geen ring. */
   icon: './icon.png',
   bundleIdentifier: 'com.ubili.vibezcoreapp.watchkitapp',
   deploymentTarget: '10.0',
