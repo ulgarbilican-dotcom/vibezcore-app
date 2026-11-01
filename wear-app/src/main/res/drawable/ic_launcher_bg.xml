@@ -1,30 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 27 okt 2026 (operator, keuze A uit de mockup): achtergrond van het adaptieve horloge-icoon volledig ZWART, met een
-     dunne lichte rand (wit, ±22%) rond de cirkel — zo valt de cirkel niet weg tegen het zwarte horlogescherm, zoals bij X.
-     Eerder: grafiet-verloop (14 okt: "de cirkel moet even groot zijn als de andere"). De cirkel zelf snijdt Wear OS uit
-     (adaptief icoon 72 dp, zichtbaar 66 dp); de ring ligt dus op de rand van het zichtbare vlak. 
-     27 okt 2026 (avond, operator: "weinig of geen omlijning, zwart op zwart"): ring 1,2 → 2 dp, 22% → 70% wit en 3 → 5 dp naar binnen — op 3 dp lag hij precies op
-     de rand die Wear OS wegsnijdt en viel de helft weg. 
-     28 okt 2026 (operator: "nog altijd een bijna onzichtbare rand"): het adaptieve icoon heeft een tekenvlak van 108 dp waarvan enkel de middelste cirkel van 72 dp
-     zichtbaar is; de ring lag op 5 dp van de rand, dus volledig in het weggesneden deel. Nu op 19 dp (binnen de zichtbare cirkel), 3 dp dik, 85% wit.
-     28 okt 2026 (2e ronde, operator: "te wit, de cirkel te klein"): de ring staat nu OP de rand van de zichtbare cirkel (stroke 16–20 dp, de rand
-     ligt op 18 dp → 2 dp ring zichtbaar), 60% wit: de cirkel is zo groot als bij de andere apps.
-     28 okt 2026 (3e ronde, operator: "de ring is te dik en te wit"): ring 4 → 2 dp en 60% → 33% wit, nog steeds op de rand van de zichtbare cirkel. -->
+<!-- 1 nov 2026 (operator: "kunnen we het icoon op zwarte achtergronden omdraaien? witte cirkel en zwarte V"): achtergrond volledig WIT,
+     geen ring meer (de oude ring-rondes van 27–28 okt zijn daarmee overbodig). Wear OS snijdt de zichtbare cirkel zelf uit; de V is zwart
+     (ic_launcher_fg → vz_vmark_dark). Zelfde icoon als de Apple Watch (targets/watch/icon.png). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#000000" />
-        </shape>
-    </item>
-    <item
-        android:left="11.5dp"
-        android:top="11.5dp"
-        android:right="11.5dp"
-        android:bottom="11.5dp">
-        <shape android:shape="oval">
-            <stroke
-                android:width="2dp"
-                android:color="#55FFFFFF" />
+            <solid android:color="#FFFFFF" />
         </shape>
     </item>
 </layer-list>
