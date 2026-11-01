@@ -3,11 +3,13 @@ import SwiftUI
 import WatchKit
 
 /* 29 okt 2026: de iPhone opent deze app bij het starten van een sessie (HKHealthStore.startWatchApp, zie WatchBreathModule.swift).
-   watchOS meldt dat hier; de app staat dan vooraan en de sessie zelf komt via WatchConnectivity binnen. Er wordt geen workout gestart
-   of opgeslagen. */
+   watchOS meldt dat hier; de sessie zelf komt via WatchConnectivity binnen. Sinds 1 nov 2026 start hier een Mind & Body-workoutsessie
+   (RuntimeSessionManager) zodat de app ook vergrendeld blijft lopen; er wordt niets opgeslagen of gelezen. */
 final class WatchAppDelegate: NSObject, WKApplicationDelegate {
   func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
     PhoneConnector.shared.activate()
+    /* 1 nov 2026 (iOS build 68): meteen de workoutsessie starten — die houdt de app wakker en laat haptiek toe, ook vergrendeld. */
+    RuntimeSessionManager.shared.startFromPhoneLaunch(workoutConfiguration)
     RuntimeSessionManager.shared.appDidBecomeActive()
   }
 }

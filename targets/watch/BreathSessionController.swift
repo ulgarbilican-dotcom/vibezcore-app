@@ -288,8 +288,8 @@ final class BreathSessionController: NSObject, ObservableObject {
          inademen   = DICHTE tikken, elke 0,5 s, zolang je inademt (het "opbouwen")
          uitademen  = TRAGE tikken, elke 1,2 s, zolang je uitademt (het "wegstromen")
          vasthouden = één tik bij de start, dan STILTE (je houdt stil)
-       Elke fase begint met haar eigen marker (.directionUp / .directionDown / .start). De toon die Apple bij die types meespeelt valt weg als het
-       horloge op stille modus staat — de trilling blijft dan volledig. De tikken ertussen zijn altijd het stille .click. */
+       1 nov 2026 (build 68, operator: "ping mag niet"): ook de eerste tik van elke fase is nu het stille .click (WatchSettings.play) — de
+       fase herken je aan het ritme: dicht = in, één tik en stilte = vast, traag = uit. */
     func repeating(every interval: TimeInterval) {
       var elapsed: TimeInterval = 0
       let t = Timer(timeInterval: interval, repeats: true) { timer in

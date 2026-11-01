@@ -259,20 +259,12 @@ final class WatchSettings: ObservableObject {
        Strong = idem, en de hartslag en "vasthouden" met de krachtigste tik (.start) */
   enum Tap { case beat, inhale, hold, exhale, tick }
 
+  /* 1 nov 2026 (iOS build 68, operator: "ik hoor een ping, mag niet" — Free én Premium, State Control én Breathwork): .start,
+     .directionUp en .directionDown spelen een toon mee zolang het horloge niet op stil staat; daar kan een app niets aan doen. Daarom
+     ALLEEN nog de stille tik (.click), op elk niveau. De fasen herken je aan het ritme (BreathSessionController.playHaptics), niet
+     meer aan een ander type tik. Strength bepaalt nog of de hartslag een tweede slag heeft (playsDub). */
   func play(_ t: Tap) {
-    let d = WKInterfaceDevice.current()
-    if strength == "soft" {
-      d.play(.click)
-      return
-    }
-    let strong = strength == "strong"
-    switch t {
-    case .beat: d.play(strong ? .start : .click)
-    case .inhale: d.play(.directionUp)
-    case .exhale: d.play(.directionDown)
-    case .hold: d.play(strong ? .start : .click)
-    case .tick: d.play(.click)
-    }
+    WKInterfaceDevice.current().play(.click)
   }
 
   /// Tweede slag van de hartslag (Soft: geen).

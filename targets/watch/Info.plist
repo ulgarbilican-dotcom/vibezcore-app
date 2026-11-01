@@ -9,13 +9,15 @@
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>mindfulness</string>
+		<!-- 1 nov 2026: Mind & Body-workoutsessie tijdens een sessie (RuntimeSessionManager.swift) — haptiek ook vergrendeld/pols omlaag. -->
+		<string>workout-processing</string>
 	</array>
 	<!-- 31 okt 2026: App Store weigerde build 67 (ITMS-90683): de Watch-app heeft het HealthKit-entitlement
 	     (zie expo-target.config.js, startWatchApp) en dan zijn deze twee uitlegzinnen verplicht.
 	     Zelfde tekst als de iPhone-app (app.json). -->
 	<key>NSHealthShareUsageDescription</key>
-	<string>VIBEZCORE does not read your health data. Access is only used to open its Apple Watch app when you start a session on your iPhone.</string>
+	<string>VIBEZCORE does not read your health data. Access is only used to open its Apple Watch app when you start a session on your iPhone and keep it running during your session.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>VIBEZCORE uses this only to open its Apple Watch app when you start a session on your iPhone. No health data is read or saved.</string>
+	<string>VIBEZCORE uses this only to open its Apple Watch app and keep it running during your session, so you can feel it with the screen off. No workout or health data is saved.</string>
 </dict>
 </plist>
