@@ -166,6 +166,7 @@ import {
 import { hapticPress } from '@/utils/haptics';
 import { dateLocale, formatClock } from '@/utils/locale';
 import { showWatchSetupInfo } from '@/utils/watch-setup-tip';
+import { getAppleWatchStatus } from '../../../modules/watch-breath';
 
 type Mode = 'login' | 'signup';
 
@@ -728,20 +729,37 @@ function ProductsGroup() {
   );
 }
 
+/* 1 nov 2026 (UX-nazicht): enkel met een gekoppelde Apple Watch — voor wie geen horloge heeft, is de rij overbodig. */
+function AppleWatchHapticsRow() {
+  const [paired, setPaired] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    let alive = true;
+    void getAppleWatchStatus().then((st) => {
+      if (alive) setPaired(st.status !== 'none');
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!paired) return null;
+  return (
+    <Row
+      icon={Watch}
+      title="Apple Watch: Silent & Haptics"
+      subtitle="Feel every tap, without sound"
+      onPress={showWatchSetupInfo}
+      accessibilityLabel="Apple Watch silent and haptics settings"
+    />
+  );
+}
+
 function SupportGroup() {
   return (
     <Group title="Settings & support">
       <Row icon={SettingsIcon} title="Settings" onPress={() => router.navigate('/settings' as never)} accessibilityLabel="Open settings" />
       {/* 1 nov 2026 (operator: "niet onder Settings, gewoon direct zichtbaar"): de drie horloge-instellingen voor voelbare tikken zonder toon. */}
-      {Platform.OS === 'ios' ? (
-        <Row
-          icon={Watch}
-          title="Apple Watch: Silent & Haptics"
-          subtitle="Feel every tap, without sound"
-          onPress={showWatchSetupInfo}
-          accessibilityLabel="Apple Watch silent and haptics settings"
-        />
-      ) : null}
+      <AppleWatchHapticsRow />
       <Row icon={UserPlus} title="Invite a friend" onPress={() => void shareInvite()} accessibilityLabel="Invite a friend to VIBEZCORE" />
       <Row icon={HelpCircle} title="FAQ" onPress={() => router.navigate('/faq' as never)} accessibilityLabel="Browse frequently asked questions" />
       <Row icon={MessageCircle} title="Contact support" onPress={() => router.navigate('/support' as never)} accessibilityLabel="Contact VIBEZCORE support" />

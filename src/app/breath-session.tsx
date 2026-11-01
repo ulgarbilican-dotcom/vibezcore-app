@@ -4431,7 +4431,7 @@ export function BreathSession() {
             ) : null}
             {/* 1 nov 2026 (operator: "ook dit moet duidelijk gecommuniceerd worden"): Strong = standaard, de keuze blijft bewaard (telefoon + horloge). */}
             {hapticsOn || watchOn ? (
-              <Text style={s.strengthNote}>Strong is the default. Your choice stays, on your phone and watch.</Text>
+              <Text style={s.strengthNote}>Strong is the default. Your choice is remembered.</Text>
             ) : null}
 
             {/* 14 okt 2026: Smartwatch aan/uit — het ritme op je pols, of
