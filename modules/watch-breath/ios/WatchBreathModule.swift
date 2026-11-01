@@ -197,7 +197,27 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   private let healthStore = HKHealthStore()
   private var lastWatchLaunch = Date.distantPast
 
+  /* 1 nov 2026 (operator, build 70: "haptics trekken op niets, Breathwork geen haptics"): Apple laat het horloge met de pols omlaag ENKEL
+     haptiek spelen tijdens een workoutsessie (WKInterfaceDevice.play-documentatie; Apple DTS, developer forums 772780). Die workout start
+     enkel met HealthKit-toestemming voor Workouts — en die werd hier alleen gevraagd als startWatchApp faalde, dus in de praktijk nooit.
+     Nu bij elke sessiestart met een gekoppeld horloge: nog niet beslist → meteen vragen (één keer, het systeem onthoudt het antwoord). */
+  private var askedWorkoutAuth = false
+  private func ensureWorkoutAuthorization() {
+    let s = WCSession.default
+    guard HKHealthStore.isHealthDataAvailable(), s.activationState == .activated, s.isPaired, s.isWatchAppInstalled else { return }
+    guard healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .notDetermined, !askedWorkoutAuth else { return }
+    askedWorkoutAuth = true
+    healthStore.requestAuthorization(toShare: [HKObjectType.workoutType()], read: nil) { [weak self] granted, _ in
+      guard granted, let self = self else { return }
+      DispatchQueue.main.async {
+        self.lastWatchLaunch = .distantPast
+        self.launchWatchAppIfNeeded()
+      }
+    }
+  }
+
   private func launchWatchAppIfNeeded() {
+    ensureWorkoutAuthorization()
     let s = WCSession.default
     guard HKHealthStore.isHealthDataAvailable(), s.activationState == .activated, s.isPaired, s.isWatchAppInstalled,
       !s.isReachable, Date().timeIntervalSince(lastWatchLaunch) > 5

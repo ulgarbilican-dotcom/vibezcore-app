@@ -82,7 +82,33 @@ final class RuntimeSessionManager: NSObject, WKExtendedRuntimeSessionDelegate, H
 
   /** Vanuit de App (scenePhase → .active): een uitgestelde start inhalen. */
   func appDidBecomeActive() {
+    requestWorkoutAuthorizationIfNeeded()
     startIfPossible()
+  }
+
+  /* 1 nov 2026: zonder toestemming voor Workouts geen workoutsessie, en zonder workout geen haptiek met de pols omlaag (Apple). Bij het
+     openen van de horloge-app één keer vragen als het nog niet beslist is; daarna de lopende sessie alsnog naar een workout tillen. */
+  private var askedWorkoutAuth = false
+  func requestWorkoutAuthorizationIfNeeded() {
+    guard HKHealthStore.isHealthDataAvailable(), !askedWorkoutAuth,
+      healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .notDetermined
+    else { return }
+    askedWorkoutAuth = true
+    healthStore.requestAuthorization(toShare: [HKObjectType.workoutType()], read: nil) { [weak self] granted, _ in
+      guard granted else { return }
+      DispatchQueue.main.async { self?.upgradeToWorkout() }
+    }
+  }
+
+  /** Loopt er al een sessie op de mindfulness-runtime, dan alsnog een workout erbij (die laat haptiek toe met de pols omlaag). */
+  private func upgradeToWorkout() {
+    guard !owners.isEmpty, workout == nil else { return }
+    if startWorkout(), workout?.state == .running { onRunningChanged?(true) }
+  }
+
+  /// Workout mag (toestemming gegeven)? Voor de melding op het horloge.
+  var workoutPermissionMissing: Bool {
+    HKHealthStore.isHealthDataAvailable() && healthStore.authorizationStatus(for: HKObjectType.workoutType()) != .sharingAuthorized
   }
 
   /** De iPhone opende deze app via startWatchApp (WKApplicationDelegate.handle): de workout meteen starten, ook met het horloge op

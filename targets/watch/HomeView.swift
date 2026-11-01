@@ -620,6 +620,14 @@ struct WatchSettingsView: View {
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
           .padding(.top, 4)
+        /* 1 nov 2026: zonder toestemming voor Workouts speelt het horloge geen tikken met de pols omlaag (Apple). */
+        if RuntimeSessionManager.shared.workoutPermissionMissing {
+          Text("To feel the taps with your wrist down, allow Workouts for VIBEZCORE: iPhone Settings › Health › Data Access & Devices.")
+            .font(.system(size: 10))
+            .foregroundColor(.orange)
+            .multilineTextAlignment(.center)
+            .padding(.top, 6)
+        }
         /* Timing van de laatste sessie (19 okt 2026) */
         if let t = WatchTiming.shared.lastSummary {
           Eyebrow(text: "Last session timing").padding(.top, 10)
