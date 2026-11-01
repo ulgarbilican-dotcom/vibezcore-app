@@ -306,9 +306,10 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'Why does my watch screen dim during a session?',
     answer:
       (IOS
-        ? "Apple Watch dims its screen after about 15 seconds without a touch, even while you look at it. Your session keeps running: VIBEZCORE stays on screen, the taps on your wrist continue, and the dimmed screen still shows your state and the minutes left.\n\n" +
-          "To keep the screen bright longer, open Settings on your watch → Display & Brightness → Wake Duration → Wake for 70 Seconds.\n\n" +
-          "You don't need to look: each phase has its own tap. Inhale is a rising tap followed by soft taps, hold is a single tap, exhale is a falling tap."
+        ? "Apple Watch dims its screen after a few seconds without a touch. Your session keeps running: VIBEZCORE stays on screen, the taps on your wrist continue, and the dimmed screen still shows your state and the time left.\n\n" +
+          "The taps continue with the screen dimmed only if VIBEZCORE may start a workout session: iPhone Settings → Privacy & Security → Health → VIBEZCORE → Workouts: on. No workout or health data is saved.\n\n" +
+          "You don't need to look: in Breathwork, inhale is a stream of rising taps, hold is one stop tap and then stillness, exhale is a slower stream of falling taps. State Control taps a heartbeat.\n\n" +
+          "For strong taps without sound: on your watch, Settings → Sounds & Haptics → Silent Mode on and Haptics: Prominent. In VIBEZCORE on your watch, Haptics lets you choose Strong or Medium."
         : "Your watch dims its screen after a short time without a touch. Your session keeps running and the vibration on your wrist continues.\n\n" +
           "To keep the screen on longer, open Settings on your watch → Display → Screen timeout.\n\n" +
           "You don't need to look: inhale, hold and exhale each have their own vibration pattern."),
@@ -379,7 +380,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'Does the Smart Bead Bracelet track personal data?',
     answer:
       "No. The Smart Bead Bracelet is designed without health sensors: it won't monitor heart rate, sleep or other health metrics. Its only job is to deliver the rhythm.\n\n" +
-      "State Control is personalised with your resting heart rate, which you measure with your phone's camera or enter yourself in the VIBEZCORE app. It stays on your device.",
+      "State Control is personalised with your resting heart rate, which you measure with your phone's camera or enter yourself in the VIBEZCORE app. Without an account it stays on your device; when you are signed in, it is part of your Backup & Sync.",
   },
   {
     id: 'bracelet-needs-smartphone',
@@ -612,7 +613,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
     question: 'What data does VIBEZCORE collect?',
     answer:
       "VIBEZCORE collects only what is necessary to provide our services — including account information, purchase details, and usage data to improve the platform. No health or biometric data reaches our servers.\n\n" +
-      "If you measure or enter your resting heart rate, it is used only to set your State Control rhythm and stays on your device. Your session history and progress are stored on your device only; sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.",
+      "If you measure or enter your resting heart rate, it is used only to set your State Control rhythm. Without an account, it and your session history stay on your device. When you are signed in, Backup & Sync keeps your settings, resting heart rate, session history, plan and Audio Library progress in your account, so they follow you to a new phone; only your own account can read them. Sessions you do on your smartwatch sync to your phone's history over your own connection. Full details are in our Privacy Policy.",
   },
   {
     id: 'privacy-deletion',

@@ -375,7 +375,7 @@ export const PRIVACY: LegalDoc = {
   title: 'Privacy Policy',
   subtitle:
     "We believe privacy is a fundamental human right. Here's exactly how we handle your data.",
-  lastUpdated: 'October 2026',
+  lastUpdated: 'November 2026',
   short: 'Privacy',
   blocks: [
     /* ── 01. Information We Collect ── */
@@ -559,9 +559,10 @@ export const PRIVACY: LegalDoc = {
     {
       kind: 'highlight',
       title: 'What we do NOT request',
-      /* 29 okt 2026: op de iPhone vraagt de app Apple Health enkel om een workout te mogen starten (de Apple Watch-app openen bij het
+      /* 1 nov 2026: de workoutsessie houdt de Watch-app ook draaiend tijdens de sessie (tikken met het scherm gedimd), zie RuntimeSessionManager.swift.
+         29 okt 2026: op de iPhone vraagt de app Apple Health enkel om een workout te mogen starten (de Apple Watch-app openen bij het
          starten van een sessie, WatchBreathModule.swift) — nooit om gegevens te lezen of op te slaan. */
-      text: `VIBEZCORE does not request access to your microphone, location, contacts, calendar or photos, and never reads or saves health data${WEB ? ' in Apple Health or Health Connect' : IOS ? ' in Apple Health' : ' in Health Connect'}.${WEB || IOS ? ' With an Apple Watch, VIBEZCORE asks Apple Health only for permission to start a workout, so the VIBEZCORE app opens on your watch when you start a session on your iPhone.' : ''} The camera is used only for the optional fingertip pulse reading. The Smart Bead Bracelet does not collect biometric or health information.`,
+      text: `VIBEZCORE does not request access to your microphone, location, contacts, calendar or photos, and never reads or saves health data${WEB ? ' in Apple Health or Health Connect' : IOS ? ' in Apple Health' : ' in Health Connect'}.${WEB || IOS ? ' With an Apple Watch, VIBEZCORE asks Apple Health only for permission to start a workout session, so the VIBEZCORE app opens on your watch when you start a session on your iPhone and keeps running during your session, letting you feel the taps with the screen dimmed. No workout is saved and no health data is read.' : ''} The camera is used only for the optional fingertip pulse reading. The Smart Bead Bracelet does not collect biometric or health information.`,
     },
 
     /* ── 07. International Data Transfers ── */
