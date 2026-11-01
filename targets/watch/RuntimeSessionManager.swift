@@ -55,6 +55,13 @@ final class RuntimeSessionManager: NSObject, WKExtendedRuntimeSessionDelegate, H
     workout?.state == .running || session?.state == .running
   }
 
+  /// Wat houdt de app nu wakker? Voor de tijdmeting in Settings (1 nov 2026): "W" = workout, "M" = mindfulness, "-" = niets.
+  var modeCode: String {
+    if workout?.state == .running { return "W" }
+    if session?.state == .running { return "M" }
+    return "-"
+  }
+
   // Altijd vanaf de main queue aanroepen.
   func acquire(_ owner: RuntimeOwner) {
     owners.insert(owner)

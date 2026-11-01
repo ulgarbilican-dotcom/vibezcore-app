@@ -297,6 +297,11 @@ final class WatchTiming {
   private var sumMs = 0.0
   private var maxMs = 0.0
   private var late = 0
+  /// 1 nov 2026: per signaal wat de app wakker hield (W/M/-) en of het scherm gedimd was — zo is "loopt niet gelijk met het scherm
+  /// uit" meetbaar: komt het door een ontbrekende runtime of door watchOS die tikken in de achtergrond uitstelt?
+  private var modes: [String: Int] = [:]
+  private var dimCount = 0
+  private var dimLate = 0
 
   /// Eén signaal: gepland moment → nu.
   func record(planned: Date) {
@@ -305,18 +310,27 @@ final class WatchTiming {
     sumMs += ms
     if ms > maxMs { maxMs = ms }
     if ms > 100 { late += 1 }
+    modes[RuntimeSessionManager.shared.modeCode, default: 0] += 1
+    if WKApplication.shared().applicationState != .active {
+      dimCount += 1
+      if ms > 100 { dimLate += 1 }
+    }
   }
 
   /// Einde van de sessie: samenvatting bewaren en opnieuw beginnen.
   func commit() {
     guard count > 0 else { return }
     let avg = Int((sumMs / Double(count)).rounded())
-    let text = "\(count) signals · avg \(avg) ms · max \(Int(maxMs.rounded())) ms · \(late) late"
+    let modeText = ["W", "M", "-"].compactMap { k in modes[k].map { "\(k)\($0)" } }.joined(separator: " ")
+    let text = "\(count) signals · avg \(avg) ms · max \(Int(maxMs.rounded())) ms · \(late) late · screen off \(dimCount) (\(dimLate) late) · \(modeText)"
     UserDefaults.standard.set(text, forKey: key)
     count = 0
     sumMs = 0
     maxMs = 0
     late = 0
+    modes = [:]
+    dimCount = 0
+    dimLate = 0
   }
 
   var lastSummary: String? { UserDefaults.standard.string(forKey: key) }
