@@ -145,7 +145,8 @@ private struct StateSessionScreen: View {
       pulses.removeAll { now.timeIntervalSince($0.start) > 3 }
       /* Eén ring per hartslag, 80 ms na de lub (waar de kloppende schijf op
          zijn grootst is), zoals de Galaxy Watch. */
-      if strong { pulses.append(RingPulse(start: now.addingTimeInterval(0.08))) }
+      /* 1 nov 2026: de tik komt nu hapticLeadSec vóór de slag (StateSessionController); de ring blijft op de slag zelf. */
+      if strong { pulses.append(RingPulse(start: now.addingTimeInterval(0.08 + StateSessionController.hapticLeadSec))) }
     }
   }
 }

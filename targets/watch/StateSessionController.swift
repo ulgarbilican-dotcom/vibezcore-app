@@ -428,6 +428,13 @@ final class StateSessionController: ObservableObject {
     anchor.addingTimeInterval(t - offsetSec)
   }
 
+  /* 1 nov 2026 (operator, iOS build 69: "seconden lopen gelijk, maar de haptic lijkt een fractie van een seconde later te komen dan op de
+     telefoon"): het horloge riep de tik aan OP het slagmoment, en de Taptic Engine heeft daarna nog tijd nodig voor je hem voelt. De telefoon
+     houdt wel rekening met zijn eigen opstarttijd (IOS_FIRST_BEAT_MS / SOUND_LEAD_MS in bracelet-haptics.ts), het horloge niet. Zoals op de
+     Galaxy Watch (WearStateSessionService, motor ~190 ms na de aanroep → voelbare tik ≈ +60 ms na het ritmemoment, waar ook de puls op het
+     telefoonscherm piekt) wordt de tik nu zoveel VÓÓR het slagmoment aangeroepen. Startwaarde, op gevoel bij te stellen: hoger = pols vroeger. */
+  static let hapticLeadSec: Double = 0.10
+
   private func scheduleNextBeat(gen: Int) {
     guard gen == generation, let p = params else { return }
     /* Valt de volgende slag op of na het einde → eind-signaal. */
@@ -435,7 +442,7 @@ final class StateSessionController: ObservableObject {
       scheduleEndSignal(at: wallDate(forCurve: nextBeatT), gen: gen)
       return
     }
-    beatTimer = schedule(at: wallDate(forCurve: nextBeatT)) { [weak self] in
+    beatTimer = schedule(at: wallDate(forCurve: nextBeatT).addingTimeInterval(-Self.hapticLeadSec)) { [weak self] in
       self?.fireBeat(gen: gen, params: p)
     }
   }
@@ -458,14 +465,14 @@ final class StateSessionController: ObservableObject {
       beat = p.beatAt(nextBeatT)
     }
     let beatDate = wallDate(forCurve: nextBeatT)
-    WatchTiming.shared.record(planned: beatDate)
+    WatchTiming.shared.record(planned: beatDate.addingTimeInterval(-Self.hapticLeadSec))
     /* Trilsterkte van het horloge (19 okt 2026, WatchSettings). */
     WatchSettings.shared.play(.beat)
     lastLubDate = beatDate
     lastCycleMs = beat.cycleMs
     beats.send(true)
     if playDub && WatchSettings.shared.playsDub {
-      dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000)) { [weak self] in
+      dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000 - Self.hapticLeadSec)) { [weak self] in
         guard let self = self, gen == self.generation else { return }
         WKInterfaceDevice.current().play(.click)
         self.beats.send(false)

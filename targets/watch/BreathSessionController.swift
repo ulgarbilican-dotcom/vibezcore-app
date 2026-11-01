@@ -62,6 +62,10 @@ final class BreathSessionController: NSObject, ObservableObject {
   private var phases: [WatchPhase] = []
   private var phaseTimer: Timer?
   private var tickTimer: Timer?
+  /* 1 nov 2026 (operator: "zorgen dat alles synchroon werkt"): de tik van de volgende fase gaat StateSessionController.hapticLeadSec vóór
+     het fasemoment af (de Taptic Engine heeft die tijd nodig), zodat je hem voelt op het moment dat de iPhone van fase wisselt. */
+  private var leadTimer: Timer?
+  private var prePlayed: (gen: Int, round: Int, idx: Int)?
   private var generation = 0
   /** Huidige fase-index (voor hervatten van een lokale sessie). */
   private var currentIdx = 0
@@ -224,11 +228,16 @@ final class BreathSessionController: NSObject, ObservableObject {
     via = phase.via
     self.round = round
     if !silentStart {
-      /* Een inhaalstart (ver in het verleden) hoort niet in de timingstatistiek. */
-      if abs(Date().timeIntervalSince(start)) < 2 { WatchTiming.shared.record(planned: start) }
-      playHaptics(for: phase.key, secs: phase.secs)
+      if let pp = prePlayed, pp.gen == gen, pp.round == round, pp.idx == idx {
+        /* De tik ging al af, lead vóór dit moment (leadTimer hieronder). */
+      } else {
+        /* Een inhaalstart (ver in het verleden) hoort niet in de timingstatistiek. */
+        if abs(Date().timeIntervalSince(start)) < 2 { WatchTiming.shared.record(planned: start) }
+        playHaptics(for: phase.key, secs: phase.secs)
+      }
       beats.send(true)
     }
+    prePlayed = nil
     let target: Double
     if phase.key.hasPrefix("inhale") {
       target = 0.85
@@ -251,6 +260,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     let nextRound = nextIdx == 0 ? round + 1 : round
 
     phaseTimer?.invalidate()
+    leadTimer?.invalidate()
     let end = phaseEnd
     let nextDur = TimeInterval(phases[nextIdx].secs)
     let t = Timer(fire: end, interval: 0, repeats: false) { [weak self] _ in
@@ -259,6 +269,19 @@ final class BreathSessionController: NSObject, ObservableObject {
     t.tolerance = 0
     RunLoop.main.add(t, forMode: .common)
     phaseTimer = t
+    if nextRound <= totalRounds {
+      let lead = StateSessionController.hapticLeadSec
+      let next = phases[nextIdx]
+      let lt = Timer(fire: end.addingTimeInterval(-lead), interval: 0, repeats: false) { [weak self] _ in
+        guard let self = self, gen == self.generation, self.running, !self.paused else { return }
+        WatchTiming.shared.record(planned: end.addingTimeInterval(-lead))
+        self.playHaptics(for: next.key, secs: next.secs)
+        self.prePlayed = (gen, nextRound, nextIdx)
+      }
+      lt.tolerance = 0
+      RunLoop.main.add(lt, forMode: .common)
+      leadTimer = lt
+    }
   }
 
   private func displayLabel(for key: String) -> String {
@@ -430,6 +453,8 @@ final class BreathSessionController: NSObject, ObservableObject {
   }
 
   func pauseLocally() {
+    leadTimer?.invalidate()
+    prePlayed = nil
     guard running else { return }
     generation += 1
     phaseTimer?.invalidate()
@@ -452,6 +477,8 @@ final class BreathSessionController: NSObject, ObservableObject {
   }
 
   func stop() {
+    leadTimer?.invalidate()
+    prePlayed = nil
     WatchTiming.shared.commit()
     if isLocal { finishLocal(completed: localCompleted) }
     localCompleted = false
