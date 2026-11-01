@@ -602,7 +602,8 @@ struct WatchSettingsView: View {
     ScrollView {
       VStack(spacing: 6) {
         Eyebrow(text: "Haptics").padding(.bottom, 2)
-        Text("Haptic strength")
+        /* 1 nov 2026 (operator: "is haptic strength voor State Control of ook Breathwork?"): kop = wat het regelt. */
+        Text("State Control")
           .font(.system(size: 14, weight: .bold))
           .foregroundColor(.white)
           .padding(.bottom, 4)
@@ -618,7 +619,7 @@ struct WatchSettingsView: View {
           .multilineTextAlignment(.center)
           .padding(.top, 4)
         /* 1 nov 2026 (operator: "doe totaal iets anders"): ademtextuur kiezen door te VOELEN — tik = 10 s in / vast / uit. */
-        Text("Breath taps")
+        Text("Breathwork")
           .font(.system(size: 14, weight: .bold))
           .foregroundColor(.white)
           .padding(.top, 10)
@@ -633,7 +634,7 @@ struct WatchSettingsView: View {
             settings.previewBreath()
           }
         }
-        Text("Tap one to feel 4 s in, 2 s hold, 4 s out.")
+        Text("Tap one to feel it: 4 s in, 2 s hold, 4 s out.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
