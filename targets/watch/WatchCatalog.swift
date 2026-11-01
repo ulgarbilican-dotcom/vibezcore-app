@@ -234,10 +234,9 @@ final class WatchSettings: ObservableObject {
   init() {
     /* 27 okt 2026 (operator: "altijd op max beginnen"): standaard het sterkste niveau. */
     strength = UserDefaults.standard.string(forKey: key) ?? "strong"
-    /* 1 nov 2026 (later, operator: "bij Breathwork zijn de haptics nooit goed voelbaar", terwijl State Control wel voelbaar is): standaard
-       dezelfde stevige .start-tik als State Control (Pulse). Light (stil .click) en de zachte omhoog/omlaag-patronen bleken op de pols nauwelijks
-       voelbaar. Toon valt weg met Stille modus (uitleg in de app). */
-    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "pulse"
+    /* 1 nov 2026 (operator, build 73, na het voelen van de drie varianten op de testpagina: "Strong voelt het sterkst"): standaard Strong
+       (omhoog-tik in, omlaag-tik uit, stop-tik vast). Light (stil .click) was nauwelijks voelbaar. Toon valt weg met Stille modus (uitleg in de app). */
+    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "strong"
   }
 
   /* ── Ademtextuur (1 nov 2026) ────────────────────────────────────────────
@@ -330,9 +329,9 @@ final class WatchSettings: ObservableObject {
     }
     switch t {
     case .beat: d.play(.start)
-    /* fase-tik: in de standaard (Pulse) de stevige .start; enkel de variant Strong gebruikt de zachtere omhoog/omlaag-patronen */
-    case .inhale: d.play(breathStyle == "strong" ? .directionUp : .start)
-    case .exhale: d.play(breathStyle == "strong" ? .directionDown : .start)
+    /* fase-tik: Strong (standaard) en Light de omhoog/omlaag-tik; Pulse de .start van State Control */
+    case .inhale: d.play(breathStyle == "pulse" ? .start : .directionUp)
+    case .exhale: d.play(breathStyle == "pulse" ? .start : .directionDown)
     /* vasthouden: .stop (eigen, dubbele stop-tik), anders dan de hartslag/.start — zo voelt "stil houden" als een duidelijk ander signaal */
     case .hold: d.play(.stop)
     case .tick: d.play(.click)
