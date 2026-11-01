@@ -226,17 +226,21 @@ enum WatchSessionLog {
      */
 final class WatchSettings: ObservableObject {
   static let shared = WatchSettings()
-  static let levels = ["soft", "medium", "strong"]
+  /* 1 nov 2026 (operator: "Soft is overbodig; horloges beginnen altijd op het krachtigste, de gebruiker mag zelf naar Medium"): enkel
+     Strong en Medium. Een oude, bewaarde "soft" wordt Strong. */
+  static let levels = ["strong", "medium"]
 
   @Published private(set) var strength: String
   private let key = "vz_watch_strength_v1"
 
   init() {
     /* 27 okt 2026 (operator: "altijd op max beginnen"): standaard het sterkste niveau. */
-    strength = UserDefaults.standard.string(forKey: key) ?? "strong"
+    let stored = UserDefaults.standard.string(forKey: key) ?? "strong"
+    strength = WatchSettings.levels.contains(stored) ? stored : "strong"
     /* 1 nov 2026 (operator, build 73, na het voelen van de drie varianten op de testpagina: "Strong voelt het sterkst"): standaard Strong
        (omhoog-tik in, omlaag-tik uit, stop-tik vast). Light (stil .click) was nauwelijks voelbaar. Toon valt weg met Stille modus (uitleg in de app). */
-    breathStyle = UserDefaults.standard.string(forKey: breathKey) ?? "strong"
+    let storedBreath = UserDefaults.standard.string(forKey: breathKey) ?? "strong"
+    breathStyle = WatchSettings.breathStyles.contains(storedBreath) ? storedBreath : "strong"
   }
 
   /* ── Ademtextuur (1 nov 2026) ────────────────────────────────────────────
@@ -245,7 +249,8 @@ final class WatchSettings: ObservableObject {
      rustigere stroom; elke fase begint met haar eigen sterke tik (omhoog / stop / omlaag). Apple laat een nieuwe tik toe na min. 100 ms
      (WKInterfaceDevice.play-documentatie), dus 0,3 s is veilig. Hoe sterk een stroom op de pols aanvoelt is niet van op afstand te meten,
      daarom drie varianten om te VOELEN in Settings › Breath taps (previewBreath); de gekozen variant blijft bewaard. */
-  static let breathStyles = ["stream", "strong", "pulse"]
+  /* 1 nov 2026 (operator: "Light mag eruit"): enkel Strong (standaard) en Pulse. */
+  static let breathStyles = ["strong", "pulse"]
   @Published private(set) var breathStyle: String
   private let breathKey = "vz_watch_breath_style_v1"
 
@@ -260,7 +265,7 @@ final class WatchSettings: ObservableObject {
     switch breathStyle {
     case "strong": return (0.5, 0.9, .directionUp, .directionDown)
     case "pulse": return (0.5, 1.0, .start, .start)
-    default: return (0.3, 0.6, .click, .click)
+    default: return (0.5, 0.9, .directionUp, .directionDown)
     }
   }
 
@@ -291,7 +296,8 @@ final class WatchSettings: ObservableObject {
     }
   }
 
-  func adoptFromPhone(_ s: String) {
+  func adoptFromPhone(_ sIn: String) {
+    let s = WatchSettings.levels.contains(sIn) ? sIn : "strong"
     guard WatchSettings.levels.contains(s), s != strength else { return }
     strength = s
     UserDefaults.standard.set(s, forKey: key)
@@ -323,12 +329,9 @@ final class WatchSettings: ObservableObject {
      Haptics). Soft blijft het stille .click. */
   func play(_ t: Tap) {
     let d = WKInterfaceDevice.current()
-    if strength == "soft" {
-      d.play(.click)
-      return
-    }
     switch t {
-    case .beat: d.play(.start)
+    /* Medium = een lichtere hartslag (.directionUp), Strong = de krachtigste (.start). */
+    case .beat: d.play(strength == "medium" ? .directionUp : .start)
     /* fase-tik: Strong (standaard) en Light de omhoog/omlaag-tik; Pulse de .start van State Control */
     case .inhale: d.play(breathStyle == "pulse" ? .start : .directionUp)
     case .exhale: d.play(breathStyle == "pulse" ? .start : .directionDown)
@@ -338,8 +341,15 @@ final class WatchSettings: ObservableObject {
     }
   }
 
-  /// Tweede slag van de hartslag (Soft: geen).
-  var playsDub: Bool { strength != "soft" }
+  /// Tweede slag van de hartslag (altijd, sinds Soft weg is — 1 nov 2026).
+  var playsDub: Bool { true }
+
+  /** Elke sessie begint op het krachtigste niveau (operator 29 okt + 1 nov 2026); Medium kies je daarna zelf. */
+  func resetForSession() {
+    guard strength != "strong" else { return }
+    strength = "strong"
+    UserDefaults.standard.set("strong", forKey: key)
+  }
 }
 
 /* Meetinstrument voor de timing (19 okt 2026, operator: "geen gokwerk — een

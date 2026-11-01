@@ -307,6 +307,7 @@ final class StateSessionController: ObservableObject {
 
   /** Start een State Control-sessie op het horloge zelf (catalogus). */
   func startLocal(_ entry: CatalogState, minutes: Int, previewSec: Int = 0) {
+    WatchSettings.shared.resetForSession()
     if isLocal { finishLocal(completed: false) }
     /* Een echte (geen voorproef) sessie telt als de ene gratis State Control-sessie op dit horloge. */
     if previewSec == 0 { WatchCatalog.shared.markStateFreeUsed() }

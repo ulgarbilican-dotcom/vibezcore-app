@@ -95,7 +95,8 @@ struct HomeView: View {
                   HomePill(icon: "wind", label: "Breathwork") { path.append(.modes(false)) }
                 }
                 /* 19 okt 2026: instellingen op het horloge zelf. */
-                HomePill(icon: "gearshape", label: "Settings") { path.append(.settings) }
+                /* 1 nov 2026 (operator: "duidelijk maken dat dit ingesteld kan worden"): "Haptics" i.p.v. "Settings". */
+                HomePill(icon: "waveform", label: "Haptics") { path.append(.settings) }
               }
             }
             .padding(.horizontal, 12)
@@ -589,23 +590,18 @@ struct WatchSettingsView: View {
   private let teal = Color(red: 0, green: 0xA3 / 255, blue: 0xA3 / 255)
 
   private func label(_ s: String) -> String {
-    switch s {
-    case "soft": return "Soft"
-    case "strong": return "Strong"
-    default: return "Medium"
-    }
+    s == "strong" ? "Strong" : "Medium"
   }
 
   private func sub(_ s: String) -> String? {
-    /* 1 nov 2026 (build 68): het horloge tikt enkel nog stil (.click, zie WatchSettings.play); het niveau bepaalt de tweede slag. */
-    /* 1 nov 2026: zeggen wat je hoort — enkel Soft is altijd stil. */
-    s == "soft" ? "No sound" : "Tone unless Silent Mode"
+    /* 1 nov 2026 (operator): Soft weg; Strong = standaard, Medium = lichter. */
+    s == "strong" ? "Firmest taps" : "Lighter taps"
   }
 
   var body: some View {
     ScrollView {
       VStack(spacing: 6) {
-        Eyebrow(text: "Settings").padding(.bottom, 2)
+        Eyebrow(text: "Haptics").padding(.bottom, 2)
         Text("Haptic strength")
           .font(.system(size: 14, weight: .bold))
           .foregroundColor(.white)
@@ -616,7 +612,7 @@ struct WatchSettingsView: View {
             settings.play(.beat)
           }
         }
-        Text("Turn on Silent Mode to feel the taps without sound. Also changes the setting on your iPhone.")
+        Text("Every session starts on Strong. Turn on Silent Mode to feel the taps without sound.")
           .font(.system(size: 10))
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
@@ -627,10 +623,10 @@ struct WatchSettingsView: View {
           .foregroundColor(.white)
           .padding(.top, 10)
           .padding(.bottom, 4)
-        ForEach(["strong", "pulse", "stream"], id: \.self) { (st: String) in
+        ForEach(WatchSettings.breathStyles, id: \.self) { (st: String) in
           PickRow(
-            title: st == "stream" ? "Light" : (st == "strong" ? "Strong" : "Pulse"),
-            sub: st == "stream" ? "No sound" : "Tone unless Silent Mode",
+            title: st == "strong" ? "Strong" : "Pulse",
+            sub: st == "strong" ? "Up and down taps" : "Firm single taps",
             subColor: dim, current: st == settings.breathStyle, color: teal
           ) {
             settings.setBreathStyle(st)

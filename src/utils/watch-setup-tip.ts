@@ -16,7 +16,7 @@ export function showWatchSetupInfo(): void {
   void showVibezAlert({
     title: 'Feel every tap on your wrist',
     message:
-      'On your Apple Watch, open Settings › Sounds & Haptics:\n\n1. Silent Mode: on\n2. Haptics: Prominent\n3. System Haptics: on\n\nSilent Mode keeps the taps and drops the sound.',
+      'On your Apple Watch, open Settings › Sounds & Haptics:\n\n1. Silent Mode: on\n2. Haptics: Prominent\n3. System Haptics: on\n\nSilent Mode keeps the taps and drops the sound.\n\nIn VIBEZCORE on your watch, tap Haptics to choose Strong or Medium and to feel the breath taps.',
     buttons: [{ text: 'Got it', style: 'primary' }],
   });
 }
