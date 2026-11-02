@@ -127,11 +127,19 @@ private struct PauseButton: View {
 private struct StateSessionScreen: View {
   @ObservedObject var state: StateSessionController
   @Environment(\.isLuminanceReduced) private var ambient
+  @Environment(\.scenePhase) private var scenePhase
   @State private var pulses: [RingPulse] = []
+  /* 2 nov 2026 (operator op build 80, foto: na Apple's Health-vraag enkel "Boost 9:56", geen cirkel): na een systeemvenster tekende
+     de animatielaag niet meer. Bij terugkeer naar actief wordt het beeld opnieuw opgebouwd. */
+  @State private var faceId = UUID()
 
   var body: some View {
     GeometryReader { geo in
       StateSessionLayout(state: state, size: geo.size, pulses: pulses, ambient: ambient)
+        .id(faceId)
+    }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active { faceId = UUID() }
     }
     /* 19 okt 2026 (operator, build 38: "de cirkel staat niet in het midden,
        bovenaan afgesneden"): enkel de onderkant negeerde de veilige zone,

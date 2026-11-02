@@ -46,21 +46,7 @@ struct LiveSessionRecord: Record {
 /// Darwin-signaal van de pauze/hervat-knop in de Live Activity.
 let vibezLiveToggleName = "com.ubili.vibezcoreapp.live.toggle"
 
-/// Zelfde intent als in targets/live-activity. Voert iOS hem in het
-/// app-proces uit, dan gaat het signaal hier meteen naar JS; voert iOS hem
-/// in de widget-extensie uit, dan komt het via het Darwin-signaal binnen.
-@available(iOS 17.0, *)
-struct VibezToggleSessionIntent: LiveActivityIntent {
-  static let title: LocalizedStringResource = "Pause or resume session"
-  static let isDiscoverable: Bool = false
-
-  init() {}
-
-  func perform() async throws -> some IntentResult {
-    LiveActivityModule.current?.emitToggle()
-    return .result()
-  }
-}
+/// De intent staat in targets/live-activity/_shared (in de app én de extensie) en stuurt het Darwin-signaal hierboven.
 
 public class LiveActivityModule: Module {
   static weak var current: LiveActivityModule?

@@ -67,22 +67,7 @@ private func deepLink(_ kind: String, _ state: VibezSessionAttributes.ContentSta
 // app. Werkt zolang de app nog draait — bij een ademsessie houdt het
 // audio-anker de app actief. Is de app intussen gesloten, dan opent een tik
 // op de activity zelf de sessie.
-@available(iOS 17.0, *)
-struct VibezToggleSessionIntent: LiveActivityIntent {
-  static let title: LocalizedStringResource = "Pause or resume session"
-  static let isDiscoverable: Bool = false
-
-  init() {}
-
-  func perform() async throws -> some IntentResult {
-    CFNotificationCenterPostNotification(
-      CFNotificationCenterGetDarwinNotifyCenter(),
-      CFNotificationName("com.ubili.vibezcoreapp.live.toggle" as CFString),
-      nil, nil, true
-    )
-    return .result()
-  }
-}
+// De intent zelf staat in _shared/VibezToggleSessionIntent.swift (extensie én app).
 
 private struct ToggleButton: View {
   let state: VibezSessionAttributes.ContentState

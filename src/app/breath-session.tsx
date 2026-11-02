@@ -2732,7 +2732,9 @@ export function BreathSession() {
   }, [params.fromPlan]);
 
   const requestStop = useCallback(() => {
-    if (isFreeOnboardingSession) {
+    /* 2 nov 2026 (operator op build 80: "na unlocken plots popup End free session terwijl ik Premium heb"): enkel wie GEEN Premium heeft
+       verliest iets bij vroeg stoppen — met Premium gewoon stoppen zoals elke sessie. */
+    if (isFreeOnboardingSession && !isPro) {
       setEndTrialConfirm(true);
       return;
     }
@@ -2761,7 +2763,7 @@ export function BreathSession() {
        blijven hangen. */
     skipBreathIntroOnce();
     leaveSession();
-  }, [isFreeOnboardingSession, locked, stop, leaveSession, pauseSession]);
+  }, [isFreeOnboardingSession, isPro, locked, stop, leaveSession, pauseSession]);
 
   /* ── Knoppen op het horloge (Wear OS + Apple Watch, 6 okt 2026) ─────────
      Eén sessie, twee bedieningen: Pause / Resume / Stop op de pols bedienen
@@ -3611,7 +3613,7 @@ export function BreathSession() {
               onPress={() => {
                 /* 2 nov 2026: geen doorgeschoten tik van een net gesloten melding. */
                 if (alertJustClosed()) return;
-                if (isFreeOnboardingSession || locked) requestStop();
+                if ((isFreeOnboardingSession && !isPro) || locked) requestStop();
                 else setConfirmEnd(true);
               }}
               onPressIn={pressEndSession.onPressIn}
