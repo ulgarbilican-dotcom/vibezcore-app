@@ -34,7 +34,7 @@ describe('product-IDs per platform', () => {
   test('maand en dagpas: zelfde ID op iOS en Android', () => {
     expect(ios.PRODUCT_IDS.monthly).toBe('vibezcore_audio_monthly');
     expect(android.PRODUCT_IDS.monthly).toBe('vibezcore_audio_monthly');
-    expect(ios.PRODUCT_IDS.day).toBe('vibezcore_day_pass');
+    expect(ios.PRODUCT_IDS.day).toBe('vibezcore_day_pass_24h');
     expect(android.PRODUCT_IDS.day).toBe('vibezcore_day_pass');
     expect(ios.DAY_PASS_PRODUCT_ID).toBe(ios.PRODUCT_IDS.day);
   });
@@ -59,6 +59,7 @@ describe('tierFromProductId herkent ook het andere platform (kopen op Android, i
     ['vibezcore_audio_yearly', 'yearly'],
     ['vibezcore_premium_yearly', 'yearly'],
     ['vibezcore_day_pass', 'day'],
+    ['vibezcore_day_pass_24h', 'day'],
     /* RevenueCat-formaat voor Play: <product>:<base plan> */
     ['vibezcore_audio_yearly:yearly', 'yearly'],
     ['vibezcore_audio_monthly:monthly', 'monthly'],
@@ -141,6 +142,11 @@ describe('activeDayPass (iap-real): 24 uur vanaf de laatste aankoop', () => {
     const ci = info([tx('vibezcore_day_pass', T), tx('vibezcore_day_pass', T + 20 * H)]);
     const r = activeDayPass(ci, T + 30 * H);
     expect(r?.validUntil).toBe(new Date(T + 44 * H).toISOString());
+  });
+
+  test('iOS Non-Renewing dagpas (vibezcore_day_pass_24h) telt ook', () => {
+    expect(activeDayPass(info([tx('vibezcore_day_pass_24h', T)]), T + H)).not.toBeNull();
+    expect(activeDayPass(info([tx('vibezcore_day_pass_24h', T)]), T + 24 * H)).toBeNull();
   });
 
   test('andere losse aankopen tellen niet als dagpas', () => {

@@ -56,11 +56,24 @@ export const DAY_PASS_MS = 24 * 60 * 60 * 1000;
 /** Product-IDs zoals in de stores aangemaakt. Het iOS-jaarabonnement heeft
  *  een eigen ID: `vibezcore_audio_yearly` werd op 16 okt 2026 in App Store
  *  Connect verwijderd en Apple laat een verwijderde ID nooit opnieuw toe.
- *  Android houdt `vibezcore_audio_yearly`. De dagpas heet op beide stores
- *  `vibezcore_day_pass` (verbruiksartikel, herhaalbaar). */
+ *  Android houdt `vibezcore_audio_yearly`.
+ *  Dagpas: Android = `vibezcore_day_pass` (eenmalige aankoop, herhaalbaar).
+ *  iOS = `vibezcore_day_pass_24h`, type Non-Renewing Subscription (2 nov 2026,
+ *  operator: "na 24 u stop tenzij gebruiker zelf verlengt of upgradet" — dat is
+ *  Apple's type voor tijdgebonden toegang; de oude Consumable `vibezcore_day_pass`
+ *  op iOS wordt niet ingediend). Beide ID's blijven herkend (sandbox-aankopen,
+ *  wie op het andere platform kocht). */
 const IOS_YEARLY_ID = 'vibezcore_premium_yearly';
 const ANDROID_YEARLY_ID = 'vibezcore_audio_yearly';
-export const DAY_PASS_PRODUCT_ID = 'vibezcore_day_pass';
+const IOS_DAY_PASS_ID = 'vibezcore_day_pass_24h';
+const ANDROID_DAY_PASS_ID = 'vibezcore_day_pass';
+export const DAY_PASS_PRODUCT_ID = Platform.OS === 'ios' ? IOS_DAY_PASS_ID : ANDROID_DAY_PASS_ID;
+
+/** Is dit (een van) de dagpas-product-ID's? Play voegt soms `:<optie>` toe. */
+export function isDayPassProductId(productId: string): boolean {
+  const base = productId.split(':')[0];
+  return base === IOS_DAY_PASS_ID || base === ANDROID_DAY_PASS_ID;
+}
 
 export const PRODUCT_IDS: Record<AudioTier, string> = {
   monthly: 'vibezcore_audio_monthly',
@@ -79,7 +92,7 @@ export function tierFromProductId(productId: string): AudioTier | null {
   const baseSku = productId.split(':')[0];
   if (baseSku === PRODUCT_IDS.monthly) return 'monthly';
   if (baseSku === IOS_YEARLY_ID || baseSku === ANDROID_YEARLY_ID) return 'yearly';
-  if (baseSku === DAY_PASS_PRODUCT_ID) return 'day';
+  if (isDayPassProductId(baseSku)) return 'day';
   return null;
 }
 

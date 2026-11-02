@@ -51,6 +51,7 @@ import {
   AudioTier,
   tierFromProductId,
   DAY_PASS_PRODUCT_ID,
+  isDayPassProductId,
   DAY_PASS_MS,
 } from './iap-contract';
 
@@ -231,7 +232,7 @@ export function activeDayPass(
   const txs = customerInfo?.nonSubscriptionTransactions ?? [];
   let best: { at: number; tx: (typeof txs)[number] } | null = null;
   for (const tx of txs) {
-    if (tx.productIdentifier.split(':')[0] !== DAY_PASS_PRODUCT_ID) continue;
+    if (!isDayPassProductId(tx.productIdentifier)) continue;
     const at = Date.parse(tx.purchaseDate);
     if (!Number.isFinite(at)) continue;
     if (!best || at > best.at) best = { at, tx };
