@@ -44,9 +44,10 @@ private enum Rhythm {
   static let lubDubFraction = 0.3
   static let lubDubMaxMs = 350.0
   /** Onder deze afstand speelt de sessie enkel de lub (zie boven). */
-  /* 1 nov 2026 (operator: "strong pulses als die ook effectief ons ritme weergeven"): 200 → 130 ms. Apple laat een nieuwe tik toe na
-     100 ms (WKInterfaceDevice.play); zo krijgt ook Boost (dub na ±164 ms) zijn tweede klop. */
-  static let minDubGapMs = 130.0
+  /* 2 nov 2026 (operator: "Boost kan de haptic niet goed volgen — doe wat zeker werkt"): terug naar 200 ms. Apple laat een nieuwe tik pas
+     toe na 100 ms en een stevige tik duurt zelf ook even; bij Boost (dub na ±164 ms) viel de tweede klop weg of smolt samen. Daar dus één
+     stevige klop per slag op het exacte tempo; lub-dub vanaf Sharp Focus en trager. */
+  static let minDubGapMs = 200.0
   static let endSilenceMs = 600.0
   /** Protocol: 70 ms tik · 120 ms stilte · 90 ms tik · 120 ms stilte · 160 ms tik. */
   static let endTapOffsetsMs: [Double] = [0, 190, 400]
