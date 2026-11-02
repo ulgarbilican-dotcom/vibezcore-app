@@ -366,7 +366,9 @@ final class WatchSettings: ObservableObject {
   var playsDub: Bool { true }
 
   /// De tik voor lub én dub van State Control.
-  var beatTap: WKHapticType { strength == "medium" ? .directionUp : .start }
+  /* 2 nov 2026 (operator: "Medium voelt sterker aan dan Strong — de sterkste wordt dus de standaard"): op de pols voelt de omhoog-tik
+     (.directionUp) steviger dan .start — zoals bij Breathwork. Strong = .directionUp, Medium = .start (zelfde ritme, lichter). */
+  var beatTap: WKHapticType { strength == "medium" ? .start : .directionUp }
 
 }
 
