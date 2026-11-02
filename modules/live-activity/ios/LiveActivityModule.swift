@@ -147,7 +147,8 @@ enum LiveSessionController {
     // beëindigt hem normaal zelf; dit is enkel het vangnet).
     let content = ActivityContent(
       state: state,
-      staleDate: r.paused ? nil : state.endDate.addingTimeInterval(60)
+      /* 2 nov 2026: verouderd = meteen bij het einde (knop weg, klok op 0:00); de app beëindigt de kaart zodra ze weer draait. */
+      staleDate: r.paused ? nil : state.endDate.addingTimeInterval(1)
     )
 
     // Eén sessie tegelijk: een lopende activity van dezelfde soort bijwerken,

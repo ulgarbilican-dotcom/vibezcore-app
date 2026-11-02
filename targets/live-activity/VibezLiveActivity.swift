@@ -153,6 +153,7 @@ private struct SubtitleLine: View {
 
 private struct LockScreenView: View {
   let state: VibezSessionAttributes.ContentState
+  var ended: Bool = false
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(alignment: .center) {
@@ -175,8 +176,11 @@ private struct LockScreenView: View {
           .foregroundColor(state.paused ? Color.white.opacity(0.6) : .white)
           .multilineTextAlignment(.trailing)
           .frame(maxWidth: 120, alignment: .trailing)
-        ToggleButton(state: state, size: 40)
-          .padding(.leading, 10)
+        /* 2 nov 2026 (operator: "na afloop druk ik op play en begint hij te tellen"): na het einde geen knop meer. */
+        if !ended {
+          ToggleButton(state: state, size: 40)
+            .padding(.leading, 10)
+        }
       }
       ProgressLine(state: state)
     }
@@ -187,7 +191,7 @@ private struct LockScreenView: View {
 struct VibezSessionLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: VibezSessionAttributes.self) { context in
-      LockScreenView(state: context.state)
+      LockScreenView(state: context.state, ended: context.isStale)
         .activityBackgroundTint(Color.black)
         .activitySystemActionForegroundColor(Color.white)
         .widgetURL(deepLink(context.attributes.kind, context.state))
@@ -217,7 +221,9 @@ struct VibezSessionLiveActivity: Widget {
               SubtitleLine(state: context.state)
               ProgressLine(state: context.state)
             }
-            ToggleButton(state: context.state, size: 36)
+            if !context.isStale {
+              ToggleButton(state: context.state, size: 36)
+            }
           }
           .padding(.horizontal, 4)
         }
