@@ -135,6 +135,38 @@ export async function ensurePermission(): Promise<boolean> {
   }
 }
 
+/* 2 nov 2026 (operator, iPhone: "ik krijg zoals op Android geen melding dat ik mijn sessie moet beginnen"): stonden de meldingen uit, dan
+   sloeg de app de herinneringen van een plan STIL over. Nu: plan met herinneringen + meldingen uit → één duidelijke kaart met de weg
+   ernaartoe (hooguit één keer per week, niet bij elke start). Zelfde op iPhone en Android. */
+const OFF_NOTICE_KEY = 'vz_reminders_off_notice_v1';
+async function ensurePlanPermission(): Promise<boolean> {
+  if (await ensurePermission()) return true;
+  try {
+    const last = Number((await AsyncStorage.getItem(OFF_NOTICE_KEY)) ?? 0);
+    if (Date.now() - last < 7 * 24 * 3600 * 1000) return false;
+    await AsyncStorage.setItem(OFF_NOTICE_KEY, String(Date.now()));
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { showVibezAlert } = require('@/components/VibezAlert') as typeof import('@/components/VibezAlert');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Linking } = require('react-native') as typeof import('react-native');
+    void showVibezAlert({
+      title: 'Notifications are off',
+      message: `Turn on notifications for VIBEZCORE to get a reminder when it is time for your session.
+
+${
+        Platform.OS === 'ios' ? 'iPhone Settings › Notifications › VIBEZCORE' : 'Settings › Apps › VIBEZCORE › Notifications'
+      }`,
+      buttons: [
+        { text: 'Open Settings', style: 'primary', onPress: () => void Linking.openSettings().catch(() => {}) },
+        { text: 'Not now', style: 'cancel' },
+      ],
+    });
+  } catch {
+    /* een melding over meldingen mag nooit iets breken */
+  }
+  return false;
+}
+
 async function cancel(kind: ReminderKind, slot: ReminderSlot): Promise<void> {
   try {
     await Notifications.cancelScheduledNotificationAsync(idFor(kind, slot));
@@ -377,7 +409,7 @@ export async function syncPlanReminders(plan: ActivePlan | null): Promise<void> 
     });
   }
   if (jobs.length === 0) return;
-  if (!(await ensurePermission())) return;
+  if (!(await ensurePlanPermission())) return;
   await ensureAndroidChannel();
 
   for (const { identifier, it, trigger } of jobs) {
@@ -488,7 +520,7 @@ export async function syncBraceletPlanReminder(
     });
   }
   if (jobs.length === 0) return;
-  if (!(await ensurePermission())) return;
+  if (!(await ensurePlanPermission())) return;
   await ensureAndroidChannel();
 
   for (const { identifier, item, trigger } of jobs) {
