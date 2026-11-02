@@ -95,6 +95,7 @@ import { Children, useCallback, useEffect, useRef, useState, type ComponentProps
 import {
     ActivityIndicator,
     Image,
+    AppState,
     Linking,
     Platform,
     Pressable,
@@ -133,6 +134,7 @@ import {
   Share2,
   UserPlus,
   Watch,
+  Bell,
 } from 'lucide-react-native';
 
 /* Deelteksten (APP_LINK_URL, BRAND_PITCH, uitnodigen) staan sinds 29 okt 2026 in utils/share.ts — één bron voor elke deelknop. */
@@ -167,6 +169,7 @@ import { hapticPress } from '@/utils/haptics';
 import { dateLocale, formatClock } from '@/utils/locale';
 import { showWatchSetupInfo } from '@/utils/watch-setup-tip';
 import { getAppleWatchStatus } from '../../../modules/watch-breath';
+import * as Notifications from 'expo-notifications';
 
 type Mode = 'login' | 'signup';
 
@@ -751,11 +754,52 @@ function AppleWatchHapticsRow() {
   );
 }
 
+/* 2 nov 2026 (operator: "de gebruiker moet weten waarvoor notifications dienen — ook in Profile met info"): status + uitleg (dezelfde
+   woorden als het privacybeleid) + de weg naar de instellingen. Zelfde op iPhone en Android. */
+function NotificationsRow() {
+  const [on, setOn] = useState<boolean | null>(null);
+  const refresh = useCallback(() => {
+    void Notifications.getPermissionsAsync()
+      .then((p) => setOn(p.granted))
+      .catch(() => setOn(null));
+  }, []);
+  useEffect(() => {
+    refresh();
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+  const explain = () => {
+    void showVibezAlert({
+      title: 'Notifications',
+      message:
+        'VIBEZCORE only sends you:\n• A reminder when it is time for a session in your plan\n• A notice when your Day Pass ends in 1 hour\n• A notice when a cancelled Premium ends in 2 days, or about a payment problem\n\nNo marketing. ' +
+        (on ? 'Notifications are on.' : 'Notifications are off, so you will not get these reminders.'),
+      buttons: [
+        { text: on ? 'Manage in Settings' : 'Turn on in Settings', style: 'primary', onPress: () => void Linking.openSettings().catch(() => {}) },
+        { text: 'OK', style: 'cancel' },
+      ],
+    });
+  };
+  return (
+    <Row
+      icon={Bell}
+      title="Notifications"
+      value={on === null ? undefined : on ? 'On' : 'Off'}
+      valueTone={on === false ? 'warn' : 'status'}
+      onPress={explain}
+      accessibilityLabel="Notifications, what they are for"
+    />
+  );
+}
+
 function SupportGroup() {
   return (
     <Group title="Settings & support">
       <Row icon={SettingsIcon} title="Settings" onPress={() => router.navigate('/settings' as never)} accessibilityLabel="Open settings" />
       {/* 1 nov 2026 (operator: "niet onder Settings, gewoon direct zichtbaar"): de drie horloge-instellingen voor voelbare tikken zonder toon. */}
+      <NotificationsRow />
       <AppleWatchHapticsRow />
       <Row icon={UserPlus} title="Invite a friend" onPress={() => void shareInvite()} accessibilityLabel="Invite a friend to VIBEZCORE" />
       <Row icon={HelpCircle} title="FAQ" onPress={() => router.navigate('/faq' as never)} accessibilityLabel="Browse frequently asked questions" />
