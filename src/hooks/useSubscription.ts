@@ -71,6 +71,9 @@ export type SubscriptionStatus = {
   /** 29 okt 2026: ISO-moment waarop de store een betaalprobleem meldde (RevenueCat `billingIssueDetectedAt`) — voor de
    *  melding "Update your payment to keep Premium" (services/access-notifications.ts). */
   billingIssueAt?: string;
+  /** 2 nov 2026 (audit): in welke winkel het abonnement loopt (RevenueCat `store`: 'APP_STORE' / 'PLAY_STORE'). Wie via een account
+   *  op het andere toestel inlogt, kan daar niet in-app wisselen of beheren — dat gebeurt in de winkel waar hij kocht. */
+  store?: string;
   /** Iter 9dq v150 (operator 2026-06-17): Gumroad-veld verwijderd. App is
    *  IAP-only (App Store / Play Store). Geen Gumroad-subscriptions meer
    *  in productie — operator-besluit "GUMROAD NIET MEER VOOR DE APP".
@@ -343,6 +346,7 @@ async function tryRevenueCatStatus(
          hier). */
       isTrialing: audioPro.periodType === 'TRIAL',
       billingIssueAt: typeof audioPro.billingIssueDetectedAt === 'string' ? audioPro.billingIssueDetectedAt : undefined,
+      store: typeof audioPro.store === 'string' ? audioPro.store : undefined,
     };
   } catch {
     lastRcCallFailed = true;
@@ -712,6 +716,7 @@ export function useSubscription() {
     email: status?.email,
     validUntil: status?.validUntil,
     willRenew: status?.willRenew,
+    store: status?.store,
     /* Iter v222 (2026-07-07): bracelet-ownership uit backend. Wordt
        gelezen door useBraceletOwner() in dev-user-override.ts en levert
        de bron-van-waarheid in productie. */

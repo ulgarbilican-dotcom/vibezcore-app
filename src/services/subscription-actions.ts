@@ -52,7 +52,29 @@ export function storeSubscriptionsUrl(_tier?: 'monthly' | 'yearly' | 'day'): str
  *  eigen plan, verlengdatum, wisselen en opzeggen, ook in TestFlight. Lukt
  *  dat niet (oude iOS, RevenueCat niet klaar), dan de App Store-pagina.
  *  Android: de abonnementenlijst van Google Play. */
+/** 2 nov 2026 (audit): loopt het abonnement in de winkel van het ANDERE platform (via een account op een tweede toestel)? Dan kan
+ *  deze telefoon het niet wisselen of beheren. Onbekend (geen `store`) = gewoon deze winkel. */
+export function isOtherStore(store?: string): boolean {
+  if (store !== 'APP_STORE' && store !== 'PLAY_STORE') return false;
+  return Platform.OS === 'ios' ? store === 'PLAY_STORE' : store === 'APP_STORE';
+}
+
 export async function openManageSubscriptions(): Promise<void> {
+  /* Abonnement uit de andere winkel: RevenueCat geeft de juiste beheerpagina (Google Play of Apple) als webadres. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Purchases = require('react-native-purchases').default as typeof import('react-native-purchases').default;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ENTITLEMENT_AUDIO_PRO } = require('@/services/iap-real');
+    const info = await Purchases.getCustomerInfo();
+    const store = info?.entitlements?.active?.[ENTITLEMENT_AUDIO_PRO]?.store;
+    if (isOtherStore(store) && info.managementURL) {
+      await Linking.openURL(info.managementURL);
+      return;
+    }
+  } catch {
+    /* gewoon deze winkel hieronder */
+  }
   if (Platform.OS === 'ios') {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -113,6 +113,11 @@ export function confirmPendingBreathOpen(): void {
 
 export function cancelPendingBreathOpen(): void {
   if (!pendingOpen) return;
+  /* Audit 2 nov 2026: de gratis sessie werd al bij de tik geclaimd — geannuleerd = niet gebruikt, dus teruggeven. */
+  if ((pendingOpen as { from?: string }).from === 'onboarding') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('@/utils/breath-entry') as typeof import('@/utils/breath-entry')).unclaimFreeSession();
+  }
   pendingOpen = null;
   notify();
 }

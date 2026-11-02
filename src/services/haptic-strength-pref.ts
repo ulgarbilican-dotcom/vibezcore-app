@@ -43,21 +43,19 @@ export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR,
    zelf Medium instelt, blijft dat zo tot hij zelf terug Strong zet." Strong = standaard, de keuze wordt bewaard (nieuwe sleutel: oude
    bewaarde waarden van vóór 29 okt tellen niet mee). Soft bestaat niet meer (wordt Medium).
 
-   2 nov 2026 (operator: "vibration strength standaard altijd op Strong", "ja op alles"): zoals Voice guidance de vraag "Just this time /
-   Yes, remember it". `saved` = de bewaarde standaard (Strong tot de gebruiker zelf iets anders onthoudt), `strength` = wat nu speelt.
-   Een keuze "Just this time" geldt voor de lopende sessie, of — gekozen vóór de start — voor de eerstvolgende; daarna weer `saved`. */
+   2 nov 2026 (operator: "ja op alles"; herzien na audit): `saved` = de bewaarde standaard (Strong tot de gebruiker "Remember" kiest),
+   `strength` = wat nu speelt. "Just this time" geldt tot de sessie EINDIGT (endHapticStrengthSession), ook als je het vóór de start
+   kiest; daarna weer `saved`. Eén regel voor State Control, voorproef en Breathwork, geen vlag die naar een andere sessie lekt. */
 const KEY_V2 = 'vibezcore.hapticStrength.v2';
 let saved: HapticStrength = 'strong';
 let strength: HapticStrength = 'strong';
-/** Een eenmalige keuze vóór de start: de eerstvolgende sessiestart laat ze staan. */
-let keepForNextStart = false;
 const listeners = new Set<(v: HapticStrength) => void>();
 void AsyncStorage.removeItem(KEY).catch(() => {});
 void AsyncStorage.getItem(KEY_V2)
   .then((v) => {
     if (v === 'medium' && saved === 'strong') {
       saved = 'medium';
-      if (strength === 'strong' && !keepForNextStart) apply('medium');
+      if (strength === 'strong') apply('medium');
     }
   })
   .catch(() => {});
@@ -68,12 +66,8 @@ function apply(v: HapticStrength): void {
   listeners.forEach((l) => l(v));
 }
 
-/** Bij elke sessiestart: terug naar de bewaarde standaard, tenzij de gebruiker net vóór de start "Just this time" koos. */
-export function resetHapticStrengthForSession(): void {
-  if (keepForNextStart) {
-    keepForNextStart = false;
-    return;
-  }
+/** Einde van een sessie (State Control, voorproef, Breathwork): een keuze "Just this time" vervalt, terug naar de bewaarde stand. */
+export function endHapticStrengthSession(): void {
   apply(saved);
 }
 
@@ -86,10 +80,9 @@ export function getSavedHapticStrength(): HapticStrength {
   return saved;
 }
 
-/** Kiezen én onthouden (o.a. vanaf de Haptics-pagina van het horloge). */
+/** Kiezen én onthouden (Remember, of vanaf de Haptics-pagina van het horloge). */
 export function setHapticStrength(vIn: HapticStrength): void {
   const v: HapticStrength = vIn === 'soft' ? 'medium' : vIn;
-  keepForNextStart = false;
   if (v !== saved) {
     saved = v;
     void AsyncStorage.setItem(KEY_V2, v).catch(() => {});
@@ -97,11 +90,9 @@ export function setHapticStrength(vIn: HapticStrength): void {
   apply(v);
 }
 
-/** Enkel voor deze sessie ("Just this time"). `sessionRunning` = er loopt al een sessie; anders geldt de keuze voor de eerstvolgende. */
-export function setHapticStrengthForSession(vIn: HapticStrength, sessionRunning: boolean): void {
-  const v: HapticStrength = vIn === 'soft' ? 'medium' : vIn;
-  keepForNextStart = !sessionRunning && v !== saved;
-  apply(v);
+/** Enkel voor deze sessie ("Just this time") — vervalt bij endHapticStrengthSession. */
+export function setHapticStrengthForSession(vIn: HapticStrength): void {
+  apply(vIn === 'soft' ? 'medium' : vIn);
 }
 
 export function subscribeHapticStrength(cb: (v: HapticStrength) => void): () => void {
@@ -113,6 +104,10 @@ export function subscribeHapticStrength(cb: (v: HapticStrength) => void): () => 
 
 export function useHapticStrength(): HapticStrength {
   const [v, setV] = useState(strength);
-  useEffect(() => subscribeHapticStrength(setV), []);
+  /* Audit 2 nov: bij het inschrijven ook de huidige waarde overnemen (kon tussen eerste render en effect veranderen). */
+  useEffect(() => {
+    setV(strength);
+    return subscribeHapticStrength(setV);
+  }, []);
   return v;
 }

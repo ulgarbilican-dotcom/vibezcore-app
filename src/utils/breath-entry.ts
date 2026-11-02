@@ -81,6 +81,13 @@ import { getSetting, setSetting } from '@/utils/settings';
    allebei de gratis sessie. Deze vlag maakt de claim echt synchroon. */
 let claimedThisRun = false;
 
+/** Audit 2 nov 2026: de claim teruggeven als er nooit geademd werd (terug vóór Play, "End current session?" geannuleerd) of als de
+ *  gebruiker Premium heeft — anders was de enige gratis sessie weg zonder dat iemand ze gebruikte. */
+export function unclaimFreeSession(): void {
+  claimedThisRun = false;
+  setSetting('breathFreeSessionUsedAt', null);
+}
+
 export function claimFreeSessionParam(): { from?: 'onboarding' } {
   const alreadyUsed = getSetting('breathFreeSessionUsedAt');
   if (alreadyUsed || claimedThisRun) return {};

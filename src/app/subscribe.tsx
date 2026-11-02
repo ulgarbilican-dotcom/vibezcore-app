@@ -75,6 +75,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { goToTab } from '@/utils/state-control-ui';
 import { useEffect, useRef, useState } from 'react';
+import { isOtherStore } from '@/services/subscription-actions';
 import {
   ActivityIndicator,
   Linking,
@@ -276,6 +277,7 @@ export default function SubscribeScreen() {
     isTrialing: alreadyTrialing,
     isLoading: subLoading,
     validUntil: currentValidUntil,
+    store: currentStore,
   } = useSubscription();
   /* Dagpas (operator, 16 okt 2026): wie een lopende pas heeft, moet nog
      een maand- of jaarabonnement kunnen nemen — enkel een tweede pas
@@ -284,7 +286,10 @@ export default function SubscribeScreen() {
   /* 2 nov 2026 (operator op build 80: "Switch to Yearly gaat niet"): Monthly → Yearly is een upgrade die in de app moet kunnen — iPhone:
      zelfde abonnementsgroep, Apple verrekent (Yearly staat op niveau 1); Android: vervanging via productChangeInfo (iap-real). Voorheen
      sprong dit scherm voor elke abonnee meteen naar "You're a Premium member". */
-  const upgradeToYearly = alreadyIsPro && currentTier === 'monthly' && tier === 'yearly';
+  /* Enkel in dezelfde winkel: een Google Play-maandabonnement wisselt niet via Apple (en omgekeerd) — dan zou je dubbel betalen. */
+  const upgradeToYearly = alreadyIsPro && currentTier === 'monthly' && tier === 'yearly' && !isOtherStore(currentStore);
+  /* Voor het bevestigingsscherm: dit was een overstap, geen nieuw abonnement. */
+  const wasUpgradeRef = useRef(false);
   const blocksPurchase = alreadyIsPro && (!hasDayPass || tier === 'day') && !upgradeToYearly;
   useEffect(() => {
     if (blocksPurchase && phase === 'form' && !linkingAccount) {
@@ -428,6 +433,7 @@ export default function SubscribeScreen() {
     }
   };
   const runIapFlowImpl = async () => {
+    wasUpgradeRef.current = upgradeToYearly;
     setErrMsg(null);
     /* Iter v230 (2026-07-08, audit BUG 4): tier-switch attempt → stuur
        user naar Play Store change-plan flow ipv rauwe already_owned error.
@@ -546,7 +552,9 @@ export default function SubscribeScreen() {
   useEffect(() => {
     if (tier === null || linkingAccount || phase !== 'form') return;
     if (signedIn === null || blocksPurchase) return;
-    if (subLoading && !subWaitOver) return;
+    /* 2 nov 2026 (audit): nooit automatisch afrekenen zolang de status nog laadt — anders kon een Premium- of dagpasgebruiker na
+       2 s een tweede dagpas (losse aankoop, de winkel blokkeert die niet) of een ongewilde wissel krijgen. */
+    if (subLoading) return;
     if (autoCheckoutRef.current) return;
     autoCheckoutRef.current = true;
     if (!signedIn) setGuestPurchase(true);
@@ -1218,18 +1226,22 @@ Create a free account to keep Premium on all your devices.`,
           title={
             doneIsDayPass
               ? 'Your Day Pass is active'
-              : alreadyMember
-                ? "You're a VIBEZCORE Premium member"
-                : 'Welcome to VIBEZCORE Premium'
+              : wasUpgradeRef.current
+                ? "You're on Yearly now"
+                : alreadyMember
+                  ? "You're a VIBEZCORE Premium member"
+                  : 'Welcome to VIBEZCORE Premium'
           }
           subtitle={
             doneIsDayPass
               ? passEndLabel
                 ? `Full access until ${passEndLabel}.`
                 : 'Full access for the next 24 hours.'
-              : alreadyMember
-                ? 'Your membership is active.'
-                : 'Thank you for subscribing.'
+              : wasUpgradeRef.current
+                ? 'Your plan switched from Monthly to Yearly.'
+                : alreadyMember
+                  ? 'Your membership is active.'
+                  : 'Thank you for subscribing.'
           }
           /* Operator, 17 okt 2026 ("de hele uitleg nakijken, dit klopt niet
              meer"): drie producten, zelfde volgorde en woorden als de

@@ -95,6 +95,7 @@ class BreathSessionService : Service() {
     /* Voor de melding — cosmetisch/informatief, geen cyclus-logica (operator,
        15 augustus 2026: "juiste informatie, duurtijd, teller"). */
     const val EXTRA_MODE_NAME = "modeName"
+    const val EXTRA_HAPTICS = "haptics"
     const val EXTRA_TOTAL_DURATION_MS = "totalDurationMs"
     const val EXTRA_SESSION_REMAINING_MS = "sessionRemainingMs"
 
@@ -109,6 +110,8 @@ class BreathSessionService : Service() {
     @Volatile var inhaleUri: String = ""
     @Volatile var holdUri: String = ""
     @Volatile var exhaleUri: String = ""
+    /** Audit 2 nov 2026: false = telefoon-trilling uit of het horloge tikt. */
+    @Volatile var hapticsOn: Boolean = true
     @Volatile var cueLeadMs: Long = 400L
     @Volatile var running: Boolean = false
     @Volatile var modeName: String = "Breathwork"
@@ -221,6 +224,7 @@ class BreathSessionService : Service() {
     exhaleUri = intent?.getStringExtra(EXTRA_EXHALE_URI) ?: ""
     cueLeadMs = (intent?.getIntExtra(EXTRA_CUE_LEAD_MS, 400) ?: 400).toLong()
     modeName = intent?.getStringExtra(EXTRA_MODE_NAME) ?: "Breathwork"
+    hapticsOn = intent?.getBooleanExtra(EXTRA_HAPTICS, true) ?: true
     totalDurationMs = (intent?.getLongExtra(EXTRA_TOTAL_DURATION_MS, 0L) ?: 0L)
     val sessionRemainingMs = intent?.getLongExtra(EXTRA_SESSION_REMAINING_MS, totalDurationMs)
       ?: totalDurationMs
@@ -248,7 +252,7 @@ class BreathSessionService : Service() {
          aanroep in breath-session.tsx. */
       val first = phases[0]
       playCueFile(cueUriFor(first.key) ?: "")
-      playHapticForPhase(this, first.key, first.secs)
+      if (hapticsOn) playHapticForPhase(this, first.key, first.secs)
       scheduleTimersWithRemaining(first.secs * 1000L, first.secs * 1000L)
     }
     startTicking()
@@ -335,7 +339,7 @@ class BreathSessionService : Service() {
     round = newRound
 
     val phase = phases[newIdx]
-    playHapticForPhase(this, phase.key, phase.secs)
+    if (hapticsOn) playHapticForPhase(this, phase.key, phase.secs)
     scheduleTimersWithRemaining(phase.secs * 1000L, phase.secs * 1000L)
     updateNotification()
   }

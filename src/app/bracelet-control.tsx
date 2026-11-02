@@ -53,7 +53,7 @@ import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
 import {
   getSavedHapticStrength,
-  resetHapticStrengthForSession,
+  endHapticStrengthSession,
   setHapticStrength,
   setHapticStrengthForSession,
   useHapticStrength,
@@ -70,7 +70,6 @@ import {
   wakeWatchForStateControl,
   setWatchLinkWarm,
   warmUpBeatEngine,
-  isModePreviewRunning,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
@@ -85,6 +84,7 @@ import {
   getBraceletMonitorRemainingSec,
   getBraceletMonitorSession,
   isBraceletSessionMonitorActive,
+  setPreviewRemoteHandler,
   isBraceletSessionUnplayed,
   subscribeSessionCompletion,
   type SessionCompletion,
@@ -3978,7 +3978,7 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
                 key={k}
                 onPress={() => {
                   if (on) return;
-                  setHapticStrengthForSession(k, isBraceletSessionMonitorActive() || isModePreviewRunning());
+                  setHapticStrengthForSession(k);
                   setAskStrength(k !== getSavedHapticStrength());
                   /* Voel meteen het verschil. */
                   void Haptics.impactAsync(
@@ -4215,11 +4215,12 @@ function IdleScreen({
     setTrialPaused(false);
     setTrialLeft(null);
     if (!ended) stopModePreviewHaptic();
+    /* Einde voorproef: "Just this time" vervalt. */
+    endHapticStrengthSession();
   }, []);
   /* 23 okt 2026 (operator): de voorproef begint NIET vanzelf — eerst de play-knop (zoals Breathwork). */
   const trialPlayedRef = useRef(false);
   const startTrial = () => {
-    resetHapticStrengthForSession();
     hapticPress();
     trialPlayedRef.current = false;
     trialPausedRef.current = true;
@@ -4266,6 +4267,17 @@ function IdleScreen({
   };
   /* Andere toestand, ander scherm of weg: voorproef stopt. */
   useEffect(() => () => stopTrial(false), [selectedMode, stopTrial]);
+  /* Audit 2 nov 2026: pauze/hervat vanaf het vergrendelscherm bedient ook de voorproef (afteller, telefoon én horloge samen). */
+  const toggleTrialRef = useRef(toggleTrialPause);
+  toggleTrialRef.current = toggleTrialPause;
+  useEffect(() => {
+    setPreviewRemoteHandler((action) => {
+      if (!trialTimer.current) return;
+      const paused = trialPausedRef.current;
+      if (action === 'toggle' || (action === 'pause' && !paused) || (action === 'resume' && paused)) toggleTrialRef.current();
+    });
+    return () => setPreviewRemoteHandler(null);
+  }, []);
   const lastAutoTrialRef = useRef<string | null>(null);
   useEffect(() => {
     if (!autoTrialToken || lastAutoTrialRef.current === autoTrialToken) return;
@@ -5929,8 +5941,6 @@ function BraceletControlScreen({
     });
 
   const onStart = async () => {
-    /* 29 okt 2026 (operator: "trillingen op max starten, ook State Control"): elke sessie begint op Strong. */
-    resetHapticStrengthForSession();
     /* 1 nov 2026: eerste sessie met een Apple Watch → één keer de instellingen voor voelbare tikken zonder toon. */
     void maybeShowWatchSetupTip();
     setBusy(true);
@@ -6123,13 +6133,30 @@ function BraceletControlScreen({
   /* 1 nov 2026 (operator, iOS: "bij free sessies krijg ik na vroegtijdig eindigen geen sales-popup"): na de 30 s-proef kwam het aanbod
      wel, na de ene gratis volledige sessie niet. Nu: eindigt die gratis sessie (vroegtijdig gestopt of afgelopen), dan het aanbod. */
   const freeRunRef = useRef(false);
+  /* Audit 2 nov 2026: liep de gratis sessie volledig af, dan komt eerst het "Well done"-scherm en pas na Done het aanbod (anders lagen
+     ze over elkaar). Vroegtijdig gestopt = geen eindscherm = meteen het aanbod. */
+  const paywallAfterDoneRef = useRef(false);
+  const completionOpenRef = useRef(false);
+  completionOpenRef.current = completedModeForModal !== null;
   useEffect(() => {
     if (sessionActive && freeSessionAvailable && premiumLocked) freeRunRef.current = true;
     if (!monitorSnap.active && freeRunRef.current) {
       freeRunRef.current = false;
-      if (premiumLocked) setPaywallOpen(true);
+      if (!premiumLocked) return;
+      /* Het eindscherm wordt in dezelfde beurt gezet; even wachten zodat het al zichtbaar is. */
+      /* Bewust zonder opruimen: een andere afhankelijkheid die meteen daarna wijzigt, mag dit aanbod niet annuleren. */
+      setTimeout(() => {
+        if (completionOpenRef.current) paywallAfterDoneRef.current = true;
+        else setPaywallOpen(true);
+      }, 300);
     }
   }, [sessionActive, monitorSnap.active, freeSessionAvailable, premiumLocked]);
+  useEffect(() => {
+    if (completedModeForModal === null && paywallAfterDoneRef.current) {
+      paywallAfterDoneRef.current = false;
+      setPaywallOpen(true);
+    }
+  }, [completedModeForModal]);
   /* Geen sessie meer → niets om "geminimaliseerd" te houden. */
   useEffect(() => {
     if (!sessionActive && !isPaused) setMinimized(false);

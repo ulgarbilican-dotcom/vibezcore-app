@@ -18,8 +18,8 @@ const KEY = 'vz_watch_setup_tip_v1';
  *  staan, ik wist dat zelf niet te vinden"): Apple Watch heeft een eigen pagina; de Galaxy Watch volgt gewoon de telefoon. */
 export const STRENGTH_NOTE =
   Platform.OS === 'ios'
-    ? 'Strong is the default. Your choice stays, on your phone and watch. On your Apple Watch: open VIBEZCORE › Haptics.'
-    : 'Strong is the default. Your choice stays, and your watch follows it.';
+    ? 'Strong is the default. Change it for this session only, or remember it. On your Apple Watch: open VIBEZCORE › Haptics.'
+    : 'Strong is the default. Change it for this session only, or remember it. Your watch follows what you remember.';
 let busy = false;
 let deniedShownThisLaunch = false;
 

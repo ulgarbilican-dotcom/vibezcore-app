@@ -49,7 +49,7 @@ import WatchHapticsRow from '@/components/WatchHapticsRow';
 import {
   getHapticStrength,
   getSavedHapticStrength,
-  resetHapticStrengthForSession,
+  endHapticStrengthSession,
   setHapticStrength,
   setHapticStrengthForSession,
   useHapticStrength,
@@ -99,6 +99,7 @@ import { getSetting, setSetting, useSetting } from '@/utils/settings';
 import {
   skipBreathIntroOnce,
   skipBreathOnboardingRedirectOnce,
+  unclaimFreeSession,
 } from '@/utils/breath-entry';
 import { recordInstantFeedback, type InstantFeedback } from '@/utils/instant-feel';
 import {
@@ -952,6 +953,21 @@ export function BreathSession() {
      blijvends gebeurt. Minder wrijving voor het meest gekozen pad, meer
      duidelijkheid op het pad waar het ertoe doet. */
   const [askScopeStep, setAskScopeStep] = useState(false);
+  /* Audit 2 nov 2026: de vraag opent 350 ms na de wissel. Wie binnen die tijd terugschakelt, mag geen vraag meer krijgen over een
+     waarde die al ongedaan is — elke nieuwe wissel annuleert de wachtende vraag. */
+  const askTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueAsk = useCallback((next: Parameters<typeof setAskDefault>[0] | null) => {
+    if (askTimerRef.current) clearTimeout(askTimerRef.current);
+    askTimerRef.current = null;
+    if (!next) return;
+    askTimerRef.current = setTimeout(() => {
+      askTimerRef.current = null;
+      setAskDefault(next);
+    }, 350);
+  }, []);
+  useEffect(() => () => {
+    if (askTimerRef.current) clearTimeout(askTimerRef.current);
+  }, []);
   const closeAskDefault = useCallback(() => {
     setAskDefault(null);
     setAskScopeStep(false);
@@ -1856,6 +1872,8 @@ export function BreathSession() {
         if (runningRef.current && pausedRef.current) stopSessionKeepAlive();
       }, 800);
     }
+    /* Audit 2 nov 2026: ook de native achtergrond-lus (Android, telefoon op slot) stopt — anders sprak en trilde hij door tijdens de pauze. */
+    if (Platform.OS === 'android') stopBackgroundBreathSession();
     /* Eén sessie, twee bedieningen (6 okt 2026): de pols pauzeert mee. */
     pauseBreathSessionOnWear();
     pauseBreathSessionOnWatch();
@@ -1891,6 +1909,8 @@ export function BreathSession() {
        deze functie wordt rechtstreeks vanuit een tik aangeroepen (geen
        verouderde timer-closure), dus vers genoeg om zonder refs te lezen. */
     runPhase(phase, round, secsLeft);
+    /* Audit 2 nov 2026: hervat terwijl de telefoon op slot ligt (bv. vanaf het horloge) → de native achtergrond-lus opnieuw bewapenen. */
+    if (Platform.OS === 'android' && AppState.currentState !== 'active') armBackgroundRef.current();
     /* De pols gaat verder op exact dezelfde plek: zelfde ronde, zelfde fase,
        met wat er van die fase nog over is (6 okt 2026). 13 okt 2026: pas NA
        runPhase versturen — het meegestuurde tijdstip (sentAtMs) moet het
@@ -1933,9 +1953,11 @@ export function BreathSession() {
     cycleRef.current = CYCLE_S;
   }, [CYCLE_S]);
 
+  /* Audit 2 nov 2026: het bewapenen van de native achtergrond-lus (Android) als functie, zodat ook hervatten vanaf het horloge met de
+     telefoon op slot de lus weer start (pauze stopt hem nu). */
+  const armBackgroundRef = useRef<() => void>(() => {});
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (st2) => {
-      if (st2 !== 'active') {
+    const armBackground = () => {
         /* ── Scherm gaat op slot / app naar achtergrond ────────────────
            Pas HIER de native achtergrond-lus bewapenen — niet al bij
            start() (operator, 13 augustus 2026: "dubbele stem... kijk dit
@@ -1991,10 +2013,11 @@ export function BreathSession() {
           })),
           rounds: effectiveRoundsRef.current,
           /* Audio-voorrang (19 okt 2026): speelt de Audio Library bij het
-             vergrendelen, dan op slot geen stem — lege URI = stille cue. */
-          inhaleCueUri: isLibraryPlaying() ? '' : bgUris.inhale,
-          holdCueUri: isLibraryPlaying() ? '' : bgUris.hold,
-          exhaleCueUri: isLibraryPlaying() ? '' : bgUris.exhale,
+             vergrendelen, dan op slot geen stem — lege URI = stille cue.
+             Audit 2 nov 2026: idem als Voice guidance uit staat. */
+          inhaleCueUri: isLibraryPlaying() || !voiceRef.current ? '' : bgUris.inhale,
+          holdCueUri: isLibraryPlaying() || !voiceRef.current ? '' : bgUris.hold,
+          exhaleCueUri: isLibraryPlaying() || !voiceRef.current ? '' : bgUris.exhale,
           cueLeadMs: cueLeadMs(),
           /* 2 nov 2026: ook in de achtergrond niet trillen als de Apple Watch speelt of de telefoon-trilling uit staat. */
           haptics: hapticRef.current && !watchBreathRef.current,
@@ -2005,6 +2028,11 @@ export function BreathSession() {
           totalDurationMs: totalMs,
           sessionRemainingMs: Math.round(sessionRemainingMs),
         });
+    };
+    armBackgroundRef.current = armBackground;
+    const sub = AppState.addEventListener('change', (st2) => {
+      if (st2 !== 'active') {
+        armBackground();
         return;
       }
       /* Terug in de voorgrond: native mag stil vallen, JS neemt het weer
@@ -2190,6 +2218,9 @@ export function BreathSession() {
   /* 30 okt 2026 (audit Free/Premium): zolang de Premium-status nog laadt (koude start via een herinnering) niet als
      "op slot" behandelen — anders startte een Premium-gebruiker een voorproef van 30 s met daarna de betaalmuur. */
   const locked = !sub.isLoading && !isPro && !isFreeOnboardingSession && !(__DEV__ && testFullSessions);
+  /* Gezet bij de automatische start (audit 2 nov 2026), zie daar. */
+  const startedLockedRef = useRef<boolean | null>(null);
+  const startedProRef = useRef<boolean | null>(null);
   /* Eenmalige, proactieve uitleg over scherm-op-slot (operator, 14
      augustus 2026: "iemand die gewoon breathwork begint gaat nooit weten
      dat het hierdoor komt... iedereen gaat denken het werkt niet") — dit
@@ -2602,6 +2633,18 @@ export function BreathSession() {
     }
   }, [isPro]);
   const autostarted = useRef(false);
+  /* Audit 2 nov 2026: sessie dicht = een trilsterkte "Just this time" vervalt (terug naar de bewaarde stand, standaard Strong). */
+  useEffect(() => () => endHapticStrengthSession(), []);
+  /* Audit 2 nov 2026: de gratis sessie nooit verliezen zonder te ademen — dicht vóór Play, of Premium (heeft ze niet nodig). */
+  const isProRef = useRef(isPro);
+  isProRef.current = isPro;
+  useEffect(
+    () => () => {
+      if (isFreeOnboardingSession && (!hasPlayedRef.current || isProRef.current)) unclaimFreeSession();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
   /* 30 okt 2026: pas automatisch starten als bekend is of de gebruiker Premium heeft (meestal meteen, uit de cache);
      vangnet 3 s, daarna start hij zoals vroeger. */
   const [subWaitOver, setSubWaitOver] = useState(false);
@@ -2613,8 +2656,10 @@ export function BreathSession() {
     if (autostarted.current) return;
     if (sub.isLoading && !subWaitOver) return;
     autostarted.current = true;
-    /* 29 okt 2026 (operator): elke sessie start met de trilling op het maximum. */
-    resetHapticStrengthForSession();
+    /* Audit 2 nov 2026: wat de sessie bij de start was, blijft ze — een dagpas die halverwege afloopt maakt van een volle sessie geen
+       vergrendelde voorproef (verkeerde popups bij End). */
+    startedLockedRef.current = locked;
+    startedProRef.current = isPro;
     /* Vangnet verstreken en nog steeds onbekend → als Free starten (zoals vroeger), nooit als Premium. */
     if (locked || (sub.isLoading && !isFreeOnboardingSession && !(__DEV__ && testFullSessions))) {
       startWithBatteryCheck(true);
@@ -2720,7 +2765,11 @@ export function BreathSession() {
        het scherm waar je de sessie startte. Gestart vanuit een plan → daar
        blijven. Anders zoals voorheen naar de keuzepagina van Breath
        (dismissTo pop't eventuele tussenschermen zoals breath-setup weg). */
+    /* Audit 2 nov 2026: verkleind gestopt (bv. Stop op het horloge terwijl je in de Audio Library zit) → enkel de laag sluiten, je blijft
+       waar je bent; niet naar de Breath-tab gegooid worden. */
+    const wasMinimized = getBreathHost()?.minimized === true;
     closeBreathSession();
+    if (wasMinimized) return;
     if (params.fromPlan === '1') return;
     const here = pathnameRef.current;
     if (here === '/breath') return;
@@ -2732,13 +2781,16 @@ export function BreathSession() {
   }, [params.fromPlan]);
 
   const requestStop = useCallback(() => {
+    /* Enkel naar het gunstige kant vastzetten: wie volledig startte blijft volledig; wie intussen Premium kocht, is het meteen. */
+    const lockedNow = startedLockedRef.current === false ? false : locked;
+    const proNow = startedProRef.current === true ? true : isPro;
     /* 2 nov 2026 (operator op build 80: "na unlocken plots popup End free session terwijl ik Premium heb"): enkel wie GEEN Premium heeft
        verliest iets bij vroeg stoppen — met Premium gewoon stoppen zoals elke sessie. */
-    if (isFreeOnboardingSession && !isPro) {
+    if (isFreeOnboardingSession && !proNow) {
       setEndTrialConfirm(true);
       return;
     }
-    const wasLockedPreview = locked;
+    const wasLockedPreview = lockedNow;
     if (wasLockedPreview) {
       /* Operator, 7 okt 2026 ("vroegtijdig end session: zelfde popup maar
          zonder glaseffect"): eerst stoppen haalde het sessiebeeld weg, dus
@@ -3613,7 +3665,11 @@ export function BreathSession() {
               onPress={() => {
                 /* 2 nov 2026: geen doorgeschoten tik van een net gesloten melding. */
                 if (alertJustClosed()) return;
-                if ((isFreeOnboardingSession && !isPro) || locked) requestStop();
+                if (
+                  (isFreeOnboardingSession && !(startedProRef.current === true || isPro)) ||
+                  (startedLockedRef.current === false ? false : locked)
+                )
+                  requestStop();
                 else setConfirmEnd(true);
               }}
               onPressIn={pressEndSession.onPressIn}
@@ -4240,17 +4296,17 @@ export function BreathSession() {
                   const prev = voiceOn;
                   setVoiceOnLocal(v);
                   /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
-                  if (v !== voiceDefault) {
-                    /* 2 nov 2026 (operator: "na Yes is de knop niet verschoven"): de vraag pas NA het omschuiven — opende ze in dezelfde
-                       tik, dan onderbrak iOS de schakelaar en bleef hij zichtbaar op de oude stand. */
-                    setTimeout(() => {
-                      setAskDefault({
-                        what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
-                        apply: (scope) => remember({ voice: v }, scope),
-                        revert: () => setVoiceOnLocal(prev),
-                      });
-                    }, 350);
-                  }
+                  /* 2 nov 2026 (operator: "na Yes is de knop niet verschoven"): de vraag pas NA het omschuiven — opende ze in dezelfde
+                     tik, dan onderbrak iOS de schakelaar en bleef hij zichtbaar op de oude stand. */
+                  queueAsk(
+                    v !== voiceDefault
+                      ? {
+                          what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
+                          apply: (scope) => remember({ voice: v }, scope),
+                          revert: () => setVoiceOnLocal(prev),
+                        }
+                      : null,
+                  );
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
@@ -4458,16 +4514,16 @@ export function BreathSession() {
                   const prev = hapticsOn;
                   setHapticsOn(v);
                   /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
-                  if (v !== hapticDefault) {
-                    /* 2 nov 2026: de vraag pas NA het omschuiven (zie Voice guidance). */
-                    setTimeout(() => {
-                      setAskDefault({
-                        what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
-                        apply: (scope) => remember({ haptics: v }, scope),
-                        revert: () => setHapticsOn(prev),
-                      });
-                    }, 350);
-                  }
+                  /* 2 nov 2026: de vraag pas NA het omschuiven (zie Voice guidance). */
+                  queueAsk(
+                    v !== hapticDefault
+                      ? {
+                          what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
+                          apply: (scope) => remember({ haptics: v }, scope),
+                          revert: () => setHapticsOn(prev),
+                        }
+                      : null,
+                  );
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
@@ -4487,22 +4543,22 @@ export function BreathSession() {
                       onPress={() => {
                         if (on) return;
                         const prev = hapticStrength;
-                        setHapticStrengthForSession(l, true);
+                        setHapticStrengthForSession(l);
                         void Haptics.impactAsync(
                           l === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
                         ).catch(() => {});
                         /* 2 nov 2026 (operator: "ja op alles"): zoals Voice guidance — "Just this time / Yes, remember it". Strong blijft de
                            standaard tot de gebruiker zelf iets anders onthoudt. */
-                        if (l !== getSavedHapticStrength()) {
-                          setTimeout(() => {
-                            setAskDefault({
-                              what: `Vibration ${l}`,
-                              noScope: true,
-                              apply: () => setHapticStrength(l),
-                              revert: () => setHapticStrengthForSession(prev, true),
-                            });
-                          }, 350);
-                        }
+                        queueAsk(
+                          l !== getSavedHapticStrength()
+                            ? {
+                                what: `Vibration ${l}`,
+                                noScope: true,
+                                apply: () => setHapticStrength(l),
+                                revert: () => setHapticStrengthForSession(prev),
+                              }
+                            : null,
+                        );
                       }}
                       style={[s.levelChip, on && s.levelChipOn]}
                       accessibilityRole="radio"

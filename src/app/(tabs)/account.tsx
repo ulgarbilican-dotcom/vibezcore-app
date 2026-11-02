@@ -77,7 +77,7 @@ import {
   useDevBraceletActivated,
   useDevUserOverride,
 } from '@/utils/dev-user-override';
-import { openManageSubscriptions } from '@/services/subscription-actions';
+import { isOtherStore, openManageSubscriptions } from '@/services/subscription-actions';
 import { useIAP } from '@/hooks/useIAP';
 import { restorePurchases, silentRestoreAfterLogin } from '@/services/restore-purchases';
 import { clearSignedUrlCache } from '@/utils/audio-url';
@@ -488,7 +488,9 @@ function ProfileHeader({ email }: { email: string }) {
  *  Account is nooit nodig om dit te zien: het plan komt uit de store. */
 function PlanCard() {
   const { isPro, tier, isLoading, braceletModel, isBraceletOwner, label, renewLine, dayPass } = useMembershipStatus();
-  const { willRenew, validUntil } = useSubscription();
+  const { willRenew, validUntil, store } = useSubscription();
+  /* 2 nov 2026 (audit): abonnement gekocht op het andere platform (zelfde account) — wisselen kan enkel daar. */
+  const otherStore = isOtherStore(store);
   const { getProduct } = useIAP();
   const monthly = getProduct('monthly');
   const yearly = getProduct('yearly');
@@ -522,6 +524,11 @@ function PlanCard() {
   } else if (dayPass) {
     cta = { label: 'Keep full access', onPress: () => router.navigate('/subscribe' as never) };
     note = savePercent ? `Yearly saves ${savePercent}% compared to monthly.` : null;
+  } else if (otherStore) {
+    note = `Bought on ${store === 'APP_STORE' ? 'an iPhone' : 'an Android phone'}. Change or cancel it in ${
+      store === 'APP_STORE' ? 'the App Store' : 'Google Play'
+    }.`;
+    manage = true;
   } else if (cancelled) {
     /* Punt 23a (operator, 19 okt 2026): opgezegd maar nog actief → zeggen
        wat er blijft, niet enkel wanneer het stopt. */

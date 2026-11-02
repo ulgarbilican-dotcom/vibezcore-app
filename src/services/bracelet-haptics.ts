@@ -812,7 +812,7 @@ function play(
         looped.repeat,
         stopMs,
       );
-      if (!silent && getStateHear()) {
+      if (!silent && getStateHearNow()) {
         jsSoundOn = true;
         startHeartbeatSound('state-control');
       }

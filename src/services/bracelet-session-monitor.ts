@@ -46,7 +46,7 @@ import { AppState, Platform } from 'react-native';
 import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
-import { setHapticStrength, subscribeHapticStrength, type HapticStrength } from './haptic-strength-pref';
+import { endHapticStrengthSession, setHapticStrength, subscribeHapticStrength, type HapticStrength } from './haptic-strength-pref';
 import {
   addRemoteControlListener,
   dismissCompletionNotice,
@@ -720,6 +720,8 @@ export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): 
   clearTimers();
   state = null;
   persist();
+  /* Einde sessie: een trilsterkte "Just this time" vervalt (audit 2 nov). */
+  endHapticStrengthSession();
   if (opts?.natural) {
     releaseSessionHapticAtNaturalEnd();
     syncIosKeepAwake();
@@ -800,7 +802,18 @@ async function remoteResume(): Promise<void> {
   }
 }
 
+/* Audit 2 nov 2026: tijdens de gratis voorproef is er geen monitor-sessie — de pauzeknop op het vergrendelscherm (Android-melding én
+   iPhone Live Activity) deed dan niets of liet de afteller doorlopen. Het State Control-scherm registreert hier zijn eigen pauze/hervat. */
+let previewRemote: ((action: 'pause' | 'resume' | 'toggle') => void) | null = null;
+export function setPreviewRemoteHandler(fn: ((action: 'pause' | 'resume' | 'toggle') => void) | null): void {
+  previewRemote = fn;
+}
+
 addRemoteControlListener((action) => {
+  if (!state) {
+    previewRemote?.(action);
+    return;
+  }
   if (action === 'pause') void remotePause();
   else void remoteResume();
 });
@@ -808,7 +821,10 @@ addRemoteControlListener((action) => {
 /* iPhone: de pauze/hervat-knop in de Live Activity (vergrendelscherm en
    Dynamic Island, iOS 17+) — dezelfde weg als de knop op de Android-melding. */
 onLiveToggle('state', () => {
-  if (!state) return;
+  if (!state) {
+    previewRemote?.('toggle');
+    return;
+  }
   if (state.paused) void remoteResume();
   else void remotePause();
 });
@@ -904,6 +920,14 @@ export async function startStateControlNow(
   opts: { quick?: boolean } = {},
 ): Promise<boolean> {
   if (state) return false;
+  /* Audit 2 nov 2026: ook een start vanuit het plan, een herinnering of Quick Chill/Boost vraagt (één keer) de toestemming die de
+     Apple Watch nodig heeft om met gedimd scherm te blijven tikken — anders deed enkel de Start-knop dat. Inline require: geen kringverwijzing. */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    void (require('@/utils/watch-setup-tip') as typeof import('@/utils/watch-setup-tip')).maybeShowWatchSetupTip();
+  } catch {
+    /* een tip mag een sessie nooit tegenhouden */
+  }
   const meta = getModeMeta(mode);
   /* Snelle sessie (Quick Chill/Boost, 5 min): onder het modus-minimum mag
      hier — de telefoon/het horloge bewaakt zelf het einde. */

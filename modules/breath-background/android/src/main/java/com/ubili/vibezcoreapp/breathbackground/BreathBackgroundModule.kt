@@ -40,6 +40,8 @@ class StartBreathBackgroundOptions(
   @Field val modeName: String = "Breathwork",
   @Field val totalDurationMs: Double = 0.0,
   @Field val sessionRemainingMs: Double = 0.0,
+  /** Audit 2 nov 2026: telefoon-trilling uit, of het horloge tikt al → in de achtergrond ook niet trillen. */
+  @Field val haptics: Boolean = true,
 ) : Record
 
 class BreathBackgroundModule : Module() {
@@ -69,6 +71,7 @@ class BreathBackgroundModule : Module() {
         putExtra(BreathSessionService.EXTRA_START_ROUND, options.startRound)
         putExtra(BreathSessionService.EXTRA_START_REMAINING_MS, options.startRemainingMs)
         putExtra(BreathSessionService.EXTRA_MODE_NAME, options.modeName)
+        putExtra(BreathSessionService.EXTRA_HAPTICS, options.haptics)
         putExtra(BreathSessionService.EXTRA_TOTAL_DURATION_MS, options.totalDurationMs.toLong())
         putExtra(
           BreathSessionService.EXTRA_SESSION_REMAINING_MS,
