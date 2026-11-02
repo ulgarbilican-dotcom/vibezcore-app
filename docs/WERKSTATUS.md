@@ -39,6 +39,8 @@ pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
 
 ## 3. Huidige bouwronde (sinds de laatste store-build)
 
+- **2 nov 2026 09:46 — iOS-build 81 gestart** (commit 0a4567d3, auto-submit naar TestFlight): alle wijzigingen sinds build 80 + Google-login iPhone.
+
 - **2 nov 2026 — Google-login iPhone:** iOS OAuth-client `80535193832-uu4e6e…` aangemaakt (project vibezcore1, bundel com.ubili.vibezcoreapp), in app.json (googleIosClientId + iosUrlScheme), en toegevoegd aan Supabase › Google › Client IDs (gecontroleerd). Werkt pas in de volgende iOS-build.
 
 - **2 nov 2026 — standaarden:** State Control staat standaard op Haptic + Audio (hartslaggeluid aan; wie zelf Haptic kiest, houdt dat). Trilsterkte: Strong blijft de standaard; een andere sterkte vraagt "Just this time / Remember" (Breathwork: dezelfde popup als Voice; State Control: regel in het blad). Nog niet gebouwd.
