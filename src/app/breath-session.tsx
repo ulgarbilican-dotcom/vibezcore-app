@@ -1142,15 +1142,13 @@ export function BreathSession() {
   const [hapticGlobal, setHapticGlobal] = useSetting('hapticsPhone');
   const [voiceGenderSetting, setVoiceGenderSetting] = useSetting('voiceGender');
   const pref = prefs[st.key] ?? {};
-  /* 29 okt 2026 (operator: "sessie moet altijd met stem en vibratie aan starten"): elke sessie start met stem en trilling AAN;
-     uitzetten in Audio & Haptics geldt enkel voor die sessie. Vervangt de onthouden keuze per toestand/voor alles (5 aug / 20 sept)
-     voor stem en trilling; de stemkeuze (Eli/Benjamin) wordt wel nog onthouden. Stil ademen bij anderen: per sessie uitzetten. */
-  const voiceDefault = true;
-  void voiceGlobal;
+  /* 2 nov 2026 (operator: "als gebruiker haptics uitzet: dezelfde vraag, enkel deze sessie of voor alle sessies — ook op Android"): terug
+     naar de onthouden keuze (vervangt 29 okt "altijd aan"). Standaard staan stem en trilling aan; enkel wie "voor alle sessies" (of deze
+     toestand) kiest, verandert de standaard. */
+  const voiceDefault = pref.voice ?? voiceGlobal;
   const [privateOn, setPrivateOn] = useState(isPrivateMode());
   const [voiceToggled, setVoiceToggled] = useState(false);
-  const hapticDefault = true;
-  void hapticGlobal;
+  const hapticDefault = pref.haptics ?? hapticGlobal;
   const voiceGenderDefault = pref.voiceGender ?? voiceGenderSetting;
   /* Mens-leesbare naam voor de "Just for …"-knop in het onthoud-scherm
      hieronder — `st.eyebrow` is de bestaande toestandsnaam, maar staat
@@ -1365,16 +1363,21 @@ export function BreathSession() {
      dan neemt de telefoon het trillen weer over vanaf de volgende fase. Stem en beeld lopen gewoon door. */
   const watchBreathRef = useRef(false);
   const lastBreathAckRef = useRef(0);
+  const [watchTapping, setWatchTapping] = useState(false);
   useEffect(() => {
     const off = onBreathAck(() => {
       lastBreathAckRef.current = Date.now();
       if (!watchBreathRef.current) {
         watchBreathRef.current = true;
+        setWatchTapping(true);
         stopPhaseHaptic();
       }
     });
     const t = setInterval(() => {
-      if (watchBreathRef.current && Date.now() - lastBreathAckRef.current > 25_000) watchBreathRef.current = false;
+      if (watchBreathRef.current && Date.now() - lastBreathAckRef.current > 25_000) {
+        watchBreathRef.current = false;
+        setWatchTapping(false);
+      }
     }, 5_000);
     return () => {
       off();
@@ -2235,6 +2238,7 @@ export function BreathSession() {
     (at?: { startRound: number; startPhase: number; phaseRemainingMs: number }) => {
       /* Nieuwe start/hervatting: het horloge moet opnieuw bevestigen voor de telefoon zwijgt (2 nov 2026, breath_ack). */
       watchBreathRef.current = false;
+      setWatchTapping(false);
       /* "Smartwatch" uit in Audio & Haptics (14 okt 2026): niets naar het horloge. */
       if (!getSetting('watchHaptics')) return;
       try {
@@ -4217,7 +4221,14 @@ export function BreathSession() {
                 onValueChange={(v) => {
                   const prev = voiceOn;
                   setVoiceOnLocal(v);
-                  void prev; // enkel deze sessie (29 okt 2026) — geen onthoud-vraag meer
+                  /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
+                  if (v !== voiceDefault) {
+                    setAskDefault({
+                      what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
+                      apply: (scope) => remember({ voice: v }, scope),
+                      revert: () => setVoiceOnLocal(prev),
+                    });
+                  }
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
@@ -4412,13 +4423,26 @@ export function BreathSession() {
               <VibezGlass radius={18} level="normal" style={StyleSheet.absoluteFill} />
             {/* Rij 3 — Phone haptics. */}
             <View style={s.voiceSheetRow}>
-              <Text style={s.voiceSheetRowLabel}>Phone haptics</Text>
+              {/* 2 nov 2026 (operator: "als de smartwatch de haptics overneemt, moet de schuif Phone haptics automatisch uit; daarna terug
+                  naar de ingestelde"): zolang het horloge tikt (breath_ack) staat hij uit en vergrendeld, met de uitleg eronder. */}
+              <View style={{ flex: 1 }}>
+                <Text style={s.voiceSheetRowLabel}>Phone haptics</Text>
+                {watchTapping ? <Text style={s.watchTappingNote}>Your watch is tapping</Text> : null}
+              </View>
               <Switch
-                value={hapticsOn}
+                disabled={watchTapping}
+                value={hapticsOn && !watchTapping}
                 onValueChange={(v) => {
                   const prev = hapticsOn;
                   setHapticsOn(v);
-                  void prev; // enkel deze sessie (29 okt 2026) — geen onthoud-vraag meer
+                  /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
+                  if (v !== hapticDefault) {
+                    setAskDefault({
+                      what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
+                      apply: (scope) => remember({ haptics: v }, scope),
+                      revert: () => setHapticsOn(prev),
+                    });
+                  }
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
                 thumbColor="#ffffff"
@@ -5883,6 +5907,7 @@ function makeStyles(st: BreathState, accent: string, accentSoft: string) {
   /* 13 okt 2026 (operator, Apple-stijl): gesegmenteerde keuze — één blok,
      gelijke vlakken, de gekozen stand wit met donkere tekst. Exact dezelfde
      look als VIBRATION STRENGTH in State Control (bracelet-control avSeg). */
+  watchTappingNote: { color: 'rgba(255,255,255,0.5)', fontFamily: BrandFonts.regular, fontSize: 12, marginTop: 2 },
   strengthNote: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, marginTop: -6, marginBottom: 14 },
   levelRow: {
     flexDirection: 'row',
