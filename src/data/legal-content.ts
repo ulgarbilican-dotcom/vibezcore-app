@@ -89,7 +89,7 @@ export const TERMS: LegalDoc = {
   title: 'Terms and Conditions',
   subtitle:
     'Please read these terms carefully before using the VIBEZCORE platform, services, or products.',
-  lastUpdated: 'October 2026',
+  lastUpdated: 'November 2026',
   short: 'Terms',
   blocks: [
     /* ── 01. Use of the Platform ── */
@@ -240,11 +240,11 @@ export const TERMS: LegalDoc = {
         'No VIBEZCORE account is needed to purchase. An optional account lets you use Premium on your other devices',
       ],
     },
-    { kind: 'h3', text: 'Day Pass (one-time purchase)' },
+    { kind: 'h3', text: 'Day Pass (24 hours, does not renew)' },
     {
       kind: 'ul',
       items: [
-        `The Day Pass is a one-time purchase charged to your ${STORE_ACCOUNT} when you confirm it. It is not a subscription and does not renew`,
+        `The Day Pass is a one-time purchase charged to your ${STORE_ACCOUNT} when you confirm it. It does not renew automatically and nothing more is charged after it`,
         'It gives access to all VIBEZCORE Premium content in the app for 24 hours from the moment of purchase. Access ends automatically after that',
         'Audio is streamed during the Day Pass (an internet connection is needed)',
         'You can buy a new Day Pass at any time, or switch to a subscription',
