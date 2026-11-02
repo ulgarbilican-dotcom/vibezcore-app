@@ -171,8 +171,12 @@ export function SalesNudgeHost() {
   /* 1 nov 2026 (operator, iOS build 69: "Welcome Back verschijnt onmiddellijk, is dat de bedoeling?"): niet meteen bij het openen,
      pas na 20 s op de app (zoals de Day Pass-kaart, die na 60 s komt). */
   const openedAtRef = useRef(Date.now());
+  /* 2 nov 2026 (operator: "de dagpas-popup komt te snel; app snel sluiten en weer openen moet de telling opnieuw laten beginnen"):
+     rustig-rondkijk-seconden van DEZE opening — de kaart (eerste keer én opnieuw) pas na DAY_PASS_FIRST_AFTER_SEC in één opening. */
+  const openActiveSecRef = useRef(0);
   const onAppOpen = useCallback(() => {
     openedAtRef.current = Date.now();
+    openActiveSecRef.current = 0;
     reshowArmedRef.current = hasDismissedPlansEnough();
     winBackKeyRef.current = null;
     setOpenSeq((n) => n + 1);
@@ -250,6 +254,7 @@ export function SalesNudgeHost() {
     }
 
     if (braceletRef.current || !dayPassCapAllows()) return;
+    if (openActiveSecRef.current < DAY_PASS_FIRST_AFTER_SEC) return;
     const first = !hasShownDayPass() && getActiveSeconds() >= DAY_PASS_FIRST_AFTER_SEC;
     const reshow = hasShownDayPass() && reshowArmedRef.current;
     if (!first && !reshow) return;
@@ -265,6 +270,7 @@ export function SalesNudgeHost() {
       const s = subRef.current;
       if (!s.isLoading && !s.isPro && !braceletRef.current && isCalmBrowsing(pathRef.current) && !cardRef.current) {
         addActiveSeconds(TICK_MS / 1000);
+        openActiveSecRef.current += TICK_MS / 1000;
       }
       tryShow();
     }, TICK_MS);
