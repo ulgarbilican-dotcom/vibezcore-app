@@ -220,7 +220,10 @@ private struct StateFace: View {
     /* 1 nov 2026 (iOS build 68, operator: "blijft altijd op 1 min staan"): de eigen minutenteller hing aan de app, die met de pols
        omlaag niet (altijd) wakker is. Nu telt het systeem zelf af (zoals de Live Activity), ook als de app even slaapt. */
     if ambient && !state.paused, let end = state.endDate {
-      return Text(timerInterval: now...max(now, end), countsDown: true, showsHours: false)
+      /* 2 nov 2026 (operator: "seconden op het gedimde scherm lopen 1 s achter"): de systeemteller rondt naar BOVEN af, de iPhone naar
+         beneden — 1 s vroeger laten eindigen geeft dezelfde seconde als de telefoon. */
+      let shown = end.addingTimeInterval(-1)
+      return Text(timerInterval: now...max(now, shown), countsDown: true, showsHours: false)
     }
     return Text(clockText(remaining, roundUp: false))
   }
@@ -559,7 +562,7 @@ private struct BreathFace: View {
         if !paused && ambient {
           /* Always On: minuten, elke minuut bijgewerkt (19 okt 2026) */
           /* 1 nov 2026: systeemteller (zie StateFace) i.p.v. een eigen minutenteller die kon blijven hangen */
-          (Text(timerInterval: now...max(now, controller.sessionEnd), countsDown: true, showsHours: false) + Text(" left"))
+          (Text(timerInterval: now...max(now, controller.sessionEnd.addingTimeInterval(-1)), countsDown: true, showsHours: false) + Text(" left"))
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(Color.white.opacity(0.59))
         }

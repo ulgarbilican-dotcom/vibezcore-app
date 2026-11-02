@@ -202,7 +202,9 @@ final class BreathSessionController: NSObject, ObservableObject {
         let now = Date()
         let elapsedNow = now.timeIntervalSince1970 - (sentAt + PhoneConnector.shared.clockAheadMs()) / 1000
         let elapsedOwn = self.syncElapsedUsed + now.timeIntervalSince(self.syncAt)
-        if abs(elapsedNow - elapsedOwn) > Self.resyncTolerance {
+        /* 2 nov 2026: eerste meting (na 3 s) vanaf 0,06 s, daarna enkel nog bij een grote afwijking (> 0,3 s) — zie StateSessionController. */
+        let first = after == Self.resyncFirstSec
+        if abs(elapsedNow - elapsedOwn) > (first ? 0.06 : 0.3) {
           self.resyncing = true
           self.apply(msg)
           self.resyncing = false

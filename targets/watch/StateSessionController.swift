@@ -283,7 +283,11 @@ final class StateSessionController: ObservableObject {
       DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) { [weak self] in
         guard let self = self, gen == self.generation, self.active, !self.paused, let msg = self.syncMessage else { return }
         let drift = PhoneConnector.shared.clockAheadMs() - self.syncAheadUsed
-        if abs(drift) > Self.resyncToleranceMs {
+        /* 2 nov 2026 (operator op build 75: "begint goed maar wijkt later af"): de eerste meting na de start (na 3 s) corrigeert al vanaf 60 ms;
+           daarna enkel nog bij een GROTE afwijking (> 300 ms, bv. na een onderbreking). Een Apple Watch-klok verschuift tijdens een sessie niet
+           echt — herhaald herijken op Bluetooth-meetruis deed het ritme telkens een stukje verspringen. */
+        let first = after == Self.resyncFirstSec
+        if abs(drift) > (first ? 60 : 300) {
           self.start(msg, sentAtMs: self.syncStamp)
         } else {
           self.scheduleResync(gen: gen, after: Self.resyncEverySec)
@@ -436,7 +440,8 @@ final class StateSessionController: ObservableObject {
      houdt wel rekening met zijn eigen opstarttijd (IOS_FIRST_BEAT_MS / SOUND_LEAD_MS in bracelet-haptics.ts), het horloge niet. Zoals op de
      Galaxy Watch (WearStateSessionService, motor ~190 ms na de aanroep → voelbare tik ≈ +60 ms na het ritmemoment, waar ook de puls op het
      telefoonscherm piekt) wordt de tik nu zoveel VÓÓR het slagmoment aangeroepen. Startwaarde, op gevoel bij te stellen: hoger = pols vroeger. */
-  static let hapticLeadSec: Double = 0.10
+  /* 2 nov 2026 (operator op build 75: "bij Sleep loopt de pulse iets vooruit"): 0,10 → 0,05 s. */
+  static let hapticLeadSec: Double = 0.05
 
   private func scheduleNextBeat(gen: Int) {
     guard gen == generation, let p = params else { return }
