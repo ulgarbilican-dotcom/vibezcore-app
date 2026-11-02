@@ -36,7 +36,9 @@ class BreathListenerService : WearableListenerService() {
       startActivity(
         Intent(this, MainActivity::class.java).addFlags(
           Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP,
-        ),
+        /* 2 nov 2026 (operator: "bij starten zie ik eerst 1-2 s het beginscherm"): ook bij een start vanaf de telefoon het
+           beginscherm verbergen tot de sessie er is — zoals een start op het horloge zelf. */
+        ).putExtra(MainActivity.EXTRA_OPENING, true),
       )
     } catch (e: Exception) {
       android.util.Log.w("VZWear", "bringSessionToFront blocked: ${e.message}")
