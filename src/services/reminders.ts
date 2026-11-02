@@ -140,7 +140,29 @@ export async function ensurePermission(): Promise<boolean> {
    ernaartoe (hooguit één keer per week, niet bij elke start). Zelfde op iPhone en Android. */
 const OFF_NOTICE_KEY = 'vz_reminders_off_notice_v1';
 async function ensurePlanPermission(): Promise<boolean> {
-  if (await ensurePermission()) return true;
+  /* 2 nov 2026 (operator: "bij het aanmaken van een plan ook een melding voor notifications — State Control en Breathwork"): nog nooit
+     gevraagd → eerst onze eigen uitleg, pas op "Allow" de vraag van Apple/Android. Zo weet de gebruiker waarom hij ja zegt. */
+  try {
+    const cur = await Notifications.getPermissionsAsync();
+    if (cur.granted) return true;
+    if (cur.canAskAgain) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { showVibezAlert } = require('@/components/VibezAlert') as typeof import('@/components/VibezAlert');
+      const pick = await showVibezAlert({
+        title: "Get a reminder when it's time",
+        message: 'Allow notifications and VIBEZCORE reminds you when a session in your plan is due. Nothing else, no marketing.',
+        buttons: [
+          { text: 'Allow', style: 'primary' },
+          { text: 'Not now', style: 'cancel' },
+        ],
+      });
+      if (pick !== 0) return false;
+      const asked = await Notifications.requestPermissionsAsync();
+      return asked.granted;
+    }
+  } catch {
+    return false;
+  }
   try {
     const last = Number((await AsyncStorage.getItem(OFF_NOTICE_KEY)) ?? 0);
     if (Date.now() - last < 7 * 24 * 3600 * 1000) return false;
