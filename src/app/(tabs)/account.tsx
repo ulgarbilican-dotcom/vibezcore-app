@@ -529,12 +529,9 @@ function PlanCard() {
   } else if (tier === 'monthly') {
     cta = {
       label: savePercent ? `Switch to Yearly · save ${savePercent}%` : 'Switch to Yearly',
-      /* Android: de plannen in de app (de Play Store kan niet wisselen
-         tussen twee abonnementen); iPhone: Apple's eigen beheerblad. */
-      onPress: () =>
-        Platform.OS === 'android'
-          ? router.navigate('/subscribe' as never)
-          : void openManageSubscriptions(),
+      /* De plannen in de app, op beide toestellen (2 nov 2026, audit iPhone = Android). Op de iPhone is jaarlijks kopen binnen dezelfde
+         abonnementsgroep een gewone StoreKit-upgrade (Apple regelt de verrekening); Android wisselt via productChangeInfo (iap-real). */
+      onPress: () => router.navigate('/subscribe' as never),
     };
     manage = true;
   } else {

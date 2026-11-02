@@ -393,9 +393,10 @@ export default function SubscribeScreen() {
       return "We couldn't reach the store. Check your connection and try again.";
     }
     if (code === 'unavailable') {
-      return Platform.OS === 'android'
-        ? "This subscription isn't available on this device yet. If you were just added as a license tester, this can take up to 24 hours. Otherwise, please contact support."
-        : "This subscription isn't available right now. Please try again later.";
+      /* 2 nov 2026 (audit iPhone = Android): één tekst; de license-tester-uitleg enkel in ontwikkeling. */
+      return __DEV__
+        ? "This subscription isn't available on this device yet. If you were just added as a license tester, this can take up to 24 hours."
+        : "This subscription isn't available right now. Please try again later or contact support.";
     }
     if (code === 'already_owned') {
       return 'You already own this subscription. Tap "Already subscribed? Restore purchases" below to activate it on this device.';

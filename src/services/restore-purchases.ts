@@ -32,7 +32,7 @@
 import { Platform } from 'react-native';
 import { getCachedSubscription, refreshSubscription } from '@/hooks/useSubscription';
 import { getAuthUserIdFromToken, getToken, linkRevenueCatUser, markGuestPurchase } from './auth';
-import { getIAP } from './iap';
+import { getIAP, USE_MOCK_IAP } from './iap';
 import type { IapPurchase } from './iap-contract';
 
 /** Iter v232 (2026-07-09): silent auto-restore na login. Voorheen moest
@@ -66,6 +66,12 @@ export function silentRestoreAfterLogin(): Promise<boolean> {
         if (Platform.OS !== 'ios') {
           const purchases = await iap.restorePurchases();
           restored = Array.isArray(purchases) && purchases.length > 0;
+        } else if (!USE_MOCK_IAP) {
+          /* 2 nov 2026 (audit iPhone = Android, operator: "Apple moet exact dezelfde werking volgen"): ook op de iPhone na het inloggen een
+             bestaande aankoop meteen activeren — via syncPurchases (StoreKit 2: GEEN Apple-ID-venster, anders dan restorePurchases). */
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const Purchases = (require('react-native-purchases') as typeof import('react-native-purchases')).default;
+          await Purchases.syncPurchases();
         }
       } catch {
         /* swallow — 'Nothing to restore' throwt niet meer sinds v227,
