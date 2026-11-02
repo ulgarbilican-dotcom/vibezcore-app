@@ -379,7 +379,9 @@ final class WatchSettings: ObservableObject {
   /* 2 nov 2026 (operator: "in Settings voelt Medium sterker, maar in de sessie zelf klopt het wel — daar voelt Medium als Medium"): de
      SESSIE (build 75) is de maatstaf: lub = .start (Strong) of .directionUp (Medium), dub = het lichte .click. De testknop speelde twee keer
      de stevige tik vlak na elkaar (de tweede breekt de eerste af) en voelde daardoor anders — die speelt nu exact de sessie (previewHeartbeat). */
-  var beatTap: WKHapticType { strength == "medium" ? .directionUp : .start }
+  /* 2 nov 2026 (operator op build 80: "in de instellingen is Strong opnieuw minder hard — behoud de tikken, draai de namen om; in de sessies
+     moet het ook kloppen"): Strong = .directionUp (voelt het hardst), Medium = .start. Testknop en sessie gebruiken exact deze tik. */
+  var beatTap: WKHapticType { strength == "medium" ? .start : .directionUp }
   /// De tweede, lichtere klop (dub) — zoals in de sessie.
   let dubTap: WKHapticType = .click
 

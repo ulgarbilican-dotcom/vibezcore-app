@@ -619,13 +619,12 @@ struct WatchSettingsView: View {
           .foregroundColor(dim)
           .multilineTextAlignment(.center)
           .padding(.top, 4)
-        PickRow(title: "Feel State Control", sub: "A few heartbeats", subColor: dim, current: false, color: teal) {
-          settings.previewHeartbeat()
-        }
-        .padding(.top, 8)
-        PickRow(title: "Feel Breathwork", sub: "4 s in, 2 s hold, 4 s out", subColor: dim, current: false, color: teal) {
+        /* 2 nov 2026 (operator: "wat voor zin heeft Feel State Control nog?"): weg — Strong/Medium aantikken laat de hartslag al voelen.
+           Wel een knop om te LEREN hoe in, vast en uit aanvoelen. */
+        PickRow(title: "Learn the breath taps", sub: "Inhale 4 s, hold 2 s, exhale 4 s", subColor: dim, current: false, color: teal) {
           settings.previewBreath()
         }
+        .padding(.top, 8)
         Text("Silent Mode on your watch drops the sound and keeps the taps.")
           .font(.system(size: 10))
           .foregroundColor(dim)

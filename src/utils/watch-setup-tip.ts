@@ -31,7 +31,7 @@ export function showWatchSetupInfo(): void {
     const perm = Platform.OS === 'ios' ? await getWorkoutPermission() : 'unavailable';
     const needsWorkouts = perm === 'denied' || perm === 'notDetermined';
     const watchSteps =
-      'On your Apple Watch, open Settings › Sounds & Haptics:\n1. Silent Mode: on\n2. Haptics: Prominent\n3. System Haptics: on\n\nSilent Mode keeps the taps and drops the sound.\n\nBreathwork on your wrist: inhale = fast taps going up, hold = slow single taps, exhale = steady taps going down.\n\nIn VIBEZCORE on your watch, tap Haptics to choose Strong or Medium and to feel the taps. Strong is the default; your choice stays until you change it.';
+      'On your Apple Watch, open Settings › Sounds & Haptics:\n1. Silent Mode: on\n2. Haptics: Prominent\n3. System Haptics: on\n\nSilent Mode keeps the taps and drops the sound.\n\nBreathwork on your wrist: inhale = fast taps going up, hold = slow single taps, exhale = steady taps going down.\n\nIn VIBEZCORE on your watch, tap Haptics to choose Strong or Medium and to learn the breath taps. Strong is the default; your choice stays until you change it.';
     const workoutsStep =
       'First, so your watch keeps tapping with the screen dimmed:\niPhone Settings › Privacy & Security › Health › VIBEZCORE › Workouts: on\n(No workout or health data is read or saved.)\n\n';
     void showVibezAlert({
