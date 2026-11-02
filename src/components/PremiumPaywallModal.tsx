@@ -106,7 +106,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
     } else if (result.ok) {
       void showVibezAlert({
         title: 'Nothing to restore',
-        message: 'No active purchase was found for this Apple ID or Google account.',
+        message: `No active purchase was found for this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google Play account'}.`,
       });
     } else {
       void showVibezAlert({ title: 'Could not restore', message: 'Please check your connection and try again.' });

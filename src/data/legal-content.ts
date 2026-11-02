@@ -425,7 +425,7 @@ export const PRIVACY: LegalDoc = {
       items: [
         'Random device identifier',
         'Authentication token',
-        'IAP receipts (Apple / Google)',
+        WEB ? 'IAP receipts (Apple / Google)' : IOS ? 'IAP receipts (Apple)' : 'IAP receipts (Google Play)',
         'Listening progress',
         'Favourites & follows',
         'Session history (Breathwork & State Control)',

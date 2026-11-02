@@ -1099,6 +1099,16 @@ function phoneTakesRhythmBack(): void {
 function onWatchTookOver(watchdogOn = false): void {
   lastWatchAckAt = Date.now();
   clearWatchRelayRetries();
+  /* 2 nov 2026 (operator op build 83: "bij Free voel ik de haptics op telefoon én horloge tegelijk"): de 30 s-voorproef is geen sessie
+     (`session` is dan null), dus de bevestiging van het horloge werd genegeerd. Ook dan zwijgt de telefoon — één ritme, op de pols. */
+  if (!session && previewRun && previewOnWatch) {
+    if (Platform.OS === 'ios') {
+      if (!muteIosPlanHaptics()) setSessionBeatHaptics(false);
+    } else if (hasNativeWaveform() && isNativeSessionAlive()) {
+      setNativeSessionHaptics(false);
+    }
+    return;
+  }
   /* 2 nov 2026 (operator, iPhone + Apple Watch: "ik voel toch haptics op de telefoon én de smartwatch"): het uitzetten van de iPhone-
      trilling gebeurde één keer, bij de eerste bevestiging — viel die vóór de geluidsmotor klaar was, dan bleef de telefoon trillen. Nu bij
      ELKE bevestiging van het horloge (elke 10 s) opnieuw: de telefoon zwijgt zolang het horloge speelt. */

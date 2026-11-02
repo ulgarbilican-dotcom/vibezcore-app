@@ -453,10 +453,9 @@ final class StateSessionController: ObservableObject {
      telefoonscherm piekt) wordt de tik nu zoveel VÓÓR het slagmoment aangeroepen. Startwaarde, op gevoel bij te stellen: hoger = pols vroeger. */
   /* 2 nov 2026 (operator op build 75: "bij Sleep loopt de pulse iets vooruit"): 0,10 → 0,05 s. */
   static let hapticLeadSec: Double = 0.05
-  /* 2 nov 2026 (operator op build 83: "bij State Control loopt de tik op het horloge een fractie van een seconde achter, voor alle
-     toestanden; de seconden kloppen"): de motor van het horloge reageert trager dan het geluid/beeld van de telefoon. Voor de hartslag
-     de tik iets vroeger inplannen (Breathwork blijft op hapticLeadSec, daar voelde het gelijk). */
-  static let stateHapticLeadSec: Double = 0.12
+  /* 2 nov 2026: op build 83 voelde de operator de tikken weer gelijk met de telefoon (de achterstand kwam van het verkeerde tijdstempel,
+     opgelost in WatchBreathModule.sendStateStart). Daarom dezelfde voorsprong als Breathwork; apart gehouden om later bij te stellen. */
+  static let stateHapticLeadSec: Double = 0.05
 
   private func scheduleNextBeat(gen: Int) {
     guard gen == generation, let p = params else { return }

@@ -512,7 +512,7 @@ export default function SubscribeScreen() {
          zorgt voor UX afhandeling. */
       if (result.error.code === 'already_owned') {
         setErrMsg(
-          "A VIBEZCORE subscription is already active on this Google/Apple account. Sign in to the VIBEZCORE account you used for that purchase, or contact support if you're not sure which account it belongs to."
+          `A VIBEZCORE subscription is already active on this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google Play account'}. Sign in to the VIBEZCORE account you used for that purchase, or contact support if you're not sure which account it belongs to.`
         );
         setErrDebug(`already_owned · no auto-restore (v236 security)`);
         setOwnedError(true);
@@ -1099,7 +1099,7 @@ Create a free account to keep Premium on all your devices.`,
         void showVibezAlert({
           title: 'Nothing to restore',
           message:
-            'No active purchase was found for this Apple ID or Google account.',
+            `No active purchase was found for this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google Play account'}.`,
         });
       }
     } else {
