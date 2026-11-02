@@ -14,6 +14,9 @@ import Foundation
 struct VibezToggleSessionIntent: LiveActivityIntent {
   static let title: LocalizedStringResource = "Pause or resume session"
   static let isDiscoverable: Bool = false
+  /* 2 nov 2026 (operator op build 83: "pauzeren lukt pas na mijn ontgrendelcode"): standaard vraagt iOS ontgrendeling voor een knop
+     op het vergrendelscherm. Pauzeren/hervatten van je eigen sessie hoort zonder code te kunnen, zoals een mediaspeler. */
+  static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
 
   init() {}
 

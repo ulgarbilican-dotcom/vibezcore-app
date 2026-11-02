@@ -453,6 +453,10 @@ final class StateSessionController: ObservableObject {
      telefoonscherm piekt) wordt de tik nu zoveel VÓÓR het slagmoment aangeroepen. Startwaarde, op gevoel bij te stellen: hoger = pols vroeger. */
   /* 2 nov 2026 (operator op build 75: "bij Sleep loopt de pulse iets vooruit"): 0,10 → 0,05 s. */
   static let hapticLeadSec: Double = 0.05
+  /* 2 nov 2026 (operator op build 83: "bij State Control loopt de tik op het horloge een fractie van een seconde achter, voor alle
+     toestanden; de seconden kloppen"): de motor van het horloge reageert trager dan het geluid/beeld van de telefoon. Voor de hartslag
+     de tik iets vroeger inplannen (Breathwork blijft op hapticLeadSec, daar voelde het gelijk). */
+  static let stateHapticLeadSec: Double = 0.12
 
   private func scheduleNextBeat(gen: Int) {
     guard gen == generation, let p = params else { return }
@@ -461,7 +465,7 @@ final class StateSessionController: ObservableObject {
       scheduleEndSignal(at: wallDate(forCurve: nextBeatT), gen: gen)
       return
     }
-    beatTimer = schedule(at: wallDate(forCurve: nextBeatT).addingTimeInterval(-Self.hapticLeadSec)) { [weak self] in
+    beatTimer = schedule(at: wallDate(forCurve: nextBeatT).addingTimeInterval(-Self.stateHapticLeadSec)) { [weak self] in
       self?.fireBeat(gen: gen, params: p)
     }
   }
@@ -484,14 +488,14 @@ final class StateSessionController: ObservableObject {
       beat = p.beatAt(nextBeatT)
     }
     let beatDate = wallDate(forCurve: nextBeatT)
-    WatchTiming.shared.record(planned: beatDate.addingTimeInterval(-Self.hapticLeadSec))
+    WatchTiming.shared.record(planned: beatDate.addingTimeInterval(-Self.stateHapticLeadSec))
     /* Trilsterkte van het horloge (19 okt 2026, WatchSettings). */
     WatchSettings.shared.play(.beat)
     lastLubDate = beatDate
     lastCycleMs = beat.cycleMs
     beats.send(true)
     if playDub && WatchSettings.shared.playsDub {
-      dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000 - Self.hapticLeadSec)) { [weak self] in
+      dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000 - Self.stateHapticLeadSec)) { [weak self] in
         guard let self = self, gen == self.generation else { return }
         /* 2 nov 2026: dub = het lichte .click, exact zoals build 75 (de operator: in de sessie klopt het zo). */
         WKInterfaceDevice.current().play(WatchSettings.shared.dubTap)
