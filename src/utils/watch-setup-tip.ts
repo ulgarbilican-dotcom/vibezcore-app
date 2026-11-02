@@ -19,7 +19,7 @@ const KEY = 'vz_watch_setup_tip_v1';
 export const STRENGTH_NOTE =
   Platform.OS === 'ios'
     ? 'Strong is the default. Change it for this session only, or remember it. On your Apple Watch: open VIBEZCORE › Haptics.'
-    : 'Strong is the default. Change it for this session only, or remember it. Your watch follows what you remember.';
+    : 'Strong is the default. Change it for this session only, or remember it. On your watch: open VIBEZCORE › Haptics.';
 let busy = false;
 let deniedShownThisLaunch = false;
 

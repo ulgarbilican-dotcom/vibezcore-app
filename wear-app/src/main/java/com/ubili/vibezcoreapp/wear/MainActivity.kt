@@ -512,7 +512,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     /* 14 okt 2026 (operator: "recent per onderdeel i.p.v. op de
        startpagina"): enkel de twee onderdelen; elk opent op je laatst
        gebruikte toestand (ModesActivity). */
-    fun choice(label: String, icon: View, kind: String, sub: String) {
+    fun choice(label: String, icon: View, kind: String, sub: String, open: (() -> Unit)? = null) {
       val row = android.widget.LinearLayout(this).apply {
         orientation = android.widget.LinearLayout.HORIZONTAL
         gravity = android.view.Gravity.CENTER_VERTICAL
@@ -524,7 +524,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
         isClickable = true
         contentDescription = label
         setOnClickListener {
-          startActivity(Intent(this@MainActivity, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, kind))
+          if (open != null) open()
+          else startActivity(Intent(this@MainActivity, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, kind))
         }
       }
       row.addView(icon, android.widget.LinearLayout.LayoutParams(dp(24f), dp(24f)).apply { marginEnd = dp(8f) })
@@ -570,6 +571,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
     // geen ondertitel (operator 14 okt: "die info mag weg")
     if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE, "")
     if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH, "")
+    /* 2 nov 2026: sterkte kiezen op het horloge, zoals op de Apple Watch (Strong standaard). */
+    choice("Haptics", glyph(R.drawable.ic_vz_haptics), "", "") {
+      startActivity(Intent(this@MainActivity, HapticsActivity::class.java))
+    }
     list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
   }
 

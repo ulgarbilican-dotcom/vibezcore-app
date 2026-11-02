@@ -39,7 +39,7 @@ pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
 
 ## 3. Huidige bouwronde (sinds de laatste store-build)
 
-- **2 nov 2026 — Galaxy Watch (volgende Android-ronde):** start vanaf de telefoon toonde 1-2 s het beginscherm → nu verborgen tot de sessie er is (EXTRA_OPENING ook in bringSessionToFront; wear compileert). Scherm blijft aan tot de time-out van het horloge (operator: 30 s) = systeemgedrag. Always On toonde de volle cirkel gedimd → nu bijna zwart: dunne grijze ring + resterende minuten, geen knoppen (zoals Apple Watch); sessie en trillingen lopen door. Voorstel: eigen Strong/Medium-pagina op de Galaxy Watch zoals Apple Watch (nu volgt hij de telefoon).
+- **2 nov 2026 — Galaxy Watch (volgende Android-ronde):** start vanaf de telefoon toonde 1-2 s het beginscherm → nu verborgen tot de sessie er is (EXTRA_OPENING ook in bringSessionToFront; wear compileert). Scherm blijft aan tot de time-out van het horloge (operator: 30 s) = systeemgedrag. Always On toonde de volle cirkel gedimd → nu bijna zwart: dunne grijze ring + resterende minuten, geen knoppen (zoals Apple Watch); sessie en trillingen lopen door. Galaxy Watch Haptics-pagina GEBOUWD (operator "ja"): Strong/Medium zoals Apple Watch, Strong standaard (255 = maximum), keuze gaat naar de telefoon (één instelling) en voelt meteen (HapticsActivity.kt; wear compileert).
 
 - **2 nov 2026 — iOS-build 82 gestart** (commit 2c5b9d13, auto-submit TestFlight): alle audit-fixes van vandaag. Volgende Android-ronde: Activity toonde onderaan een WITTE systeembalk (Android-navigatiebalk, operator-screenshot 12:15) → donker maken zoals de rest.
 
