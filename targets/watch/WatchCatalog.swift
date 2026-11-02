@@ -266,7 +266,9 @@ final class WatchSettings: ObservableObject {
      één sterkte voor de hele app (zoals op de iPhone). Zelfde tempo's; Strong = de omhoog/omlaag-tik (door de operator als sterkst gevoeld),
      Medium = de lichtere enkele .start-tik. */
   func breathTexture() -> (inEvery: Double, outEvery: Double, inTap: WKHapticType, outTap: WKHapticType) {
-    strength == "medium" ? (0.5, 0.9, .start, .start) : (0.5, 0.9, .directionUp, .directionDown)
+    /* 2 nov 2026 (operator: "bij Boost komt er bij exhale bijna niets"): uitademen elke 0,6 s i.p.v. 0,9 — een korte uitademing (2 s) voel je
+       zo duidelijk; nog altijd trager dan inademen (0,5 s), zodat in en uit verschillend aanvoelen. */
+    strength == "medium" ? (0.5, 0.6, .start, .start) : (0.5, 0.6, .directionUp, .directionDown)
   }
 
   func playRaw(_ t: WKHapticType) {
