@@ -48,7 +48,10 @@ function balance(text: string, lines: number): string {
 
 export default function BalancedText({ children, onTextLayout, ...rest }: TextProps) {
   const plain = typeof children === 'string' ? children : null;
-  const [balanced, setBalanced] = useState<string | null>(null);
+  /* 2 nov 2026 (operator op build 82: Profile toonde "Premium · Yearly" met de Free-tekst eronder): de herverdeelde versie hoort bij
+     ÉÉN tekst. Verandert de tekst, dan gold de oude herverdeling nog — nu enkel gebruikt als ze bij de huidige tekst hoort. */
+  const [balancedState, setBalancedState] = useState<{ src: string; text: string } | null>(null);
+  const balanced = balancedState && balancedState.src === plain ? balancedState.text : null;
   const handle = useCallback(
     (e: NativeSyntheticEvent<TextLayoutEventData>) => {
       onTextLayout?.(e);
@@ -59,7 +62,7 @@ export default function BalancedText({ children, onTextLayout, ...rest }: TextPr
       const prev = ls[ls.length - 2].text.trim();
       /* Wees: één woord, of de laatste regel is veel korter dan de vorige. */
       const orphan = !last.includes(' ') || last.length < prev.length * 0.55;
-      if (orphan) setBalanced(balance(plain, ls.length));
+      if (orphan) setBalancedState({ src: plain, text: balance(plain, ls.length) });
     },
     [plain, balanced, onTextLayout],
   );

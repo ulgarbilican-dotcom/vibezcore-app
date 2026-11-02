@@ -96,7 +96,9 @@ private struct TimerLabel: View {
     if state.paused {
       Text(fmt(state.remainingSec))
     } else {
-      Text(state.endDate, style: .timer)
+      /* 2 nov 2026 (operator op build 82: "na afloop begint de klok naar boven te tellen"): `style: .timer` telt na het einde verder op.
+         Een interval met countsDown stopt op 0:00. */
+      Text(timerInterval: min(Date(), state.endDate)...state.endDate, countsDown: true)
     }
   }
 }
@@ -136,7 +138,7 @@ private struct SubtitleLine: View {
         Text(phase)
           .font(.system(size: 14, weight: .semibold))
           .foregroundColor(.white)
-        Text(end, style: .timer)
+        Text(timerInterval: min(Date(), end)...end, countsDown: true)
           .font(.system(size: 14, weight: .semibold).monospacedDigit())
           .foregroundColor(Color(vzHex: state.colorHex))
       }

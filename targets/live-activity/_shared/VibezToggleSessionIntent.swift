@@ -18,6 +18,11 @@ struct VibezToggleSessionIntent: LiveActivityIntent {
   init() {}
 
   func perform() async throws -> some IntentResult {
+    /* 2 nov 2026 (build 82: de knop deed niets): binnen het app-proces ook rechtstreeks melden (NotificationCenter, hoofdthread) —
+       het Darwin-signaal hieronder blijft voor het geval iOS de intent in de extensie uitvoert. De module negeert een dubbele melding. */
+    await MainActor.run {
+      NotificationCenter.default.post(name: Notification.Name("com.ubili.vibezcoreapp.live.toggle.local"), object: nil)
+    }
     CFNotificationCenterPostNotification(
       CFNotificationCenterGetDarwinNotifyCenter(),
       CFNotificationName("com.ubili.vibezcoreapp.live.toggle" as CFString),

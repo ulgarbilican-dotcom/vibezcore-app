@@ -51,7 +51,14 @@ let vibezLiveToggleName = "com.ubili.vibezcoreapp.live.toggle"
 public class LiveActivityModule: Module {
   static weak var current: LiveActivityModule?
 
+  /* Eén tik kan via twee wegen binnenkomen (rechtstreeks + Darwin-signaal): binnen 0,8 s telt enkel de eerste. */
+  private var lastToggleAt = Date.distantPast
+  private var localObserver: NSObjectProtocol?
+
   func emitToggle() {
+    let now = Date()
+    if now.timeIntervalSince(lastToggleAt) < 0.8 { return }
+    lastToggleAt = now
     sendEvent("onLiveAction", ["action": "toggle"])
   }
 
@@ -72,6 +79,8 @@ public class LiveActivityModule: Module {
   private func stopObserving() {
     let center = CFNotificationCenterGetDarwinNotifyCenter()
     CFNotificationCenterRemoveEveryObserver(center, Unmanaged.passUnretained(self).toOpaque())
+    if let o = localObserver { NotificationCenter.default.removeObserver(o) }
+    localObserver = nil
   }
 
   public func definition() -> ModuleDefinition {
@@ -81,7 +90,13 @@ public class LiveActivityModule: Module {
 
     OnCreate {
       LiveActivityModule.current = self
-      self.observeToggle()
+      /* 2 nov 2026: op de hoofdthread inschrijven — die heeft altijd een lopende run loop; anders kon het Darwin-signaal verloren gaan. */
+      DispatchQueue.main.async {
+        self.observeToggle()
+        self.localObserver = NotificationCenter.default.addObserver(
+          forName: Notification.Name("com.ubili.vibezcoreapp.live.toggle.local"), object: nil, queue: .main
+        ) { [weak self] _ in self?.emitToggle() }
+      }
     }
 
     OnDestroy {
