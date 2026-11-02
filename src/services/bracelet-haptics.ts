@@ -102,6 +102,7 @@ import {
   type BeatPlan,
 } from '../../modules/session-audio';
 import { getStateHear, getStateHearNow, subscribeStateHear } from './state-sound-pref';
+import { getPhoneHapticsNow, subscribePhoneHaptics } from './state-phone-haptics-pref';
 import { audioOutputExtraMs } from './audio-latency';
 import { isLibraryPlaying, subscribeLibraryPlaying } from './library-priority';
 import { endLiveSession, showLiveSession } from '../../modules/live-activity';
@@ -293,7 +294,10 @@ function buildWaveform(
   const lubAmp = amplitudeControl ? Math.max(1, Math.min(255, Math.round(PHONE_AMP_LEVEL[st] * modeScale))) : 255;
   const dubAmp = amplitudeControl ? Math.max(1, Math.min(255, Math.round(lubAmp * 0.7))) : 255;
   const pushBeat = (cycleMs: number, dubAt: number) => {
-    timings.push(lubMs, dubAt - lubMs, dubMs, cycleMs - dubAt - dubMs);
+    /* Altijd een duidelijk gat tussen lub en dub (min. 45 ms), ook met lange tikken op Strong — anders voelt het als zoemen. */
+    const lub = Math.min(lubMs, Math.max(20, dubAt - 45));
+    const dub = Math.min(dubMs, Math.max(20, cycleMs - dubAt - 60));
+    timings.push(lub, dubAt - lub, dub, cycleMs - dubAt - dub);
     amplitudes.push(lubAmp, 0, dubAmp, 0);
   };
 
@@ -903,7 +907,8 @@ export function playModeSessionHaptic(mode: BraceletMode, elapsedSec: number, re
     Math.max(0, elapsedSec - session.curveZeroSec),
     remainingSec > 0 ? remainingSec : undefined,
     { elapsedSec, totalSec: elapsedSec + remainingSec },
-    false,
+    /* 2 nov 2026: "Phone haptics" uit = de telefoon trilt niet (geluid en horloge lopen door). */
+    !getPhoneHapticsNow(),
     session.restingBpm,
     session.startBpm,
   );
@@ -1076,6 +1081,13 @@ function phoneTakesRhythmBack(): void {
   stopWatchdog();
   if (!watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
   watchHasRhythm = false;
+  restartPhoneAtClock();
+}
+
+/** De telefoon speelt het ritme verder vanaf de huidige plek, met of zonder
+ *  eigen trilling volgens "Phone haptics" (2 nov 2026). */
+function restartPhoneAtClock(): void {
+  if (!session || session.pausedAt !== null || !lastClock) return;
   const clock = lastClock;
   const passed = (Date.now() - clock.at) / 1000;
   const elapsedSec = clock.elapsedSec + passed;
@@ -1087,7 +1099,7 @@ function phoneTakesRhythmBack(): void {
     Math.max(0, elapsedSec - session.curveZeroSec),
     remainingSec,
     { elapsedSec, totalSec: elapsedSec + remainingSec },
-    false,
+    !getPhoneHapticsNow(),
     session.restingBpm,
     session.startBpm,
   );
@@ -1174,6 +1186,13 @@ function onWatchTookOver(watchdogOn = false): void {
   );
 }
 onWearStateAck(() => onWatchTookOver(true));
+
+/* "Phone haptics" midden in een sessie omgezet (2 nov 2026): speelt het horloge, dan verandert er niets (de telefoon zwijgt toch);
+   anders speelt de telefoon verder vanaf de huidige plek, met of zonder eigen trilling. */
+subscribePhoneHaptics(() => {
+  if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
+  restartPhoneAtClock();
+});
 
 /** "Smartwatch"-schakelaar in Audio & Haptics, ook midden in een sessie
  *  (14 okt 2026). Uit: het horloge stopt en de telefoon trilt weer zelf,

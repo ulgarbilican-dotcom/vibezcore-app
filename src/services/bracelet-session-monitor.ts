@@ -47,6 +47,7 @@ import { getBracelet, USE_SIMULATED_BLE } from './bracelet';
 import { BleCommand, BraceletMode, getModeMeta } from './ble-contract';
 import { recordSession } from '@/utils/bracelet-history';
 import { endHapticStrengthSession, setHapticStrength, subscribeHapticStrength, type HapticStrength } from './haptic-strength-pref';
+import { endPhoneHapticsSession } from './state-phone-haptics-pref';
 import {
   addRemoteControlListener,
   dismissCompletionNotice,
@@ -720,8 +721,9 @@ export async function stopBraceletSessionMonitor(opts?: { natural?: boolean }): 
   clearTimers();
   state = null;
   persist();
-  /* Einde sessie: een trilsterkte "Just this time" vervalt (audit 2 nov). */
+  /* Einde sessie: een trilsterkte of "Phone haptics" voor "Just this time" vervalt (audit 2 nov). */
   endHapticStrengthSession();
+  endPhoneHapticsSession();
   if (opts?.natural) {
     releaseSessionHapticAtNaturalEnd();
     syncIosKeepAwake();

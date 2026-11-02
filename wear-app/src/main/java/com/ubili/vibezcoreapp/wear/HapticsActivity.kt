@@ -84,15 +84,16 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
   }
 
   private fun option(value: String, title: String, sub: String, selected: Boolean) {
-    val teal = Color.parseColor("#00A3A3")
+    /* 2 nov 2026 (operator: "omlijning in de teal kleur is niet mooi"): de gekozen optie = lichter glas met een zachte rand (≤16 %),
+       zoals de pillen in de app — geen gekleurde omlijning. */
     val row = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_VERTICAL
       setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
       background = GradientDrawable().apply {
         cornerRadius = dp(26f).toFloat()
-        setColor(Color.parseColor("#1C1C1E"))
-        if (selected) setStroke(dp(1.5f), teal)
+        setColor(if (selected) Color.parseColor("#3A3A3C") else Color.parseColor("#1C1C1E"))
+        if (selected) setStroke(dp(1f), Color.argb(40, 255, 255, 255))
       }
       isClickable = true
       contentDescription = if (selected) "$title, selected" else title
@@ -100,7 +101,7 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
     }
     row.addView(TextView(this).apply {
       text = title
-      setTextColor(if (selected) teal else Color.WHITE)
+      setTextColor(if (selected) Color.WHITE else Color.argb(200, 255, 255, 255))
       textSize = 13f
       typeface = Typeface.DEFAULT_BOLD
     })

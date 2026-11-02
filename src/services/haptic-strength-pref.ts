@@ -36,7 +36,10 @@ export const MS_FACTOR: Record<HapticStrength, number> = { soft: 0.55, medium: 1
  *  Strong duidelijk steviger. Tikduur ×1,8 (A16: Calm 42 → 76 ms) en kracht
  *  ×3 op toestellen met amplitude-regeling (Calm 24 → 72, Boost 65 → 195).
  *  Soft en Medium ongewijzigd. Het horloge staat op Strong al op 255 (max). */
-export const STATE_MS_FACTOR: Record<HapticStrength, number> = { ...MS_FACTOR, strong: 1.8 };
+/* 2 nov 2026 (operator, Galaxy A16 zonder amplitude-regeling: "Strong voelt zwak"): tikduur ×2,2 i.p.v. ×1,8 (Calm 42 → 92 ms,
+   Boost 60 → 132 ms). bracelet-haptics.ts houdt altijd een hoorbaar/voelbaar gat van 45 ms tussen lub en dub, zodat het een hartslag
+   blijft en geen zoemen. Telefoons MET amplitude-regeling gebruiken STATE_AMP_FACTOR (ongewijzigd). */
+export const STATE_MS_FACTOR: Record<HapticStrength, number> = { ...MS_FACTOR, strong: 2.2 };
 export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR, strong: 3 };
 
 /* 1 nov 2026 (operator, vervangt 29 okt "elke sessie op Strong"): "wie de app downloadt staat standaard op Strong; enkel als de gebruiker

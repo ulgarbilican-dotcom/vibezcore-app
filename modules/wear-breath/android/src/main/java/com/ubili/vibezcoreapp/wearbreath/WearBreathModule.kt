@@ -96,6 +96,7 @@ private const val PATH_STATE_START = "/vibezcore/state/start"
 private const val PATH_STATE_PAUSE = "/vibezcore/state/pause"
 private const val PATH_STATE_STOP = "/vibezcore/state/stop"
 private const val PATH_STATE_ACK = "/vibezcore/state/ack"
+private const val PATH_BREATH_ACK = "/vibezcore/breath/ack"
 /* 28 okt 2026 — samen starten, voor ELK horloge (operator: "telefoon start en wacht op smartwatch, beiden beginnen samen"): het (grote) sessiebericht
    gaat vooruit als PREPARE; het horloge maakt zich klaar en antwoordt READY; pas dan stuurt de telefoon het kleine GO ("begin over X ms") op een
    warme verbinding, en start zelf op hetzelfde moment. Geen kloktijden tussen de toestellen. */
@@ -181,6 +182,8 @@ class WearBreathModule : Module() {
         /* Het horloge speelt State Control echt af → JS legt de eigen
            trilling op de telefoon stil (WATCH_PROTOCOL §3). */
         PATH_STATE_ACK -> sendEvent("onStateAck", emptyMap<String, Any>())
+        /* 2 nov 2026: het horloge speelt de ademsessie echt → JS legt de eigen trilling stil (breath-session.tsx). */
+        PATH_BREATH_ACK -> sendEvent("onBreathAck", emptyMap<String, Any>())
         /* Het horloge staat klaar: nu het kleine GO, met hoeveel ms er nog te wachten is tot het startmoment van de telefoon. */
         PATH_STATE_READY -> {
           val id = String(event.data, Charsets.UTF_8).trim().toLongOrNull()
@@ -207,7 +210,7 @@ class WearBreathModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("WearBreath")
 
-    Events("onWatchAction", "onStateAck")
+    Events("onWatchAction", "onStateAck", "onBreathAck")
 
     OnCreate {
       /* Een horloge-app die de handdruk ooit meldde blijft die kennen, ook na een herstart van de telefoon-app. */

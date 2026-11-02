@@ -1270,7 +1270,8 @@ const s = StyleSheet.create({
   changeProtocolTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    /* 2 nov 2026 (operator): zelfde als het State Control-plan (bracelet-agenda.tsx, pillBtnTxt). */
+    color: 'rgba(255,255,255,0.85)',
   },
 
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
@@ -1504,6 +1505,7 @@ const s = StyleSheet.create({
   editBtnTxt: {
     fontFamily: BrandFonts.semibold,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    /* 2 nov 2026 (operator): zelfde als het State Control-plan (bracelet-agenda.tsx, pillBtnTxt). */
+    color: 'rgba(255,255,255,0.85)',
   },
 });

@@ -47,6 +47,13 @@ import { HapticPulseRings, HeartbeatScale } from '@/components/HapticPulseRings'
 import RhythmSheet, { useRestingPulse } from '@/components/RhythmSheet';
 import { shouldSuggestRemeasure } from '@/services/resting-pulse';
 import { setStateHear, useStateHear } from '@/services/state-sound-pref';
+import {
+  endPhoneHapticsSession,
+  getSavedPhoneHaptics,
+  setPhoneHaptics,
+  setPhoneHapticsForSession,
+  usePhoneHaptics,
+} from '@/services/state-phone-haptics-pref';
 import { useLibraryPlaying } from '@/services/library-priority';
 import { FREE_COPY } from '@/constants/free-session-copy';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
@@ -148,6 +155,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
   type StyleProp,
@@ -3905,8 +3913,14 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
   /* 2 nov 2026 (operator: "ja op alles"): na een andere sterkte de vraag "Just this time / Yes, remember it" — hier in het blad zelf,
      geen popup bovenop het blad (een venster op een venster bevriest iOS). Strong blijft de standaard tot de gebruiker iets anders onthoudt. */
   const [askStrength, setAskStrength] = useState(false);
+  /* 2 nov 2026 (operator): "Phone haptics" zoals bij Breathwork, met dezelfde vraag "Just this time / Remember". */
+  const phoneOn = usePhoneHaptics();
+  const [askPhone, setAskPhone] = useState(false);
   useEffect(() => {
-    if (!visible) setAskStrength(false);
+    if (!visible) {
+      setAskStrength(false);
+      setAskPhone(false);
+    }
   }, [visible]);
   if (!visible) return null;
   const options = [
@@ -4024,6 +4038,52 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           </View>
         ) : null}
         <Text style={s.avStrengthNote}>{STRENGTH_NOTE}</Text>
+        {/* 2 nov 2026 (operator): de telefoon zelf (niet) laten trillen — het hartslaggeluid en een horloge lopen door. */}
+        <View style={s.avWatchSep} />
+        <View style={s.avPhoneRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.avPhoneTitle}>Phone haptics</Text>
+            <Text style={s.avPhoneSub}>{phoneOn ? 'Your phone vibrates with the rhythm' : 'Your phone stays still'}</Text>
+          </View>
+          <Switch
+            value={phoneOn}
+            onValueChange={(v) => {
+              hapticTap();
+              setPhoneHapticsForSession(v);
+              setAskPhone(v !== getSavedPhoneHaptics());
+            }}
+            trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
+            thumbColor="#ffffff"
+            ios_backgroundColor="#3a3a3a"
+            accessibilityLabel="Phone haptics"
+          />
+        </View>
+        {askPhone ? (
+          <View style={[s.avAskRow, { marginTop: 0 }]}>
+            <Text style={s.avAskTxt}>Make this your default?</Text>
+            <Tap
+              onPress={() => {
+                hapticTap();
+                setAskPhone(false);
+              }}
+              hitSlop={8}
+              style={s.avAskBtn}
+            >
+              <Text style={s.avAskBtnTxt}>Just this time</Text>
+            </Tap>
+            <Tap
+              onPress={() => {
+                hapticTap();
+                setPhoneHaptics(phoneOn);
+                setAskPhone(false);
+              }}
+              hitSlop={8}
+              style={[s.avAskBtn, s.avAskBtnOn]}
+            >
+              <Text style={[s.avAskBtnTxt, { color: '#0a0a0a' }]}>Remember</Text>
+            </Tap>
+          </View>
+        ) : null}
         {/* 14 okt 2026 (operator): Smartwatch aan/uit — het ritme op je pols,
             of de telefoon trilt zelf. Ook midden in een sessie. Enkel
             zichtbaar met een horloge. */}
@@ -4217,6 +4277,7 @@ function IdleScreen({
     if (!ended) stopModePreviewHaptic();
     /* Einde voorproef: "Just this time" vervalt. */
     endHapticStrengthSession();
+    endPhoneHapticsSession();
   }, []);
   /* 23 okt 2026 (operator): de voorproef begint NIET vanzelf — eerst de play-knop (zoals Breathwork). */
   const trialPlayedRef = useRef(false);
@@ -7066,6 +7127,9 @@ const s = StyleSheet.create({
     marginLeft: 4,
   },
   avWatchSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.14)', marginTop: 18 },
+  avPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  avPhoneTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16 },
+  avPhoneSub: { color: 'rgba(255,255,255,0.55)', fontFamily: BrandFonts.regular, fontSize: 13, marginTop: 2 },
   avAskRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   avAskTxt: { flexGrow: 1, color: '#f4f4f4', fontFamily: BrandFonts.semibold, fontSize: 13 },
   avAskBtn: {

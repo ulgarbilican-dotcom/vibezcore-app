@@ -65,6 +65,8 @@ private const val PRE_ROLL_MS = 250L
 private const val RESYNC_FIRST_MS = 3_000L
 private const val RESYNC_EVERY_MS = 15_000L
 private const val RESYNC_TOLERANCE_MS = 40L
+/** Hoe vaak het horloge de telefoon laat weten dat het de ademsessie speelt (zoals State Control). */
+private const val BREATH_ACK_EVERY_MS = 10_000L
 
 private data class Phase(val key: String, val secs: Int, val pattern: LongArray, val via: String = "")
 
@@ -350,6 +352,22 @@ class WearBreathSessionService : Service() {
       syncJson = null
     }
     startVibration(myGeneration, phases, rounds, round, idx, left, resumed = midPhase && !skipped, now)
+    /* 2 nov 2026 (operator, Galaxy Watch: "telefoon en smartwatch blijven beide trillen bij Breathwork"): zoals State Control bevestigt het
+       horloge de telefoon dat het de ademsessie echt speelt — meteen, na 3 s (koude start) en dan elke 10 s. Enkel voor een sessie van de
+       telefoon; blijft de bevestiging 25 s weg, dan trilt de telefoon weer zelf (breath-session.tsx). */
+    if (localJson == null && !json.optBoolean("local", false)) {
+      val ackPayload = """{"playing":true}""".toByteArray(Charsets.UTF_8)
+      PhoneLink.send(this, PhoneLink.PATH_BREATH_ACK, ackPayload)
+      val ack = object : Runnable {
+        override fun run() {
+          if (generation == myGeneration && playing) {
+            PhoneLink.send(this@WearBreathSessionService, PhoneLink.PATH_BREATH_ACK, ackPayload)
+            handler?.postDelayed(this, BREATH_ACK_EVERY_MS)
+          }
+        }
+      }
+      handler?.postDelayed(ack, 3000L)
+    }
     runPhase(
       myGeneration, phases, rounds, modeName, round = round, phaseIdx = idx,
       startUptime = now,

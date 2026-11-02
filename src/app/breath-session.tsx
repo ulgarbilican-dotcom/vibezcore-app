@@ -151,6 +151,7 @@ import {
   stopBreathSessionOnWatch,
 } from '../../modules/watch-breath';
 import {
+  onBreathAck as onWearBreathAck,
   onWatchAction as onWearWatchAction,
   pauseBreathSessionOnWatch as pauseBreathSessionOnWear,
   sendBreathSessionToWatch as sendBreathSessionToWear,
@@ -1395,14 +1396,21 @@ export function BreathSession() {
   const lastBreathAckRef = useRef(0);
   const [watchTapping, setWatchTapping] = useState(false);
   useEffect(() => {
-    const off = onBreathAck(() => {
+    const onAck = () => {
       lastBreathAckRef.current = Date.now();
       if (!watchBreathRef.current) {
         watchBreathRef.current = true;
         setWatchTapping(true);
         stopPhaseHaptic();
       }
-    });
+    };
+    /* Apple Watch én (2 nov 2026) Galaxy Watch. */
+    const offApple = onBreathAck(onAck);
+    const offWear = onWearBreathAck(onAck);
+    const off = () => {
+      offApple();
+      offWear();
+    };
     const t = setInterval(() => {
       if (watchBreathRef.current && Date.now() - lastBreathAckRef.current > 25_000) {
         watchBreathRef.current = false;
@@ -4528,7 +4536,9 @@ export function BreathSession() {
                     v !== hapticDefault
                       ? {
                           what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
-                          apply: (scope) => remember({ haptics: v }, scope),
+                          /* 2 nov 2026 (operator): "enkel nu of voor altijd en voor alle sessies" — geen extra stap per toestand. */
+                          noScope: true,
+                          apply: () => remember({ haptics: v }, 'all'),
                           revert: () => setHapticsOn(prev),
                         }
                       : null,

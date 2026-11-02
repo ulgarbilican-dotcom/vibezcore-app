@@ -11,8 +11,11 @@ import { Linking, Platform } from 'react-native';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { getSetting } from '@/utils/settings';
 import { getAppleWatchStatus, getWorkoutPermission, requestWorkoutPermission } from '../../modules/watch-breath';
+import { getWatchStatus } from '../../modules/wear-breath';
 
 const KEY = 'vz_watch_setup_tip_v1';
+/** Galaxy/Wear OS: één keer "open de app één keer op je horloge" (2 nov 2026). */
+const WEAR_FIRST_KEY = 'vz_wear_first_open_tip_v1';
 
 /** Onder de sterkte-keuze (Audio & Haptics). 1 nov 2026 (operator: "ook op de telefoon duidelijk maken waar die sterktes op de smartwatch
  *  staan, ik wist dat zelf niet te vinden"): Apple Watch heeft een eigen pagina; de Galaxy Watch volgt gewoon de telefoon. */
@@ -59,9 +62,37 @@ function showWorkoutsDenied(): void {
   });
 }
 
-/** Bij elke sessiestart met een gekoppelde Apple Watch. */
+/* 2 nov 2026 (operator, Galaxy Watch: "bij de eerste run hoorde ik de haptics maar het horloge bleef op het vergrendelscherm"): een
+   horloge-app die nog nooit geopend werd, mag van Android geen scherm vanzelf openen (de tikken lopen wel). Eén keer, bij de eerste sessie
+   met een Wear OS-horloge, één zin. De iPhone opent de Watch-app zelf; daar is dit niet nodig. */
+async function maybeShowWearFirstOpenTip(): Promise<void> {
+  if (!getSetting('watchHaptics')) return;
+  if ((await AsyncStorage.getItem(WEAR_FIRST_KEY)) === '1') return;
+  const st = await getWatchStatus();
+  if (st.status !== 'ready') return;
+  await AsyncStorage.setItem(WEAR_FIRST_KEY, '1');
+  void showVibezAlert({
+    title: 'First time with your watch?',
+    message: 'Open VIBEZCORE once on your watch. After that, every session you start here also opens on your wrist.',
+    buttons: [{ text: 'Got it', style: 'primary' }],
+  });
+}
+
+/** Bij elke sessiestart met een gekoppeld horloge. */
 export async function maybeShowWatchSetupTip(): Promise<void> {
-  if (Platform.OS !== 'ios' || busy) return;
+  if (busy) return;
+  if (Platform.OS === 'android') {
+    busy = true;
+    try {
+      await maybeShowWearFirstOpenTip();
+    } catch {
+      /* een tip mag een sessie nooit tegenhouden */
+    } finally {
+      busy = false;
+    }
+    return;
+  }
+  if (Platform.OS !== 'ios') return;
   busy = true;
   try {
     if (!getSetting('watchHaptics')) return;

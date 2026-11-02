@@ -97,6 +97,7 @@ type WearBreathNativeModule = {
   takeWatchSessions?(): Promise<string[]>;
   addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): { remove(): void };
   addListener(eventName: 'onStateAck', listener: () => void): { remove(): void };
+  addListener(eventName: 'onBreathAck', listener: () => void): { remove(): void };
 };
 
 let native: WearBreathNativeModule | null = null;
@@ -229,6 +230,16 @@ export function stopStateSessionOnWatch(): void {
     native?.stopStateSession();
   } catch {
     /* stil */
+  }
+}
+
+/** 2 nov 2026: de Galaxy Watch speelt de ademsessie echt (elke 10 s) → de telefoon trilt niet mee. Retourneert cleanup. */
+export function onBreathAck(cb: () => void): () => void {
+  try {
+    const sub = native?.addListener('onBreathAck', () => cb());
+    return () => sub?.remove();
+  } catch {
+    return () => {};
   }
 }
 
