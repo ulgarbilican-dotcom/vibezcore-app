@@ -311,6 +311,19 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     cancelPendingStateTransfers()
     var message = start
     message["type"] = "state_start"
+    /* 2 nov 2026 (operator op build 82: "State Control loopt 5 à 6 s achter op het horloge, Breathwork niet"): de app rekent
+       remainingSec en curveOffsetSec uit voor HAAR `sentAtMs` (het ankermoment van de eerste slag, vaak seconden geleden als het
+       horloge nog moest opstarten). deliverState zet daar het verzendmoment op — dan kreeg het horloge die seconden er gratis bij.
+       Eerst naar NU omrekenen, zodat het bericht klopt met het nieuwe tijdstempel. */
+    if let anchorMs = (start["sentAtMs"] as? NSNumber)?.doubleValue {
+      let d = (Date().timeIntervalSince1970 * 1000 - anchorMs) / 1000
+      if let rem = (start["remainingSec"] as? NSNumber)?.doubleValue {
+        message["remainingSec"] = max(0, rem - d)
+      }
+      if d > 0, let off = (start["curveOffsetSec"] as? NSNumber)?.doubleValue {
+        message["curveOffsetSec"] = off + d
+      }
+    }
     deliverState(message)
     launchWatchAppIfNeeded()
   }
