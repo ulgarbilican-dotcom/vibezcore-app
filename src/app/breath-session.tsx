@@ -136,6 +136,7 @@ import {
 } from '../../modules/breath-background';
 import { isLibraryPlaying, useLibraryPlaying } from '@/services/library-priority';
 import {
+  onBreathAck,
   onWatchAction as onAppleWatchAction,
   pauseBreathSessionOnWatch,
   sendBreathSessionToWatch,
@@ -1359,6 +1360,27 @@ export function BreathSession() {
        op een JS-klok per fase). */
     if (!hapticsOn) stopPhaseHaptic();
   }, [hapticsOn]);
+  /* 2 nov 2026 (operator: "ik voel haptics op de telefoon én de smartwatch — geldt ook voor Breathwork"): zolang de Apple Watch bevestigt
+     dat hij de ademsessie speelt (breath_ack, elke 10 s), trilt de iPhone niet mee — één ritme, op de pols. Blijft de bevestiging 25 s uit,
+     dan neemt de telefoon het trillen weer over vanaf de volgende fase. Stem en beeld lopen gewoon door. */
+  const watchBreathRef = useRef(false);
+  const lastBreathAckRef = useRef(0);
+  useEffect(() => {
+    const off = onBreathAck(() => {
+      lastBreathAckRef.current = Date.now();
+      if (!watchBreathRef.current) {
+        watchBreathRef.current = true;
+        stopPhaseHaptic();
+      }
+    });
+    const t = setInterval(() => {
+      if (watchBreathRef.current && Date.now() - lastBreathAckRef.current > 25_000) watchBreathRef.current = false;
+    }, 5_000);
+    return () => {
+      off();
+      clearInterval(t);
+    };
+  }, []);
   useEffect(() => {
     roundsRef.current = rounds;
     if (!previewRef.current) effectiveRoundsRef.current = rounds;
@@ -1650,7 +1672,7 @@ export function BreathSession() {
 
       /* Bij bracelet en privé zwijgt de telefoon: het ritme zit dan op de
          pols en twee bronnen tegelijk is geen begeleiding maar ruis. */
-      if (hapticRef.current) {
+      if (hapticRef.current && !watchBreathRef.current) {
         /* De trilling draagt de HELE fase, niet alleen de overgang: een tik
            aan het begin zegt niets over de vier seconden erna. In- en
            uitademen krijgen een reeks die respectievelijk aanzwelt en
@@ -2209,6 +2231,8 @@ export function BreathSession() {
      van die fase nog over is). Faalt stil: geen horloge, of het andere OS. */
   const relayBreathToWatches = useCallback(
     (at?: { startRound: number; startPhase: number; phaseRemainingMs: number }) => {
+      /* Nieuwe start/hervatting: het horloge moet opnieuw bevestigen voor de telefoon zwijgt (2 nov 2026, breath_ack). */
+      watchBreathRef.current = false;
       /* "Smartwatch" uit in Audio & Haptics (14 okt 2026): niets naar het horloge. */
       if (!getSetting('watchHaptics')) return;
       try {

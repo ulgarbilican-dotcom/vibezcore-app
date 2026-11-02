@@ -30,7 +30,7 @@ public class WatchBreathModule: Module {
   public func definition() -> ModuleDefinition {
     Name("WatchBreath")
 
-    Events("onWatchAction", "onStateAck", "onWatchLog")
+    Events("onWatchAction", "onStateAck", "onBreathAck", "onWatchLog")
 
     OnCreate {
       WatchBridge.shared.activate()
@@ -39,6 +39,10 @@ public class WatchBreathModule: Module {
       }
       WatchBridge.shared.onStateAck = { [weak self] in
         self?.sendEvent("onStateAck", ["playing": true])
+      }
+      /* 2 nov 2026: de Watch speelt de ademsessie echt (`breath_ack`) → de iPhone zwijgt (zoals bij State Control). */
+      WatchBridge.shared.onBreathAck = { [weak self] in
+        self?.sendEvent("onBreathAck", ["playing": true])
       }
       WatchBridge.shared.onLog = { [weak self] record in
         self?.sendEvent("onWatchLog", ["record": record])
@@ -136,6 +140,8 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   var onAction: ((String, String) -> Void)?
   /** De Watch speelt het State Control-ritme echt (`state_ack`). */
   var onStateAck: (() -> Void)?
+  /** De Watch speelt de ademsessie echt (`breath_ack`, 2 nov 2026). */
+  var onBreathAck: (() -> Void)?
   /** Een sessie die op het horloge zelf liep (JSON-record). */
   var onLog: ((String) -> Void)?
   private var lastCatalog = ""
@@ -445,6 +451,13 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     if (message["type"] as? String) == "watch_log", let record = message["record"] as? String {
       DispatchQueue.main.async { [weak self] in
         self?.onLog?(record)
+      }
+      return
+    }
+    if (message["type"] as? String) == "breath_ack" {
+      guard (message["playing"] as? Bool) ?? true else { return }
+      DispatchQueue.main.async { [weak self] in
+        self?.onBreathAck?()
       }
       return
     }

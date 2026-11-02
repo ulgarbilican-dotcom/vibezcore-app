@@ -92,6 +92,7 @@ type WatchBreathNativeModule = {
   requestWorkoutPermission?(): Promise<string>;
   addListener(eventName: 'onWatchAction', listener: (event: WatchAction) => void): Subscription;
   addListener(eventName: 'onStateAck', listener: () => void): Subscription;
+  addListener(eventName: 'onBreathAck', listener: () => void): Subscription;
   addListener(eventName: 'onWatchLog', listener: (event: { record: string }) => void): Subscription;
 };
 
@@ -250,6 +251,16 @@ export function stopStateSessionOnWatch(): void {
 
 /** Het horloge speelt het ritme echt (ook met de pols omlaag) — de
  *  telefoon mag zijn eigen trilling stilleggen. Retourneert cleanup. */
+/** 2 nov 2026: de Apple Watch speelt de ademsessie echt (elke 10 s) → de iPhone trilt niet mee. Retourneert cleanup. */
+export function onBreathAck(cb: () => void): () => void {
+  try {
+    const sub = native?.addListener('onBreathAck', () => cb());
+    return () => sub?.remove();
+  } catch {
+    return () => {};
+  }
+}
+
 export function onStateAck(cb: () => void): () => void {
   try {
     const sub = native?.addListener('onStateAck', () => cb());

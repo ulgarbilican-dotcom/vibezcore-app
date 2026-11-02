@@ -62,6 +62,20 @@ final class BreathSessionController: NSObject, ObservableObject {
   private var phases: [WatchPhase] = []
   private var phaseTimer: Timer?
   private var tickTimer: Timer?
+  /* 2 nov 2026 (operator: "ik voel haptics op telefoon én smartwatch, geldt ook voor Breathwork"): zoals State Control (state_ack) meldt het
+     horloge elke 10 s dat het de ademsessie echt speelt — enkel als de app wakker blijft (runtime/workout); de iPhone trilt dan niet mee. */
+  private var ackTimer: Timer?
+  private func startBreathAckLoop() {
+    ackTimer?.invalidate()
+    let send: () -> Void = { [weak self] in
+      guard let self = self, self.running, !self.paused, !self.isLocal, RuntimeSessionManager.shared.isRunning else { return }
+      PhoneConnector.shared.send(["type": "breath_ack", "playing": true])
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: send)
+    let t = Timer(timeInterval: 10, repeats: true) { _ in send() }
+    RunLoop.main.add(t, forMode: .common)
+    ackTimer = t
+  }
   /* 1 nov 2026 (operator: "zorgen dat alles synchroon werkt"): de tik van de volgende fase gaat StateSessionController.hapticLeadSec vóór
      het fasemoment af (de Taptic Engine heeft die tijd nodig), zodat je hem voelt op het moment dat de iPhone van fase wisselt. */
   private var leadTimer: Timer?
@@ -131,6 +145,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     paused = false
     pauseReleaseWork?.cancel()
     RuntimeSessionManager.shared.acquire(.breath)
+    if fromPhone { startBreathAckLoop() }
 
     /* Hervatten (6 okt 2026): verder op exact de plek waar de iPhone
        pauzeerde — ronde, fase en wat er van die fase nog over was. */
@@ -453,6 +468,7 @@ final class BreathSessionController: NSObject, ObservableObject {
   }
 
   func pauseLocally() {
+    ackTimer?.invalidate()
     leadTimer?.invalidate()
     prePlayed = nil
     guard running else { return }
@@ -487,6 +503,7 @@ final class BreathSessionController: NSObject, ObservableObject {
   private var pauseReleaseWork: DispatchWorkItem?
 
   func stop() {
+    ackTimer?.invalidate()
     leadTimer?.invalidate()
     prePlayed = nil
     WatchTiming.shared.commit()

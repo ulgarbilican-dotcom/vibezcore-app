@@ -1099,6 +1099,13 @@ function phoneTakesRhythmBack(): void {
 function onWatchTookOver(watchdogOn = false): void {
   lastWatchAckAt = Date.now();
   clearWatchRelayRetries();
+  /* 2 nov 2026 (operator, iPhone + Apple Watch: "ik voel toch haptics op de telefoon én de smartwatch"): het uitzetten van de iPhone-
+     trilling gebeurde één keer, bij de eerste bevestiging — viel die vóór de geluidsmotor klaar was, dan bleef de telefoon trillen. Nu bij
+     ELKE bevestiging van het horloge (elke 10 s) opnieuw: de telefoon zwijgt zolang het horloge speelt. */
+  if (watchHasRhythm && Platform.OS === 'ios') {
+    if (!muteIosPlanHaptics()) setSessionBeatHaptics(false);
+    return;
+  }
   if (watchHasRhythm || !session || session.pausedAt !== null || !lastClock) return;
   watchHasRhythm = true;
   stopWatchdog();
