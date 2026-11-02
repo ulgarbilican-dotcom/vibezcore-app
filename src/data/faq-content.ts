@@ -308,7 +308,7 @@ const ALL_FAQ_ITEMS: FaqItem[] = [
       (IOS
         ? "Apple Watch dims its screen after a few seconds without a touch. Your session keeps running: VIBEZCORE stays on screen, the taps on your wrist continue, and the dimmed screen still shows your state and the time left.\n\n" +
           "The taps continue with the screen dimmed only if VIBEZCORE may start a workout session: iPhone Settings → Privacy & Security → Health → VIBEZCORE → Workouts: on. No workout or health data is saved.\n\n" +
-          "You don't need to look: in Breathwork, inhale is a stream of rising taps, hold is one stop tap and then stillness, exhale is a slower stream of falling taps. State Control taps a heartbeat.\n\n" +
+          "You don't need to look: in Breathwork, inhale is a fast stream of rising taps, hold is a slow, single firm tap, exhale is a steady stream of falling taps. State Control taps a heartbeat.\n\n" +
           "For strong taps without sound: on your watch, Settings → Sounds & Haptics → Silent Mode on and Haptics: Prominent. In VIBEZCORE on your watch, Haptics lets you choose Strong or Medium."
         : "Your watch dims its screen after a short time without a touch. Your session keeps running and the vibration on your wrist continues.\n\n" +
           "To keep the screen on longer, open Settings on your watch → Display → Screen timeout.\n\n" +

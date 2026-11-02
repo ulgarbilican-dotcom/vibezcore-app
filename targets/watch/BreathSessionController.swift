@@ -356,6 +356,7 @@ final class BreathSessionController: NSObject, ObservableObject {
       repeating(every: tex.outEvery, tap: tex.outTap)
     } else {
       s.play(.hold)
+      repeating(every: tex.holdEvery, tap: tex.holdTap)
     }
   }
 

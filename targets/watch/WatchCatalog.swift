@@ -265,10 +265,16 @@ final class WatchSettings: ObservableObject {
   /* 1 nov 2026 (operator: "Medium mag enkel de voelbaarheid verminderen, niet de techniek" + "waarom ging dat niet voor Breathwork?"):
      één sterkte voor de hele app (zoals op de iPhone). Zelfde tempo's; Strong = de omhoog/omlaag-tik (door de operator als sterkst gevoeld),
      Medium = de lichtere enkele .start-tik. */
-  func breathTexture() -> (inEvery: Double, outEvery: Double, inTap: WKHapticType, outTap: WKHapticType) {
-    /* 2 nov 2026 (operator: "bij Boost komt er bij exhale bijna niets"): uitademen elke 0,6 s i.p.v. 0,9 — een korte uitademing (2 s) voel je
-       zo duidelijk; nog altijd trager dan inademen (0,5 s), zodat in en uit verschillend aanvoelen. */
-    strength == "medium" ? (0.5, 0.6, .start, .start) : (0.5, 0.6, .directionUp, .directionDown)
+  /* 2 nov 2026 (operator: "hold doet nu niets — bij 4-7-8 lijkt het alsof het stopt; er moet een duidelijk verschil zijn tussen inhale, hold
+     en exhale"): GEEN stilte meer. Elke fase heeft een eigen, doorlopend gevoel — ander soort tik én ander tempo:
+       inademen   = dubbele tik omhoog, snel (0,5 s)
+       vasthouden = enkele stevige tik, traag (1,5 s)
+       uitademen  = dubbele tik omlaag, gemiddeld (0,9 s)
+     Medium = zelfde ritme, lichtere tik voor in/uit. */
+  func breathTexture() -> (inEvery: Double, outEvery: Double, holdEvery: Double, inTap: WKHapticType, outTap: WKHapticType, holdTap: WKHapticType) {
+    strength == "medium"
+      ? (0.5, 0.9, 1.5, .start, .start, .start)
+      : (0.5, 0.9, 1.5, .directionUp, .directionDown, .start)
   }
 
   func playRaw(_ t: WKHapticType) {
@@ -306,6 +312,8 @@ final class WatchSettings: ObservableObject {
     var t = tex.inEvery
     while t < 4 - 0.25 { events.append((t, { self.playRaw(tex.inTap) })); t += tex.inEvery }
     events.append((4, { self.play(.hold) }))
+    t = 4 + tex.holdEvery
+    while t < 6 - 0.25 { events.append((t, { self.playRaw(tex.holdTap) })); t += tex.holdEvery }
     events.append((6, { self.play(.exhale) }))
     t = 6 + tex.outEvery
     while t < 10 - 0.25 { events.append((t, { self.playRaw(tex.outTap) })); t += tex.outEvery }
