@@ -9,9 +9,6 @@
    testbuild, zodat het testaccount het kan zien); niet als er al een plan is. Teksten (PlanOfferHost.tsx) goedgekeurd door de operator, 28 okt 2026.
    ───────────────────────────────────────────────────────────────────────── */
 
-import { reloadActiveBraceletPlan, getActiveBraceletPlan } from '@/utils/bracelet-plan-store';
-import { getActivePlan, reloadActivePlan } from '@/utils/plan-store';
-import { QA_ENABLED } from '@/utils/qa';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 
@@ -73,10 +70,11 @@ export function subscribePlanOfferSheet(l: (k: PlanOfferKind | null) => void): (
 export async function markPlanOfferPending(): Promise<void> {
   const seen = await read(SEEN_KEY);
   const pending = await read(PENDING_KEY);
-  const next = {
-    state: pending.state || QA_ENABLED || !seen.state,
-    breath: pending.breath || QA_ENABLED || !seen.breath,
-  };
+  /* 2 nov 2026 (operator: "moet consistent en logisch zijn — misschien wil de gebruiker deze keer een ander plan"): na ELKE nieuwe aankoop
+     opnieuw, voor beide tabbladen (niet meer één keer per toestel). */
+  void seen;
+  void pending;
+  const next = { state: true, breath: true };
   pendingCache = next;
   tappedAt.state = 0;
   tappedAt.breath = 0;
@@ -103,25 +101,15 @@ export function usePlanOffer(kind: PlanOfferKind, ready: boolean): void {
     };
   }, []);
   useEffect(() => {
-    if (!ready || shown.current || tappedAt[kind] === 0) return;
+    /* 2 nov 2026 (operator): ook bij TERUGKEER op het tabblad waar je kocht (niet enkel na een nieuwe tabtik), na 1 s zodat het blad niet
+       meteen over het aankoopscherm valt; en ook als er al een plan is (de gebruiker kiest zelf: nieuw plan of "Not now"). `ready` vraagt
+       nog altijd dat het tabblad zelf open is — wie in Profile koopt, krijgt de vraag pas als hij zelf naar het tabblad gaat. */
+    if (!ready || shown.current) return;
     let cancelled = false;
     void (async () => {
+      await new Promise((r) => setTimeout(r, 1000));
       const pending = await read(PENDING_KEY);
       if (!pending[kind] || cancelled || shown.current) return;
-      if (kind === 'breath') {
-        await reloadActivePlan();
-        if (getActivePlan()) {
-          await consume(kind);
-          return;
-        }
-      } else {
-        await reloadActiveBraceletPlan();
-        if (getActiveBraceletPlan()) {
-          await consume(kind);
-          return;
-        }
-      }
-      if (cancelled || shown.current) return;
       shown.current = true;
       await consume(kind);
       /* Het glasblad zelf: components/PlanOfferHost.tsx (root-layout). */
