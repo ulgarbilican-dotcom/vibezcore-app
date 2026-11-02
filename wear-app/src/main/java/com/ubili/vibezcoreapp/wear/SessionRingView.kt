@@ -48,6 +48,22 @@ class SessionRingView @JvmOverloads constructor(
   var frontAlpha = 0.15f
 
   /** Grote tekst in het midden (tijd of fase). */
+  /** 2 nov 2026 (operator: "het scherm dimt maar de cirkel blijft heel duidelijk zichtbaar"): Always On = bijna zwart, enkel een dunne
+   *  grijze ring en de resterende minuten (zoals de Apple Watch). De sessie en de trillingen lopen gewoon door. */
+  var ambient = false
+    set(v) {
+      field = v
+      invalidate()
+    }
+  var ambientTextAt: (Long) -> String = { "" }
+  private val ambientRimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    this.color = Color.argb(90, 255, 255, 255)
+  }
+  private val ambientTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    this.color = Color.argb(170, 255, 255, 255)
+    textAlign = Paint.Align.CENTER
+  }
   var centerText: String = ""
     set(value) {
       if (field != value) {
@@ -206,6 +222,14 @@ class SessionRingView @JvmOverloads constructor(
     val now = SystemClock.uptimeMillis()
     val cx = width / 2f
     val cy = height / 2f
+    if (ambient) {
+      val ar = min(width, height) / 2f / 1.10f
+      ambientRimPaint.strokeWidth = 1.5f * resources.displayMetrics.density
+      canvas.drawCircle(cx, cy, ar, ambientRimPaint)
+      ambientTextPaint.textSize = ar * 0.24f
+      canvas.drawText(ambientTextAt(now), cx, cy + ambientTextPaint.textSize * 0.35f, ambientTextPaint)
+      return
+    }
     // 12 okt 2026: de ring vult het scherm; de tik-ringen dijen nog net tot
     // aan de rand uit (tot 1,08×) i.p.v. ver erbuiten.
     val r = min(width, height) / 2f / 1.10f * beatScale(now)

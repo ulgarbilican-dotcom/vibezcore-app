@@ -44,11 +44,18 @@ class MainActivity : androidx.activity.ComponentActivity() {
     override fun onEnterAmbient(ambientDetails: androidx.wear.ambient.AmbientLifecycleObserver.AmbientDetails) {
       ambient = true
       ring.flowing = false
-      ring.alpha = 0.6f
+      ring.ambient = true
+      /* Enkel de dunne ring en de minuten: geen knoppen, naam gedimd. */
+      pauseButton.visibility = View.INVISIBLE
+      endButton.visibility = View.INVISIBLE
+      (nameLabel.parent as View).alpha = 0.5f
     }
     override fun onExitAmbient() {
       ambient = false
+      ring.ambient = false
       ring.alpha = 1f
+      endButton.visibility = View.VISIBLE
+      (nameLabel.parent as View).alpha = 1f
       render()
     }
     override fun onUpdateAmbient() {
@@ -307,12 +314,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
     ring.paused = false
     (nameLabel.parent as View).visibility = View.VISIBLE
     ring.isClickable = false
-    pauseButton.visibility = View.VISIBLE
+    pauseButton.visibility = if (ambient) View.INVISIBLE else View.VISIBLE
     setNameTop(44)
     nameLabel.textSize = 15f
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
+    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else "${sec / 60} min" }
     val total = s.totalSec.coerceAtLeast(1)
     val frac = (sec.toFloat() / total).coerceIn(0f, 1f)
     ring.levelAt = { frac }
@@ -342,6 +350,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
     /* De naam enkel bij pauze — tijdens het ademen krijgt de figuur de
        ruimte (operator 13 okt 2026). */
     (nameLabel.parent as View).visibility = if (b.paused) View.VISIBLE else View.INVISIBLE
+    ring.ambientTextAt = { now ->
+      val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
+      when {
+        b.paused -> "Paused"
+        b.sessionEndUptime <= 0L -> ""
+        else -> "${(leftMs / 60_000L).coerceAtLeast(0L)} min left"
+      }
+    }
     ring.footerAt = { now ->
       val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
       /* Zoals de telefoon ("10:08 left"): minuten en seconden, zodat je hem
