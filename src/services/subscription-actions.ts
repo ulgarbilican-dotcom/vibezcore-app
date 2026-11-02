@@ -59,6 +59,22 @@ export function isOtherStore(store?: string): boolean {
   return Platform.OS === 'ios' ? store === 'PLAY_STORE' : store === 'APP_STORE';
 }
 
+/** Na een wijziging in de winkel (opzeggen, wisselen, verlengen): RevenueCat-cache leeg en de status opnieuw ophalen. */
+export function refreshAfterStoreChange(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Purchases = require('react-native-purchases').default as typeof import('react-native-purchases').default;
+    void Purchases.invalidateCustomerInfoCache()
+      .catch(() => {})
+      .then(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        (require('@/hooks/useSubscription') as typeof import('@/hooks/useSubscription')).refreshSubscription();
+      });
+  } catch {
+    /* geen RevenueCat — niets te verversen */
+  }
+}
+
 export async function openManageSubscriptions(): Promise<void> {
   /* Abonnement uit de andere winkel: RevenueCat geeft de juiste beheerpagina (Google Play of Apple) als webadres. */
   try {
@@ -80,6 +96,9 @@ export async function openManageSubscriptions(): Promise<void> {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Purchases = require('react-native-purchases').default as typeof import('react-native-purchases').default;
       await Purchases.showManageSubscriptions();
+      /* 2 nov 2026 (operator op build 82: opgezegd in Apple's blad, Profile bleef "Renews on…" tonen): het blad is IN de app, dus er
+         was geen terugkeer naar de voorgrond en RevenueCat gaf zijn bewaarde (tot 5 min oude) status. Na het sluiten vers ophalen. */
+      refreshAfterStoreChange();
       return;
     } catch {
       /* terugval hieronder */

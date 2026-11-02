@@ -645,7 +645,15 @@ export default function RootLayout() {
         /* Zelfde macrotask-defer als de RevenueCat-listener hierboven —
            AppState's 'change'-event is ook een echte native-bridge-callback
            die op elk moment, midden in een React-commit, kan vallen. */
-        setTimeout(() => { refreshSubscription(); }, 0);
+        /* 2 nov 2026: terug uit Instellingen › Abonnementen → RevenueCat-cache eerst leeg, anders tot 5 min de oude status. */
+        setTimeout(() => {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            (require('@/services/subscription-actions') as typeof import('@/services/subscription-actions')).refreshAfterStoreChange();
+          } catch {
+            refreshSubscription();
+          }
+        }, 0);
         /* Iter v230 (2026-07-08, audit BUG 6/8): retry pending RC-link
            bij foreground. Als linkRevenueCatUser eerder faalde (offline,
            SDK not ready) zit RC nog op $RCAnonymousID → volgende purchase
