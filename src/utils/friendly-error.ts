@@ -7,7 +7,7 @@ export function friendlyError(raw: string | null | undefined): string {
   const t = String(raw).toLowerCase();
   /* 2 nov 2026 (operator op build 83): RevenueCat-melding wanneer de aankoop op dit Apple-/Google-account al bij een ANDER
      VIBEZCORE-account hoort ("another active subscriber using the same receipt"). */
-  if ((t.includes('receipt') && (t.includes('another') || t.includes('already'))) || t.includes('already in use')) {
+  if (t.includes('receipt') && (t.includes('another') || t.includes('already'))) {
     return 'This purchase belongs to another VIBEZCORE account. Sign in with that account to use it, or contact support.';
   }
   if (

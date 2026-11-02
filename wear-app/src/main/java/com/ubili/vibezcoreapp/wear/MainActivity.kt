@@ -320,7 +320,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
-    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else "${sec / 60} min" }
+    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else if (sec < 60) "<1 min left" else "${sec / 60} min left" }
     val total = s.totalSec.coerceAtLeast(1)
     val frac = (sec.toFloat() / total).coerceIn(0f, 1f)
     ring.levelAt = { frac }
@@ -355,7 +355,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
       when {
         b.paused -> "Paused"
         b.sessionEndUptime <= 0L -> ""
-        else -> "${(leftMs / 60_000L).coerceAtLeast(0L)} min left"
+        leftMs < 60_000L -> "<1 min left"
+        else -> "${leftMs / 60_000L} min left"
       }
     }
     ring.footerAt = { now ->

@@ -53,6 +53,8 @@ public class LiveActivityModule: Module {
 
   /* Eén tik kan via twee wegen binnenkomen (rechtstreeks + Darwin-signaal): binnen 0,8 s telt enkel de eerste. */
   private var lastToggleAt = Date.distantPast
+  /* Na OnDestroy niet meer inschrijven (de inschrijving loopt asynchroon op de hoofdthread). */
+  private var destroyed = false
   private var localObserver: NSObjectProtocol?
 
   func emitToggle() {
@@ -92,6 +94,7 @@ public class LiveActivityModule: Module {
       LiveActivityModule.current = self
       /* 2 nov 2026: op de hoofdthread inschrijven — die heeft altijd een lopende run loop; anders kon het Darwin-signaal verloren gaan. */
       DispatchQueue.main.async {
+        guard !self.destroyed else { return }
         self.observeToggle()
         self.localObserver = NotificationCenter.default.addObserver(
           forName: Notification.Name("com.ubili.vibezcoreapp.live.toggle.local"), object: nil, queue: .main
@@ -100,6 +103,7 @@ public class LiveActivityModule: Module {
     }
 
     OnDestroy {
+      self.destroyed = true
       self.stopObserving()
       if LiveActivityModule.current === self { LiveActivityModule.current = nil }
     }

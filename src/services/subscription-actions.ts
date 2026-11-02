@@ -64,12 +64,16 @@ export function refreshAfterStoreChange(): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Purchases = require('react-native-purchases').default as typeof import('react-native-purchases').default;
-    void Purchases.invalidateCustomerInfoCache()
-      .catch(() => {})
-      .then(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        (require('@/hooks/useSubscription') as typeof import('@/hooks/useSubscription')).refreshSubscription();
-      });
+    const refresh = () =>
+      void Purchases.invalidateCustomerInfoCache()
+        .catch(() => {})
+        .then(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          (require('@/hooks/useSubscription') as typeof import('@/hooks/useSubscription')).refreshSubscription();
+        });
+    refresh();
+    /* Een opzegging bereikt RevenueCat via Apple's servermelding, vaak enkele seconden later — dan nog eens. */
+    setTimeout(refresh, 8000);
   } catch {
     /* geen RevenueCat — niets te verversen */
   }
