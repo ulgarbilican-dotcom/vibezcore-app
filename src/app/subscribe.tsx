@@ -281,7 +281,11 @@ export default function SubscribeScreen() {
      een maand- of jaarabonnement kunnen nemen — enkel een tweede pas
      tijdens de eerste heeft geen zin. */
   const hasDayPass = alreadyIsPro && currentTier === 'day';
-  const blocksPurchase = alreadyIsPro && (!hasDayPass || tier === 'day');
+  /* 2 nov 2026 (operator op build 80: "Switch to Yearly gaat niet"): Monthly → Yearly is een upgrade die in de app moet kunnen — iPhone:
+     zelfde abonnementsgroep, Apple verrekent (Yearly staat op niveau 1); Android: vervanging via productChangeInfo (iap-real). Voorheen
+     sprong dit scherm voor elke abonnee meteen naar "You're a Premium member". */
+  const upgradeToYearly = alreadyIsPro && currentTier === 'monthly' && tier === 'yearly';
+  const blocksPurchase = alreadyIsPro && (!hasDayPass || tier === 'day') && !upgradeToYearly;
   useEffect(() => {
     if (blocksPurchase && phase === 'form' && !linkingAccount) {
       /* Zelfde purchaseWasTrial-signaal als de echte aankoopflow, maar dan
@@ -301,7 +305,7 @@ export default function SubscribeScreen() {
      + currentTier ≠ tierForCompute → tonen we een aparte info-state in
      runIapFlow zodat user weet dat 'ie via Play Store moet switchen. */
   const isTierSwitchAttempt =
-    alreadyIsPro && !!currentTier && currentTier !== 'day' && currentTier !== tierForCompute;
+    alreadyIsPro && !!currentTier && currentTier !== 'day' && currentTier !== tierForCompute && !upgradeToYearly;
   const [errMsg, setErrMsg] = useState<string | null>(null);
   /* Iter v177 (2026-07-02): infoMsg voor positieve transities — bijv. duplicate
      email switch naar signin. Wordt in GROENE banner getoond ipv rood, zodat

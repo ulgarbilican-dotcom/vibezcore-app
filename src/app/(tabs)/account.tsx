@@ -507,6 +507,7 @@ function PlanCard() {
   let cta: { label: string; onPress: () => void } | null = null;
   let note: string | null = null;
   let manage = false;
+  let secondary: { label: string; onPress: () => void } | null = null;
 
   if (isLoading) {
     title = 'Checking your plan…';
@@ -529,12 +530,19 @@ function PlanCard() {
       ? `Your plan ends on ${ends}. Your progress, plan and history stay saved.`
       : 'Your progress, plan and history stay saved.';
     cta = { label: 'Turn renewal back on', onPress: () => void openManageSubscriptions() };
+    /* 2 nov 2026 (operator: "na opzeggen staat Switch to Yearly er niet meer"): wie maandelijks opzegde, kan ook meteen naar jaarlijks. */
+    if (tier === 'monthly') {
+      secondary = {
+        label: savePercent ? `Or switch to Yearly · save ${savePercent}%` : 'Or switch to Yearly',
+        onPress: () => router.navigate('/subscribe?tier=yearly' as never),
+      };
+    }
   } else if (tier === 'monthly') {
     cta = {
       label: savePercent ? `Switch to Yearly · save ${savePercent}%` : 'Switch to Yearly',
       /* De plannen in de app, op beide toestellen (2 nov 2026, audit iPhone = Android). Op de iPhone is jaarlijks kopen binnen dezelfde
          abonnementsgroep een gewone StoreKit-upgrade (Apple regelt de verrekening); Android wisselt via productChangeInfo (iap-real). */
-      onPress: () => router.navigate('/subscribe' as never),
+      onPress: () => router.navigate('/subscribe?tier=yearly' as never),
     };
     manage = true;
   } else {
@@ -566,6 +574,20 @@ function PlanCard() {
         </PressScale>
       ) : null}
       {note ? <Text style={pc.note}>{note}</Text> : null}
+      {secondary ? (
+        <PressScale
+          style={pc.link}
+          onPress={() => {
+            hapticPress();
+            secondary?.onPress();
+          }}
+          scaleTo={0.97}
+          accessibilityRole="button"
+          accessibilityLabel={secondary.label}
+        >
+          <Text style={pc.linkText}>{secondary.label}</Text>
+        </PressScale>
+      ) : null}
       {manage ? (
         <PressScale
           style={pc.link}

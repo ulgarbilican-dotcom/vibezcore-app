@@ -39,6 +39,8 @@ pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
 
 ## 3. Huidige bouwronde (sinds de laatste store-build)
 
+- **2 nov 2026 — na build 81 (zit er NIET in):** Monthly → Yearly in de app werkte niet: /subscribe sprong voor elke abonnee naar "You're a Premium member". Nu: upgrade toegestaan (subscribe.tsx `upgradeToYearly`), Profile-knop opent /subscribe?tier=yearly, en na opzeggen staat er ook "Or switch to Yearly". App Store Connect: Yearly op niveau 1, Monthly niveau 2 (was 3/2 → werd als downgrade gezien).
+
 - **2 nov 2026 09:46 — iOS-build 81 gestart** (commit 0a4567d3, auto-submit naar TestFlight): alle wijzigingen sinds build 80 + Google-login iPhone.
 
 - **2 nov 2026 — Google-login iPhone:** iOS OAuth-client `80535193832-uu4e6e…` aangemaakt (project vibezcore1, bundel com.ubili.vibezcoreapp), in app.json (googleIosClientId + iosUrlScheme), en toegevoegd aan Supabase › Google › Client IDs (gecontroleerd). Werkt pas in de volgende iOS-build.
