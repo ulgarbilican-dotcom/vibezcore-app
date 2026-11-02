@@ -483,8 +483,8 @@ final class StateSessionController: ObservableObject {
     if playDub && WatchSettings.shared.playsDub {
       dubTimer = schedule(at: beatDate.addingTimeInterval(beat.dubAt / 1000 - Self.hapticLeadSec)) { [weak self] in
         guard let self = self, gen == self.generation else { return }
-        /* 1 nov 2026: de dub als STEVIGE klop (was het stille .click, nauwelijks voelbaar) — zo voel je het lub-dub-ritme. */
-        WKInterfaceDevice.current().play(WatchSettings.shared.beatTap)
+        /* 2 nov 2026: dub = het lichte .click, exact zoals build 75 (de operator: in de sessie klopt het zo). */
+        WKInterfaceDevice.current().play(WatchSettings.shared.dubTap)
         self.beats.send(false)
       }
     }

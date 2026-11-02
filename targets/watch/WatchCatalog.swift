@@ -283,10 +283,10 @@ final class WatchSettings: ObservableObject {
     let start = Date()
     for i in 0..<5 {
       let lub = Double(i) * cycle
-      for at in [lub, lub + cycle * 0.3] {
+      for (k, at) in [lub, lub + cycle * 0.3].enumerated() {
         let timer = Timer(fire: start.addingTimeInterval(at), interval: 0, repeats: false) { [weak self] _ in
           guard let self = self else { return }
-          self.playRaw(self.beatTap)
+          self.playRaw(k == 0 ? self.beatTap : self.dubTap)
         }
         timer.tolerance = 0
         RunLoop.main.add(timer, forMode: .common)
@@ -366,9 +366,12 @@ final class WatchSettings: ObservableObject {
   var playsDub: Bool { true }
 
   /// De tik voor lub én dub van State Control.
-  /* 2 nov 2026 (operator: "Medium voelt sterker aan dan Strong — de sterkste wordt dus de standaard"): op de pols voelt de omhoog-tik
-     (.directionUp) steviger dan .start — zoals bij Breathwork. Strong = .directionUp, Medium = .start (zelfde ritme, lichter). */
-  var beatTap: WKHapticType { strength == "medium" ? .start : .directionUp }
+  /* 2 nov 2026 (operator: "in Settings voelt Medium sterker, maar in de sessie zelf klopt het wel — daar voelt Medium als Medium"): de
+     SESSIE (build 75) is de maatstaf: lub = .start (Strong) of .directionUp (Medium), dub = het lichte .click. De testknop speelde twee keer
+     de stevige tik vlak na elkaar (de tweede breekt de eerste af) en voelde daardoor anders — die speelt nu exact de sessie (previewHeartbeat). */
+  var beatTap: WKHapticType { strength == "medium" ? .directionUp : .start }
+  /// De tweede, lichtere klop (dub) — zoals in de sessie.
+  let dubTap: WKHapticType = .click
 
 }
 
