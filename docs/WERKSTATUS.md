@@ -231,7 +231,7 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
   1. 1.5 Support URL https://www.vibezcore.com/contact geeft 404 → in ASC vervangen door /support (200).
   2. 2.1(b) Abonnementen + dagpas samen met de app indienen, elk met een App Review-screenshot.
   3. 4 Sign in with Apple-knop moet herkenbaar zijn → app gebruikt nu Apple's eigen knop (opgelost in code, te tonen in review).
-  4. 2.3.10 Geen Google Play-verwijzingen / Android-statusbalk in iPhone-screenshots (oude 8 vervangen; ook "View All Sizes in Media Manager").
+  4. 2.3.10 Geen Google Play-verwijzingen / Android-statusbalk in iPhone-screenshots — GEDAAN 2 nov: oude 8 verwijderd, 10 nieuwe (iPhone-statusbalk, 1242x2688) in Media Manager › iPhone with Face ID (large display); 6,1/6,3" gebruikt die automatisch. Apple Watch-screenshots (5) staan er al.
   5. 5.1.1(v) Kopen zonder account → app laat dat nu toe (te bevestigen op build 81).
   6. 3.1.2(c) Beschrijving: wat krijg je voor de prijs + werkende link naar Terms of Use (EULA) in de App Description (concept docs/APPSTORE_TEKSTEN_2026-11-01.md heeft /terms-and-conditions = 200).
   7. Antwoord aan Apple + Notes-veld: per punt wat gewijzigd is, met schermopname van de aankoopflow.
