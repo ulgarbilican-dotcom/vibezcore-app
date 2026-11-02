@@ -69,7 +69,7 @@ final class BreathSessionController: NSObject, ObservableObject {
     ackTimer?.invalidate()
     let send: () -> Void = { [weak self] in
       guard let self = self, self.running, !self.paused, !self.isLocal, RuntimeSessionManager.shared.isRunning else { return }
-      PhoneConnector.shared.send(["type": "breath_ack", "playing": true])
+      PhoneConnector.shared.sendLive(["type": "breath_ack", "playing": true])
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: send)
     let t = Timer(timeInterval: 10, repeats: true) { _ in send() }

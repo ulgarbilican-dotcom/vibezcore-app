@@ -23,6 +23,9 @@ struct VibezToggleSessionIntent: LiveActivityIntent {
       CFNotificationName("com.ubili.vibezcoreapp.live.toggle" as CFString),
       nil, nil, true
     )
+    /* Audit 2 nov 2026: de app even wakker houden zodat ze het signaal ook echt verwerkt (pauzeren/hervatten en de kaart bijwerken)
+       voor iOS haar weer stillegt. */
+    try? await Task.sleep(nanoseconds: 1_000_000_000)
     return .result()
   }
 }

@@ -108,7 +108,12 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
 
   /** Live als de iPhone bereikbaar is, anders (of bij een fout) via de
    *  FIFO-wachtrij transferUserInfo, die later alsnog aflevert. */
-  func send(_ message: [String: Any], onUndeliverable: (() -> Void)? = nil) {
+  func send(_ messageIn: [String: Any], onUndeliverable: (() -> Void)? = nil) {
+    /* Audit 2 nov 2026: elk bericht krijgt het tijdstip van versturen mee; de telefoon negeert een knopdruk die via de wachtrij pas
+       veel later aankomt (anders kon een oude pauze of stop een nieuwere sessie raken). */
+    var stamped = messageIn
+    if stamped["sentAtMs"] == nil { stamped["sentAtMs"] = Date().timeIntervalSince1970 * 1000 }
+    let message = stamped
     guard WCSession.isSupported() else {
       onUndeliverable?()
       return
@@ -129,6 +134,15 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
       session.transferUserInfo(message)
       onUndeliverable?()
     }
+  }
+
+  /** Audit 2 nov 2026: enkel live (bevestigingen "ik speel het ritme"). Geen wachtrij: een bevestiging die minuten later aankomt, zou
+   *  de telefoon 25 s stil zetten terwijl het horloge niet (meer) speelt. */
+  func sendLive(_ message: [String: Any]) {
+    guard WCSession.isSupported() else { return }
+    let session = WCSession.default
+    guard session.activationState == .activated, session.isReachable else { return }
+    session.sendMessage(message, replyHandler: nil, errorHandler: nil)
   }
 
   // MARK: WCSessionDelegate

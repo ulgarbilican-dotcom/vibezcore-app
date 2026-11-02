@@ -1165,11 +1165,11 @@ export default function AccountScreen() {
       if (result.restoredCount > 0) void refreshSubscription();
       if (result.restoredCount > 0) {
         void showVibezAlert({
-          title: 'Subscription restored',
+          title: 'Purchase restored',
           /* Operator, 7 okt 2026 (account-audit): een gast heeft geen
              account — de aankoop staat dan op dit toestel. */
           message: email
-            ? `${result.restoredCount} active subscription${result.restoredCount === 1 ? '' : 's'} restored to your account.`
+            ? 'Your purchase is restored. Everything is unlocked again.'
             : 'Premium is active on this device. Create a free account to stream the Audio Library and use Premium on all your devices.',
         });
       } else if (result.accountMismatch) {
@@ -1185,7 +1185,7 @@ export default function AccountScreen() {
         void showVibezAlert({
           title: 'Nothing to restore',
           message:
-            `No active subscriptions were found for this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google account'}. If you believe this is wrong, contact support.`,
+            `No active purchase was found for this ${Platform.OS === 'ios' ? 'Apple Account' : 'Google account'}. If you believe this is wrong, contact support.`,
         });
       }
     } else {

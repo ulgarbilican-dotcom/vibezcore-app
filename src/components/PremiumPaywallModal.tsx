@@ -96,7 +96,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
     setRestoring(false);
     if (result.ok && result.restoredCount > 0) {
       onClose();
-      void showVibezAlert({ title: 'Subscription restored', message: 'Everything is unlocked again.' });
+      void showVibezAlert({ title: 'Purchase restored', message: 'Everything is unlocked again.' });
     } else if (result.ok && result.accountMismatch) {
       void showVibezAlert({
         title: 'Active on your account, not on this device',
@@ -106,7 +106,7 @@ export default function PremiumPaywallModal({ visible, onClose, context = 'breat
     } else if (result.ok) {
       void showVibezAlert({
         title: 'Nothing to restore',
-        message: 'No active subscriptions were found for this Apple ID or Google account.',
+        message: 'No active purchase was found for this Apple ID or Google account.',
       });
     } else {
       void showVibezAlert({ title: 'Could not restore', message: 'Please check your connection and try again.' });

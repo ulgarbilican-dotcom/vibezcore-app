@@ -82,7 +82,9 @@ final class RuntimeSessionManager: NSObject, WKExtendedRuntimeSessionDelegate, H
 
   /** Vanuit de App (scenePhase → .active): een uitgestelde start inhalen. */
   func appDidBecomeActive() {
-    requestWorkoutAuthorizationIfNeeded()
+    /* Audit 2 nov 2026 (operator op build 80: na Apple's Health-vraag geen cirkel meer): nooit midden in een sessie vragen — dat blad lag
+       over de lopende sessie. De iPhone vraagt het al bij de start; zonder sessie mag het horloge het zelf vragen. */
+    if owners.isEmpty { requestWorkoutAuthorizationIfNeeded() }
     startIfPossible()
   }
 

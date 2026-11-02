@@ -475,6 +475,12 @@ final class WatchBridge: NSObject, WCSessionDelegate {
       let action = message["action"] as? String,
       let kind = message["kind"] as? String
     else { return }
+    /* Audit 2 nov 2026: een pauze/hervat/stop die via de wachtrij pas veel later aankomt, hoort bij een oude sessie — negeren.
+       Instellingen (sterkte) blijven altijd gelden. */
+    if kind != "settings", let sentAtMs = message["sentAtMs"] as? Double,
+      Date().timeIntervalSince1970 * 1000 - sentAtMs > 15_000 {
+      return
+    }
     DispatchQueue.main.async { [weak self] in
       self?.onAction?(action, kind)
     }

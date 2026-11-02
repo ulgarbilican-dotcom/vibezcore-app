@@ -269,6 +269,7 @@ final class StateSessionController: ObservableObject {
     active = true
     ackedCurrentStart = false
 
+    pauseReleaseWork?.cancel()
     RuntimeSessionManager.shared.acquire(.state)
     scheduleNextBeat(gen: generation)
     ackIfRuntimeRunning()
@@ -311,7 +312,16 @@ final class StateSessionController: ObservableObject {
     endDate = nil
     pausedAt = now
     paused = true
+    /* Audit 2 nov 2026: zoals Breathwork — een vergeten pauze houdt de workout (en de batterij) niet eindeloos vast. */
+    pauseReleaseWork?.cancel()
+    let work = DispatchWorkItem { [weak self] in
+      guard let self = self, self.paused else { return }
+      RuntimeSessionManager.shared.release(.state)
+    }
+    pauseReleaseWork = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + 600, execute: work)
   }
+  private var pauseReleaseWork: DispatchWorkItem?
 
   /** Start een State Control-sessie op het horloge zelf (catalogus). */
   func startLocal(_ entry: CatalogState, minutes: Int, previewSec: Int = 0) {
@@ -540,7 +550,7 @@ final class StateSessionController: ObservableObject {
   private func ackIfRuntimeRunning() {
     guard !isLocal, active, !paused, !ackedCurrentStart, RuntimeSessionManager.shared.isRunning else { return }
     ackedCurrentStart = true
-    PhoneConnector.shared.send(["type": "state_ack", "playing": true])
+    PhoneConnector.shared.sendLive(["type": "state_ack", "playing": true])
   }
 
   /** 15 okt 2026 (zoals de Galaxy Watch): elke 10 s bevestigen dat het
@@ -551,7 +561,7 @@ final class StateSessionController: ObservableObject {
     let timer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
       guard let self = self, !self.isLocal, self.active, !self.paused, self.ackedCurrentStart,
         RuntimeSessionManager.shared.isRunning else { return }
-      PhoneConnector.shared.send(["type": "state_ack", "playing": true])
+      PhoneConnector.shared.sendLive(["type": "state_ack", "playing": true])
     }
     timer.tolerance = 0.5
     RunLoop.main.add(timer, forMode: .common)
@@ -566,7 +576,7 @@ final class StateSessionController: ObservableObject {
          telefoon-reactie hierop; de brug negeert `false`. Wel al melden,
          zodat de telefoon dit later kan oppakken. */
       ackedCurrentStart = false
-      PhoneConnector.shared.send(["type": "state_ack", "playing": false])
+      PhoneConnector.shared.sendLive(["type": "state_ack", "playing": false])
     }
   }
 
