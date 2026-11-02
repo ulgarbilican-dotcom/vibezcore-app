@@ -163,7 +163,7 @@ export default function MembershipPlans({
   const store = Platform.OS === 'ios' ? 'Your Apple ID' : 'Your Google Play account';
   const disclosure =
     plan === 'day'
-      ? `${store} is charged once when you confirm your purchase. The Day Pass ends 24 hours later and does not renew. Audio streams only.`
+      ? `${store} is charged once when you confirm your purchase. The Day Pass ends 24 hours later and does not renew.`
       : Platform.OS === 'ios'
         ? 'Your Apple ID is charged when you confirm your purchase. Your subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.'
         : 'Your Google Play account is charged when you confirm your purchase. Your subscription renews automatically until you cancel. Manage or cancel anytime in Google Play › Subscriptions.';

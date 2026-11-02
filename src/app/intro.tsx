@@ -78,7 +78,7 @@ const STEPS: Step[] = [
     title: 'Feel the pulse.\nFeel the shift',
     sub: 'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
     body: '', // (26 okt, operator) "Choose the state you want to move toward." weg: de tekst moet kunnen ademen en niet scrollen
-    note: 'Smart bead bracelet support coming soon.',
+    note: 'Smart Bead Bracelet · Launching Early 2027',
     mock: { kind: 'state', accent: '#B478FF' }, // State Control · Calm Control: pulseert meteen en stopt niet (Boost is hier te heftig)
     Icon: Radio,
   },
@@ -88,7 +88,7 @@ const STEPS: Step[] = [
     title: 'Follow the cues.\nLet your breathing lead',
     sub: 'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch.',
     body: 'Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
-    note: 'Smart bead bracelet support coming soon.',
+    note: 'Smart Bead Bracelet · Launching Early 2027',
     mock: { kind: 'breath', accent: '#FFFFFF' }, // Breathwork · Clarity & Relax: ademt (levend)
     Icon: Wind,
   },
