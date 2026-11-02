@@ -1984,6 +1984,8 @@ export function BreathSession() {
           holdCueUri: isLibraryPlaying() ? '' : bgUris.hold,
           exhaleCueUri: isLibraryPlaying() ? '' : bgUris.exhale,
           cueLeadMs: cueLeadMs(),
+          /* 2 nov 2026: ook in de achtergrond niet trillen als de Apple Watch speelt of de telefoon-trilling uit staat. */
+          haptics: hapticRef.current && !watchBreathRef.current,
           startPhaseIdx: idx,
           startRound: roundNow,
           startRemainingMs: Math.round(remainingSec * 1000),

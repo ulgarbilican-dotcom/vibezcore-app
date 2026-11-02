@@ -35,6 +35,9 @@ struct StartBreathBackgroundOptions: Record {
   @Field var holdCueUri: String = ""
   @Field var exhaleCueUri: String = ""
   @Field var cueLeadMs: Int = 400
+  /* 2 nov 2026 (operator: "bij Sleep voel ik haptics op telefoon én smartwatch"): de achtergrondlus trilde altijd, ook als de Apple Watch
+     speelt of de telefoon-trilling uit staat. Nu volgt ze de stand van het sessiescherm. Standaard aan (oudere aanroepen). */
+  @Field var haptics: Bool = true
 }
 
 public class BreathBackgroundModule: Module {
@@ -50,6 +53,7 @@ public class BreathBackgroundModule: Module {
   private var holdUri = ""
   private var exhaleUri = ""
   private var cueLeadMs: Int = 400
+  private var hapticsOn = true
 
   private let impact = UIImpactFeedbackGenerator(style: .medium)
 
@@ -97,6 +101,7 @@ public class BreathBackgroundModule: Module {
     holdUri = options.holdCueUri
     exhaleUri = options.exhaleCueUri
     cueLeadMs = options.cueLeadMs
+    hapticsOn = options.haptics
     phaseIdx = 0
     round = 1
 
@@ -197,6 +202,7 @@ public class BreathBackgroundModule: Module {
   }
 
   private func playHaptic(forKey key: String, secs: Int) {
+    guard hapticsOn else { return }
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       switch key {

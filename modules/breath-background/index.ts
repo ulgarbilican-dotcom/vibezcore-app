@@ -43,6 +43,8 @@ export type StartBreathBackgroundOptions = {
    *  Doorgegeven i.p.v. hardcoded native constante — zie CUE_LEAD_MS in
    *  breath-session.tsx, dat blijft de ene bron van waarheid. */
   cueLeadMs: number;
+  /** Mag de telefoon trillen in de achtergrond? Uit als de Apple Watch speelt of de telefoon-trilling uit staat (2 nov 2026). */
+  haptics?: boolean;
   /** Index in `phases` waar de sessie NU al in zit (operator, 13 augustus
    *  2026: "dubbele stem" — native start pas als het scherm al op slot
    *  gaat, dus altijd MIDDEN in een fase, nooit bij fase 0). */
