@@ -955,18 +955,23 @@ export function BreathSession() {
   const [askScopeStep, setAskScopeStep] = useState(false);
   /* Audit 2 nov 2026: de vraag opent 350 ms na de wissel. Wie binnen die tijd terugschakelt, mag geen vraag meer krijgen over een
      waarde die al ongedaan is — elke nieuwe wissel annuleert de wachtende vraag. */
-  const askTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const queueAsk = useCallback((next: Parameters<typeof setAskDefault>[0] | null) => {
-    if (askTimerRef.current) clearTimeout(askTimerRef.current);
-    askTimerRef.current = null;
+  /* Per instelling een eigen wachtende vraag: Voice en Phone vlak na elkaar wisselen annuleert elkaar niet. */
+  const askTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const queueAsk = useCallback((key: string, next: Parameters<typeof setAskDefault>[0] | null) => {
+    const prev = askTimersRef.current.get(key);
+    if (prev) clearTimeout(prev);
+    askTimersRef.current.delete(key);
     if (!next) return;
-    askTimerRef.current = setTimeout(() => {
-      askTimerRef.current = null;
-      setAskDefault(next);
-    }, 350);
+    askTimersRef.current.set(
+      key,
+      setTimeout(() => {
+        askTimersRef.current.delete(key);
+        setAskDefault(next);
+      }, 350),
+    );
   }, []);
   useEffect(() => () => {
-    if (askTimerRef.current) clearTimeout(askTimerRef.current);
+    askTimersRef.current.forEach((t) => clearTimeout(t));
   }, []);
   const closeAskDefault = useCallback(() => {
     setAskDefault(null);
@@ -1887,6 +1892,8 @@ export function BreathSession() {
       pausedAtWallRef.current = 0;
     }
     setPaused(false);
+    /* Meteen, niet pas na de render: armBackground (hieronder) leest deze ref. */
+    pausedRef.current = false;
     if (!hasPlayedRef.current) {
       hasPlayedRef.current = true;
       setHasPlayed(true);
@@ -4299,6 +4306,7 @@ export function BreathSession() {
                   /* 2 nov 2026 (operator: "na Yes is de knop niet verschoven"): de vraag pas NA het omschuiven — opende ze in dezelfde
                      tik, dan onderbrak iOS de schakelaar en bleef hij zichtbaar op de oude stand. */
                   queueAsk(
+                    'voice',
                     v !== voiceDefault
                       ? {
                           what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
@@ -4516,6 +4524,7 @@ export function BreathSession() {
                   /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
                   /* 2 nov 2026: de vraag pas NA het omschuiven (zie Voice guidance). */
                   queueAsk(
+                    'haptics',
                     v !== hapticDefault
                       ? {
                           what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
@@ -4550,6 +4559,7 @@ export function BreathSession() {
                         /* 2 nov 2026 (operator: "ja op alles"): zoals Voice guidance — "Just this time / Yes, remember it". Strong blijft de
                            standaard tot de gebruiker zelf iets anders onthoudt. */
                         queueAsk(
+                          'strength',
                           l !== getSavedHapticStrength()
                             ? {
                                 what: `Vibration ${l}`,

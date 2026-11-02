@@ -19,7 +19,9 @@ import { phaseHapticPattern, watchBreathAmplitude } from '@/services/breath-hapt
 import { watchStateParams } from '@/services/bracelet-haptics';
 import { MODES } from '@/services/ble-contract';
 import { BREATH_STATE_MODE, STATE_USAGE } from '@/data/state-usage';
-import { getSavedHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+/* Audit 2 nov 2026: de HUIDIGE sterkte — het horloge tikt ermee in de lopende sessie. Een keuze "Just this time" valt bij het einde
+   van de sessie terug op de bewaarde stand, en die wordt dan meteen opnieuw naar het horloge gestuurd. */
+import { getHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
 import { getRestingPulse, subscribeRestingPulse } from '@/services/resting-pulse';
 import { recordSession } from '@/utils/bracelet-history';
 import { useBraceletOwner } from '@/utils/dev-user-override';
@@ -145,7 +147,7 @@ export function buildWatchCatalog(
     locked: stateLocked && !stateFreeOnce,
     params: watchStateParams(m.mode),
   }));
-  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, stateFreeOnce, entitledUntil: entitledUntilMs, ownsBracelet, strength: getSavedHapticStrength() });
+  return JSON.stringify({ v: 3, amp: watchBreathAmplitude(), breath, state, breathFreeOnce, stateFreeOnce, entitledUntil: entitledUntilMs, ownsBracelet, strength: getHapticStrength() });
 }
 
 /** Een State Control-sessie die op het horloge zelf liep (13 okt 2026). */

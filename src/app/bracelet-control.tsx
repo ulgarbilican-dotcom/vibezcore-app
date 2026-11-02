@@ -5639,6 +5639,11 @@ function BraceletControlScreen({
      in de trilling. Zonder native module (iOS) geeft expo-haptics de tik. */
   useEffect(() => {
     const show = (c: SessionCompletion) => {
+      /* Audit 2 nov 2026: kwam het aanbod (gratis sessie) al vóór het eindscherm (trage bracelet-stop), dan eerst "Well done", aanbod na Done. */
+      if (paywallOpenRef.current && freeEndPaywallRef.current) {
+        setPaywallOpen(false);
+        paywallAfterDoneRef.current = true;
+      }
       dismissCompletionNotice();
       sessionStartedAtRef.current = null;
       sessionRealStartedAtRef.current = null;
@@ -5798,6 +5803,11 @@ function BraceletControlScreen({
   const freeSessionAvailable = freeFor(selectedMode);
   const sessionsLocked = premiumLocked && !freeSessionAvailable;
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const paywallOpenRef = useRef(false);
+  paywallOpenRef.current = paywallOpen;
+  useEffect(() => {
+    if (!paywallOpen) freeEndPaywallRef.current = false;
+  }, [paywallOpen]);
   const [autoTrialToken, setAutoTrialToken] = useState<string | null>(null);
 
   const autoStartFiredRef = useRef(false);
@@ -6136,6 +6146,8 @@ function BraceletControlScreen({
   /* Audit 2 nov 2026: liep de gratis sessie volledig af, dan komt eerst het "Well done"-scherm en pas na Done het aanbod (anders lagen
      ze over elkaar). Vroegtijdig gestopt = geen eindscherm = meteen het aanbod. */
   const paywallAfterDoneRef = useRef(false);
+  /* Het aanbod na een gratis sessie (en niet een ander betaalscherm) — enkel dat mag het eindscherm laten voorgaan. */
+  const freeEndPaywallRef = useRef(false);
   const completionOpenRef = useRef(false);
   completionOpenRef.current = completedModeForModal !== null;
   useEffect(() => {
@@ -6147,7 +6159,10 @@ function BraceletControlScreen({
       /* Bewust zonder opruimen: een andere afhankelijkheid die meteen daarna wijzigt, mag dit aanbod niet annuleren. */
       setTimeout(() => {
         if (completionOpenRef.current) paywallAfterDoneRef.current = true;
-        else setPaywallOpen(true);
+        else {
+          freeEndPaywallRef.current = true;
+          setPaywallOpen(true);
+        }
       }, 300);
     }
   }, [sessionActive, monitorSnap.active, freeSessionAvailable, premiumLocked]);
