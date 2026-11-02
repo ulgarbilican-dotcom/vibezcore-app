@@ -72,6 +72,14 @@ let queue: QueueEntry[] = [];
 const listeners: ((entry: QueueEntry | null) => void)[] = [];
 const topListener = () => listeners[listeners.length - 1];
 
+/* 2 nov 2026 (operator: "bij de eerste sessie plots 'End session?'"): op iOS kan de tik waarmee je een melding sluit, doorschieten naar de
+   knop eronder (END SESSION). Knoppen met een ingrijpend gevolg vragen daarom of er net een melding dicht ging. */
+let lastClosedAt = 0;
+/** Ging er net (binnen `ms`) een melding dicht? */
+export function alertJustClosed(ms = 800): boolean {
+  return Date.now() - lastClosedAt < ms;
+}
+
 /** Staat er nu een melding open? (19 okt 2026: geen saleskaart erbovenop.) */
 export function isVibezAlertOpen(): boolean {
   return queue.length > 0;
@@ -128,6 +136,7 @@ export function VibezAlertHost() {
   const dismiss = (idx: number) => {
     const entry = current;
     if (!entry) return;
+    lastClosedAt = Date.now();
     setCurrent(null);
     queue.shift();
     entry.resolve(idx);

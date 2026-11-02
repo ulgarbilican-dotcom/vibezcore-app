@@ -149,7 +149,7 @@ import {
   stopBreathSessionOnWatch as stopBreathSessionOnWear,
   wakeWatch as wakeWear,
 } from '../../modules/wear-breath';
-import { showVibezAlert } from '@/components/VibezAlert';
+import { alertJustClosed, showVibezAlert } from '@/components/VibezAlert';
 import {
   BlurMask,
   Canvas,
@@ -3600,6 +3600,8 @@ export function BreathSession() {
                 houden hun eigen afhandeling (requestStop). */}
             <AnimatedPressable
               onPress={() => {
+                /* 2 nov 2026: geen doorgeschoten tik van een net gesloten melding. */
+                if (alertJustClosed()) return;
                 if (isFreeOnboardingSession || locked) requestStop();
                 else setConfirmEnd(true);
               }}

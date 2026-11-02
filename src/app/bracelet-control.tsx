@@ -211,6 +211,7 @@ import {
 import { hapticPress, hapticTap, hapticTick } from '@/utils/haptics';
 import { imageSource } from '@/utils/image-source';
 import { STRENGTH_NOTE } from '@/utils/watch-setup-tip';
+import { alertJustClosed } from '@/components/VibezAlert';
 
 /* MERK_ANKER §2 levert geen "warn"-kleur. Voor de battery-warn drempel
    (5–20%) gebruiken we de Sharp Focus oranje uit CLAUDE.md §5. */
@@ -3832,7 +3833,11 @@ function ActiveSessionScreen({
           <Tap
             style={({ pressed }) => [s.endTxtWrap, pressed && { opacity: 0.6 }]}
             hitSlop={10}
-            onPress={() => setConfirmEnd(true)}
+            onPress={() => {
+              /* 2 nov 2026: geen doorgeschoten tik van een net gesloten melding (bv. de uitleg bij de eerste horlogesessie). */
+              if (alertJustClosed()) return;
+              setConfirmEnd(true);
+            }}
             disabled={busy}
             accessibilityRole="button"
             accessibilityLabel="End session"
