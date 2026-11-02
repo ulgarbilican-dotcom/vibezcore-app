@@ -58,11 +58,9 @@ import {
   addActiveSeconds,
   dayPassCapAllows,
   ensureSalesNudgesLoaded,
-  getActiveSeconds,
   getWasPro,
   getWinBackShownFor,
   hasDismissedPlansEnough,
-  hasShownDayPass,
   markDayPassShown,
   markWinBackShown,
   salesQuietAllows,
@@ -254,11 +252,8 @@ export function SalesNudgeHost() {
     }
 
     if (braceletRef.current || !dayPassCapAllows()) return;
+    /* 2 nov 2026 (operator): elke dag één keer voor wie Free blijft, na 60 s rustig rondkijken in deze opening. */
     if (openActiveSecRef.current < DAY_PASS_FIRST_AFTER_SEC) return;
-    const first = !hasShownDayPass() && getActiveSeconds() >= DAY_PASS_FIRST_AFTER_SEC;
-    const reshow = hasShownDayPass() && reshowArmedRef.current;
-    if (!first && !reshow) return;
-    reshowArmedRef.current = false;
     markDayPassShown();
     setCard('day-pass');
   }, []);

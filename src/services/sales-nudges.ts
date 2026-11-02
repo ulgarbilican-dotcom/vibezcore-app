@@ -9,10 +9,11 @@
    beslist components/SalesNudgeHost.tsx.
 
    Regels (bindend, operator-goedgekeurd):
-   - Day Pass-kaart: eerste keer na 60 s ACTIEF rondkijken (voorgrond, geen
-     onboarding, geen sessie/preview, Audio Library speelt niet). Later
-     opnieuw na twee keer de plannen/paywall wegtikken zonder kopen, bij
-     de volgende app-opening. Max 1 keer per 7 dagen, max 3 keer in totaal.
+   - Day Pass-kaart: na 60 s ACTIEF rondkijken in een app-opening (voorgrond,
+     geen onboarding, geen sessie/preview, Audio Library speelt niet).
+     GEWIJZIGD 2 nov 2026 (operator: "dagpas moet elke dag komen als de
+     gebruiker erop gaat en in free blijft"): één keer per kalenderdag, zonder
+     totaal-maximum (was: 1x per 7 dagen, max 3x, herhaling pas na 2x wegtikken).
    - Nooit binnen ~2 min na een andere paywall/saleskaart, nooit vlak na
      een aankoop.
    - Welcome Back: één keer per verlopen abonnement (einddatum bewaard).
@@ -28,10 +29,6 @@ const KEY = 'vz_sales_nudges_v1';
 
 /** Actieve seconden vóór de eerste Day Pass-kaart. */
 export const DAY_PASS_FIRST_AFTER_SEC = 60;
-/** Max één Day Pass-kaart per 7 dagen. */
-const DAY_PASS_MIN_GAP_MS = 7 * 24 * 60 * 60 * 1000;
-/** Max 3 Day Pass-kaarten in totaal (inclusief de eerste). */
-const DAY_PASS_MAX_SHOWS = 3;
 /** Twee keer de plannen weggetikt zonder kopen = opnieuw aanbieden. */
 const DISMISSALS_FOR_RESHOW = 2;
 /** Geen kaart binnen ~2 min na een andere paywall/saleskaart. */
@@ -144,10 +141,10 @@ export function hasShownDayPass(): boolean {
   return state.dayPassShows > 0;
 }
 
-/** Frequentiegrens van de Day Pass-kaart (7 dagen, max 3). */
+/** Frequentiegrens van de Day Pass-kaart: één keer per kalenderdag (toesteltijd). */
 export function dayPassCapAllows(now = Date.now()): boolean {
-  if (state.dayPassShows >= DAY_PASS_MAX_SHOWS) return false;
-  return now - state.dayPassLastShownAt >= DAY_PASS_MIN_GAP_MS;
+  if (!state.dayPassLastShownAt) return true;
+  return new Date(state.dayPassLastShownAt).toDateString() !== new Date(now).toDateString();
 }
 
 /** Algemene rust: geen andere saleskaart net getoond, geen verse aankoop. */

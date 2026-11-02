@@ -1,8 +1,7 @@
 /* Verkoopkaarten-boekhouding (services/sales-nudges.ts), operator-regels
    19 okt 2026:
-   - Day Pass-kaart: eerste keer na 60 s ACTIEF rondkijken;
-   - max 1 keer per 7 dagen, max 3 keer in totaal;
-   - opnieuw na 2x de plannen wegtikken (bij de volgende app-opening);
+   - Day Pass-kaart: na 60 s ACTIEF rondkijken in een app-opening;
+   - één keer per kalenderdag zolang de gebruiker Free blijft (2 nov 2026);
    - nooit binnen ~2 min na een andere saleskaart, nooit vlak na een aankoop;
    - Welcome Back: een keer per verlopen abonnement (einddatum).
    Wanneer de kaart effectief verschijnt (geen sessie/preview) beslist
@@ -33,134 +32,64 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 /** Wat SalesNudgeHost.tryShow beslist voor de Day Pass-kaart (zonder de
- *  scherm-/sessiechecks), met de functies uit sales-nudges. */
-function dayPassWouldShow(n: Nudges, reshowArmed: boolean): boolean {
+ *  scherm-/sessiechecks): 60 s rustig in DEZE opening + niet vandaag al getoond. */
+function dayPassWouldShow(n: Nudges, openActiveSec: number): boolean {
   if (!n.salesQuietAllows()) return false;
   if (!n.dayPassCapAllows()) return false;
-  const first = !n.hasShownDayPass() && n.getActiveSeconds() >= n.DAY_PASS_FIRST_AFTER_SEC;
-  const reshow = n.hasShownDayPass() && reshowArmed;
-  return first || reshow;
+  return openActiveSec >= n.DAY_PASS_FIRST_AFTER_SEC;
 }
 
-describe('Day Pass — eerste keer na 60 s actief rondkijken', () => {
+describe('Day Pass — na 60 s rustig rondkijken in een opening', () => {
   test('drempel is 60 s', async () => {
     const n = await load();
     expect(n.DAY_PASS_FIRST_AFTER_SEC).toBe(60);
   });
 
-  test('55 s actief = nog niet; 60 s = wel', async () => {
+  test('55 s = nog niet; 60 s = wel', async () => {
     const n = await load();
-    for (let i = 0; i < 11; i++) n.addActiveSeconds(5);
-    expect(n.getActiveSeconds()).toBe(55);
-    expect(dayPassWouldShow(n, false)).toBe(false);
-    n.addActiveSeconds(5);
-    expect(n.getActiveSeconds()).toBe(60);
-    expect(dayPassWouldShow(n, false)).toBe(true);
-  });
-
-  test('actieve seconden stoppen op 60 en blijven bewaard over een koude start', async () => {
-    let n = await load();
-    n.addActiveSeconds(45);
-    n.addActiveSeconds(45);
-    expect(n.getActiveSeconds()).toBe(60);
-    n.addActiveSeconds(5);
-    expect(n.getActiveSeconds()).toBe(60);
-    await coldStart();
-    n = await load();
-    expect(n.getActiveSeconds()).toBe(60);
-  });
-
-  test('gedeeltelijk rondkijken telt op over app-runs heen', async () => {
-    let n = await load();
-    n.addActiveSeconds(30);
-    await coldStart();
-    n = await load();
-    n.addActiveSeconds(30);
-    expect(n.getActiveSeconds()).toBe(60);
+    expect(dayPassWouldShow(n, 55)).toBe(false);
+    expect(dayPassWouldShow(n, 60)).toBe(true);
   });
 });
 
-describe('Day Pass — frequentiegrens: 1x per 7 dagen, max 3x totaal', () => {
-  test('na een kaart: 7 dagen niets, ook niet bij gewapende herhaling', async () => {
+describe('Day Pass — één keer per dag zolang de gebruiker Free blijft (operator, 2 nov 2026)', () => {
+  test('na een kaart: de rest van die dag niets meer', async () => {
     const n = await load();
-    n.addActiveSeconds(60);
     n.markDayPassShown();
-    expect(n.hasShownDayPass()).toBe(true);
-    now = T0 + 7 * DAY - 1;
+    now = T0 + 6 * 60 * MIN; // zelfde dag, 6 u later
     expect(n.dayPassCapAllows()).toBe(false);
-    expect(dayPassWouldShow(n, true)).toBe(false);
-    now = T0 + 7 * DAY;
-    expect(n.dayPassCapAllows()).toBe(true);
+    expect(dayPassWouldShow(n, 600)).toBe(false);
   });
 
-  test('de eerste kaart komt geen tweede keer vanzelf (zonder 2x wegtikken)', async () => {
+  test('de volgende dag opnieuw', async () => {
     const n = await load();
-    n.addActiveSeconds(60);
     n.markDayPassShown();
-    now = T0 + 30 * DAY;
-    expect(dayPassWouldShow(n, false)).toBe(false);
+    now = T0 + DAY;
+    expect(dayPassWouldShow(n, 60)).toBe(true);
   });
 
-  test('max 3 keer in totaal, ook na lange tijd', async () => {
+  test('3 dagen per week in de app = 3 keer gezien, geen totaal-maximum', async () => {
     const n = await load();
-    for (let i = 0; i < 3; i++) {
-      now = T0 + i * 8 * DAY;
-      expect(n.dayPassCapAllows()).toBe(true);
-      n.markDayPassShown();
+    let shown = 0;
+    for (const d of [0, 2, 4, 7, 9, 11, 30]) {
+      now = T0 + d * DAY;
+      if (dayPassWouldShow(n, 60)) {
+        n.markDayPassShown();
+        shown++;
+      }
+      now += 3 * MIN; // nog eens openen dezelfde dag: niet opnieuw
+      if (dayPassWouldShow(n, 60)) shown++;
     }
-    now = T0 + 365 * DAY;
-    expect(n.dayPassCapAllows()).toBe(false);
-    expect(dayPassWouldShow(n, true)).toBe(false);
+    expect(shown).toBe(7);
   });
 
-  test('de telling overleeft een koude start', async () => {
+  test('"vandaag al getoond" overleeft een koude start', async () => {
     let n = await load();
-    n.markDayPassShown();
-    now += 8 * DAY;
-    n.markDayPassShown();
-    now += 8 * DAY;
     n.markDayPassShown();
     await coldStart();
     n = await load();
-    now += 100 * DAY;
+    now = T0 + 30 * MIN;
     expect(n.dayPassCapAllows()).toBe(false);
-  });
-});
-
-describe('Day Pass — opnieuw na 2x de plannen wegtikken', () => {
-  test('1x wegtikken = niet genoeg, 2x = wel', async () => {
-    const n = await load();
-    expect(n.hasDismissedPlansEnough()).toBe(false);
-    n.recordPlansDismissed();
-    expect(n.hasDismissedPlansEnough()).toBe(false);
-    n.recordPlansDismissed();
-    expect(n.hasDismissedPlansEnough()).toBe(true);
-  });
-
-  test('een getoonde kaart zet de teller terug op 0', async () => {
-    const n = await load();
-    n.recordPlansDismissed();
-    n.recordPlansDismissed();
-    n.markDayPassShown();
-    expect(n.hasDismissedPlansEnough()).toBe(false);
-  });
-
-  test('volledige doorloop: eerste kaart -> 2x wegtikken -> na 7 dagen herhaling', async () => {
-    let n = await load();
-    n.addActiveSeconds(60);
-    expect(dayPassWouldShow(n, false)).toBe(true);
-    n.markDayPassShown();
-    n.recordPlansDismissed();
-    now += 5 * MIN;
-    n.recordPlansDismissed();
-    await coldStart(); // volgende app-opening: host wapent de herhaling
-    n = await load();
-    const armed = n.hasDismissedPlansEnough();
-    expect(armed).toBe(true);
-    now = T0 + 6 * DAY;
-    expect(dayPassWouldShow(n, armed)).toBe(false); // binnen 7 dagen
-    now = T0 + 7 * DAY;
-    expect(dayPassWouldShow(n, armed)).toBe(true);
   });
 });
 
