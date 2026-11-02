@@ -4225,11 +4225,15 @@ export function BreathSession() {
                   setVoiceOnLocal(v);
                   /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
                   if (v !== voiceDefault) {
-                    setAskDefault({
-                      what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
-                      apply: (scope) => remember({ voice: v }, scope),
-                      revert: () => setVoiceOnLocal(prev),
-                    });
+                    /* 2 nov 2026 (operator: "na Yes is de knop niet verschoven"): de vraag pas NA het omschuiven — opende ze in dezelfde
+                       tik, dan onderbrak iOS de schakelaar en bleef hij zichtbaar op de oude stand. */
+                    setTimeout(() => {
+                      setAskDefault({
+                        what: `${st.eyebrow} · Voice ${v ? 'on' : 'off'}`,
+                        apply: (scope) => remember({ voice: v }, scope),
+                        revert: () => setVoiceOnLocal(prev),
+                      });
+                    }, 350);
                   }
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
@@ -4439,11 +4443,14 @@ export function BreathSession() {
                   setHapticsOn(v);
                   /* 2 nov 2026: weer de vraag "Just this time / Yes, remember it" (operator). */
                   if (v !== hapticDefault) {
-                    setAskDefault({
-                      what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
-                      apply: (scope) => remember({ haptics: v }, scope),
-                      revert: () => setHapticsOn(prev),
-                    });
+                    /* 2 nov 2026: de vraag pas NA het omschuiven (zie Voice guidance). */
+                    setTimeout(() => {
+                      setAskDefault({
+                        what: `${st.eyebrow} · Phone ${v ? 'on' : 'off'}`,
+                        apply: (scope) => remember({ haptics: v }, scope),
+                        revert: () => setHapticsOn(prev),
+                      });
+                    }, 350);
                   }
                 }}
                 trackColor={{ false: '#3a3a3a', true: '#00A3A3' }}
