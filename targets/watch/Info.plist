@@ -16,8 +16,8 @@
 	     (zie expo-target.config.js, startWatchApp) en dan zijn deze twee uitlegzinnen verplicht.
 	     Zelfde tekst als de iPhone-app (app.json). -->
 	<key>NSHealthShareUsageDescription</key>
-	<string>VIBEZCORE does not read your health data. Access is only used to open its Apple Watch app when you start a session on your iPhone and keep it running during your session.</string>
+	<string>VIBEZCORE does not read your health data. Health access is only used to start a Mind &amp; Body session on your Apple Watch during your Breathwork or State Control session.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>VIBEZCORE uses this only to open its Apple Watch app and keep it running during your session, so you can feel it with the screen off. No workout or health data is saved.</string>
+	<string>VIBEZCORE starts a Mind &amp; Body workout session on your Apple Watch while your Breathwork or State Control session runs. This opens the VIBEZCORE watch app when you start on your iPhone and keeps the guiding taps going while your wrist is down. VIBEZCORE does not save workouts or any other health data.</string>
 </dict>
 </plist>
