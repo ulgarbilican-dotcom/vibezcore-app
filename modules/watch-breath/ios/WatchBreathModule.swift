@@ -440,10 +440,10 @@ final class WatchBridge: NSObject, WCSessionDelegate {
   /* Terugval-pad van de Watch (transferUserInfo) als de telefoon op het
      moment van de tik niet bereikbaar was. */
   func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
-    handleFromWatch(userInfo)
+    handleFromWatch(userInfo, queued: true)
   }
 
-  private func handleFromWatch(_ message: [String: Any]) {
+  private func handleFromWatch(_ message: [String: Any], queued: Bool = false) {
     if (message["type"] as? String) == "catalog_request" {
       DispatchQueue.main.async { [weak self] in self?.flushCatalog(force: true) }
       return
@@ -477,8 +477,10 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     else { return }
     /* Audit 2 nov 2026: een pauze/hervat/stop die via de wachtrij pas veel later aankomt, hoort bij een oude sessie — negeren.
        Instellingen (sterkte) blijven altijd gelden. */
-    if kind != "settings", let sentAtMs = message["sentAtMs"] as? Double,
-      Date().timeIntervalSince1970 * 1000 - sentAtMs > 15_000 {
+    /* Enkel voor de wachtrij (transferUserInfo): een live bericht is per definitie nu getikt — geen klokvergelijking tussen twee toestellen
+       die een geldige tik zou kunnen weggooien (operator op build 82: pauze/stop op het horloge deed niets). */
+    if queued, kind != "settings", let sentAtMs = message["sentAtMs"] as? Double,
+      Date().timeIntervalSince1970 * 1000 - sentAtMs > 60_000 {
       return
     }
     DispatchQueue.main.async { [weak self] in

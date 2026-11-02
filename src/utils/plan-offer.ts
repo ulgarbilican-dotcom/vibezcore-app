@@ -76,6 +76,8 @@ export async function markPlanOfferPending(): Promise<void> {
   void pending;
   const next = { state: true, breath: true };
   pendingCache = next;
+  /* Een tabblad dat al open staat, opnieuw laten kijken (zonder nieuwe tik). */
+  tapListeners.forEach((l) => l());
   tappedAt.state = 0;
   tappedAt.breath = 0;
   await write(PENDING_KEY, next);
@@ -104,6 +106,9 @@ export function usePlanOffer(kind: PlanOfferKind, ready: boolean): void {
     /* 2 nov 2026 (operator): ook bij TERUGKEER op het tabblad waar je kocht (niet enkel na een nieuwe tabtik), na 1 s zodat het blad niet
        meteen over het aankoopscherm valt; en ook als er al een plan is (de gebruiker kiest zelf: nieuw plan of "Not now"). `ready` vraagt
        nog altijd dat het tabblad zelf open is — wie in Profile koopt, krijgt de vraag pas als hij zelf naar het tabblad gaat. */
+    /* 2 nov 2026 (operator op build 82: "set your goal/plan moet bij elke Premium-aankoop verschijnen"): `shown` gold voor het hele
+       leven van het tabblad — na een tweede aankoop (bv. upgrade) kwam de vraag niet meer. Nu beslist enkel de openstaande vlag (die na
+       tonen wordt verbruikt); `shown` voorkomt alleen dat dezelfde vraag twee keer tegelijk opent. */
     if (!ready || shown.current) return;
     let cancelled = false;
     void (async () => {
@@ -114,6 +119,7 @@ export function usePlanOffer(kind: PlanOfferKind, ready: boolean): void {
       await consume(kind);
       /* Het glasblad zelf: components/PlanOfferHost.tsx (root-layout). */
       sheetListeners.forEach((l) => l(kind));
+      shown.current = false;
     })();
     return () => {
       cancelled = true;
