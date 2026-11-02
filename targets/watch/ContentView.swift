@@ -170,7 +170,7 @@ private struct StateSessionLayout: View {
       /* Pols omlaag: watchOS verbergt seconden ("21:--") — dan minuten,
          elke minuut bijgewerkt (19 okt 2026). */
       if ambient {
-        TimelineView(.everyMinute) { ctx in
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
           StateFace(state: state, now: ctx.date, size: size, r: r, pulses: pulses, ambient: ambient)
         }
       } else {
@@ -219,11 +219,11 @@ private struct StateFace: View {
   private var timerText: Text {
     /* 1 nov 2026 (iOS build 68, operator: "blijft altijd op 1 min staan"): de eigen minutenteller hing aan de app, die met de pols
        omlaag niet (altijd) wakker is. Nu telt het systeem zelf af (zoals de Live Activity), ook als de app even slaapt. */
-    if ambient && !state.paused, let end = state.endDate {
-      /* 2 nov 2026 (operator: "seconden op het gedimde scherm lopen 1 s achter"): de systeemteller rondt naar BOVEN af, de iPhone naar
-         beneden — 1 s vroeger laten eindigen geeft dezelfde seconde als de telefoon. */
-      let shown = end.addingTimeInterval(-1)
-      return Text(timerInterval: now...max(now, shown), countsDown: true, showsHours: false)
+    /* 2 nov 2026 (operator op build 75, foto: gedimd scherm toont "27:--"): de systeemteller verbergt in het gedimde scherm de seconden
+       ("--"). Terug naar minuten, naar beneden afgerond zoals de iPhone (27:30 → "27 min"). Blijft niet meer hangen sinds de workoutsessie
+       de app wakker houdt; het beeld ververst elke seconde (TimelineView .periodic, zie StateSessionLayout). */
+    if ambient && !state.paused {
+      return Text("\(max(0, Int((remaining / 60).rounded(.down)))) min")
     }
     return Text(clockText(remaining, roundUp: false))
   }
@@ -400,7 +400,7 @@ private struct BreathSessionLayout: View {
   var body: some View {
     ZStack {
       if ambient {
-        TimelineView(.everyMinute) { ctx in
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
           BreathFace(controller: controller, now: ctx.date, size: size, r: r, acy: acy, ambient: ambient)
         }
       } else {
@@ -562,7 +562,8 @@ private struct BreathFace: View {
         if !paused && ambient {
           /* Always On: minuten, elke minuut bijgewerkt (19 okt 2026) */
           /* 1 nov 2026: systeemteller (zie StateFace) i.p.v. een eigen minutenteller die kon blijven hangen */
-          (Text(timerInterval: now...max(now, controller.sessionEnd.addingTimeInterval(-1)), countsDown: true, showsHours: false) + Text(" left"))
+          /* 2 nov 2026: minuten (geen "--" van de systeemteller), naar beneden afgerond zoals de iPhone */
+          Text("\(max(0, Int((sessionLeft / 60).rounded(.down)))) min left")
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(Color.white.opacity(0.59))
         }
