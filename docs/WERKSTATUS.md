@@ -39,6 +39,8 @@ pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
 
 ## 3. Huidige bouwronde (sinds de laatste store-build)
 
+- **2 nov 2026 — Google-login iPhone:** iOS OAuth-client `80535193832-uu4e6e…` aangemaakt (project vibezcore1, bundel com.ubili.vibezcoreapp), in app.json (googleIosClientId + iosUrlScheme), en toegevoegd aan Supabase › Google › Client IDs (gecontroleerd). Werkt pas in de volgende iOS-build.
+
 - **2 nov 2026 — standaarden:** State Control staat standaard op Haptic + Audio (hartslaggeluid aan; wie zelf Haptic kiest, houdt dat). Trilsterkte: Strong blijft de standaard; een andere sterkte vraagt "Just this time / Remember" (Breathwork: dezelfde popup als Voice; State Control: regel in het blad). Nog niet gebouwd.
 
 Alles hieronder zit in de code op de werkbranch, maar is **nog niet in een store-build**.
@@ -207,6 +209,8 @@ Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/m
 - 25 okt 2026 (avond): algemene uitleg vóór het welkomstscherm (src/app/intro.tsx, eenmalig via `appIntroSeenAt`, 5 schermen, operator-teksten in kop/subkop/body, foto's per onderdeel op volle breedte met gemeten verhouding), Restore zonder account biedt het gratis account aan (subscribe.tsx). Operator: is ok. Open: kleine schermen/grote tekst voor intro controleren, zin "nervous system" blijft operator-keuze (projectregel zegt toestand-taal), scherm 4 subkop/body-splitsing, Breathwork-onboarding naast de huisstijl leggen, schone (niet-QA) build op de telefoon, account-uitnodiging na het bouwen van een plan = pas met plannen-sync (eerst akkoord op één nieuwe Supabase-tabel).
 
 ## 4. Wacht op de operator (niet zelf beslissen)
+
+- **Vóór lancering: Google-toestemmingsscherm publiceren** (Google Cloud › vibezcore1 › Google Auth Platform › Audience › Publish app). Staat op "Testing": enkel 3 testgebruikers kunnen met Google inloggen (iPhone én Android). Operator 2 nov: nu nog geen klanten, later doen.
 
 - Title Case voor alle knoppen (inventaris gemaakt, niet goedgekeurd).
 - Welkomstschermen enkel de eerste keer (replay via Settings).
