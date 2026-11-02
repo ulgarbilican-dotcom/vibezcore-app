@@ -158,7 +158,12 @@
           "enableBackgroundRecording": false
         }
       ],
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.80535193832-uu4e6e68da1rd57n8tv83nsev84iiq57"
+        }
+      ],
       "expo-apple-authentication",
       [
         "expo-build-properties",
@@ -222,6 +227,7 @@
         "projectId": "8c47743c-4586-4790-91b5-a1a6508b8e7a"
       },
       "googleWebClientId": "80535193832-hmkidpmb9ki274p5go7rhsli6fgcueht.apps.googleusercontent.com",
+      "googleIosClientId": "80535193832-uu4e6e68da1rd57n8tv83nsev84iiq57.apps.googleusercontent.com",
       "revenuecatApiKeyAndroid": "goog_KyNEYIhvNNHzFWGdJeCPCmpPxWp",
       "revenuecatApiKeyIos": "appl_fINnAMNHPkMcgTRuFOJuecbFKPL"
     },
