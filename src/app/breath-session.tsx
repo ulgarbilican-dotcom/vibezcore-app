@@ -46,7 +46,14 @@ import PopupCard from '@/components/PopupCard';
 import Tap from '@/components/Tap';
 import BalancedText from '@/components/BalancedText';
 import WatchHapticsRow from '@/components/WatchHapticsRow';
-import { getHapticStrength, resetHapticStrengthForSession, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+import {
+  getHapticStrength,
+  getSavedHapticStrength,
+  resetHapticStrengthForSession,
+  setHapticStrength,
+  setHapticStrengthForSession,
+  useHapticStrength,
+} from '@/services/haptic-strength-pref';
 import { audioOutputExtraMs } from '@/services/audio-latency';
 import FeelCheck from '@/components/FeelCheck';
 import ConfirmCard from '@/components/ConfirmCard';
@@ -932,6 +939,8 @@ export function BreathSession() {
     apply: (scope: 'all' | 'state') => void;
     revert?: () => void;
     what: string;
+    /** Geldt app-breed (trilsterkte): "Yes, remember it" onthoudt meteen, zonder de vraag "enkel deze toestand of alle". */
+    noScope?: boolean;
   }>(null);
   /* Operator, 20 september 2026 ("eerst moet er een vraag gesteld worden
      just this session, dan is dat alleen voor dit. als gebruiker remember
@@ -3808,7 +3817,12 @@ export function BreathSession() {
                 </BalancedText>
                 <Tap
                   style={s.modalBtn}
-                  onPress={() => setAskScopeStep(true)}
+                  onPress={() => {
+                    if (askDefault?.noScope) {
+                      askDefault.apply('all');
+                      closeAskDefault();
+                    } else setAskScopeStep(true);
+                  }}
                 >
                   <Text style={s.modalBtnTxt}>Yes, remember it</Text>
                 </Tap>
@@ -4470,10 +4484,23 @@ export function BreathSession() {
                       key={l}
                       onPress={() => {
                         if (on) return;
-                        setHapticStrength(l);
+                        const prev = hapticStrength;
+                        setHapticStrengthForSession(l, true);
                         void Haptics.impactAsync(
                           l === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
                         ).catch(() => {});
+                        /* 2 nov 2026 (operator: "ja op alles"): zoals Voice guidance — "Just this time / Yes, remember it". Strong blijft de
+                           standaard tot de gebruiker zelf iets anders onthoudt. */
+                        if (l !== getSavedHapticStrength()) {
+                          setTimeout(() => {
+                            setAskDefault({
+                              what: `Vibration ${l}`,
+                              noScope: true,
+                              apply: () => setHapticStrength(l),
+                              revert: () => setHapticStrengthForSession(prev, true),
+                            });
+                          }, 350);
+                        }
                       }}
                       style={[s.levelChip, on && s.levelChipOn]}
                       accessibilityRole="radio"

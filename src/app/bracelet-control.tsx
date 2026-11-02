@@ -51,7 +51,13 @@ import { useLibraryPlaying } from '@/services/library-priority';
 import { FREE_COPY } from '@/constants/free-session-copy';
 import { QUICK_SESSION_MINUTES, QUICK_SESSIONS } from '@/services/ble-contract';
 import { useActiveBraceletPlan } from '@/utils/bracelet-plan-store';
-import { resetHapticStrengthForSession, setHapticStrength, useHapticStrength } from '@/services/haptic-strength-pref';
+import {
+  getSavedHapticStrength,
+  resetHapticStrengthForSession,
+  setHapticStrength,
+  setHapticStrengthForSession,
+  useHapticStrength,
+} from '@/services/haptic-strength-pref';
 import {
   PREVIEW_MAX_SECONDS,
   previewCondensedRampMinutes,
@@ -64,6 +70,7 @@ import {
   wakeWatchForStateControl,
   setWatchLinkWarm,
   warmUpBeatEngine,
+  isModePreviewRunning,
 } from '@/services/bracelet-haptics';
 import { deviceCanVibrate, dismissCompletionNotice, hasNativeWaveform } from '../../modules/state-haptics';
 import { isActiveSessionVisible, setActiveSessionVisible, setChooseScreenVisible } from '@/utils/state-control-ui';
@@ -3895,6 +3902,12 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
   const insets = useSafeAreaInsets();
   const hear = useStateHear();
   const strength = useHapticStrength();
+  /* 2 nov 2026 (operator: "ja op alles"): na een andere sterkte de vraag "Just this time / Yes, remember it" — hier in het blad zelf,
+     geen popup bovenop het blad (een venster op een venster bevriest iOS). Strong blijft de standaard tot de gebruiker iets anders onthoudt. */
+  const [askStrength, setAskStrength] = useState(false);
+  useEffect(() => {
+    if (!visible) setAskStrength(false);
+  }, [visible]);
   if (!visible) return null;
   const options = [
     {
@@ -3965,7 +3978,8 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
                 key={k}
                 onPress={() => {
                   if (on) return;
-                  setHapticStrength(k);
+                  setHapticStrengthForSession(k, isBraceletSessionMonitorActive() || isModePreviewRunning());
+                  setAskStrength(k !== getSavedHapticStrength());
                   /* Voel meteen het verschil. */
                   void Haptics.impactAsync(
                     k === 'strong' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium,
@@ -3983,6 +3997,32 @@ function AudioHapticsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           })}
         </View>
         {/* 1 nov 2026 (operator: "ook dit moet duidelijk gecommuniceerd worden"): Strong = standaard, de keuze blijft bewaard (telefoon + horloge). */}
+        {askStrength ? (
+          <View style={s.avAskRow}>
+            <Text style={s.avAskTxt}>Make {strength === 'medium' ? 'Medium' : 'Strong'} your default?</Text>
+            <Tap
+              onPress={() => {
+                hapticTap();
+                setAskStrength(false);
+              }}
+              hitSlop={8}
+              style={s.avAskBtn}
+            >
+              <Text style={s.avAskBtnTxt}>Just this time</Text>
+            </Tap>
+            <Tap
+              onPress={() => {
+                hapticTap();
+                setHapticStrength(strength);
+                setAskStrength(false);
+              }}
+              hitSlop={8}
+              style={[s.avAskBtn, s.avAskBtnOn]}
+            >
+              <Text style={[s.avAskBtnTxt, { color: '#0a0a0a' }]}>Remember</Text>
+            </Tap>
+          </View>
+        ) : null}
         <Text style={s.avStrengthNote}>{STRENGTH_NOTE}</Text>
         {/* 14 okt 2026 (operator): Smartwatch aan/uit — het ritme op je pols,
             of de telefoon trilt zelf. Ook midden in een sessie. Enkel
@@ -6984,6 +7024,19 @@ const s = StyleSheet.create({
     marginLeft: 4,
   },
   avWatchSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.14)', marginTop: 18 },
+  avAskRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  avAskTxt: { flexGrow: 1, color: '#f4f4f4', fontFamily: BrandFonts.semibold, fontSize: 13 },
+  avAskBtn: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  avAskBtnOn: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
+  avAskBtnTxt: { color: '#f4f4f4', fontFamily: BrandFonts.semibold, fontSize: 13 },
   avStrengthNote: { color: 'rgba(255,255,255,0.45)', fontFamily: BrandFonts.regular, fontSize: 12, lineHeight: 17, marginTop: 8 },
   avSeg: {
     flexDirection: 'row',

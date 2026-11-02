@@ -2,7 +2,7 @@
    VIBEZCORE — State Control: Feel of Feel & Hear (operator, 10 okt 2026:
    "ja voor Feel en Hear … dat is een keuze voor State Control").
 
-   Feel = enkel trillen (standaard). Feel & Hear = op elke slag ook het
+   Feel = enkel trillen. Feel & Hear = op elke slag ook het (standaard sinds 2 nov 2026)
    hartslaggeluid (zelfde opnames als de Resting Heart Rate-pagina). Op
    Android speelt de trilmotor-service het geluid zelf af, exact op de tik
    en ook met het scherm op slot; elders speelt de app het af zolang ze open
@@ -15,7 +15,9 @@ import { isLibraryPlaying, subscribeLibraryPlaying } from './library-priority';
 
 const KEY = 'vibezcore.stateControl.hear';
 
-let hear = false;
+/* 2 nov 2026 (operator: "standaard op Haptics en Audio"): standaard Feel & Hear (trillen + hartslaggeluid). Wie zelf "Haptics" kiest,
+   houdt die keuze (bewaard als '0'). */
+let hear = true;
 const listeners = new Set<(v: boolean) => void>();
 
 /* Audio-voorrang (19 okt 2026, operator: "speelt de Audio Library, dan geen
@@ -42,10 +44,11 @@ export function subscribeStateHear(cb: (v: boolean) => void): () => void {
 
 void AsyncStorage.getItem(KEY)
   .then((v) => {
-    if (v === '1' && !hear) {
-      hear = true;
+    const want = v === '0' ? false : true;
+    if (want !== hear) {
+      hear = want;
       pushNativeSound();
-      listeners.forEach((l) => l(true));
+      listeners.forEach((l) => l(want));
     }
   })
   .catch(() => {});

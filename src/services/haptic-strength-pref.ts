@@ -41,33 +41,67 @@ export const STATE_AMP_FACTOR: Record<HapticStrength, number> = { ...AMP_FACTOR,
 
 /* 1 nov 2026 (operator, vervangt 29 okt "elke sessie op Strong"): "wie de app downloadt staat standaard op Strong; enkel als de gebruiker
    zelf Medium instelt, blijft dat zo tot hij zelf terug Strong zet." Strong = standaard, de keuze wordt bewaard (nieuwe sleutel: oude
-   bewaarde waarden van vóór 29 okt tellen niet mee). Soft bestaat niet meer (wordt Medium). */
+   bewaarde waarden van vóór 29 okt tellen niet mee). Soft bestaat niet meer (wordt Medium).
+
+   2 nov 2026 (operator: "vibration strength standaard altijd op Strong", "ja op alles"): zoals Voice guidance de vraag "Just this time /
+   Yes, remember it". `saved` = de bewaarde standaard (Strong tot de gebruiker zelf iets anders onthoudt), `strength` = wat nu speelt.
+   Een keuze "Just this time" geldt voor de lopende sessie, of — gekozen vóór de start — voor de eerstvolgende; daarna weer `saved`. */
 const KEY_V2 = 'vibezcore.hapticStrength.v2';
+let saved: HapticStrength = 'strong';
 let strength: HapticStrength = 'strong';
+/** Een eenmalige keuze vóór de start: de eerstvolgende sessiestart laat ze staan. */
+let keepForNextStart = false;
 const listeners = new Set<(v: HapticStrength) => void>();
 void AsyncStorage.removeItem(KEY).catch(() => {});
 void AsyncStorage.getItem(KEY_V2)
   .then((v) => {
-    if (v === 'medium' && strength === 'strong') {
-      strength = 'medium';
-      listeners.forEach((l) => l('medium'));
+    if (v === 'medium' && saved === 'strong') {
+      saved = 'medium';
+      if (strength === 'strong' && !keepForNextStart) apply('medium');
     }
   })
   .catch(() => {});
 
-/** Was: terug naar Strong bij elke sessie. Sinds 1 nov 2026 blijft de keuze van de gebruiker staan — bewust leeg gelaten. */
-export function resetHapticStrengthForSession(): void {}
+function apply(v: HapticStrength): void {
+  if (v === strength) return;
+  strength = v;
+  listeners.forEach((l) => l(v));
+}
+
+/** Bij elke sessiestart: terug naar de bewaarde standaard, tenzij de gebruiker net vóór de start "Just this time" koos. */
+export function resetHapticStrengthForSession(): void {
+  if (keepForNextStart) {
+    keepForNextStart = false;
+    return;
+  }
+  apply(saved);
+}
 
 export function getHapticStrength(): HapticStrength {
   return strength;
 }
 
+/** De bewaarde standaard (Strong tot de gebruiker zelf iets anders onthoudt). */
+export function getSavedHapticStrength(): HapticStrength {
+  return saved;
+}
+
+/** Kiezen én onthouden (o.a. vanaf de Haptics-pagina van het horloge). */
 export function setHapticStrength(vIn: HapticStrength): void {
   const v: HapticStrength = vIn === 'soft' ? 'medium' : vIn;
-  if (v === strength) return;
-  strength = v;
-  void AsyncStorage.setItem(KEY_V2, v).catch(() => {});
-  listeners.forEach((l) => l(v));
+  keepForNextStart = false;
+  if (v !== saved) {
+    saved = v;
+    void AsyncStorage.setItem(KEY_V2, v).catch(() => {});
+  }
+  apply(v);
+}
+
+/** Enkel voor deze sessie ("Just this time"). `sessionRunning` = er loopt al een sessie; anders geldt de keuze voor de eerstvolgende. */
+export function setHapticStrengthForSession(vIn: HapticStrength, sessionRunning: boolean): void {
+  const v: HapticStrength = vIn === 'soft' ? 'medium' : vIn;
+  keepForNextStart = !sessionRunning && v !== saved;
+  apply(v);
 }
 
 export function subscribeHapticStrength(cb: (v: HapticStrength) => void): () => void {

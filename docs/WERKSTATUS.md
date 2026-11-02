@@ -39,6 +39,8 @@ pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
 
 ## 3. Huidige bouwronde (sinds de laatste store-build)
 
+- **2 nov 2026 — standaarden:** State Control staat standaard op Haptic + Audio (hartslaggeluid aan; wie zelf Haptic kiest, houdt dat). Trilsterkte: Strong blijft de standaard; een andere sterkte vraagt "Just this time / Remember" (Breathwork: dezelfde popup als Voice; State Control: regel in het blad). Nog niet gebouwd.
+
 Alles hieronder zit in de code op de werkbranch, maar is **nog niet in een store-build**.
 Plan: eerst alle fixes bundelen, dan één EAS-build (quotum 15 Android-builds/maand).
 
