@@ -51,19 +51,16 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
   private var lastClockStart: TimeInterval = 0
 
   /** Klokverschil Watch − iPhone in ms (0 zolang er geen recente meting is). */
-  /* 1 nov 2026 (operator: "State Control liep eerst goed en nu weer achter — pas een correcte formule toe"): de meting via WatchConnectivity
-     heeft een rondreis van 100–400 ms en is dus tot ±200 ms onnauwkeurig; samen met de herijking elke 20 s (tolerantie 40 ms) verschoof het
-     ritme telkens met die ruis. Apple houdt de klok van de Watch zelf gelijk met de gekoppelde iPhone (orde tientallen ms) — nauwkeuriger dan
-     elke Bluetooth-meting. Formule: systeemklok (0), tenzij een NAUWKEURIGE meting (rondreis ≤ 120 ms) een ECHTE afwijking (> 150 ms) toont. */
+  /* 2 nov 2026 (operator op build 74: "Breathwork en State Control lopen helemaal niet meer gelijk"): build 74 vertrouwde de systeemklok en
+     gebruikte een meting enkel bij een rondreis ≤ 120 ms — die komt via WatchConnectivity bijna nooit voor, dus werd het (echte) klokverschil
+     nooit meer gecorrigeerd. Terug naar de GEMETEN correctie (zoals build 73), met een nauwkeurigere meting (10 pings, de kortste rondreis
+     telt). Het verspringen door meetruis blijft weg via de hogere herijkdrempel in de sessies (resyncTolerance). */
   private let clockRttKey = "vz_clock_rtt_ms"
   func clockAheadMs() -> Double {
     let d = UserDefaults.standard
     let at = d.double(forKey: clockAtKey)
     guard at > 0, Date().timeIntervalSince1970 - at < 6 * 3600 else { return 0 }
-    let rtt = d.double(forKey: clockRttKey)
-    guard rtt > 0, rtt <= 120 else { return 0 }
-    let ahead = d.double(forKey: clockAheadKey)
-    return abs(ahead) > 150 ? ahead : 0
+    return d.double(forKey: clockAheadKey)
   }
 
   func measureClock() {
@@ -77,7 +74,7 @@ final class PhoneConnector: NSObject, WCSessionDelegate {
     lastClockStart = now
     var bestRtt = Double.greatestFiniteMagnitude
     var bestAhead: Double?
-    for i in 0..<5 {
+    for i in 0..<10 {
       DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.12) {
         let t0 = Date().timeIntervalSince1970 * 1000
         session.sendMessage(["type": "clock_ping"], replyHandler: { reply in

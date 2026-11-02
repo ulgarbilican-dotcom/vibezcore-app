@@ -140,8 +140,8 @@ final class StateSessionController: ObservableObject {
   private var syncAheadUsed: Double = 0
   private static let resyncFirstSec: Double = 3
   private static let resyncEverySec: Double = 20
-  /* 1 nov 2026: 40 → 250 ms — enkel een echte afwijking, geen meetruis (zie PhoneConnector.clockAheadMs). */
-  private static let resyncToleranceMs: Double = 250
+  /* 2 nov 2026: 40 → 100 ms (build 74 had 250: een echt klokverschil onder die drempel werd nooit gecorrigeerd). Met 10 pings is de meetruis klein. */
+  private static let resyncToleranceMs: Double = 100
   /** Laatst toegepaste `sentAtMs` van de telefoon (volgorde-bewaking). */
   private var lastAppliedStamp: Double = 0
   /** Ack al verstuurd voor de huidige start? */

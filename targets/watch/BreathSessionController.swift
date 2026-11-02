@@ -79,8 +79,8 @@ final class BreathSessionController: NSObject, ObservableObject {
   private var resyncing = false
   private static let resyncFirstSec: Double = 3
   private static let resyncEverySec: Double = 20
-  /* 1 nov 2026: 0,04 → 0,25 s — enkel een echte afwijking, geen meetruis (zie PhoneConnector.clockAheadMs). */
-  private static let resyncTolerance: TimeInterval = 0.25
+  /* 2 nov 2026: 0,04 → 0,10 s (build 74 had 0,25: een echt klokverschil onder die drempel werd nooit gecorrigeerd). Met 10 pings is de meetruis klein. */
+  private static let resyncTolerance: TimeInterval = 0.10
 
   /* ── Op het horloge zelf gestart (18 okt 2026) ─────────────────────────
      Het horloge is dan de bron van waarheid: pauze, hervatten en stop
