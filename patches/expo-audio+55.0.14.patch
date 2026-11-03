@@ -1,0 +1,81 @@
+diff --git a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
+index f32f2d0..557e14d 100644
+--- a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
++++ b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
+@@ -9,11 +9,13 @@ import android.content.Intent
+ import android.content.pm.ServiceInfo
+ import android.graphics.Bitmap
+ import android.graphics.BitmapFactory
++import android.net.Uri
+ import android.os.Build
+ import android.os.Bundle
+ import android.os.IBinder
+ import androidx.annotation.OptIn
+ import androidx.core.app.NotificationCompat
++import androidx.media3.common.MediaMetadata
+ import androidx.media3.common.Player
+ import androidx.media3.common.util.UnstableApi
+ import androidx.media3.session.CommandButton
+@@ -314,6 +316,7 @@ class AudioControlsService : MediaSessionService() {
+         postOrStartForegroundNotification(startInForeground = true)
+ 
+         addPlayerListener(player)
++        applySessionMetadata()
+ 
+         // Initial update now that session exists
+         postOrStartForegroundNotification(startInForeground = false)
+@@ -328,6 +331,7 @@ class AudioControlsService : MediaSessionService() {
+       return
+     }
+     currentMetadata = metadata
++    applySessionMetadataOnMain()
+     currentMetadata?.artworkUrl?.let {
+       loadArtworkFromUrl(it) { bitmap ->
+         currentArtwork = bitmap
+@@ -368,6 +372,7 @@ class AudioControlsService : MediaSessionService() {
+     if (player == currentPlayer) {
+       currentMetadata = metadata
+       currentOptions = options
++      applySessionMetadataOnMain()
+ 
+       // Reload artwork if metadata has changed
+       metadata?.artworkUrl?.let {
+@@ -432,8 +437,38 @@ class AudioControlsService : MediaSessionService() {
+     removePlayerListener()
+   }
+ 
++  /* VIBEZCORE (3 nov 2026): the artwork only reached the notification's
++     large icon, which Android shrinks to ~64 px; Samsung's lock screen then
++     blows that up to a full card, so it looked pixelated. Give the session
++     itself the metadata + artwork URI so Media3 loads the full-size image.
++     replaceMediaItem with the same URI keeps playing without a gap. */
++  private fun applySessionMetadata() {
++    val exo = currentPlayer?.ref ?: return
++    val meta = currentMetadata ?: return
++    val item = exo.currentMediaItem ?: return
++    val md = MediaMetadata.Builder()
++      .setTitle(meta.title)
++      .setArtist(meta.artist)
++      .setAlbumTitle(meta.albumTitle)
++      .setArtworkUri(meta.artworkUrl?.let { Uri.parse(it.toString()) })
++      .build()
++    if (item.mediaMetadata == md) return
++    try {
++      exo.replaceMediaItem(exo.currentMediaItemIndex, item.buildUpon().setMediaMetadata(md).build())
++    } catch (_: Exception) {
++    }
++  }
++
++  private fun applySessionMetadataOnMain() {
++    appContext?.mainQueue?.launch { applySessionMetadata() }
++  }
++
+   private fun addPlayerListener(player: AudioPlayer) {
+     val listener = object : Player.Listener {
++      override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
++        applySessionMetadata()
++      }
++
+       override fun onIsPlayingChanged(isPlaying: Boolean) {
+         updateSessionCustomLayout(isPlaying)
+         postOrStartForegroundNotification(startInForeground = false)

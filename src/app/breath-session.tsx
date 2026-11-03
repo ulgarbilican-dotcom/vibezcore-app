@@ -137,7 +137,9 @@ import {
 } from '@/services/breath-voice';
 import { assetUri } from '@/services/asset-cache';
 import {
+  addBreathRemoteControlListener,
   isIgnoringBatteryOptimizations,
+  pauseBackgroundBreathSession,
   requestIgnoreBatteryOptimizations,
   startBackgroundBreathSession,
   stopBackgroundBreathSession,
@@ -1465,6 +1467,12 @@ export function BreathSession() {
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+  /* Hervat op het Android-vergrendelscherm: bij ontgrendelen moet de
+     inhaalslag de JS-lus altijd herstarten (zie de AppState-listener). */
+  const forceResyncRef = useRef(false);
+  /* Zet fase/ronde/resterende tijd op de wandklok — voor een pauze terwijl
+     de telefoon op slot ligt (JS-lus stond mogelijk stil). Gevuld verderop. */
+  const syncToWallClockRef = useRef<() => void>(() => {});
   /* De drie cue-bestanden voor DEZE sessie, klaargezet in start() maar pas
      gebruikt als de app naar de achtergrond gaat — zie de AppState-listener
      verderop. `null` = geen sessie bezig / native mag niet bewapend worden. */
@@ -1885,8 +1893,15 @@ export function BreathSession() {
         if (runningRef.current && pausedRef.current) stopSessionKeepAlive();
       }, 800);
     }
-    /* Audit 2 nov 2026: ook de native achtergrond-lus (Android, telefoon op slot) stopt — anders sprak en trilde hij door tijdens de pauze. */
-    if (Platform.OS === 'android') stopBackgroundBreathSession();
+    /* Audit 2 nov 2026: ook de native achtergrond-lus (Android, telefoon op slot) stopt — anders sprak en trilde hij door tijdens de pauze.
+       3 nov 2026: op slot (bv. pauze vanaf het horloge) pauzeert hij enkel, zodat de vergrendelscherm-kaart met afspeelknop blijft. */
+    if (Platform.OS === 'android') {
+      if (AppState.currentState !== 'active') {
+        pauseBackgroundBreathSession();
+        /* De JS-stand kan achterlopen (lus stond stil): hervatten in de app gaat dan verder waar de sessie echt was. */
+        syncToWallClockRef.current();
+      } else stopBackgroundBreathSession();
+    }
     /* Eén sessie, twee bedieningen (6 okt 2026): de pols pauzeert mee. */
     pauseBreathSessionOnWear();
     pauseBreathSessionOnWatch();
@@ -2061,8 +2076,11 @@ export function BreathSession() {
       const trueElapsed =
         (Date.now() - startWallRef.current - pausedMsRef.current) / 1000;
       /* Kleine afwijking is gewoon jitter; pas vanaf drie seconden is het
-         een bevroren klok geweest. */
-      if (trueElapsed - elapsedRef.current < 3) return;
+         een bevroren klok geweest. Na hervatten op het vergrendelscherm
+         altijd: de JS-lus stond toen stil (3 nov 2026). */
+      const forced = forceResyncRef.current;
+      forceResyncRef.current = false;
+      if (!forced && trueElapsed - elapsedRef.current < 3) return;
       const cycle = Math.max(1, cycleRef.current);
       /* effectiveRoundsRef, niet roundsRef: bij een preview (zie runPhase
          hierboven) is dit de verlaagde 2-cycli-grens, anders identiek aan
@@ -2332,6 +2350,86 @@ export function BreathSession() {
     },
     [st.eyebrow, st.key, st.accent],
   );
+
+  /* Pauze/hervat op het Android-vergrendelscherm (3 nov 2026). De native lus
+     heeft zichzelf al stilgezet of hervat; hier gaat de rest mee (soundscape,
+     horloge, het scherm). Native blijft de sessie dragen zolang de telefoon
+     op slot ligt — dus hier GEEN stopBackgroundBreathSession en geen JS-
+     timers, anders liepen twee lussen door elkaar. */
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    /* Waar de sessie nu staat volgens de wandklok (zelfde rekensom als de
+       inhaalslag), zodat hervatten in de app later op de juiste plek verdergaat. */
+    const positionNow = () => {
+      const cycle = Math.max(1, cycleRef.current);
+      const trueElapsed = (Date.now() - startWallRef.current - pausedMsRef.current) / 1000;
+      const phases = techRef.current.phases;
+      let off = trueElapsed % cycle;
+      let i = 0;
+      while (i < phases.length - 1 && off >= phases[i].secs) {
+        off -= phases[i].secs;
+        i += 1;
+      }
+      return {
+        elapsed: trueElapsed,
+        idx: i,
+        round: Math.min(effectiveRoundsRef.current, Math.floor(trueElapsed / cycle) + 1),
+        remainingSec: Math.max(1, Math.round(phases[i].secs - off)),
+      };
+    };
+    const syncStateToWallClock = () => {
+      const pos = positionNow();
+      elapsedRef.current = Math.floor(pos.elapsed);
+      roundRef.current = pos.round;
+      setRound(pos.round);
+      setPhase(techRef.current.phases[pos.idx].key);
+      setSecsLeft(pos.remainingSec);
+    };
+    syncToWallClockRef.current = syncStateToWallClock;
+    const unsubscribe = addBreathRemoteControlListener((action) => {
+      if (!runningRef.current || startWallRef.current <= 0) return;
+      if (action === 'pause') {
+        if (pausedRef.current) return;
+        syncStateToWallClock();
+        clearTimers();
+        stopPhaseHaptic();
+        stopVoice();
+        cancelAnimation(breath);
+        cancelAnimation(arc);
+        pausedAtWallRef.current = Date.now();
+        pausedRef.current = true;
+        setPaused(true);
+        pauseScape();
+        pauseLiveSession();
+        pauseBreathSessionOnWear();
+        pauseBreathSessionOnWatch();
+        return;
+      }
+      if (!pausedRef.current) return;
+      if (pausedAtWallRef.current > 0) {
+        pausedMsRef.current += Date.now() - pausedAtWallRef.current;
+        pausedAtWallRef.current = 0;
+      }
+      pausedRef.current = false;
+      setPaused(false);
+      resumeScape();
+      resumeLiveSession();
+      const pos = positionNow();
+      relayBreathToWatches({
+        startRound: pos.round,
+        startPhase: pos.idx,
+        phaseRemainingMs: pos.remainingSec * 1000,
+      });
+      /* Bij ontgrendelen neemt de inhaalslag het over, ook als het verschil
+         kleiner is dan zijn gewone drempel van 3 s (de JS-lus staat stil). */
+      forceResyncRef.current = true;
+    });
+    return () => {
+      unsubscribe();
+      syncToWallClockRef.current = () => {};
+    };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [arc, breath, clearTimers, relayBreathToWatches]);
 
   const start = useCallback((preview = false, startPaused = false) => {
     if (startingRef.current) return;

@@ -51,6 +51,31 @@ class BreathBackgroundModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("BreathBackground")
 
+    /* Pauze/hervat op het vergrendelscherm (3 nov 2026): de service reageert
+       zelf al; dit laat het sessiescherm, de soundscape en het horloge
+       meegaan. */
+    Events("onRemoteControl")
+
+    OnCreate {
+      BreathSessionService.remoteListener = { action ->
+        sendEvent("onRemoteControl", mapOf("action" to action))
+      }
+    }
+
+    OnDestroy {
+      BreathSessionService.remoteListener = null
+    }
+
+    /* De app pauzeert terwijl de telefoon op slot ligt (bv. vanaf het
+       horloge): de lockscreen-kaart blijft staan, met een afspeelknop. */
+    Function("pauseBackgroundBreathSession") {
+      if (!BreathSessionService.running) return@Function Unit
+      val intent = Intent(context, BreathSessionService::class.java).apply {
+        action = BreathSessionService.ACTION_PAUSE
+      }
+      ContextCompat.startForegroundService(context, intent)
+    }
+
     Function("startBackgroundBreathSession") { options: StartBreathBackgroundOptions ->
       val intent = Intent(context, BreathSessionService::class.java).apply {
         action = BreathSessionService.ACTION_START

@@ -71,6 +71,11 @@ export type StartBreathBackgroundOptions = {
 type BreathBackgroundNativeModule = {
   startBackgroundBreathSession(options: StartBreathBackgroundOptions): void;
   stopBackgroundBreathSession(): void;
+  pauseBackgroundBreathSession?(): void;
+  addListener?(
+    event: 'onRemoteControl',
+    cb: (e: { action: 'pause' | 'resume' }) => void,
+  ): { remove(): void };
   isIgnoringBatteryOptimizations(): boolean;
   requestIgnoreBatteryOptimizations(): void;
 };
@@ -117,6 +122,31 @@ export function stopBackgroundBreathSession(): void {
     /* stil */
   }
   forgetAudioMode();
+}
+
+/** De app pauzeert terwijl de telefoon op slot ligt (bv. vanaf het
+ *  horloge): de native lus staat stil maar de lockscreen-kaart blijft, met
+ *  een afspeelknop (3 nov 2026). Enkel Android. */
+export function pauseBackgroundBreathSession(): void {
+  if (Platform.OS === 'ios') return;
+  try {
+    native?.pauseBackgroundBreathSession?.();
+  } catch {
+    /* stil */
+  }
+}
+
+/** Pauze/hervat-knop op het Android-vergrendelscherm. De native lus
+ *  reageert zelf al; dit laat het sessiescherm meegaan. */
+export function addBreathRemoteControlListener(
+  cb: (action: 'pause' | 'resume') => void,
+): () => void {
+  try {
+    const sub = native?.addListener?.('onRemoteControl', (e) => cb(e.action));
+    return () => sub?.remove();
+  } catch {
+    return () => {};
+  }
 }
 
 /* iOS-test build 20 (16 okt 2026): de native module zet zelf de iOS-

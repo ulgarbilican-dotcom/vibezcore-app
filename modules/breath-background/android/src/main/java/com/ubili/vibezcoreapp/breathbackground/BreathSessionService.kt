@@ -78,6 +78,17 @@ class BreathSessionService : Service() {
 
     const val ACTION_START = "com.ubili.vibezcoreapp.breathbackground.action.START"
     const val ACTION_STOP = "com.ubili.vibezcoreapp.breathbackground.action.STOP"
+    /* 3 nov 2026 (operator: "bij breathwork op lockscreen geen play of pauze
+       knop — is dit professioneel?"): pauze/hervat op het vergrendelscherm.
+       REMOTE_* = tik op de kaart (de service pauzeert zelf en meldt het aan
+       JS); PAUSE = de app pauzeert terwijl de telefoon op slot ligt (bv.
+       vanaf het horloge) — de kaart blijft staan, niets terugmelden. */
+    const val ACTION_PAUSE = "com.ubili.vibezcoreapp.breathbackground.action.PAUSE"
+    const val ACTION_REMOTE_PAUSE = "com.ubili.vibezcoreapp.breathbackground.action.REMOTE_PAUSE"
+    const val ACTION_REMOTE_RESUME = "com.ubili.vibezcoreapp.breathbackground.action.REMOTE_RESUME"
+
+    /** Tik op pauze/hervat op het vergrendelscherm → JS ("pause"/"resume"). */
+    @Volatile var remoteListener: ((String) -> Unit)? = null
 
     const val EXTRA_PHASE_KEYS = "phaseKeys"
     const val EXTRA_PHASE_SECS = "phaseSecs"
@@ -114,6 +125,7 @@ class BreathSessionService : Service() {
     @Volatile var hapticsOn: Boolean = true
     @Volatile var cueLeadMs: Long = 400L
     @Volatile var running: Boolean = false
+    @Volatile var paused: Boolean = false
     @Volatile var modeName: String = "Breathwork"
     @Volatile var totalDurationMs: Long = 0L
     @Volatile var elapsedMs: Long = 0L
@@ -148,6 +160,11 @@ class BreathSessionService : Service() {
      VOLTOOIDE fasen) geeft dit op elk moment de live sessie-voortgang. */
   private var phaseStartRealtime: Long = 0L
   private var tickRunnable: Runnable? = null
+  /* Tijdens een pauze: wat er van de huidige fase nog over was, hoe lang die
+     fase in totaal duurt, en de bevroren sessie-voortgang. */
+  private var pausedRemainingMs: Long = 0L
+  private var pausedPhaseFullMs: Long = 0L
+  private var elapsedAtPauseMs: Long = 0L
 
   /** OneUI's vergrendelscherm-widget bleek de PlaybackState-positie NIET
    *  zelf te interpoleren tussen twee `setPlaybackState()`-aanroepen, EN
@@ -185,6 +202,7 @@ class BreathSessionService : Service() {
     }
 
   private fun liveElapsedMs(): Long {
+    if (paused) return elapsedAtPauseMs
     val inPhase = (SystemClock.elapsedRealtime() - phaseStartRealtime).coerceAtLeast(0L)
     return (elapsedMs + inPhase).coerceAtMost(if (totalDurationMs > 0) totalDurationMs else Long.MAX_VALUE)
   }
@@ -202,9 +220,24 @@ class BreathSessionService : Service() {
        aan om de service wakker te maken als hij al gestopt was. */
     startForeground(NOTIFICATION_ID, buildNotification())
 
-    if (intent?.action == ACTION_STOP) {
-      stopSessionInternal()
-      return START_NOT_STICKY
+    when (intent?.action) {
+      ACTION_STOP -> {
+        stopSessionInternal()
+        return START_NOT_STICKY
+      }
+      ACTION_PAUSE, ACTION_REMOTE_PAUSE, ACTION_REMOTE_RESUME -> {
+        /* Een oude melding zonder lopende sessie: niets te bedienen. */
+        if (!running) {
+          stopSessionInternal()
+          return START_NOT_STICKY
+        }
+        when (intent.action) {
+          ACTION_PAUSE -> enterPaused()
+          ACTION_REMOTE_PAUSE -> remotePause()
+          else -> remoteResume()
+        }
+        return START_NOT_STICKY
+      }
     }
 
     val keys = intent?.getStringArrayListExtra(EXTRA_PHASE_KEYS) ?: arrayListOf()
@@ -230,6 +263,7 @@ class BreathSessionService : Service() {
       ?: totalDurationMs
     elapsedMs = (totalDurationMs - sessionRemainingMs).coerceAtLeast(0L)
     running = true
+    paused = false
 
     /* `startRemainingMs >= 0` betekent: JS liep al een tijdje in de
        voorgrond en draagt de sessie nu over omdat het scherm op slot gaat
@@ -242,6 +276,11 @@ class BreathSessionService : Service() {
       phaseIdx = intent?.getIntExtra(EXTRA_START_PHASE_IDX, 0) ?: 0
       round = intent?.getIntExtra(EXTRA_START_ROUND, 1) ?: 1
       val fullMs = phases.getOrNull(phaseIdx)?.secs?.times(1000L) ?: startRemainingMs.toLong()
+      /* `elapsedMs` telt enkel VOLTOOIDE fasen; het al verstreken deel van
+         de huidige fase telt liveElapsedMs() zelf (via phaseStartRealtime).
+         Zonder deze aftrek telde dat deel dubbel en liep de lockscreen-tijd
+         tot een fase vóór op de app (3 nov 2026). */
+      elapsedMs = (elapsedMs - (fullMs - startRemainingMs)).coerceAtLeast(0L)
       scheduleTimersWithRemaining(startRemainingMs.toLong(), fullMs)
     } else {
       phaseIdx = 0
@@ -344,6 +383,54 @@ class BreathSessionService : Service() {
     updateNotification()
   }
 
+  /** Alles stil op de plek waar de sessie nu is: timers, tikker en trilling
+   *  stoppen, de voortgang bevriest. De melding blijft staan, nu met een
+   *  afspeelknop. Wake lock los: een pauze hoeft de CPU niet wakker te houden. */
+  private fun enterPaused() {
+    if (!running || paused || phases.isEmpty()) return
+    val full = phases[phaseIdx].secs * 1000L
+    val inPhase = (SystemClock.elapsedRealtime() - phaseStartRealtime).coerceIn(0L, full)
+    elapsedAtPauseMs = liveElapsedMs()
+    pausedRemainingMs = full - inPhase
+    pausedPhaseFullMs = full
+    paused = true
+    cancelTimers()
+    stopTicking()
+    try {
+      getVibrator(this)?.cancel()
+    } catch (_: Exception) {
+    }
+    releaseWakeLock()
+    updateNotification()
+  }
+
+  /** Verder op exact dezelfde plek. De trilling van de lopende fase loopt
+   *  verder over wat er van die fase over is; de stem pas bij de volgende
+   *  fase (deze fase werd al aangekondigd). */
+  private fun leavePaused() {
+    if (!running || !paused || phases.isEmpty()) return
+    paused = false
+    acquireWakeLock()
+    val phase = phases[phaseIdx]
+    val remSecs = (pausedRemainingMs / 1000L).toInt()
+    if (hapticsOn && remSecs >= 1) playHapticForPhase(this, phase.key, remSecs)
+    scheduleTimersWithRemaining(pausedRemainingMs, pausedPhaseFullMs)
+    startTicking()
+    updateNotification()
+  }
+
+  private fun remotePause() {
+    if (!running || paused) return
+    enterPaused()
+    remoteListener?.invoke("pause")
+  }
+
+  private fun remoteResume() {
+    if (!running || !paused) return
+    leavePaused()
+    remoteListener?.invoke("resume")
+  }
+
   private fun acquireWakeLock() {
     if (wakeLock?.isHeld == true) return
     try {
@@ -383,6 +470,7 @@ class BreathSessionService : Service() {
       /* stil */
     }
     running = false
+    paused = false
     phases = emptyList()
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
@@ -396,6 +484,21 @@ class BreathSessionService : Service() {
   private fun ensureMediaSession(): MediaSessionCompat {
     mediaSession?.let { return it }
     val session = MediaSessionCompat(this, "VibezcoreBreathSession")
+    /* Android 13+ tekent de knoppen van de mediakaart uit de PlaybackState
+       en stuurt een tik hierheen (zelfde als StateHapticsService). */
+    session.setCallback(object : MediaSessionCompat.Callback() {
+      /* Hardwareknoppen (oordopjes, headset) niet doorlaten: die zijn voor
+         muziek en mogen een ademsessie nooit stil pauzeren. */
+      override fun onMediaButtonEvent(mediaButtonEvent: Intent?): Boolean = true
+
+      override fun onPause() {
+        handler.post { remotePause() }
+      }
+
+      override fun onPlay() {
+        handler.post { remoteResume() }
+      }
+    })
     session.isActive = true
     mediaSession = session
     return session
@@ -494,20 +597,22 @@ class BreathSessionService : Service() {
       lastMetaKey = metaKey
     }
 
-    /* Geen ACTION_PLAY_PAUSE/ACTION_SEEK_TO: er zit geen echte speler
-       achter, dus geen knoppen die iets zouden doen — alleen ACTION_STOP,
-       zodat "sluiten" op het vergrendelscherm de sessie ook echt stopt.
+    /* 3 nov 2026: pauze/hervat (zie enterPaused/leavePaused); nog steeds
+       geen SEEK_TO — in een ademsessie spoel je niet.
        `liveElapsedMs()` i.p.v. het statische `elapsedMs` (operator, 15
        augustus 2026: "timer telt niet") — dit toestel interpoleerde de
        positie zelf niet tussen twee updates, dus de seconde-tikker
        hierboven roept deze functie elke seconde opnieuw aan met een verse,
        berekende positie. */
     val state = PlaybackStateCompat.Builder()
-      .setActions(PlaybackStateCompat.ACTION_STOP)
+      .setActions(
+        PlaybackStateCompat.ACTION_STOP or PlaybackStateCompat.ACTION_PLAY_PAUSE or
+          (if (paused) PlaybackStateCompat.ACTION_PLAY else PlaybackStateCompat.ACTION_PAUSE),
+      )
       .setState(
-        PlaybackStateCompat.STATE_PLAYING,
+        if (paused) PlaybackStateCompat.STATE_PAUSED else PlaybackStateCompat.STATE_PLAYING,
         liveElapsedMs(),
-        1.0f,
+        if (paused) 0f else 1.0f,
         SystemClock.elapsedRealtime(),
       )
       .build()
@@ -560,7 +665,9 @@ class BreathSessionService : Service() {
       ""
     }
     val phaseText = (
-      if (phases.isNotEmpty() && phaseIdx < phases.size) {
+      if (paused) {
+        "Paused"
+      } else if (phases.isNotEmpty() && phaseIdx < phases.size) {
         phaseLabel(phases[phaseIdx].key)
       } else {
         "Getting ready"
@@ -587,11 +694,21 @@ class BreathSessionService : Service() {
          (modusnaam + fase), dus PUBLIC is hier gewoon correct. */
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setContentIntent(contentPendingIntent())
+      /* Android 12 en ouder tekenen de knop uit deze actie; 13+ uit de
+         PlaybackState (zie updateMediaSession). */
+      .addAction(
+        if (paused) {
+          NotificationCompat.Action(android.R.drawable.ic_media_play, "Resume", remotePending(ACTION_REMOTE_RESUME))
+        } else {
+          NotificationCompat.Action(android.R.drawable.ic_media_pause, "Pause", remotePending(ACTION_REMOTE_PAUSE))
+        },
+      )
 
     if (session != null) {
       builder.setStyle(
         MediaNotificationCompat.MediaStyle()
-          .setMediaSession(session.sessionToken),
+          .setMediaSession(session.sessionToken)
+          .setShowActionsInCompactView(0),
       )
     }
 
@@ -616,6 +733,14 @@ class BreathSessionService : Service() {
     val mgr = getSystemService(NotificationManager::class.java)
     mgr?.notify(NOTIFICATION_ID, buildNotification())
   }
+
+  private fun remotePending(action: String): PendingIntent =
+    PendingIntent.getService(
+      this,
+      if (action == ACTION_REMOTE_PAUSE) 1 else 2,
+      Intent(this, BreathSessionService::class.java).setAction(action),
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
   private fun contentPendingIntent(): PendingIntent? {
     val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: return null
