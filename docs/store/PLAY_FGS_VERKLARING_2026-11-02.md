@@ -20,7 +20,9 @@ Opslaan kan pas als elke aangevinkte taak een videolink heeft (YouTube, mag "Nie
 
 > The VIBEZCORE Wear OS app runs a guided Breathwork or State Control session that the user starts on the watch or from the phone. During the session the watch gives haptic taps in a set rhythm for 5 to 50 minutes. The foreground service keeps these taps going while the screen is off or the wrist is down; without it the taps stop in the middle of the session. It starts only when the user starts a session, shows an ongoing notification, and stops when the session ends or the user ends it. No health data is read, stored or synced.
 
-- Videolink: *(nieuwe video)*
+- Videolink: **https://youtu.be/_buSeDSJUuI** (3 nov 2026, State Control op de Galaxy Watch4, gedimd scherm, verborgen).
+
+**Status 3 nov 2026:** beide taken + links + beschrijving ingevuld en OPGESLAGEN in Play Console ("Wijziging opgeslagen"). Nog niet verstuurd: dat gebeurt via Publicatieoverzicht › Ter beoordeling versturen (operator beslist).
 
 **Wat de video moet tonen (30–60 s, het horloge filmen met een tweede toestel):**
 1. Op het horloge (of vanaf de telefoon) een State Control- of Breathwork-sessie starten.
