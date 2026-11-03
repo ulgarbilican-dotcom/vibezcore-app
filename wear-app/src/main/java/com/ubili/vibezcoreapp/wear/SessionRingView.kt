@@ -236,8 +236,8 @@ class SessionRingView @JvmOverloads constructor(
       canvas.drawCircle(cx, cy, ar, ambientTrackPaint)
       val left = ambientProgressAt(now).coerceIn(0f, 1f)
       if (left > 0f) {
-        /* Gedempte toestandskleur (~45 %): je herkent de toestand, maar het licht niet op. */
-        ambientArcPaint.color = Color.argb(115, Color.red(color), Color.green(color), Color.blue(color))
+        /* Gedempte toestandskleur (~35 %): je herkent de toestand, maar het licht niet op (45 % oogde nog fel, operator-foto). */
+        ambientArcPaint.color = Color.argb(90, Color.red(color), Color.green(color), Color.blue(color))
         ambientArcPaint.strokeWidth = stroke
         arcRect.set(cx - ar, cy - ar, cx + ar, cy + ar)
         canvas.drawArc(arcRect, -90f, 360f * left, false, ambientArcPaint)

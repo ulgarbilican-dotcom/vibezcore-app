@@ -48,18 +48,17 @@ class MainActivity : androidx.activity.ComponentActivity() {
       ambient = true
       ring.flowing = false
       ring.ambient = true
-      /* Enkel de dunne ring en de minuten: geen knoppen. 3 nov 2026 (discreet tussen mensen): de naam weg, het gekleurde bolletje gedimd. */
+      /* Enkel de dunne ring en de minuten: geen knoppen. 3 nov 2026 (discreet tussen mensen): naam en bolletje weg — de kleur van de
+         boog zegt al welke toestand loopt (een los bolletje zweefde vreemd boven de minuten, operator-foto). */
       pauseButton.visibility = View.INVISIBLE
       endButton.visibility = View.INVISIBLE
-      nameLabel.visibility = View.INVISIBLE
-      (nameLabel.parent as View).alpha = 0.45f
+      (nameLabel.parent as View).alpha = 0f
     }
     override fun onExitAmbient() {
       ambient = false
       ring.ambient = false
       ring.alpha = 1f
       endButton.visibility = View.VISIBLE
-      nameLabel.visibility = View.VISIBLE
       (nameLabel.parent as View).alpha = 1f
       render()
     }

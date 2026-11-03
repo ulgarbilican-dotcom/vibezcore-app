@@ -6,7 +6,7 @@ Opslaan kan pas als elke aangevinkte taak een videolink heeft (YouTube, mag "Nie
 ## 1. Media afspelen — FOREGROUND_SERVICE_MEDIA_PLAYBACK (telefoon)
 
 - Aanvinken: **Media afspelen**
-- Videolink: *(nieuwe video, de oude link `youtu.be/Z7OQpAA-1mM` is verouderd en werd weggehaald)*
+- Videolink: **https://youtu.be/9HlWjJll0Qg** (3 nov 2026, build 113, 95 s, verborgen; Home-knop i.p.v. vergrendelen). De oude link `youtu.be/Z7OQpAA-1mM` is verouderd en werd weggehaald.
 
 **Wat de video moet tonen (30–60 s, schermopname van de telefoon):**
 1. Een Breathwork-sessie starten (stem aan) → scherm vergrendelen → de stem en het ritme lopen door; de melding op het vergrendelscherm met pauze/hervat.
