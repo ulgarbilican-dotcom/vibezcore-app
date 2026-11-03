@@ -40,21 +40,26 @@ class MainActivity : androidx.activity.ComponentActivity() {
      ons scherm blijft gedimd staan i.p.v. terug naar de wijzerplaat; pols
      omhoog = meteen weer de ring. De golf staat stil in ambient (batterij). */
   private var ambient = false
+  /* Geschatte totale duur van de lopende ademsessie (dimstand-boog); leeg = nog niet geschat. */
+  private var breathTotalKey = ""
+  private var breathTotalMs = 0L
   private val ambientCallback = object : androidx.wear.ambient.AmbientLifecycleObserver.AmbientLifecycleCallback {
     override fun onEnterAmbient(ambientDetails: androidx.wear.ambient.AmbientLifecycleObserver.AmbientDetails) {
       ambient = true
       ring.flowing = false
       ring.ambient = true
-      /* Enkel de dunne ring en de minuten: geen knoppen, naam gedimd. */
+      /* Enkel de dunne ring en de minuten: geen knoppen. 3 nov 2026 (discreet tussen mensen): de naam weg, het gekleurde bolletje gedimd. */
       pauseButton.visibility = View.INVISIBLE
       endButton.visibility = View.INVISIBLE
-      (nameLabel.parent as View).alpha = 0.5f
+      nameLabel.visibility = View.INVISIBLE
+      (nameLabel.parent as View).alpha = 0.45f
     }
     override fun onExitAmbient() {
       ambient = false
       ring.ambient = false
       ring.alpha = 1f
       endButton.visibility = View.VISIBLE
+      nameLabel.visibility = View.VISIBLE
       (nameLabel.parent as View).alpha = 1f
       render()
     }
@@ -290,6 +295,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         sessionContainer.visibility = View.GONE
         idleContainer.visibility = View.VISIBLE
         overLockScreen(false)
+        breathTotalKey = ""
         renderHome()
       }
     }
@@ -320,10 +326,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
-    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else if (sec < 60) "<1 min left" else "${sec / 60} min left" }
+    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else if (sec < 60) "<1 min" else "${sec / 60} min" }
     val total = s.totalSec.coerceAtLeast(1)
     val frac = (sec.toFloat() / total).coerceIn(0f, 1f)
     ring.levelAt = { frac }
+    ring.ambientProgressAt = { frac }
   }
 
   private fun renderBreath(b: BreathSessionState.Snapshot) {
@@ -355,9 +362,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
       when {
         b.paused -> "Paused"
         b.sessionEndUptime <= 0L -> ""
-        leftMs < 60_000L -> "<1 min left"
-        else -> "${leftMs / 60_000L} min left"
+        leftMs < 60_000L -> "<1 min"
+        else -> "${leftMs / 60_000L} min"
       }
+    }
+    /* Voor de boog in de dimstand: de sessielengte één keer per sessie
+       schatten uit de resterende tijd en de rondes (de snapshot kent de totale
+       duur niet). Bij een start in ronde 1 is dat exact. */
+    if (b.sessionEndUptime > 0L && breathTotalKey != b.modeName) {
+      val leftNow = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - android.os.SystemClock.uptimeMillis()
+      val roundsLeft = (b.totalRounds - b.round + 1).coerceAtLeast(1)
+      breathTotalMs = (leftNow + (b.round - 1).coerceAtLeast(0) * (leftNow / roundsLeft)).coerceAtLeast(1L)
+      breathTotalKey = b.modeName
+    }
+    ring.ambientProgressAt = { now ->
+      val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
+      if (b.sessionEndUptime <= 0L || breathTotalMs <= 0L) 1f else (leftMs.toFloat() / breathTotalMs).coerceIn(0f, 1f)
     }
     ring.footerAt = { now ->
       val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
