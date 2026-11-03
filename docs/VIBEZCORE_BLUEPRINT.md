@@ -30,8 +30,8 @@ Verdienmodel: gratis = 10 audiosessies + kennismaking; **Premium** via de stores
 | De code van de app | `C:\Users\ulgar\vibezcore-app` (GitHub: ulgarbilican-dotcom/vibezcore-app, branch `rollback-vc76-take2`) |
 | De code van de backend | `C:\Users\ulgar\vibezcore-backend` (NOOIT wijzigen zonder toestemming) |
 | Builds om te uploaden (.aab) | `C:\Users\ulgar\vibezcore-app\release-android` |
-| Jouw bestanden (beelden, audio, store-materiaal, Word) | `OneDrive › Bureaublad › Vibezcore native app` — opgeruimd op 3 nov 2026 in: `01 Store-materiaal` · `02 Website` · `03 Audio` · `04 Bracelet en hardware` · `05 Sleutels en codes` · `06 Regels` · `99 Archief` (verouderd). Bestandsnamen in Deel E staan nu in die submappen. |
-| Bracelet: firmware, schema, stuklijst, PCBWay | `OneDrive › Bureaublad › pcb alle documenten` (firmware = `vibezcore-firmware-correct.zip`) |
+| Jouw bestanden (beelden, audio, store-materiaal, Word) | `OneDrive › Bureaublad › Vibezcore native app` — opgeruimd op 3 nov 2026 in: `01 Store-materiaal` · `02 Website` · `03 Audio` · `04 Bracelet en hardware` · `05 Sleutels en codes` · `06 Regels` (ook huisstijl) · `07 Beelden en marketing` · `08 Strategie en plannen` · `09 Eli and Bens - Stones and Sterling` · `99 Archief` (verouderd, o.a. oude Expo-app en webapp). Bestandsnamen in Deel E staan nu in die submappen; tekstbestanden (.md/scripts) zijn omgezet naar .docx, originelen in `99 Archief › originele tekstbestanden`. |
+| Bracelet: firmware, schema, stuklijst, PCBWay | `Vibezcore native app › 04 Bracelet en hardware › pcb alle documenten` (firmware = `vibezcore-firmware-correct.zip`) |
 | Back-up van alles (sleutels, geheugen, broncode-zip) | `OneDrive › Documenten › VIBEZCORE-archief` (automatisch na elke Claude-beurt; broncode in `broncode\`) |
 | Waar het werk NU staat | `docs/WERKSTATUS.md` |
 | Harde regels | `CLAUDE.md` |
