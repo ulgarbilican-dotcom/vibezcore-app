@@ -1,19 +1,19 @@
-﻿# Play Console â€” verklaring services op de voorgrond (klaar om in te vullen)
+# Play Console — verklaring services op de voorgrond (klaar om in te vullen)
 
-Plaats: Play Console â€º VIBEZCORE â€º Beleid en programma's â€º App-content â€º **Rechten voor services op de voorgrond**.
+Plaats: Play Console › VIBEZCORE › Beleid en programma's › App-content › **Rechten voor services op de voorgrond**.
 Opslaan kan pas als elke aangevinkte taak een videolink heeft (YouTube, mag "Niet vermeld"/unlisted).
 
-## 1. Media afspelen â€” FOREGROUND_SERVICE_MEDIA_PLAYBACK (telefoon)
+## 1. Media afspelen — FOREGROUND_SERVICE_MEDIA_PLAYBACK (telefoon)
 
 - Aanvinken: **Media afspelen**
 - Videolink: **https://youtu.be/9HlWjJll0Qg** (3 nov 2026, build 113, 95 s, verborgen; Home-knop i.p.v. vergrendelen). De oude link `youtu.be/Z7OQpAA-1mM` is verouderd en werd weggehaald.
 
-**Wat de video moet tonen (30â€“60 s, schermopname van de telefoon):**
-1. Een Breathwork-sessie starten (stem aan) â†’ scherm vergrendelen â†’ de stem en het ritme lopen door; de melding op het vergrendelscherm met pauze/hervat.
-2. Een State Control-sessie starten met Haptic + Audio â†’ scherm vergrendelen â†’ het hartslaggeluid loopt door; melding met pauze.
-3. Een Audio Library-sessie starten â†’ vergrendelen â†’ audio speelt door met de mediabediening.
+**Wat de video moet tonen (30–60 s, schermopname van de telefoon):**
+1. Een Breathwork-sessie starten (stem aan) → scherm vergrendelen → de stem en het ritme lopen door; de melding op het vergrendelscherm met pauze/hervat.
+2. Een State Control-sessie starten met Haptic + Audio → scherm vergrendelen → het hartslaggeluid loopt door; melding met pauze.
+3. Een Audio Library-sessie starten → vergrendelen → audio speelt door met de mediabediening.
 
-## 2. Gezondheid â€” FOREGROUND_SERVICE_HEALTH (Galaxy Watch / Wear OS)
+## 2. Gezondheid — FOREGROUND_SERVICE_HEALTH (Galaxy Watch / Wear OS)
 
 - Aanvinken: **Overig**
 - Beschrijving (plakken):
@@ -22,9 +22,9 @@ Opslaan kan pas als elke aangevinkte taak een videolink heeft (YouTube, mag "Nie
 
 - Videolink: **https://youtu.be/_buSeDSJUuI** (3 nov 2026, State Control op de Galaxy Watch4, gedimd scherm, verborgen).
 
-**Status 3 nov 2026:** beide taken + links + beschrijving ingevuld en OPGESLAGEN in Play Console ("Wijziging opgeslagen"). Nog niet verstuurd: dat gebeurt via Publicatieoverzicht â€º Ter beoordeling versturen (operator beslist).
+**Status 3 nov 2026:** beide taken + links + beschrijving ingevuld en OPGESLAGEN in Play Console ("Wijziging opgeslagen"). VERSTUURD ter beoordeling op 3 nov 2026 (operator: "ja"); Publicatieoverzicht toont "Wijzigingen worden beoordeeld". Enkel deze verklaring ging mee. Laatst gepubliceerd in productie: 20 juli 2026.
 
-**Wat de video moet tonen (30â€“60 s, het horloge filmen met een tweede toestel):**
+**Wat de video moet tonen (30–60 s, het horloge filmen met een tweede toestel):**
 1. Op het horloge (of vanaf de telefoon) een State Control- of Breathwork-sessie starten.
-2. De pols laten zakken tot het scherm dimt/uitgaat â†’ het horloge blijft tikken (in beeld of met een zin uitleg).
-3. Het V-icoon van de lopende sessie op de wijzerplaat, Ã©Ã©n tik â†’ terug in de sessie; daarna stoppen met END.
+2. De pols laten zakken tot het scherm dimt/uitgaat → het horloge blijft tikken (in beeld of met een zin uitleg).
+3. Het V-icoon van de lopende sessie op de wijzerplaat, één tik → terug in de sessie; daarna stoppen met END.
