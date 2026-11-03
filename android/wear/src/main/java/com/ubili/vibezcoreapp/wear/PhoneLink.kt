@@ -10,6 +10,8 @@ import org.json.JSONObject
 
 object PhoneLink {
   const val PATH_STATE_ACK = "/vibezcore/state/ack"
+  /** 2 nov 2026: het horloge speelt de ademsessie echt → de telefoon trilt niet mee (zoals de Apple Watch, breath_ack). */
+  const val PATH_BREATH_ACK = "/vibezcore/breath/ack"
   const val PATH_STATE_READY = "/vibezcore/state/ready"
   const val PATH_WATCH_ACTION = "/vibezcore/watch/action"
   /** 27 okt 2026: het horloge vraagt de catalogus ACTIEF op (een bewaard data-item wordt soms niet afgeleverd als de app niet draait). */

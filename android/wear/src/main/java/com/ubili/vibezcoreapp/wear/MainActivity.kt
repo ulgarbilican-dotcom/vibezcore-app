@@ -40,15 +40,19 @@ class MainActivity : androidx.activity.ComponentActivity() {
      ons scherm blijft gedimd staan i.p.v. terug naar de wijzerplaat; pols
      omhoog = meteen weer de ring. De golf staat stil in ambient (batterij). */
   private var ambient = false
+  /* Geschatte totale duur van de lopende ademsessie (dimstand-boog); leeg = nog niet geschat. */
+  private var breathTotalKey = ""
+  private var breathTotalMs = 0L
   private val ambientCallback = object : androidx.wear.ambient.AmbientLifecycleObserver.AmbientLifecycleCallback {
     override fun onEnterAmbient(ambientDetails: androidx.wear.ambient.AmbientLifecycleObserver.AmbientDetails) {
       ambient = true
       ring.flowing = false
       ring.ambient = true
-      /* Enkel de dunne ring en de minuten: geen knoppen, naam gedimd. */
+      /* Enkel de dunne ring en de minuten: geen knoppen. 3 nov 2026 (discreet tussen mensen): naam en bolletje weg — de kleur van de
+         boog zegt al welke toestand loopt (een los bolletje zweefde vreemd boven de minuten, operator-foto). */
       pauseButton.visibility = View.INVISIBLE
       endButton.visibility = View.INVISIBLE
-      (nameLabel.parent as View).alpha = 0.5f
+      (nameLabel.parent as View).alpha = 0f
     }
     override fun onExitAmbient() {
       ambient = false
@@ -290,6 +294,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         sessionContainer.visibility = View.GONE
         idleContainer.visibility = View.VISIBLE
         overLockScreen(false)
+        breathTotalKey = ""
         renderHome()
       }
     }
@@ -320,10 +325,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
     val sec = s.remainingSec.coerceAtLeast(0)
     ring.centerText = "%d:%02d".format(sec / 60, sec % 60)
     ring.subText = if (s.paused) "Paused" else ""
-    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else "${sec / 60} min" }
+    ring.ambientTextAt = { _ -> if (s.paused) "Paused" else if (sec < 60) "<1 min" else "${sec / 60} min" }
     val total = s.totalSec.coerceAtLeast(1)
     val frac = (sec.toFloat() / total).coerceIn(0f, 1f)
     ring.levelAt = { frac }
+    ring.ambientProgressAt = { frac }
   }
 
   private fun renderBreath(b: BreathSessionState.Snapshot) {
@@ -355,8 +361,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
       when {
         b.paused -> "Paused"
         b.sessionEndUptime <= 0L -> ""
-        else -> "${(leftMs / 60_000L).coerceAtLeast(0L)} min left"
+        leftMs < 60_000L -> "<1 min"
+        else -> "${leftMs / 60_000L} min"
       }
+    }
+    /* Voor de boog in de dimstand: de sessielengte één keer per sessie
+       schatten uit de resterende tijd en de rondes (de snapshot kent de totale
+       duur niet). Bij een start in ronde 1 is dat exact. */
+    if (b.sessionEndUptime > 0L && breathTotalKey != b.modeName) {
+      val leftNow = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - android.os.SystemClock.uptimeMillis()
+      val roundsLeft = (b.totalRounds - b.round + 1).coerceAtLeast(1)
+      breathTotalMs = (leftNow + (b.round - 1).coerceAtLeast(0) * (leftNow / roundsLeft)).coerceAtLeast(1L)
+      breathTotalKey = b.modeName
+    }
+    ring.ambientProgressAt = { now ->
+      val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
+      if (b.sessionEndUptime <= 0L || breathTotalMs <= 0L) 1f else (leftMs.toFloat() / breathTotalMs).coerceIn(0f, 1f)
     }
     ring.footerAt = { now ->
       val leftMs = if (b.paused) b.pausedSessionLeftMs else b.sessionEndUptime - now
@@ -512,7 +532,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
     /* 14 okt 2026 (operator: "recent per onderdeel i.p.v. op de
        startpagina"): enkel de twee onderdelen; elk opent op je laatst
        gebruikte toestand (ModesActivity). */
-    fun choice(label: String, icon: View, kind: String, sub: String) {
+    fun choice(label: String, icon: View, kind: String, sub: String, open: (() -> Unit)? = null) {
       val row = android.widget.LinearLayout(this).apply {
         orientation = android.widget.LinearLayout.HORIZONTAL
         gravity = android.view.Gravity.CENTER_VERTICAL
@@ -524,7 +544,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
         isClickable = true
         contentDescription = label
         setOnClickListener {
-          startActivity(Intent(this@MainActivity, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, kind))
+          if (open != null) open()
+          else startActivity(Intent(this@MainActivity, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, kind))
         }
       }
       row.addView(icon, android.widget.LinearLayout.LayoutParams(dp(24f), dp(24f)).apply { marginEnd = dp(8f) })
@@ -561,8 +582,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
        symbolen in de app en gebruik dezelfde"): Radio en Wind */
     fun glyph(res: Int) = android.widget.ImageView(this).apply {
       setImageResource(res)
-      // Bio-Teal, de accentkleur van VIBEZCORE (operator, 19 okt 2026)
-      setColorFilter(Color.parseColor("#00A3A3"))
+      // Bio-Teal, de accentkleur van VIBEZCORE (operator, 19 okt 2026) — 2 nov 2026 (operator): de lichtere tint
+      setColorFilter(Color.parseColor("#4AF0D4"))
       scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
       setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -570,6 +591,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
     // geen ondertitel (operator 14 okt: "die info mag weg")
     if (hasState) choice("State Control", glyph(R.drawable.ic_vz_radio), ModesActivity.KIND_STATE, "")
     if (hasBreath) choice("Breathwork", glyph(R.drawable.ic_vz_wind), ModesActivity.KIND_BREATH, "")
+    /* 2 nov 2026: sterkte kiezen op het horloge, zoals op de Apple Watch (Strong standaard). */
+    choice("Haptics", glyph(R.drawable.ic_vz_haptics), "", "") {
+      startActivity(Intent(this@MainActivity, HapticsActivity::class.java))
+    }
     list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
   }
 

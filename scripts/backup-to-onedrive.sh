@@ -38,4 +38,8 @@ for f in .env.bunny .env.test; do
   [ -f "$f" ] && cp -f "$f" "$ARCHIEF/env/" 2>/dev/null
 done
 [ -d secrets ] && mkdir -p "$ARCHIEF/env/secrets" && cp -f secrets/* "$ARCHIEF/env/secrets/" 2>/dev/null
+# 3 nov 2026: ook de ondertekensleutels (Expo credentials + Wear upload-sleutel) — zonder die geen updates meer naar de stores.
+[ -f credentials.json ] && cp -f credentials.json "$ARCHIEF/env/" 2>/dev/null
+[ -d credentials ] && mkdir -p "$ARCHIEF/env/credentials" && cp -rf credentials/. "$ARCHIEF/env/credentials/" 2>/dev/null
+[ -f wear-app/upload.jks ] && cp -f wear-app/upload.jks "$ARCHIEF/env/wear-upload.jks" 2>/dev/null
 exit 0

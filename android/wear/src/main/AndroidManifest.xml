@@ -76,6 +76,12 @@
 
         <activity
             android:screenOrientation="nosensor"
+            android:name=".HapticsActivity"
+            android:exported="false"
+            android:theme="@style/VzWearTheme" />
+
+        <activity
+            android:screenOrientation="nosensor"
             android:name=".DurationActivity"
             android:exported="false"
             android:theme="@style/VzWearTheme" />

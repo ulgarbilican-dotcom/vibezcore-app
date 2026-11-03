@@ -56,12 +56,19 @@ class SessionRingView @JvmOverloads constructor(
       invalidate()
     }
   var ambientTextAt: (Long) -> String = { "" }
-  private val ambientRimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+  /** 3 nov 2026 (operator: "hoe wil een gebruiker dat het gedimd scherm eruitziet als die bij mensen is"): discreet — wat er van de
+   *  sessie over is (1 → 0) als een gedempte boog in de toestandskleur die korter wordt, de minuten klein en grijs. */
+  var ambientProgressAt: (Long) -> Float = { 1f }
+  private val ambientTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.STROKE
-    this.color = Color.argb(90, 255, 255, 255)
+    this.color = Color.argb(28, 255, 255, 255)
+  }
+  private val ambientArcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
   }
   private val ambientTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    this.color = Color.argb(170, 255, 255, 255)
+    this.color = Color.argb(115, 255, 255, 255)
     textAlign = Paint.Align.CENTER
   }
   var centerText: String = ""
@@ -224,9 +231,18 @@ class SessionRingView @JvmOverloads constructor(
     val cy = height / 2f
     if (ambient) {
       val ar = min(width, height) / 2f / 1.10f
-      ambientRimPaint.strokeWidth = 1.5f * resources.displayMetrics.density
-      canvas.drawCircle(cx, cy, ar, ambientRimPaint)
-      ambientTextPaint.textSize = ar * 0.24f
+      val stroke = 2f * resources.displayMetrics.density
+      ambientTrackPaint.strokeWidth = 1f * resources.displayMetrics.density
+      canvas.drawCircle(cx, cy, ar, ambientTrackPaint)
+      val left = ambientProgressAt(now).coerceIn(0f, 1f)
+      if (left > 0f) {
+        /* Gedempte toestandskleur (~35 %): je herkent de toestand, maar het licht niet op (45 % oogde nog fel, operator-foto). */
+        ambientArcPaint.color = Color.argb(90, Color.red(color), Color.green(color), Color.blue(color))
+        ambientArcPaint.strokeWidth = stroke
+        arcRect.set(cx - ar, cy - ar, cx + ar, cy + ar)
+        canvas.drawArc(arcRect, -90f, 360f * left, false, ambientArcPaint)
+      }
+      ambientTextPaint.textSize = ar * 0.17f
       canvas.drawText(ambientTextAt(now), cx, cy + ambientTextPaint.textSize * 0.35f, ambientTextPaint)
       return
     }
