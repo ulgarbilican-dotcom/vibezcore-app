@@ -6,7 +6,7 @@
 > verderzetten zonder vragen"). Een nieuwe sessie leest dit als eerste na
 > `CLAUDE.md`, daarna `git log -20`, `docs/TEST_LOG.md` en het geheugen.
 >
-> Laatst bijgewerkt: 1 november 2026 (fixronde iOS build 68); vorige: 31 oktober 2026 (How it works-schermen); vorige: 28 oktober 2026 (laat) — zie de bovenste regel van §3; vorige: 20 oktober 2026 — toestel-onafhankelijk (T324–T328); vorige: 19 oktober 2026 — toestel-audit (T314, T318, T319) + Android-fixes (T315–T317) klaar; één nieuwe iOS- en Android-build met alles; Galaxy Watch-aab in release-android/.
+> Laatst bijgewerkt: 5 november 2026 (back-up uitgebreid); vorige: 1 november 2026 (fixronde iOS build 68); vorige: 31 oktober 2026 (How it works-schermen); vorige: 28 oktober 2026 (laat) — zie de bovenste regel van §3; vorige: 20 oktober 2026 — toestel-onafhankelijk (T324–T328); vorige: 19 oktober 2026 — toestel-audit (T314, T318, T319) + Android-fixes (T315–T317) klaar; één nieuwe iOS- en Android-build met alles; Galaxy Watch-aab in release-android/.
 
 ---
 
@@ -24,7 +24,9 @@
 Regel: na elke afgeronde wijziging `git commit` + `git push origin rollback-vc76-take2`.
 Een Stop-hook (`.claude/settings.local.json` → `scripts/backup-to-onedrive.sh`)
 pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
-`secrets/` naar `OneDrive\Documenten\VIBEZCORE-archief`.
+`secrets/` naar `OneDrive\Documenten\VIBEZCORE-archief`. Sinds 5 nov 2026 ook de
+Claude-chats zonder afbeeldingen (`claude-chats`, via `scripts/backup-chats.py`) en
+de scripts + renderbeelden van Studio GenOne (`OneDrive\Bureaublad\Studio GenOne\Werkbestanden`).
 
 ---
 

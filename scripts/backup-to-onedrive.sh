@@ -42,4 +42,20 @@ done
 [ -f credentials.json ] && cp -f credentials.json "$ARCHIEF/env/" 2>/dev/null
 [ -d credentials ] && mkdir -p "$ARCHIEF/env/credentials" && cp -rf credentials/. "$ARCHIEF/env/credentials/" 2>/dev/null
 [ -f wear-app/upload.jks ] && cp -f wear-app/upload.jks "$ARCHIEF/env/wear-upload.jks" 2>/dev/null
+# 4 nov 2026 (operator: "dat alles altijd veilig is"): ook de chats (zonder afbeeldingen) en het werk van Studio GenOne dat enkel op deze laptop stond.
+# Los van de hook: de chats zijn groot en de hook stopt na 120 s.
+nohup python "$PROJECT/scripts/backup-chats.py" "$HOME/.claude/projects/$SLUG" "$ARCHIEF/claude-chats" >/dev/null 2>&1 &
+STUDIO="$HOME/OneDrive/Bureaublad/Studio GenOne/Werkbestanden"
+if [ -d "$HOME/OneDrive/Bureaublad/Studio GenOne" ]; then
+  mkdir -p "$STUDIO/scripts" "$STUDIO/renderbeelden" 2>/dev/null
+  for f in "$HOME/AppData/Local/Temp/claude/$SLUG"/*/scratchpad/*.py "$HOME/AppData/Local/Temp/claude/$SLUG"/*/scratchpad/*.sh "$HOME/AppData/Local/Temp/claude/$SLUG"/*/scratchpad/intro_*.png; do
+    [ -f "$f" ] && cp -uf "$f" "$STUDIO/scripts/" 2>/dev/null
+  done
+  # Enkel de meest recente rendermap: de oudere proeven zijn niet meer nodig.
+  latest="$(ls -td "$HOME/Downloads/portfolio_raw"/cyc_*/ 2>/dev/null | head -1)"
+  if [ -n "$latest" ]; then
+    mkdir -p "$STUDIO/renderbeelden/$(basename "$latest")" 2>/dev/null
+    cp -uf "$latest"f_*.png "$STUDIO/renderbeelden/$(basename "$latest")/" 2>/dev/null
+  fi
+fi
 exit 0
