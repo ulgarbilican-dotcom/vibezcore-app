@@ -155,6 +155,9 @@ class SessionRingView @JvmOverloads constructor(
   private var scaledFor: Bitmap? = null
   private val playPath = Path()
 
+  /* 4 nov 2026 (operator: "blijft niet in beeld"): schijf (+7 %) en pulsring (+11 %) blijven altijd binnen het scherm. */
+  private val RING_DIV = 1.17f
+
   private data class Pulse(val startMs: Long, val strong: Boolean)
 
   private val pulses = ArrayList<Pulse>()
@@ -230,7 +233,7 @@ class SessionRingView @JvmOverloads constructor(
     val cx = width / 2f
     val cy = height / 2f
     if (ambient) {
-      val ar = min(width, height) / 2f / 1.10f
+      val ar = min(width, height) / 2f / RING_DIV
       val stroke = 2f * resources.displayMetrics.density
       ambientTrackPaint.strokeWidth = 1f * resources.displayMetrics.density
       canvas.drawCircle(cx, cy, ar, ambientTrackPaint)
@@ -248,7 +251,7 @@ class SessionRingView @JvmOverloads constructor(
     }
     // 12 okt 2026: de ring vult het scherm; de tik-ringen dijen nog net tot
     // aan de rand uit (tot 1,08×) i.p.v. ver erbuiten.
-    val r = min(width, height) / 2f / 1.10f * beatScale(now)
+    val r = min(width, height) / 2f / RING_DIV * beatScale(now)
     val size = 2f * r
 
     // 1 · schijf (State Control); Breathwork heeft geen cirkel
@@ -282,7 +285,7 @@ class SessionRingView @JvmOverloads constructor(
     // 4 · ringen per tik — 14 okt 2026: zelfde verloop als de telefoon
     // (HapticPulseRings): duur = 1,5 slag (500–2600 ms), uitdijen met
     // ease-out cubic, in 90 ms op volle sterkte en dan uitdoven (ease-in).
-    val base = min(width, height) / 2f / 1.10f
+    val base = min(width, height) / 2f / RING_DIV
     val it = pulses.iterator()
     while (it.hasNext()) {
       val p = it.next()
@@ -386,7 +389,7 @@ class SessionRingView @JvmOverloads constructor(
 
     /* Halve boog langs de bovenrand: dun spoor, en de kleur van de toestand
        die over de fase van links naar rechts volloopt — de aftelling. */
-    val inset = 7f * density
+    val inset = width / 2f - min(width, height) / 2f / RING_DIV  // zelfde cirkel als de State Control-schijf in rust
     arcRect.set(inset, inset, width - inset, height - inset)
     arcPaint.strokeWidth = 4f * density
     arcPaint.color = Color.argb(36, 255, 255, 255)
