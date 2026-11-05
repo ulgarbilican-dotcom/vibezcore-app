@@ -27,6 +27,7 @@ pusht openstaande commits en kopieert geheugen, privé-docs, `.env*` en
 `secrets/` naar `OneDrive\Documenten\VIBEZCORE-archief`. Sinds 5 nov 2026 ook de
 Claude-chats zonder afbeeldingen (`claude-chats`, via `scripts/backup-chats.py`) en
 de scripts + renderbeelden van Studio GenOne (`OneDrive\Bureaublad\Studio GenOne\Werkbestanden`).
+Studio GenOne heeft een eigen privé-repo `studio-genone` (lokaal `C:\Users\ulgar\studio-genone`, lees daar `STATUS.md`), bijgewerkt door `scripts/sync-studio-repo.py`.
 
 ---
 
