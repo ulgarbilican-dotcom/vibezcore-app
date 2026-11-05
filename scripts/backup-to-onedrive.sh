@@ -57,5 +57,7 @@ if [ -d "$HOME/OneDrive/Bureaublad/Studio GenOne" ]; then
     mkdir -p "$STUDIO/renderbeelden/$(basename "$latest")" 2>/dev/null
     cp -uf "$latest"f_*.png "$STUDIO/renderbeelden/$(basename "$latest")/" 2>/dev/null
   fi
+  # 5 nov 2026: privé-repo studio-genone, zodat een cloud-sessie ook zonder laptop verder kan.
+  [ -d "$HOME/studio-genone/.git" ] && python "$PROJECT/scripts/sync-studio-repo.py" "$HOME/studio-genone" "$MEMORY" "$HOME/AppData/Local/Temp/claude/$SLUG/*/scratchpad" "$HOME/OneDrive/Bureaublad/Studio GenOne" >/dev/null 2>&1
 fi
 exit 0
