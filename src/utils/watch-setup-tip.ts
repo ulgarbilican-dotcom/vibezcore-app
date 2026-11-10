@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
 import { showVibezAlert } from '@/components/VibezAlert';
 import { getSetting } from '@/utils/settings';
-import { getAppleWatchStatus, getWorkoutPermission, requestWorkoutPermission } from '../../modules/watch-breath';
+import { getAppleWatchStatus, getWorkoutPermission, requestWorkoutPermission, type WorkoutPermission } from '../../modules/watch-breath';
 import { getWatchStatus } from '../../modules/wear-breath';
 
 const KEY = 'vz_watch_setup_tip_v1';
@@ -25,6 +25,53 @@ export const STRENGTH_NOTE =
     : 'Strong is the default. Change it for this session only, or remember it. On your watch: open VIBEZCORE › Haptics.';
 let busy = false;
 let deniedShownThisLaunch = false;
+/** "Not now" op de Apple Health-kaart: niet bij elke sessie opnieuw vragen, wel na een nieuwe app-start. */
+let healthAskedThisLaunch = false;
+
+/* 10 nov 2026 (App Review 2.5.1, build 89: "does not clearly identify the HealthKit functionality in the app's user interface"): de
+   uitleg verscheen enkel met een gekoppelde Apple Watch, dus Apple zag ze nooit. Nu één vaste tekst, op drie plekken: de vaste regel
+   "Apple Health" in Profile (altijd zichtbaar op de iPhone), de kaart vóór Apple's eigen toestemmingsvraag, en de uitlegkaart. */
+export const APPLE_HEALTH_PURPOSE =
+  'VIBEZCORE uses Apple Health (HealthKit) for one thing only: to start a Mind & Body workout session on your Apple Watch while your Breathwork or State Control session runs. That keeps the taps on your wrist going while the watch screen is dimmed.\n\nVIBEZCORE does not read any health data and does not save workouts or any other data to Apple Health.';
+
+/** Uitleg Apple Health + status + de juiste knop (Profile › Apple Health). Geeft de nieuwe status terug na "Allow". */
+export async function showAppleHealthInfo(): Promise<WorkoutPermission> {
+  const perm = await getWorkoutPermission();
+  if (perm === 'unavailable') {
+    await showVibezAlert({
+      title: 'Apple Health',
+      message: APPLE_HEALTH_PURPOSE + '\n\nApple Health is not available on this device.',
+      buttons: [{ text: 'OK', style: 'primary' }],
+    });
+    return perm;
+  }
+  const status =
+    perm === 'granted'
+      ? 'Workouts: allowed.'
+      : perm === 'denied'
+        ? 'Workouts: not allowed. You can change this in iPhone Settings › Privacy & Security › Health › VIBEZCORE.'
+        : 'Workouts: not set yet.';
+  if (perm === 'notDetermined') {
+    const idx = await showVibezAlert({
+      title: 'Apple Health',
+      message: APPLE_HEALTH_PURPOSE + '\n\n' + status,
+      buttons: [
+        { text: 'Allow Workouts', style: 'primary' },
+        { text: 'Not now', style: 'cancel' },
+      ],
+    });
+    return idx === 0 ? requestWorkoutPermission() : perm;
+  }
+  await showVibezAlert({
+    title: 'Apple Health',
+    message: APPLE_HEALTH_PURPOSE + '\n\n' + status,
+    buttons: [
+      { text: 'Manage in Settings', style: 'primary', onPress: () => void Linking.openSettings().catch(() => {}) },
+      { text: 'OK', style: 'cancel' },
+    ],
+  });
+  return perm;
+}
 
 /** De uitleg zelf, op elk moment op te roepen (Profile, Audio & Haptics, eerste sessie). 1 nov 2026 (operator: "wie iets wegklikt bij de
  *  eerste sessie, moet de info nadien gemakkelijk en duidelijk kunnen vinden"): ontbreekt de toestemming voor Workouts, dan staat die als
@@ -99,7 +146,21 @@ export async function maybeShowWatchSetupTip(): Promise<void> {
     const st = await getAppleWatchStatus();
     if (st.status !== 'ready') return;
     let perm = await getWorkoutPermission();
-    if (perm === 'notDetermined') perm = await requestWorkoutPermission();
+    if (perm === 'notDetermined') {
+      if (healthAskedThisLaunch) return;
+      healthAskedThisLaunch = true;
+      /* 10 nov 2026 (App Review 2.5.1): eerst in eigen woorden zeggen dat het om Apple Health gaat en waarvoor, dan pas Apple's vraag. */
+      const idx = await showVibezAlert({
+        title: 'Apple Health',
+        message: APPLE_HEALTH_PURPOSE + '\n\nApple will ask you next. You can change this anytime in Profile › Apple Health.',
+        buttons: [
+          { text: 'Continue', style: 'primary' },
+          { text: 'Not now', style: 'cancel' },
+        ],
+      });
+      if (idx !== 0) return;
+      perm = await requestWorkoutPermission();
+    }
     if (perm === 'denied') {
       if (!deniedShownThisLaunch) {
         deniedShownThisLaunch = true;

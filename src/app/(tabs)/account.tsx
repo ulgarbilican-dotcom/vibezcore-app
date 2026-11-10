@@ -123,6 +123,7 @@ import {
   Eye,
   EyeOff,
   Headphones,
+  Heart,
   HeartPulse,
   MessageCircle,
   HelpCircle,
@@ -167,8 +168,8 @@ import {
 } from '@/services/social-auth';
 import { hapticPress } from '@/utils/haptics';
 import { dateLocale, formatClock } from '@/utils/locale';
-import { showWatchSetupInfo } from '@/utils/watch-setup-tip';
-import { getAppleWatchStatus } from '../../../modules/watch-breath';
+import { showAppleHealthInfo, showWatchSetupInfo } from '@/utils/watch-setup-tip';
+import { getAppleWatchStatus, getWorkoutPermission, type WorkoutPermission } from '../../../modules/watch-breath';
 import * as Notifications from 'expo-notifications';
 
 type Mode = 'login' | 'signup';
@@ -823,12 +824,42 @@ function NotificationsRow() {
   );
 }
 
+/* 10 nov 2026 (App Review 2.5.1, build 89): HealthKit moet zichtbaar benoemd staan in de app. Op de iPhone ALTIJD, ook zonder Apple Watch
+   (de reviewer testte zonder horloge en zag Apple Health nergens). Status + uitleg + Allow / Settings. */
+function AppleHealthRow() {
+  const [perm, setPerm] = useState<WorkoutPermission | null>(null);
+  const refresh = useCallback(() => {
+    void getWorkoutPermission().then(setPerm);
+  }, []);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    refresh();
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+  if (Platform.OS !== 'ios' || perm === null || perm === 'unavailable') return null;
+  return (
+    <Row
+      icon={Heart}
+      title="Apple Health"
+      subtitle="Workouts, only for your Apple Watch sessions"
+      value={perm === 'granted' ? 'Allowed' : perm === 'denied' ? 'Not allowed' : 'Not set'}
+      valueTone="status"
+      onPress={() => void showAppleHealthInfo().then(setPerm)}
+      accessibilityLabel="Apple Health, what VIBEZCORE uses it for"
+    />
+  );
+}
+
 function SupportGroup() {
   return (
     <Group title="Settings & support">
       <Row icon={SettingsIcon} title="Settings" onPress={() => router.navigate('/settings' as never)} accessibilityLabel="Open settings" />
       {/* 1 nov 2026 (operator: "niet onder Settings, gewoon direct zichtbaar"): de drie horloge-instellingen voor voelbare tikken zonder toon. */}
       <NotificationsRow />
+      <AppleHealthRow />
       <AppleWatchHapticsRow />
       <Row icon={UserPlus} title="Invite a friend" onPress={() => void shareInvite()} accessibilityLabel="Invite a friend to VIBEZCORE" />
       <Row icon={HelpCircle} title="FAQ" onPress={() => router.navigate('/faq' as never)} accessibilityLabel="Browse frequently asked questions" />
