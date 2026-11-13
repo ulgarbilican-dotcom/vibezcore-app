@@ -33,7 +33,7 @@ object RoundList {
 
   fun attach(scroll: ScrollView, container: ViewGroup, mode: Mode = Mode.WHEEL) {
     val ctx = scroll.context
-    if (!RoundFit.isRound(ctx)) return
+    /* 13 nov 2026: ook op een VIERKANT scherm (rust = niets half afgekapt aan de schermrand; lens + vastklikken zijn overal gelijk) */
     val density = ctx.resources.displayMetrics.density
     val handler = Handler(Looper.getMainLooper())
     var touching = false

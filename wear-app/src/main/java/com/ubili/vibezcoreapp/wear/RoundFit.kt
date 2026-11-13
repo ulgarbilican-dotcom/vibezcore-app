@@ -20,7 +20,13 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 object RoundFit {
-  fun isRound(ctx: Context): Boolean = ctx.resources.configuration.isScreenRound
+  /** Rond scherm? In een debug-build kan de audit de VIERKANTE indeling afdwingen (prefs vz_debug › forceSquare), om een vierkant horloge na te bootsen. */
+  fun isRound(ctx: Context): Boolean {
+    if ((ctx.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 &&
+      ctx.getSharedPreferences("vz_debug", Context.MODE_PRIVATE).getBoolean("forceSquare", false)
+    ) return false
+    return ctx.resources.configuration.isScreenRound
+  }
 
   fun heightDp(ctx: Context): Float = ctx.resources.displayMetrics.let { it.heightPixels / it.density }
 
@@ -109,6 +115,8 @@ object RoundFit {
     val h = v.height.toFloat()
     if (w <= 0f || h <= 0f) return true
     if (top < 0f || top + h > screenH) return false
+    // vierkant scherm: er is geen ronding, enkel de rand van het scherm (minstens 3 dp ruimte)
+    if (!isRound(v.context)) return top >= 3f * density && top + h <= screenH - 3f * density
     val radius = min(screenW, screenH) / 2f
     val limit = radius - 6f * density  // in rust: minstens 6 dp van de rand (gemeten: dan raakt niets de rand)
     val cap = min(h, w) / 2f
