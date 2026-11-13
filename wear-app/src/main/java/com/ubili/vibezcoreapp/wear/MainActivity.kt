@@ -562,10 +562,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         orientation = android.widget.LinearLayout.HORIZONTAL
         gravity = android.view.Gravity.CENTER_VERTICAL
         setPadding(dp(12f), 0, dp(10f), 0)
-        background = GradientDrawable().apply {
-          cornerRadius = dp(28f).toFloat()
-          setColor(Color.parseColor("#1C1C1E"))
-        }
+        background = Glass.pill(this@MainActivity, 28f) // 13 nov 2026: glaslook, zelfde recept als de andere knoppen
         isClickable = true
         contentDescription = label
         setOnClickListener {

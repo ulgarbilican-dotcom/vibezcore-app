@@ -36,6 +36,8 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
     }
   }
 
+  private lateinit var scrollView: ScrollView
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     val scroll = ScrollView(this).apply {
@@ -44,13 +46,15 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
       isFocusable = true
       isFocusableInTouchMode = true
     }
+    scrollView = scroll
     list = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(RoundFit.edgeDp(this@HapticsActivity) + 6f), dp(24f), dp(44f))
+      setPadding(dp(25f), dp(RoundFit.edgeDp(this@HapticsActivity) + 2f), dp(25f), dp(44f))
     }
     scroll.addView(list)
-    RoundFit.attach(scroll, list) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
+    /* 13 nov 2026 (operator-testronde): rijen even groot in rust, lens tijdens scrollen; titel, twee keuzes en Done in één beeld */
+    RoundList.attach(scroll, list, RoundList.Mode.PAGE)
     setContentView(scroll)
     render()
   }
@@ -64,39 +68,47 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
       textSize = 14f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
-    })
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(6f) })
+    option("strong", "Strong", "Firmest taps", cur == "strong")
+    option("medium", "Medium", "Same rhythm, lighter", cur == "medium")
+    /* 13 nov 2026 (operator: "als ik Strong aanduid en verder wil, geen knop of manier om verder te gaan"): Done sluit het scherm */
+    list.addView(TextView(this).apply {
+      text = "Done"
+      setTextColor(Color.parseColor("#0A0A0A"))
+      textSize = 14f
+      typeface = Typeface.DEFAULT_BOLD
+      gravity = Gravity.CENTER
+      background = Glass.cta(this@HapticsActivity, 20f)
+      contentDescription = "Done"
+      isClickable = true
+      tag = RoundList.ROW
+      setOnClickListener { finish() }
+    }, LinearLayout.LayoutParams(dp(120f), dp(Compact.CTA_DP)).apply { topMargin = dp(2f) })
+    // de uitleg onder de knoppen: scrol om te lezen
     list.addView(TextView(this).apply {
       text = "For State Control and Breathwork. Strong is the default."
       setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
       gravity = Gravity.CENTER
-    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      topMargin = dp(4f)
-      bottomMargin = dp(10f)
-    })
-    option("strong", "Strong", "Firmest taps", cur == "strong")
-    option("medium", "Medium", "Same rhythm, lighter", cur == "medium")
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10f) })
     list.addView(TextView(this).apply {
       text = "Your phone uses the same strength."
       setTextColor(Color.argb(120, 255, 255, 255))
       textSize = 10f
       gravity = Gravity.CENTER
-    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8f) })
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6f) })
+    RoundList.refresh(scrollView)
   }
 
   private fun option(value: String, title: String, sub: String, selected: Boolean) {
-    /* 2 nov 2026 (operator: "omlijning in de teal kleur is niet mooi"): de gekozen optie = lichter glas met een zachte rand (≤16 %),
-       zoals de pillen in de app — geen gekleurde omlijning. */
+    /* glazen pil; de gekozen optie = lichter glas met dezelfde dunne lichte rand (nooit een gekleurde omlijning) */
     val row = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_VERTICAL
-      setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
-      background = GradientDrawable().apply {
-        cornerRadius = dp(26f).toFloat()
-        setColor(if (selected) Color.parseColor("#3A3A3C") else Color.parseColor("#1C1C1E"))
-        if (selected) setStroke(dp(1f), Color.argb(40, 255, 255, 255))
-      }
+      setPadding(dp(14f), dp(4f), dp(14f), dp(4f))
+      background = Glass.pill(this@HapticsActivity, 26f, selected)
       isClickable = true
+      tag = RoundList.ROW
       contentDescription = if (selected) "$title, selected" else title
       setOnClickListener { choose(value) }
     }
@@ -111,8 +123,8 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
       setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
     })
-    list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      bottomMargin = dp(6f)
+    list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.ROW_DP + 2f)).apply {
+      bottomMargin = dp(Compact.GAP_DP)
     })
   }
 

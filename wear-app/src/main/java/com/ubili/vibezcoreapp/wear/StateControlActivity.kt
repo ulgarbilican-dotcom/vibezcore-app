@@ -67,10 +67,9 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateControlActivity) + 3f), dp(24f), dp(34f)) // 13 nov 2026: alles (Start erbij) binnen het scherm, Play WO-V16
+      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateControlActivity) + 1f), dp(24f), dp(20f)) // 13 nov 2026: compact, alles (Start erbij) in beeld op normale grootte (Play WO-V16)
     }
     scroll.addView(col)
-    RoundFit.attach(scroll, col) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
     col.addView(TextView(this).apply {
       text = "STATE CONTROL"
       setTextColor(Color.argb(140, 255, 255, 255))
@@ -82,23 +81,20 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     col.addView(TextView(this).apply {
       text = e.optString("name")
       setTextColor(c)
-      textSize = 18f
+      textSize = 17f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
       topMargin = dp(2f)
-      bottomMargin = dp(10f)
+      bottomMargin = dp(5f)
     })
 
     // Duur — zelfde knop als bij Breathwork
     val row = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_VERTICAL
-      setPadding(dp(16f), dp(6f), dp(14f), dp(6f))
-      background = GradientDrawable().apply {
-        cornerRadius = dp(20f).toFloat()
-        setColor(Color.argb(36, 255, 255, 255))
-      }
+      setPadding(dp(16f), dp(4f), dp(14f), dp(4f))
+      background = Glass.pill(this@StateControlActivity, 20f)
       isClickable = true
       contentDescription = "Duration: $minutes minutes. Tap to change."
       setOnClickListener {
@@ -107,8 +103,8 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     }
     row.addView(TextView(this).apply {
       text = if (minutes == e.optInt("defaultMinutes")) "Recommended" else "Duration"
-      setTextColor(if (minutes == e.optInt("defaultMinutes")) c else Color.argb(140, 255, 255, 255))
-      textSize = 10f
+      setTextColor(if (minutes == e.optInt("defaultMinutes")) readable(c) else Color.argb(190, 255, 255, 255))
+      textSize = 11f
       maxLines = 1
     })
     row.addView(TextView(this).apply {
@@ -118,8 +114,8 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
       typeface = Typeface.DEFAULT_BOLD
       maxLines = 1
     })
-    col.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
-      bottomMargin = dp(6f)
+    col.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.ROW_DP)).apply {
+      bottomMargin = dp(Compact.GAP_DP)
     })
 
     if (e.optBoolean("locked")) {
@@ -129,24 +125,21 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
         textSize = 14f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        background = GradientDrawable().apply {
-          cornerRadius = dp(22f).toFloat()
-          setColor(Color.argb(46, 255, 255, 255))
-        }
+        background = Glass.pill(this@StateControlActivity, 22f)
         contentDescription = "Preview ${e.optString("name")} for 30 seconds"
         setOnClickListener {
           startLocalStateSession(this@StateControlActivity, e, minutes, previewSec = 30)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
-        topMargin = dp(6f)
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.CTA_DP)).apply {
+        topMargin = dp(Compact.GAP_DP)
       })
       col.addView(TextView(this).apply {
         text = "Full session with Premium"
         setTextColor(Color.argb(170, 255, 255, 255))
         textSize = 11f
         gravity = Gravity.CENTER
-        setPadding(0, dp(8f), 0, 0)
+        setPadding(0, dp(3f), 0, 0)
       })
     } else {
       col.addView(TextView(this).apply {
@@ -164,8 +157,8 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
           startLocalStateSession(this@StateControlActivity, e, minutes)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
-        topMargin = dp(6f)
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.CTA_DP)).apply {
+        topMargin = dp(Compact.GAP_DP)
       })
     }
     setContentView(scroll)

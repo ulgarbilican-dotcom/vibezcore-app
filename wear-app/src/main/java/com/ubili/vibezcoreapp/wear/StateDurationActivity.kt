@@ -44,10 +44,10 @@ class StateDurationActivity : androidx.activity.ComponentActivity() {
     val list = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(26f), dp(36f), dp(26f), dp(40f))
+      setPadding(dp(30f), dp(34f), dp(30f), dp(40f))
     }
     scroll.addView(list)
-    RoundFit.attach(scroll, list) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
+    RoundList.attach(scroll, list) // 13 nov 2026: even groot in rust, lens tijdens scrollen
     list.addView(TextView(this).apply {
       text = e.optString("name")
       setTextColor(c)
@@ -57,17 +57,13 @@ class StateDurationActivity : androidx.activity.ComponentActivity() {
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
       bottomMargin = dp(10f)
     })
-    var currentRow: View? = null
     for (m in e.optInt("minMinutes", 5)..e.optInt("maxMinutes", 30)) {
       val row = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        background = GradientDrawable().apply {
-          cornerRadius = dp(24f).toFloat()
-          setColor(Color.argb(36, 255, 255, 255))
-          if (m == current) setStroke(dp(1.5f).coerceAtLeast(1), Color.argb(170, Color.red(c), Color.green(c), Color.blue(c)))
-        }
-        minimumHeight = dp(50f)
+        background = Glass.pill(this@StateDurationActivity, 24f, selected = m == current)
+        tag = if (m == current) RoundList.ROW_INITIAL else RoundList.ROW
+        minimumHeight = dp(44f)
         isClickable = true
         contentDescription = "$m minutes" + if (m == rec) ", recommended" else ""
         setOnClickListener {
@@ -85,25 +81,16 @@ class StateDurationActivity : androidx.activity.ComponentActivity() {
       if (m == rec) {
         row.addView(TextView(this).apply {
           text = "Recommended"
-          setTextColor(c)
-          textSize = 10f
+          setTextColor(readable(c))
+          textSize = 11f
           gravity = Gravity.CENTER
         })
       }
       list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
         bottomMargin = dp(6f)
       })
-      if (m == current) currentRow = row
     }
     setContentView(scroll)
     scroll.requestFocus()
-    currentRow?.let { row ->
-      scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-        override fun onGlobalLayout() {
-          scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
-          scroll.scrollTo(0, (row.top + row.height / 2 - scroll.height / 2).coerceAtLeast(0))
-        }
-      })
-    }
   }
 }

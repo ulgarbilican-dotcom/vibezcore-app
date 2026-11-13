@@ -43,10 +43,10 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
     val list = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(22f), dp(30f), dp(22f), dp(48f))
+      setPadding(dp(30f), dp(34f), dp(30f), dp(48f))
     }
     scroll.addView(list)
-    RoundFit.attach(scroll, list) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
+    RoundList.attach(scroll, list) // 13 nov 2026: even groot in rust, lens tijdens scrollen
 
     list.addView(TextView(this).apply {
       text = e.optString("name")
@@ -63,14 +63,11 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
       val row = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16f), dp(8f), dp(14f), dp(8f))
-        background = GradientDrawable().apply {
-          cornerRadius = dp(24f).toFloat()
-          setColor(Color.argb(36, 255, 255, 255))
-          /* de techniek die klaarstaat: dunne rand in de kleur van de toestand */
-          if (i == selected) setStroke(dp(1.5f).coerceAtLeast(1), Color.argb(150, Color.red(color), Color.green(color), Color.blue(color)))
-        }
-        minimumHeight = dp(52f)
+        setPadding(dp(14f), dp(4f), dp(12f), dp(4f))
+        /* 13 nov 2026 (operator: "omlijning moet niet in kleur"): de gekozen techniek = lichter glas, geen gekleurde rand */
+        background = Glass.pill(this@TechniqueActivity, 24f, selected = i == selected)
+        tag = if (i == selected) RoundList.ROW_INITIAL else RoundList.ROW
+        minimumHeight = dp(46f)
         isClickable = true
         contentDescription = t.optString("name")
         setOnClickListener {
@@ -82,10 +79,10 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
       row.addView(TextView(this).apply {
         text = t.optString("name")
         setTextColor(Color.WHITE)
-        textSize = 14f
         typeface = Typeface.DEFAULT_BOLD
-        maxLines = 2
-      })
+        maxLines = 1
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 10, 14, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(20f)))
       row.addView(TextView(this).apply {
         // één regel: waarom deze klaarstaat, anders het niveau
         text = when {
@@ -94,7 +91,7 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
           else -> t.optString("level")
         }
         maxLines = 1
-        setTextColor(if (i == recommended || i == selected) color else Color.argb(140, 255, 255, 255))
+        setTextColor(if (i == recommended || i == selected) readable(color) else Color.argb(190, 255, 255, 255))
         textSize = 11f
       })
       list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {

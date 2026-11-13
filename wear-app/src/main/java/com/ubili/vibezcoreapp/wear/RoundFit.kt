@@ -61,7 +61,7 @@ object RoundFit {
   }
 
   /** Bovenkant van [v] t.o.v. het zichtbare scherm (houdt rekening met het scrollen en met een geneste container). */
-  private fun topInScroll(scroll: ScrollView, v: View): Float {
+  internal fun topInScroll(scroll: ScrollView, v: View): Float {
     var y = 0f
     var cur: View = v
     while (cur.parent !== scroll && cur.parent is View) {
@@ -101,5 +101,21 @@ object RoundFit {
       v.scaleY = s
     }
     if (v.alpha != a) v.alpha = a
+  }
+
+  /** Past [v] met zijn VOLLE grootte binnen de ronding en het scherm? (Voor lijsten in rust: wat niet past, wordt verborgen i.p.v. afgekapt.) */
+  fun fitsAtRest(v: View, top: Float, screenW: Float, screenH: Float, density: Float): Boolean {
+    val w = v.width.toFloat()
+    val h = v.height.toFloat()
+    if (w <= 0f || h <= 0f) return true
+    if (top < 0f || top + h > screenH) return false
+    val radius = min(screenW, screenH) / 2f
+    val limit = radius - 3f * density
+    val cap = min(h, w) / 2f
+    val yFar = max(abs(top - screenH / 2f), abs(top + h - screenH / 2f))
+    val yCap = max(0f, yFar - cap)
+    val free = (limit - cap) * (limit - cap) - yCap * yCap
+    val allowedHalf = if (free <= 0f) cap * 0.5f else cap + sqrt(free)
+    return allowedHalf >= w / 2f - 3f
   }
 }
