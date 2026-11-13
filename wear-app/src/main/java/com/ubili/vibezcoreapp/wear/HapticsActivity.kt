@@ -19,6 +19,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class HapticsActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
   private lateinit var list: LinearLayout
 
@@ -83,7 +88,7 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
       isClickable = true
       tag = RoundList.ROW
       setOnClickListener { finish() }
-    }, LinearLayout.LayoutParams(dp(120f), dp(Compact.CTA_DP)).apply { topMargin = dp(2f) })
+    }, LinearLayout.LayoutParams(dp(120f), dp(Compact.cta(this@HapticsActivity))).apply { topMargin = dp(2f) })
     // de uitleg onder de knoppen: scrol om te lezen
     list.addView(TextView(this).apply {
       text = "For State Control and Breathwork. Strong is the default."
@@ -105,7 +110,8 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
     val row = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_VERTICAL
-      setPadding(dp(14f), dp(4f), dp(14f), dp(4f))
+      setPadding(dp(14f), dp(3f), dp(14f), dp(3f))
+      minimumHeight = dp(Compact.row(this@HapticsActivity) + 2f)
       background = Glass.pill(this@HapticsActivity, 26f, selected)
       isClickable = true
       tag = RoundList.ROW
@@ -123,8 +129,8 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
       setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
     })
-    list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.ROW_DP + 2f)).apply {
-      bottomMargin = dp(Compact.GAP_DP)
+    list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+      bottomMargin = dp(Compact.gap(this@HapticsActivity))
     })
   }
 

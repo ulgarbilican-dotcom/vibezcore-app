@@ -22,6 +22,11 @@ import android.widget.TextView
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   companion object {
     /** Gezet door de start-helpers hieronder: de sessie wordt net gestart (zie [openingUntil]). */
     const val EXTRA_OPENING = "vz_opening_session"
@@ -156,6 +161,15 @@ class MainActivity : androidx.activity.ComponentActivity() {
         this,
         """{"v":1,"amp":120,"breath":[{"key":"calm","name":"Calm Control","colorHex":"#B478FF","technique":"Box Breathing","techniqueKey":"box","locked":false,"phases":[{"key":"inhale","secs":4,"via":"Nose","pattern":[0,60]},{"key":"hold-in","secs":4,"via":"","pattern":[0,40]},{"key":"exhale","secs":4,"via":"Mouth","pattern":[0,60]},{"key":"hold-out","secs":4,"via":"","pattern":[0,40]}],"durations":[{"label":"5 min","minutes":5,"rounds":19},{"label":"10 min","minutes":10,"rounds":38}],"defaultIdx":0},{"key":"rest","name":"Sleep","colorHex":"#4AF0D4","technique":"4-7-8 Breathing","techniqueKey":"478","locked":true,"phases":[{"key":"inhale","secs":4,"via":"Nose","pattern":[0,60]}],"durations":[{"label":"4 cycles","minutes":1,"rounds":4}],"defaultIdx":0}]}""",
       )
+      /* schermen rechtstreeks openen voor de schermenaudit (enkel debug): --es vz_demo state-set --es vz_key boost */
+      "modes-state" -> startActivity(Intent(this, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, ModesActivity.KIND_STATE))
+      "modes-breath" -> startActivity(Intent(this, ModesActivity::class.java).putExtra(ModesActivity.EXTRA_KIND, ModesActivity.KIND_BREATH))
+      "state-set" -> startActivity(Intent(this, StateControlActivity::class.java).putExtra("key", intent.getStringExtra("vz_key") ?: "boost"))
+      "breath-set" -> startActivity(Intent(this, StateActivity::class.java).putExtra("key", intent.getStringExtra("vz_key") ?: "calm"))
+      "technique" -> startActivity(Intent(this, TechniqueActivity::class.java).putExtra("key", intent.getStringExtra("vz_key") ?: "calm"))
+      "duration" -> startActivity(Intent(this, DurationActivity::class.java).putExtra("key", intent.getStringExtra("vz_key") ?: "calm"))
+      "state-duration" -> startActivity(Intent(this, StateDurationActivity::class.java).putExtra("key", intent.getStringExtra("vz_key") ?: "boost"))
+      "haptics" -> startActivity(Intent(this, HapticsActivity::class.java))
       "pause" -> {
         if (StateSessionState.current.active) {
           startService(Intent(this, WearStateSessionService::class.java).apply { action = WearStateSessionService.ACTION_PAUSE })

@@ -19,6 +19,11 @@ import android.widget.TextView
 import org.json.JSONObject
 
 class StateControlActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
   /* 27 okt 2026: net als de lijst en het startscherm — komt de catalogus van de telefoon binnen terwijl dit scherm open staat
@@ -44,11 +49,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
       finish()
       return
     }
-    val c = try {
-      Color.parseColor(e.optString("colorHex"))
-    } catch (_: Exception) {
-      Color.parseColor("#00A3A3")
-    }
+    val c = accentColor(e.optString("colorHex"))
     val minutes = CatalogStore.stateMinutes(this, e)
     val scroll = ScrollView(this).apply {
       background = GradientDrawable().apply {
@@ -67,14 +68,14 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateControlActivity) + 1f), dp(24f), dp(20f)) // 13 nov 2026: compact, alles (Start erbij) in beeld op normale grootte (Play WO-V16)
+      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateControlActivity) + Compact.topExtra(this@StateControlActivity, 5f)), dp(24f), dp(20f)) // 13 nov 2026: compact, alles (Start erbij) in beeld op normale grootte (Play WO-V16)
     }
     scroll.addView(col)
     col.addView(TextView(this).apply {
       text = "STATE CONTROL"
       setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
-      letterSpacing = 0.14f
+      letterSpacing = 0.10f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     })
@@ -93,7 +94,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     val row = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_VERTICAL
-      setPadding(dp(16f), dp(4f), dp(14f), dp(4f))
+      setPadding(dp(16f), dp(3f), dp(14f), dp(3f))
       background = Glass.pill(this@StateControlActivity, 20f)
       isClickable = true
       contentDescription = "Duration: $minutes minutes. Tap to change."
@@ -114,8 +115,9 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
       typeface = Typeface.DEFAULT_BOLD
       maxLines = 1
     })
-    col.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.ROW_DP)).apply {
-      bottomMargin = dp(Compact.GAP_DP)
+    row.minimumHeight = dp(Compact.row(this@StateControlActivity))
+    col.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+      bottomMargin = dp(Compact.gap(this@StateControlActivity))
     })
 
     if (e.optBoolean("locked")) {
@@ -131,13 +133,13 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
           startLocalStateSession(this@StateControlActivity, e, minutes, previewSec = 30)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
-        topMargin = dp(Compact.GAP_DP)
+      }, LinearLayout.LayoutParams(dp(Compact.ctaWidth(this@StateControlActivity)), dp(Compact.cta(this@StateControlActivity))).apply {
+        topMargin = dp(Compact.gap(this@StateControlActivity))
       })
       col.addView(TextView(this).apply {
         text = "Full session with Premium"
         setTextColor(Color.argb(170, 255, 255, 255))
-        textSize = 11f
+        textSize = 10f
         gravity = Gravity.CENTER
         setPadding(0, dp(3f), 0, 0)
       })
@@ -157,8 +159,8 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
           startLocalStateSession(this@StateControlActivity, e, minutes)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
-        topMargin = dp(Compact.GAP_DP)
+      }, LinearLayout.LayoutParams(dp(Compact.ctaWidth(this@StateControlActivity)), dp(Compact.cta(this@StateControlActivity))).apply {
+        topMargin = dp(Compact.gap(this@StateControlActivity))
       })
     }
     setContentView(scroll)

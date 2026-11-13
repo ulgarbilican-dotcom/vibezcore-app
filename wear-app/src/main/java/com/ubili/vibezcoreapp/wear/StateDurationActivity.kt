@@ -14,6 +14,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class StateDurationActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
   override fun onResume() {
@@ -28,11 +33,7 @@ class StateDurationActivity : androidx.activity.ComponentActivity() {
       finish()
       return
     }
-    val c = try {
-      Color.parseColor(e.optString("colorHex"))
-    } catch (_: Exception) {
-      Color.parseColor("#00A3A3")
-    }
+    val c = accentColor(e.optString("colorHex"))
     val current = CatalogStore.stateMinutes(this, e)
     val rec = e.optInt("defaultMinutes")
     val scroll = ScrollView(this).apply {

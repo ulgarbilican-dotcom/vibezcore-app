@@ -17,6 +17,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class DurationActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
   override fun onCreate(savedInstanceState: Bundle?) {

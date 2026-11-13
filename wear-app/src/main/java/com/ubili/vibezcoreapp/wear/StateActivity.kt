@@ -24,6 +24,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class StateActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
   private var scrollView: ScrollView? = null
 
@@ -59,7 +64,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateActivity) + 1f), dp(24f), dp(20f)) // 13 nov 2026: dezelfde maten als State Control, Start in beeld
+      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateActivity) + Compact.topExtra(this@StateActivity, 2f)), dp(24f), dp(20f)) // 13 nov 2026: dezelfde maten als State Control, Start in beeld
     }
     scroll.addView(col)
 
@@ -70,8 +75,8 @@ class StateActivity : androidx.activity.ComponentActivity() {
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      topMargin = dp(2f)
-      bottomMargin = dp(if (manyTechs) 5f else 1f)
+      topMargin = dp(1f)
+      bottomMargin = dp(if (manyTechs) 3f else 1f)
     })
     /* 13 nov 2026 (operator-foto Sleep: "Full session with Premium" werd onderaan afgekapt): een toestand met maar ÉÉN techniek heeft
        geen keuze, dus geen aparte knop: de techniek staat als kleine regel onder de naam. Dat scheelt een rij van 44 dp. */
@@ -89,7 +94,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
       val r = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16f), dp(4f), dp(14f), dp(4f))
+        setPadding(dp(16f), dp(3f), dp(14f), dp(3f))
         background = Glass.pill(this@StateActivity, 20f)
         // (operator: "knoppen allemaal even groot, buiten Start") vaste hoogte
         if (onTap != null) {
@@ -114,9 +119,10 @@ class StateActivity : androidx.activity.ComponentActivity() {
         // de knop hoger te maken
         maxLines = 1
         androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 10, 14, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(20f)))
-      col.addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.ROW_DP)).apply {
-        bottomMargin = dp(Compact.GAP_DP)
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(18f)))
+      r.minimumHeight = dp(Compact.row(this@StateActivity))
+      col.addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = dp(Compact.gap(this@StateActivity))
       })
     }
 
@@ -147,13 +153,13 @@ class StateActivity : androidx.activity.ComponentActivity() {
           startPreviewSession(this@StateActivity, e)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
-        topMargin = dp(Compact.GAP_DP)
+      }, LinearLayout.LayoutParams(dp(Compact.ctaWidth(this@StateActivity)), dp(Compact.cta(this@StateActivity))).apply {
+        topMargin = dp(Compact.gap(this@StateActivity))
       })
       col.addView(TextView(this).apply {
         text = "Full session with Premium"
         setTextColor(Color.argb(170, 255, 255, 255))
-        textSize = 11f
+        textSize = 10f
         gravity = Gravity.CENTER
         setPadding(0, dp(3f), 0, 0)
       })
@@ -173,8 +179,8 @@ class StateActivity : androidx.activity.ComponentActivity() {
           startLocalSession(this@StateActivity, e, durIdx)
           finish()
         }
-      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
-        topMargin = dp(Compact.GAP_DP)
+      }, LinearLayout.LayoutParams(dp(Compact.ctaWidth(this@StateActivity)), dp(Compact.cta(this@StateActivity))).apply {
+        topMargin = dp(Compact.gap(this@StateActivity))
       })
     }
 

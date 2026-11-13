@@ -395,7 +395,7 @@ private fun toBioTeal(src: android.graphics.Bitmap): android.graphics.Bitmap {
   val tr = 0x4A / 255f
   val tg = 0xF0 / 255f
   val tb = 0xD4 / 255f
-  val gain = 1.15f
+  val gain = 1.0f // de helderste delen van de boom = precies #4AF0D4 (geen overbelichting)
   val m = android.graphics.ColorMatrix(
     floatArrayOf(
       tr * 0.299f * gain, tr * 0.587f * gain, tr * 0.114f * gain, 0f, 0f,
@@ -416,6 +416,7 @@ private val figureColorCache = HashMap<Int, Int>()
  *  en accenten op het horloge volgen de figuur, zodat alles één geheel is. */
 internal fun figureColor(context: android.content.Context, colorHex: String): Int {
   val res = artResFor(colorHex)
+  if (res == R.drawable.vz_art_tree) return android.graphics.Color.parseColor(SLEEP_TEAL) // de boom IS dit teal (toBioTeal): tekst, gloed en cirkel er exact gelijk aan
   return figureColorCache.getOrPut(res) {
     val bm = trimmedArt(context, colorHex)
     val w = bm.width
