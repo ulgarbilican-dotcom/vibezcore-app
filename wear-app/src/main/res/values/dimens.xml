@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Wear-handleiding: rond app-icoon in het opstartscherm = 48 dp ZICHTBAAR. Gemeten op Galaxy Watch4 40 mm (Wear OS 6): een adaptief
-         icoon in een item van 48 dp toont een witte cirkel van 60 dp (x 1,25) — daarom 38,4 dp, zodat de cirkel 48 dp is. -->
-    <dimen name="splash_screen_icon_size">38.4dp</dimen>
+    <!-- Wear-handleiding: rond app-icoon in het opstartscherm = 48 dp. Het beeld zelf is een gewoon vectorbeeld van 48 dp (geen adaptief icoon). -->
+    <dimen name="splash_screen_icon_size">48dp</dimen>
 </resources>
