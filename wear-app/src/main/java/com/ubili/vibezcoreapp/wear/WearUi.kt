@@ -44,5 +44,7 @@ fun readable(color: Int): Int = androidx.core.graphics.ColorUtils.blendARGB(colo
 object Compact {
   const val ROW_DP = 40f
   const val CTA_DP = 38f
+  /** Start/Preview onderaan: iets smaller dan de rijen erboven, zodat de hoeken op een rond scherm ruim binnen de rand blijven (Play WO-V16). */
+  const val CTA_WIDTH_DP = 126f
   const val GAP_DP = 4f
 }

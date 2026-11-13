@@ -131,7 +131,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
           startLocalStateSession(this@StateControlActivity, e, minutes, previewSec = 30)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.CTA_DP)).apply {
+      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
         topMargin = dp(Compact.GAP_DP)
       })
       col.addView(TextView(this).apply {
@@ -157,7 +157,7 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
           startLocalStateSession(this@StateControlActivity, e, minutes)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.CTA_DP)).apply {
+      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
         topMargin = dp(Compact.GAP_DP)
       })
     }

@@ -110,7 +110,7 @@ object RoundFit {
     if (w <= 0f || h <= 0f) return true
     if (top < 0f || top + h > screenH) return false
     val radius = min(screenW, screenH) / 2f
-    val limit = radius - 3f * density
+    val limit = radius - 6f * density  // in rust: minstens 6 dp van de rand (gemeten: dan raakt niets de rand)
     val cap = min(h, w) / 2f
     val yFar = max(abs(top - screenH / 2f), abs(top + h - screenH / 2f))
     val yCap = max(0f, yFar - cap)

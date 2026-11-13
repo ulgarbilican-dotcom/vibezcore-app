@@ -373,7 +373,7 @@ internal fun trimmedArt(context: android.content.Context, colorHex: String): and
         if (y > b) b = y
       }
     }
-    if (r < 0) return@getOrPut src
+    if (r < 0) return@getOrPut (if (res == R.drawable.vz_art_tree) toBioTeal(src) else src)
     val side = maxOf(r - l, b - t) + 4
     val out = android.graphics.Bitmap.createBitmap(side, side, android.graphics.Bitmap.Config.ARGB_8888)
     val cx = (l + r) / 2
@@ -384,8 +384,29 @@ internal fun trimmedArt(context: android.content.Context, colorHex: String): and
       android.graphics.Rect(0, 0, side, side),
       android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG),
     )
-    out
+    if (res == R.drawable.vz_art_tree) toBioTeal(out) else out
   }
+}
+
+/** 13 nov 2026 (operator: "het groen moet ook Bio-Teal zijn"): de boom van Sleep is als beeld nog het oude limoengroen; de telefoon geeft Sleep
+ *  het lichte Bio-Teal (#4AF0D4, watch-catalog.ts). Het beeld wordt hier naar dat teal gekleurd (helderheid blijft), en omdat de naam en de
+ *  gloed hun kleur uit het beeld halen (figureColor), is alles van Sleep op het horloge dan Bio-Teal. */
+private fun toBioTeal(src: android.graphics.Bitmap): android.graphics.Bitmap {
+  val tr = 0x4A / 255f
+  val tg = 0xF0 / 255f
+  val tb = 0xD4 / 255f
+  val gain = 1.15f
+  val m = android.graphics.ColorMatrix(
+    floatArrayOf(
+      tr * 0.299f * gain, tr * 0.587f * gain, tr * 0.114f * gain, 0f, 0f,
+      tg * 0.299f * gain, tg * 0.587f * gain, tg * 0.114f * gain, 0f, 0f,
+      tb * 0.299f * gain, tb * 0.587f * gain, tb * 0.114f * gain, 0f, 0f,
+      0f, 0f, 0f, 1f, 0f,
+    ),
+  )
+  val out = android.graphics.Bitmap.createBitmap(src.width, src.height, android.graphics.Bitmap.Config.ARGB_8888)
+  android.graphics.Canvas(out).drawBitmap(src, 0f, 0f, android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(m) })
+  return out
 }
 
 private val figureColorCache = HashMap<Int, Int>()

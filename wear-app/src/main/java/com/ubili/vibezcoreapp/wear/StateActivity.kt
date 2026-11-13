@@ -71,8 +71,19 @@ class StateActivity : androidx.activity.ComponentActivity() {
       gravity = Gravity.CENTER
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
       topMargin = dp(2f)
-      bottomMargin = dp(5f)
+      bottomMargin = dp(if (manyTechs) 5f else 1f)
     })
+    /* 13 nov 2026 (operator-foto Sleep: "Full session with Premium" werd onderaan afgekapt): een toestand met maar ÉÉN techniek heeft
+       geen keuze, dus geen aparte knop: de techniek staat als kleine regel onder de naam. Dat scheelt een rij van 44 dp. */
+    if (!manyTechs) {
+      col.addView(TextView(this).apply {
+        text = e.optString("technique")
+        setTextColor(Color.argb(190, 255, 255, 255))
+        textSize = 11f
+        gravity = Gravity.CENTER
+        maxLines = 1
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(5f) })
+    }
 
     fun row(label: String, value: String, tag: String?, onTap: (() -> Unit)?) {
       val r = LinearLayout(this).apply {
@@ -113,12 +124,14 @@ class StateActivity : androidx.activity.ComponentActivity() {
       selected == recommended -> "Recommended"
       else -> "Last used"
     }
-    row(
-      "Technique",
-      e.optString("technique"),
-      if (manyTechs) techTag else null,
-      if (manyTechs) ({ startActivity(Intent(this, TechniqueActivity::class.java).putExtra("key", key)) }) else null,
-    )
+    if (manyTechs) {
+      row(
+        "Technique",
+        e.optString("technique"),
+        techTag,
+        { startActivity(Intent(this, TechniqueActivity::class.java).putExtra("key", key)) },
+      )
+    }
     row("Duration", dur, null) { startActivity(Intent(this, DurationActivity::class.java).putExtra("key", key)) }
 
     if (locked) {
@@ -134,7 +147,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
           startPreviewSession(this@StateActivity, e)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.CTA_DP)).apply {
+      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
         topMargin = dp(Compact.GAP_DP)
       })
       col.addView(TextView(this).apply {
@@ -160,7 +173,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
           startLocalSession(this@StateActivity, e, durIdx)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(Compact.CTA_DP)).apply {
+      }, LinearLayout.LayoutParams(dp(Compact.CTA_WIDTH_DP), dp(Compact.CTA_DP)).apply {
         topMargin = dp(Compact.GAP_DP)
       })
     }
