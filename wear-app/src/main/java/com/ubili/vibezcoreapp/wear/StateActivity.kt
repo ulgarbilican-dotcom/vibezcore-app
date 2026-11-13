@@ -62,6 +62,7 @@ class StateActivity : androidx.activity.ComponentActivity() {
       setPadding(dp(24f), dp(34f), dp(24f), dp(34f))
     }
     scroll.addView(col)
+    RoundFit.attach(scroll, col) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
 
     col.addView(TextView(this).apply {
       text = e.optString("name")

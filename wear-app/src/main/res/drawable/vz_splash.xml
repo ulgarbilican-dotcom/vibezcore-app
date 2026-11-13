@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 13 okt 2026 (operator: "bij opstart de V gewoon op zwart, zonder knop,
-     groter"): enkel de witte V voor het opstartscherm. -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/vz_vmark"
-    android:inset="24%" />
+<!-- 13 nov 2026 (Google Play WO-V15): het echte app-icoon (adaptief: witte cirkel + zwarte V) op 48 dp, midden op zwart. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="@dimen/splash_screen_icon_size"
+        android:height="@dimen/splash_screen_icon_size"
+        android:drawable="@mipmap/ic_launcher"
+        android:gravity="center" />
+</layer-list>

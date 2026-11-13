@@ -19,6 +19,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : androidx.activity.ComponentActivity() {
   companion object {
@@ -79,6 +80,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
   private val beatListener: (Boolean) -> Unit = { strong -> runOnUiThread { ring.pulse(strong) } }
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    /* 13 nov 2026 (Play WO-V15): opstartscherm met app-icoon, zie res/values/styles.xml */
+    installSplashScreen()
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     /* startscherm: per toestand vastklikken na het scrollen */
@@ -500,10 +503,28 @@ class MainActivity : androidx.activity.ComponentActivity() {
       }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, pageH))
       return
     }
+    /* 13 nov 2026 (Play WO-V16, gemeten op Galaxy Watch4 40 mm: de pil "Haptics" hing half buiten beeld; operator: "als het te klein wordt
+       mag je de V boven de knoppen ook weghalen"): het startscherm past altijd volledig, zonder scrollen. Vaste kop (V 16 + 4, groet 17,
+       ondertitel 12 + 9) en drie pillen; de pillen krijgen wat overblijft (max. 44 dp). Past het niet, dan vervalt eerst de ondertitel,
+       daarna de V. */
+    val availDp = RoundFit.heightDp(this) - 2f * RoundFit.edgeDp(this)
+    val gapDp = 5f
+    fun pillFor(headerDp: Float) = (availDp - headerDp - 2f * gapDp) / 3f
+    // pillen van 40 dp; wat niet past, vervalt: eerst de ondertitel, dan de V (operator: "als het te klein wordt mag je de V ook weghalen")
+    val showSub = pillFor(20f + 17f + 21f) >= 40f
+    val showV = showSub || pillFor(20f + 17f + 8f) >= 40f
+    val pillDp = minOf(
+      40f,
+      when {
+        showSub -> pillFor(20f + 17f + 21f)
+        showV -> pillFor(20f + 17f + 8f)
+        else -> pillFor(17f + 8f)
+      },
+    ).coerceAtLeast(30f)
     val col = android.widget.LinearLayout(this).apply {
       orientation = android.widget.LinearLayout.VERTICAL
       gravity = android.view.Gravity.CENTER
-      setPadding(dp(18f), dp(12f), dp(18f), dp(12f))
+      setPadding(dp(18f), dp(RoundFit.edgeDp(this@MainActivity)), dp(18f), dp(RoundFit.edgeDp(this@MainActivity) + 8f))
       minimumHeight = pageH
     }
     /* 14 okt 2026 (operator-mock-up "idee voor startpagina, maar dat
@@ -511,24 +532,28 @@ class MainActivity : androidx.activity.ComponentActivity() {
        "Choose your session"; daaronder de twee onderdelen met een pijltje,
        gelijkwaardig (operator: "heeft die omlijning zin? je klikt op de
        pil en het start?" — een tik opent het onderdeel, dus geen rand). */
+    if (showV) {
     col.addView(android.widget.ImageView(this).apply {
       setImageResource(R.drawable.vz_vmark)
       scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }, android.widget.LinearLayout.LayoutParams(dp(17f), dp(16f)).apply { bottomMargin = dp(4f) })
+    }
     col.addView(TextView(this).apply {
       text = greeting
       setTextColor(Color.WHITE)
       textSize = 14f
       typeface = android.graphics.Typeface.DEFAULT_BOLD
       gravity = android.view.Gravity.CENTER
-    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
+    }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply { if (!showSub) bottomMargin = dp(8f) })
+    if (showSub) {
     col.addView(TextView(this).apply {
       text = "Choose your session"
       setTextColor(Color.argb(140, 255, 255, 255))
       textSize = 10f
       gravity = android.view.Gravity.CENTER
     }, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(9f) })
+    }
     /* 14 okt 2026 (operator: "recent per onderdeel i.p.v. op de
        startpagina"): enkel de twee onderdelen; elk opent op je laatst
        gebruikte toestand (ModesActivity). */
@@ -574,8 +599,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
         alpha = 0.55f
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
       }, android.widget.LinearLayout.LayoutParams(dp(13f), dp(13f)))
-      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
-        bottomMargin = dp(6f)
+      col.addView(row, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dp(pillDp)).apply {
+        bottomMargin = dp(gapDp)
       })
     }
     /* dezelfde symbolen als de tabbalk van de app (operator: "kijk naar de
@@ -596,6 +621,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
       startActivity(Intent(this@MainActivity, HapticsActivity::class.java))
     }
     list.addView(col, android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
+    RoundFit.attach(idleContainer as android.widget.ScrollView, col)
   }
 
 

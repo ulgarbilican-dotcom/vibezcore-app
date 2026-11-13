@@ -47,6 +47,7 @@ class StateDurationActivity : androidx.activity.ComponentActivity() {
       setPadding(dp(26f), dp(36f), dp(26f), dp(40f))
     }
     scroll.addView(list)
+    RoundFit.attach(scroll, list) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
     list.addView(TextView(this).apply {
       text = e.optString("name")
       setTextColor(c)

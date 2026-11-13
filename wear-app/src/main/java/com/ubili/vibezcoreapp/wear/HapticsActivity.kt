@@ -47,9 +47,10 @@ class HapticsActivity : androidx.activity.ComponentActivity() {
     list = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(30f), dp(24f), dp(44f))
+      setPadding(dp(24f), dp(RoundFit.edgeDp(this@HapticsActivity) + 6f), dp(24f), dp(44f))
     }
     scroll.addView(list)
+    RoundFit.attach(scroll, list) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
     setContentView(scroll)
     render()
   }

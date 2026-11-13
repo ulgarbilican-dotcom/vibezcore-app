@@ -46,6 +46,7 @@ class TechniqueActivity : androidx.activity.ComponentActivity() {
       setPadding(dp(22f), dp(30f), dp(22f), dp(48f))
     }
     scroll.addView(list)
+    RoundFit.attach(scroll, list) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
 
     list.addView(TextView(this).apply {
       text = e.optString("name")

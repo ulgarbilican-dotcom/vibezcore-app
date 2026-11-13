@@ -67,9 +67,10 @@ class StateControlActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(30f), dp(24f), dp(34f))
+      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateControlActivity) + 3f), dp(24f), dp(34f)) // 13 nov 2026: alles (Start erbij) binnen het scherm, Play WO-V16
     }
     scroll.addView(col)
+    RoundFit.attach(scroll, col) // 13 nov 2026: rijen blijven binnen de ronding (Play WO-V16)
     col.addView(TextView(this).apply {
       text = "STATE CONTROL"
       setTextColor(Color.argb(140, 255, 255, 255))

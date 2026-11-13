@@ -36,7 +36,7 @@
             android:screenOrientation="nosensor"
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/VzWearTheme">
+            android:theme="@style/VzWearTheme.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
