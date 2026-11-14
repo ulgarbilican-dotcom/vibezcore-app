@@ -540,6 +540,8 @@ export default function IntroScreen() {
   const phoneTop = Math.round(insets.top + 50); // onder de bovenbalk (Back / stap / Skip)
   const ctaLabel = step === 0 ? 'Get started' : last ? 'Take your first step' : 'Next'; // slotknop: operator-tekst 28 okt 2026
   const textNext = step > 0 && !last;
+  /* Lichtbron achter de glaskaart in de kleur van de pagina (operator, 14 nov 2026): paars / wit / Bio-Teal; het glas zelf blijft kleurloos. */
+  const glowColor = cur.mock?.accent ?? '#FFFFFF';
   /* Met rijen heeft de tekst iets meer hoogte nodig; korte schermen krijgen een hogere kaart en compactere rijen, zodat alles zonder scrollen past. */
   const shortScreen = winH < 760;
   const cardFrac = cur.rows ? (shortScreen ? 0.7 : 0.66) : 0.57;
@@ -621,11 +623,11 @@ export default function IntroScreen() {
           </Animated.View>
           {cur.rows ? (
             /* 14 nov 2026 (operator: "één geheel", "zachte lichtbron erachter"): alle rijen in ÉÉN glaskaart (ons eigen glas, VibezGlass) met dunne
-               scheidingslijnen; achter de linkerbovenhoek een zachte witte gloed zodat het glas iets heeft om door te schijnen. */
+               scheidingslijnen; achter de linkerbovenhoek een zachte gloed in de kleur van de pagina zodat het glas iets heeft om door te schijnen. */
             <Animated.View entering={enter(3)} style={s.stage}>
               <Canvas style={s.glow} pointerEvents="none">
                 <Circle cx={150} cy={125} r={135}>
-                  <RadialGradient c={vec(150, 125)} r={135} colors={['rgba(255,255,255,0.26)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']} positions={[0, 0.55, 1]} />
+                  <RadialGradient c={vec(150, 125)} r={135} colors={[`${glowColor}47`, `${glowColor}14`, `${glowColor}00`]} positions={[0, 0.55, 1]} />
                 </Circle>
               </Canvas>
               <VibezGlass radius={20} level="normal">
