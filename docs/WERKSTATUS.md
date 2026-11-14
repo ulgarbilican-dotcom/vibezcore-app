@@ -8,7 +8,7 @@
 >
 > Laatst bijgewerkt: 5 november 2026 (back-up uitgebreid); vorige: 1 november 2026 (fixronde iOS build 68); vorige: 31 oktober 2026 (How it works-schermen); vorige: 28 oktober 2026 (laat) — zie de bovenste regel van §3; vorige: 20 oktober 2026 — toestel-onafhankelijk (T324–T328); vorige: 19 oktober 2026 — toestel-audit (T314, T318, T319) + Android-fixes (T315–T317) klaar; één nieuwe iOS- en Android-build met alles; Galaxy Watch-aab in release-android/.
 
-> **14 nov 2026 — gratis voorproef, teller op horloge ~1 s achter (OPGELOST in code, NOG NIET GETEST):**
+> **14 nov 2026 — gratis voorproef, teller op horloge ~1 s achter (OPGELOST EN GETEST in Android 114: operator ziet het gelijk; logboek: einde = start + 28,5 s = tikmoment + 30 s, drift 0-1 ms):**
 > oorzaak gemeten in het horloge-logboek (3 gratis voorproeven, wachtmoment 738-788 ms, pulsen 2-6 ms gelijk):
 > `sendPreviewToWatch` stuurde `remainingSec` voor het tikken i.p.v. voor `sentAtMs` (= anker, het vaste
 > startmoment later); Premium (`relayToWatch`, regel ~1046) trekt dat al af. Nu hetzelfde in de voorproef
