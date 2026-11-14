@@ -285,7 +285,7 @@ function StateScene({ w, h }: { w: number; h: number; accent: string }) {
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: meta.color }} />
         <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.075) }}>{meta.name}</Text>
       </View>
-      <View style={{ position: 'absolute', top: h * 0.17, left: (w - d) / 2, width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', top: h * 0.205, left: (w - d) / 2, width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>
         <HapticPulseRings size={d} color={color} beatSynced />
         <HeartbeatScale size={d}>
           <View style={{ width: d, height: d, borderRadius: d / 2, borderWidth: 2, borderColor: color, backgroundColor: 'rgba(180,120,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
@@ -474,6 +474,12 @@ function PhoneLayer({ src, active, w, h }: { src: ImageSourcePropType; active: b
   );
 }
 
+/* 14 nov 2026 (operator: "een echte fade, geen harde horizontale lijn"): de donkere laag onder de telefoon loopt in 8 stappen (smoothstep) van
+   doorzichtig naar zwart over 21 % van de kaarthoogte, in plaats van 4 stappen — geen zichtbare rand, ook niet op een lichte achtergrond. */
+const FADE_STEPS = [0, 0.04, 0.14, 0.32, 0.55, 0.78, 0.93, 1];
+const FADE_COLORS = FADE_STEPS.map((a) => (a >= 1 ? '#0a0a0a' : `rgba(10,10,10,${a})`)) as [string, string, ...string[]];
+const FADE_LOCATIONS = [0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.18, 0.21] as [number, number, ...number[]];
+
 const enter = (i: number) => reveal(i);
 
 export default function IntroScreen() {
@@ -546,7 +552,7 @@ export default function IntroScreen() {
   const shortScreen = winH < 760;
   /* 14 nov 2026 (operator: "overlay lager, pauzeknop en cirkel in zicht"): met rijen is de tekst compacter, dus de kaart (en daarmee de donkere
   overgang over de telefoon) begint lager: 50 % i.p.v. 57 %, korte schermen 58 %. */
-  const cardFrac = cur.rows ? (shortScreen ? 0.58 : 0.5) : 0.57;
+  const cardFrac = cur.rows ? (shortScreen ? 0.58 : 0.485) : 0.57;
 
   return (
     <View style={s.root}>
@@ -601,12 +607,12 @@ export default function IntroScreen() {
         <View style={{ flex: 1 }} />
         {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
         <View style={cur.mock ? [s.card, { height: Math.round(winH * cardFrac) }] : undefined}>
-        {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.35)', 'rgba(10,10,10,0.8)', '#0a0a0a']} locations={[0, 0.07, 0.13, 0.19]} style={StyleSheet.absoluteFill} /> : null}
+        {cur.mock ? <LinearGradient pointerEvents="none" colors={FADE_COLORS} locations={FADE_LOCATIONS} style={StyleSheet.absoluteFill} /> : null}
         <ScrollView
           key={step}
           /* 28 okt 2026 (operator, iPhone): de zwarte overgang hoger (kaart 52 → 57%) zodat de onderkant van de telefoon niet zichtbaar is; de tekst blijft waar hij stond. */
           style={cur.mock ? { flex: 1, marginTop: cur.rows ? 0 : Math.round(winH * 0.05) } : { flexGrow: 0, flexShrink: 1 }}
-          contentContainerStyle={[s.content, cur.mock ? { justifyContent: cur.rows ? 'center' : 'flex-start' } : cur.photo && s.contentBottom]}
+          contentContainerStyle={[s.content, cur.mock ? { justifyContent: cur.rows ? 'flex-end' : 'flex-start' } : cur.photo && s.contentBottom]}
           alwaysBounceVertical={false}
           showsVerticalScrollIndicator={false}
         >
@@ -721,8 +727,8 @@ const s = StyleSheet.create({
   choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
   stage: { marginTop: 4 },
   glow: { position: 'absolute', left: -50, top: -50, width: 300, height: 250 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 48, paddingHorizontal: 16 },
-  rowShort: { height: 42 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 44, paddingHorizontal: 16 },
+  rowShort: { height: 40 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.08)' },
   rowIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)' },
   rowTxt: { flex: 1, fontSize: 15, lineHeight: 20 },
