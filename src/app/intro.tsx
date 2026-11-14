@@ -285,7 +285,7 @@ function StateScene({ w, h }: { w: number; h: number; accent: string }) {
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: meta.color }} />
         <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(w * 0.075) }}>{meta.name}</Text>
       </View>
-      <View style={{ position: 'absolute', top: h * 0.205, left: (w - d) / 2, width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', top: h * 0.255, left: (w - d) / 2, width: d, height: d, alignItems: 'center', justifyContent: 'center' }}>
         <HapticPulseRings size={d} color={color} beatSynced />
         <HeartbeatScale size={d}>
           <View style={{ width: d, height: d, borderRadius: d / 2, borderWidth: 2, borderColor: color, backgroundColor: 'rgba(180,120,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
@@ -475,10 +475,10 @@ function PhoneLayer({ src, active, w, h }: { src: ImageSourcePropType; active: b
 }
 
 /* 14 nov 2026 (operator: "een echte fade, geen harde horizontale lijn"): de donkere laag onder de telefoon loopt in 8 stappen (smoothstep) van
-   doorzichtig naar zwart over 21 % van de kaarthoogte, in plaats van 4 stappen — geen zichtbare rand, ook niet op een lichte achtergrond. */
+   doorzichtig naar zwart over 16 % van de kaarthoogte, zodat hij volledig zwart is voordat de onderrand van de telefoon begint, in plaats van 4 stappen — geen zichtbare rand, ook niet op een lichte achtergrond. */
 const FADE_STEPS = [0, 0.04, 0.14, 0.32, 0.55, 0.78, 0.93, 1];
 const FADE_COLORS = FADE_STEPS.map((a) => (a >= 1 ? '#0a0a0a' : `rgba(10,10,10,${a})`)) as [string, string, ...string[]];
-const FADE_LOCATIONS = [0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.18, 0.21] as [number, number, ...number[]];
+const FADE_LOCATIONS = [0, 0.023, 0.046, 0.069, 0.092, 0.115, 0.138, 0.16] as [number, number, ...number[]];
 
 const enter = (i: number) => reveal(i);
 
