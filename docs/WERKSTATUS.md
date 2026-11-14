@@ -15,8 +15,11 @@
 > (`src/services/bracelet-haptics.ts`). Premium en pulsen ongewijzigd. Testen met de volgende Android-build
 > (Play-app op de A16 heeft andere handtekening dan een lokale build: niet lokaal installeren). Horloge-
 > meetversie 26111403 (VzLog altijd aan) NOOIT naar Production; voor Production schone build, nieuw versiecode.
-> Intro pagina 2-4 rustiger (korte glasrijen, "Next" als tekst zonder knop, enkel intro): ontwerp goedgekeurd
-> in chat, NOG NIET gebouwd; wacht op oordeel Apple build 90.
+> Intro pagina 2-4 rustiger GEBOUWD in code (14 nov): korte glasrijen, "Next" als tekst zonder knop (enkel intro,
+> uitzondering vastgelegd in UI_EN_BEWEGINGSREGELS), nieuw horloge-beeld (`assets/intro/watch-band.png`, eigen AI-beeld
+> operator, scherm gevuld met live State Control-weergave; ook zichtbaar in How it works). Typecheck schoon, NOG NIET op
+> toestel gezien (web-voorbeeld lukte niet). Past-zonder-scrollen op korte schermen (<760 dp) is berekend, niet gemeten.
+> Bandfoto rechtenvrij (zelf gemaakt). iOS-build pas na oordeel Apple build 90; Android mag eerder.
 
 ---
 

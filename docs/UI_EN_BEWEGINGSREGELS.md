@@ -23,6 +23,8 @@
 ## 3. Intro's en onboarding
 - Free: eerste keer de onboarding van het tabblad, daarna bij elk bezoek de intro van het tabblad. **Premium ziet geen tab-intro's.**
 - De drie intro-knoppen (State Control, Breath, Library) staan op exact dezelfde plek en hebben dezelfde maat.
+- **Uitzondering (operator, 14 nov 2026): de algemene intro (`src/app/intro.tsx`) toont "Next" op pagina 2 t/m 4 als TEKST met een pijltje, zonder knopvorm** (zelfde aantikvlak, 52 dp breed). Pagina 1 ("Get started") en de laatste ("Take your first step") blijven een pil. Geldt enkel voor deze intro, niet voor de rest van de app.
+- Intro pagina 2 t/m 4: korte glasrijen (icoon + titel · één korte regel) i.p.v. een lopende alinea; rand ≤ 16 %, geen kleur. Woorden zijn van de operator ("Calm · Slow down", "Sleep · Drift off").
 
 ## 4. Sessies
 - Een sessie is pas **actief na de eerste Play/Start**. Daarvoor: geen minimaliseer-chevron, geen pil, terug = vorige pagina

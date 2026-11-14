@@ -28,7 +28,7 @@ import { breathWaveLook } from '@/components/LiquidWave';
 import { emitVisualPulse, rhythmFor } from '@/services/bracelet-haptics';
 import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { AudioLines, ChevronLeft, Radio, Wind } from 'lucide-react-native';
+import { AudioLines, ChevronLeft, ChevronRight, Compass, Lightbulb, ListChecks, Mic, Moon, Radio, Repeat, Target, Vibrate, Wind, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Image, type ImageSourcePropType, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -55,6 +55,8 @@ type Step = {
   /** Telefoon-mockup met echte schermen van de app (wisselt elke paar seconden) in plaats van een foto. */
   mock?: { kind: 'state' | 'breath' | 'audio'; accent: string; steps?: { src: ImageSourcePropType; ms: number; tap?: { x: number; y: number } }[] };
   Icon?: typeof Radio;
+  /** 14 nov 2026 (operator: "te druk"): korte glasrijen (icoon + titel · één korte regel) i.p.v. een lopende alinea. Dan zijn `sub` en `body` leeg. */
+  rows?: { Icon: typeof Radio; title: string; sub: string }[];
 };
 
 /* [OPERATOR]-teksten (25 okt 2026, tweede versie), in drie niveaus: kop (twee regels), subkop, body. Scherm 5 sluit de uitleg af.
@@ -76,8 +78,15 @@ const STEPS: Step[] = [
     key: 'state',
     eyebrow: 'STATE CONTROL',
     title: 'Feel the pulse.\nFeel the shift',
-    sub: 'Research-based, bottom-up haptic pulse patterns deliver vibrations through your phone or smartwatch, guiding your nervous system from stress toward calm or focus, or toward energy or sleep.',
+    sub: '',
     body: '', // (26 okt, operator) "Choose the state you want to move toward." weg: de tekst moet kunnen ademen en niet scrollen
+    /* 14 nov 2026: vier korte regels (woorden van de operator: "Slow down", "Sleep · Drift off"); de lange alinea is weg. */
+    rows: [
+      { Icon: Wind, title: 'Calm', sub: 'Slow down' },
+      { Icon: Target, title: 'Focus', sub: 'Sharpen your attention' },
+      { Icon: Zap, title: 'Energy', sub: 'Lift your drive' },
+      { Icon: Moon, title: 'Sleep', sub: 'Drift off' },
+    ],
     note: 'Smart Bead Bracelet · Launching Early 2027',
     mock: { kind: 'state', accent: '#B478FF' }, // State Control · Calm Control: pulseert meteen en stopt niet (Boost is hier te heftig)
     Icon: Radio,
@@ -86,8 +95,13 @@ const STEPS: Step[] = [
     key: 'breath',
     eyebrow: 'GUIDED BREATHWORK',
     title: 'Follow the cues.\nLet your breathing lead',
-    sub: 'Clear spoken guidance and haptic cues help you follow each breath through your phone or smartwatch.',
-    body: 'Use established breathing techniques to guide your state toward calm, focus, energy or sleep.',
+    sub: '',
+    body: '',
+    rows: [
+      { Icon: Mic, title: 'Spoken guidance', sub: 'Clear, step by step' },
+      { Icon: Vibrate, title: 'Haptic cues', sub: 'On your phone or watch' },
+      { Icon: ListChecks, title: 'Techniques', sub: 'Calm, focus, energy, sleep' },
+    ],
     note: 'Smart Bead Bracelet · Launching Early 2027',
     mock: { kind: 'breath', accent: '#FFFFFF' }, // Breathwork · Clarity & Relax: ademt (levend)
     Icon: Wind,
@@ -96,8 +110,13 @@ const STEPS: Step[] = [
     key: 'audio',
     eyebrow: 'AUDIO LIBRARY',
     title: 'Learn from the minds\nthat changed how we see the world',
-    sub: 'We turn the enduring ideas of history’s greatest minds into clear, structured audio sessions you can understand, apply and return to.',
-    body: 'So insight can become lasting personal growth.',
+    sub: '',
+    body: '',
+    rows: [
+      { Icon: Lightbulb, title: 'Understand', sub: 'Clear, structured sessions' },
+      { Icon: Compass, title: 'Apply', sub: 'Ideas you can use today' },
+      { Icon: Repeat, title: 'Return to', sub: 'Insight that lasts' },
+    ],
     mock: { kind: 'audio', accent: '#00A3A3', steps: [{ src: require('../../assets/intro/audio3.jpg'), ms: 1 }] }, // The Inner Child (Carl Jung) met audio & haptics
     Icon: AudioLines,
   },
@@ -154,65 +173,47 @@ export function PhoneMockup({ mock, height: heightIn }: { mock: NonNullable<Step
   );
 }
 
-/* Smartwatch bij "Feel the pulse", zoals op de website: grafiet vierkant-rond behuizing met dikke donkere rand, zwart scherm met modusnaam, cirkel + tijd,
-   pauzeknop en END, één zijknop, brede donkere bandjes met gaatjes die ONDER de behuizing doorlopen en uitlopen. Generiek (geen Apple Watch-ontwerp, geen kroon). */
+/* Smartwatch bij "Feel the pulse": eigen beeld van een horloge met band (14 nov 2026, operator: "realistischer", zelf met AI gemaakt, doorzichtige
+   achtergrond). Het scherm van het beeld wordt gevuld met de echte weergave van een State Control-sessie: modusnaam, cirkel + tijd, pauze en END.
+   Geen merk of kroon van een bestaand horloge. Verhoudingen van het scherm in het beeld (520 x 999 px) gemeten: links 8,5 %, boven 22,4 %, breed 81,2 %, hoog 50,8 %. */
+const WATCH_BAND = require('../../assets/intro/watch-band.png');
 function SmartWatchMock({ phoneW, phoneH }: { phoneW: number; phoneH: number }) {
   const meta = getModeMeta(BraceletMode.Alpha);
   const color = breathWaveLook(meta.color).color;
   const cw = Math.round(phoneW * 0.6);
-  const ch = Math.round(cw * 1.2);
-  const rim = Math.max(4, Math.round(cw * 0.035));
-  const screenW = cw - rim * 2;
-  const screenH = ch - rim * 2;
+  const imgW = Math.round(cw * 1.05);
+  const imgH = Math.round(imgW * (999 / 520));
+  const sx = Math.round(imgW * 0.085);
+  const sy = Math.round(imgH * 0.224);
+  const screenW = Math.round(imgW * 0.812);
+  const screenH = Math.round(imgH * 0.508);
   const inner = Math.round(screenW * 0.42);
   const n = useTick(250);
   const left = 18 * 60 - Math.floor(n * 0.25);
-  const strapW = Math.round(cw * 0.7);
-  const strapH = Math.round(ch * 0.62);
-  const tuck = Math.round(ch * 0.14); // bandje loopt onder de behuizing door
-  /* bandje: loopt onder de behuizing door en loopt zacht uit naar niets (alpha-verloop, geen harde rechthoek) */
-  const strap = (top: boolean) => (
-    <View style={{ width: strapW, height: strapH, marginTop: top ? 0 : -tuck, marginBottom: top ? -tuck : 0, alignItems: 'center' }}>
-      <LinearGradient colors={top ? ['rgba(58,58,66,0)', '#3a3a42', '#3a3a42'] : ['#3a3a42', '#3a3a42', 'rgba(58,58,66,0)']} locations={[0, 0.55, 1]} style={{ flex: 1, width: '100%', borderTopLeftRadius: top ? 12 : 0, borderTopRightRadius: top ? 12 : 0, borderBottomLeftRadius: top ? 0 : 16, borderBottomRightRadius: top ? 0 : 16 }} />
-      {!top ? (
-        <View style={{ position: 'absolute', top: tuck + 16, alignItems: 'center', gap: 20 }}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#060607', opacity: 1 - i * 0.3 }} />
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 1.06, top: phoneH * 0.1, width: cw + 8, alignItems: 'center' }}>
-      {strap(true)}
-      <View style={{ width: cw, height: ch, zIndex: 3, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}>
-        <View style={{ position: 'absolute', right: -3.5, top: ch * 0.34, width: 4, height: ch * 0.2, borderRadius: 2, backgroundColor: '#3b3b40' }} />
-        <LinearGradient colors={['#4b4b50', '#17171a', '#0e0e10', '#3a3a3f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: cw * 0.25, padding: rim }}>
-          <View style={{ flex: 1, borderRadius: cw * 0.22, backgroundColor: '#000', alignItems: 'center', overflow: 'hidden' }}>
-            <View style={{ position: 'absolute', top: screenH * 0.06, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: meta.color }} />
-              <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.085) }}>{meta.name}</Text>
+    <View pointerEvents="none" style={{ position: 'absolute', left: phoneW * 1.06 + Math.round((cw + 8 - imgW) / 2), top: phoneH * 0.1, width: imgW, height: imgH }}>
+      <Image source={WATCH_BAND} style={{ width: imgW, height: imgH }} resizeMode="contain" />
+      <View style={{ position: 'absolute', left: sx, top: sy, width: screenW, height: screenH, borderRadius: Math.round(imgW * 0.1), backgroundColor: '#000', alignItems: 'center', overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', top: screenH * 0.06, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: meta.color }} />
+          <Text style={{ color: '#fff', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.085) }}>{meta.name}</Text>
+        </View>
+        <View style={{ position: 'absolute', top: screenH * 0.27, width: inner, height: inner, alignItems: 'center', justifyContent: 'center' }}>
+          <HapticPulseRings size={inner} color={color} beatSynced />
+          <HeartbeatScale size={inner}>
+            <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.3), letterSpacing: -0.5 }}>{mmss(left)}</Text>
             </View>
-            <View style={{ position: 'absolute', top: screenH * 0.27, width: inner, height: inner, alignItems: 'center', justifyContent: 'center' }}>
-              <HapticPulseRings size={inner} color={color} beatSynced />
-              <HeartbeatScale size={inner}>
-                <View style={{ width: inner, height: inner, borderRadius: inner / 2, borderWidth: 1.5, borderColor: color, backgroundColor: 'rgba(180,120,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#fff', fontFamily: BrandFonts.extrabold, fontSize: Math.round(inner * 0.3), letterSpacing: -0.5 }}>{mmss(left)}</Text>
-                </View>
-              </HeartbeatScale>
-            </View>
-            <View style={{ position: 'absolute', bottom: screenH * 0.05, alignItems: 'center', gap: 2 }}>
-              <View style={{ width: screenH * 0.15, height: screenH * 0.15, borderRadius: screenH * 0.075, backgroundColor: 'rgba(180,120,255,0.3)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3 }}>
-                <View style={{ width: 2.5, height: screenH * 0.06, backgroundColor: '#fff', borderRadius: 1 }} />
-                <View style={{ width: 2.5, height: screenH * 0.06, backgroundColor: '#fff', borderRadius: 1 }} />
-              </View>
-              <Text style={{ color: 'rgba(255,255,255,0.75)', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.06), letterSpacing: 1.2 }}>END</Text>
-            </View>
+          </HeartbeatScale>
+        </View>
+        <View style={{ position: 'absolute', bottom: screenH * 0.05, alignItems: 'center', gap: 2 }}>
+          <View style={{ width: screenH * 0.15, height: screenH * 0.15, borderRadius: screenH * 0.075, backgroundColor: 'rgba(180,120,255,0.3)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3 }}>
+            <View style={{ width: 2.5, height: screenH * 0.06, backgroundColor: '#fff', borderRadius: 1 }} />
+            <View style={{ width: 2.5, height: screenH * 0.06, backgroundColor: '#fff', borderRadius: 1 }} />
           </View>
-        </LinearGradient>
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontFamily: BrandFonts.bold, fontSize: Math.round(cw * 0.06), letterSpacing: 1.2 }}>END</Text>
+        </View>
       </View>
-      {strap(false)}
     </View>
   );
 }
@@ -538,6 +539,10 @@ export default function IntroScreen() {
   const phoneH = Math.round(winH * 0.46); // groot; de onderste helft verdwijnt achter de tekstkaart (alleen de bovenste helft is zichtbaar)
   const phoneTop = Math.round(insets.top + 50); // onder de bovenbalk (Back / stap / Skip)
   const ctaLabel = step === 0 ? 'Get started' : last ? 'Take your first step' : 'Next'; // slotknop: operator-tekst 28 okt 2026
+  const textNext = step > 0 && !last;
+  /* Met rijen heeft de tekst iets meer hoogte nodig; korte schermen krijgen een hogere kaart en compactere rijen, zodat alles zonder scrollen past. */
+  const shortScreen = winH < 760;
+  const cardFrac = cur.rows ? (shortScreen ? 0.66 : 0.62) : 0.57;
 
   return (
     <View style={s.root}>
@@ -591,7 +596,7 @@ export default function IntroScreen() {
 
         <View style={{ flex: 1 }} />
         {/* Tekstkaart (alleen bij de telefoon-schermen): effen donker vlak met ronde bovenhoeken; de telefoon verdwijnt er netjes achter, geen doorlopende tekst over beeld. */}
-        <View style={cur.mock ? [s.card, { height: Math.round(winH * 0.57) }] : undefined}>
+        <View style={cur.mock ? [s.card, { height: Math.round(winH * cardFrac) }] : undefined}>
         {cur.mock ? <LinearGradient pointerEvents="none" colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.35)', 'rgba(10,10,10,0.8)', '#0a0a0a']} locations={[0, 0.07, 0.13, 0.19]} style={StyleSheet.absoluteFill} /> : null}
         <ScrollView
           key={step}
@@ -611,9 +616,25 @@ export default function IntroScreen() {
             <Text style={s.eyebrow}>{cur.eyebrow}</Text>
             <Text style={[s.title, !Icon && s.titleBig]}>{cur.title}</Text>
           </Animated.View>
-          <Animated.View entering={enter(2)}>
-            <BalancedText style={s.sub}>{cur.sub}</BalancedText>
-          </Animated.View>
+          {cur.rows ? (
+            <Animated.View entering={enter(2)} style={s.rows}>
+              {cur.rows.map((r) => (
+                <View key={r.title} style={[s.row, shortScreen && s.rowShort]}>
+                  <View style={s.rowIcon}>
+                    <r.Icon size={17} color="#ffffff" strokeWidth={1.8} />
+                  </View>
+                  <Text style={s.rowTxt}>
+                    <Text style={s.rowTitle}>{r.title}</Text>
+                    <Text style={s.rowSub}>{`  ·  ${r.sub}`}</Text>
+                  </Text>
+                </View>
+              ))}
+            </Animated.View>
+          ) : (
+            <Animated.View entering={enter(2)}>
+              <BalancedText style={s.sub}>{cur.sub}</BalancedText>
+            </Animated.View>
+          )}
           <Animated.View entering={enter(3)}>
             {cur.body ? <BalancedText style={s.body}>{cur.body}</BalancedText> : null}
             {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
@@ -622,6 +643,14 @@ export default function IntroScreen() {
 
         <View style={s.footer}>
             <Animated.View key={step} entering={enter(4)}>
+              {textNext ? (
+                /* 14 nov 2026 (operator): enkel in de intro staat "Next" onderaan als tekst, zonder knopvorm; eerste en laatste pagina blijven een pil. Zelfde
+                   aantikvlak als de pil (volle breedte, 52 dp). */
+                <PressScale onPress={next} scaleTo={0.97} style={s.linkWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
+                  <Text style={s.linkTxt}>{ctaLabel}</Text>
+                  <ChevronRight size={18} color="#ffffff" strokeWidth={2.2} />
+                </PressScale>
+              ) : (
               <PressScale onPress={next} scaleTo={0.97} style={s.ctaWrap} accessibilityRole="button" accessibilityLabel={`CTA ${ctaLabel}`}>
                 <View style={[s.cta, { overflow: 'hidden' }]} onLayout={(e) => setCtaWidth(e.nativeEvent.layout.width)}>
                   <Text style={s.ctaTxt}>{ctaLabel}</Text>
@@ -632,6 +661,7 @@ export default function IntroScreen() {
                   ) : null}
                 </View>
               </PressScale>
+              )}
             </Animated.View>
         </View>
         </View>
@@ -675,5 +705,14 @@ const s = StyleSheet.create({
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
   choice: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 52, paddingHorizontal: 20, borderRadius: 999, overflow: 'hidden' },
   choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
+  rows: { gap: 6, marginTop: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 11, minHeight: 44, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  rowShort: { minHeight: 38, paddingVertical: 5 },
+  rowIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  rowTxt: { flex: 1, fontSize: 15, lineHeight: 20 },
+  rowTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold },
+  rowSub: { color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.regular },
+  linkWrap: { height: 52, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 },
+  linkTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16, letterSpacing: 0.1 },
   ctaTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
 });
