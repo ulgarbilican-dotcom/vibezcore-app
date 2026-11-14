@@ -77,8 +77,8 @@ const STEPS: Step[] = [
   {
     key: 'state',
     eyebrow: 'STATE CONTROL',
-    title: 'Feel the pulse.\nFeel the shift',
-    sub: 'Research-based, bottom-up haptic pulse patterns', // operator 14 nov 2026: eerste deel van de oude alinea als subkop
+    title: 'Feel the pulse.\nShift your state', // operator 14 nov 2026
+    sub: '',
     body: '', // (26 okt, operator) "Choose the state you want to move toward." weg: de tekst moet kunnen ademen en niet scrollen
     /* 14 nov 2026: vier korte regels (woorden van de operator: "Slow down", "Sleep · Drift off"); de lange alinea is weg. */
     rows: [
@@ -95,7 +95,7 @@ const STEPS: Step[] = [
     key: 'breath',
     eyebrow: 'GUIDED BREATHWORK',
     title: 'Follow the cues.\nLet your breathing lead',
-    sub: 'Clear spoken guidance and haptic cues',
+    sub: '', // operator 14 nov 2026: weg
     body: '',
     rows: [
       { Icon: Mic, title: 'Spoken guidance', sub: 'Step by step' },
@@ -109,8 +109,8 @@ const STEPS: Step[] = [
   {
     key: 'audio',
     eyebrow: 'AUDIO LIBRARY',
-    title: 'Learn from the minds\nthat changed how we see the world',
-    sub: 'The enduring ideas of history’s greatest thinkers', // 'thinkers': 'minds' stond al in de kop
+    title: 'The enduring ideas of history’s greatest thinkers', // operator 14 nov 2026: dit is nu de kop
+    sub: '',
     body: '',
     rows: [
       { Icon: Lightbulb, title: 'Understand', sub: 'Clear sessions' },
@@ -544,7 +544,7 @@ export default function IntroScreen() {
   const glowColor = cur.mock?.accent ?? '#FFFFFF';
   /* Met rijen heeft de tekst iets meer hoogte nodig; korte schermen krijgen een hogere kaart en compactere rijen, zodat alles zonder scrollen past. */
   const shortScreen = winH < 760;
-  const cardFrac = cur.rows ? (shortScreen ? 0.7 : 0.66) : 0.57;
+  const cardFrac = cur.rows && shortScreen ? 0.62 : 0.57;
 
   return (
     <View style={s.root}>
@@ -604,7 +604,7 @@ export default function IntroScreen() {
           key={step}
           /* 28 okt 2026 (operator, iPhone): de zwarte overgang hoger (kaart 52 → 57%) zodat de onderkant van de telefoon niet zichtbaar is; de tekst blijft waar hij stond. */
           style={cur.mock ? { flex: 1, marginTop: Math.round(winH * 0.05) } : { flexGrow: 0, flexShrink: 1 }}
-          contentContainerStyle={[s.content, cur.mock ? { justifyContent: 'flex-start' } : cur.photo && s.contentBottom]}
+          contentContainerStyle={[s.content, cur.mock ? { justifyContent: cur.rows ? 'center' : 'flex-start' } : cur.photo && s.contentBottom]}
           alwaysBounceVertical={false}
           showsVerticalScrollIndicator={false}
         >
@@ -618,9 +618,11 @@ export default function IntroScreen() {
             <Text style={s.eyebrow}>{cur.eyebrow}</Text>
             <Text style={[s.title, !Icon && s.titleBig]}>{cur.title}</Text>
           </Animated.View>
-          <Animated.View entering={enter(2)}>
-            <BalancedText style={[s.sub, cur.rows && s.subRows, cur.rows && shortScreen && s.subShort]}>{cur.sub}</BalancedText>
-          </Animated.View>
+          {cur.sub ? (
+            <Animated.View entering={enter(2)}>
+              <BalancedText style={s.sub}>{cur.sub}</BalancedText>
+            </Animated.View>
+          ) : null}
           {cur.rows ? (
             /* 14 nov 2026 (operator: "één geheel", "zachte lichtbron erachter"): alle rijen in ÉÉN glaskaart (ons eigen glas, VibezGlass) met dunne
                scheidingslijnen; achter de linkerbovenhoek een zachte gloed in de kleur van de pagina zodat het glas iets heeft om door te schijnen. */
@@ -717,8 +719,6 @@ const s = StyleSheet.create({
   choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
   stage: { marginTop: 4 },
   glow: { position: 'absolute', left: -50, top: -50, width: 300, height: 250 },
-  subRows: { marginBottom: 8 },
-  subShort: { fontSize: 15, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 50, paddingHorizontal: 16 },
   rowShort: { height: 42 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.08)' },

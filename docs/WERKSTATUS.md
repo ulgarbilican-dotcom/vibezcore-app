@@ -33,6 +33,10 @@
 > (`VibezGlass`, dunne lijnen, rij 50 dp / 42 dp op korte schermen) met zachte witte lichtbron erachter (Skia-gloed), subkop in blok
 > (BalancedText), voetnoot weg op schermen < 760 dp. Typecheck schoon; past-zonder-scrollen enkel berekend. Volgende Android-build nodig om te zien.
 
+> **14 nov 2026 (17:30) — intro pagina 2-4, kleine aanpassing na test van Android 115 (code klaar, NIET gebouwd):** koppen: stap 2 "Feel the pulse. Shift your state",
+> stap 3 ongewijzigd maar subkop weg, stap 4 kop = "The enduring ideas of history’s greatest thinkers"; alle subkoppen weg; kaarthoogte terug naar 57 %
+> (visuals vrij, zoals voor de glaskaart), tekst gecentreerd in het vrije vak. Glaskaart en kleurlicht blijven. Operator wil NIET opnieuw laten ontwerpen: alleen doen wat gevraagd is.
+
 ---
 
 ## 1. Repository en branches
