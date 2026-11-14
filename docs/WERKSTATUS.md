@@ -21,6 +21,13 @@
 > toestel gezien (web-voorbeeld lukte niet). Past-zonder-scrollen op korte schermen (<760 dp) is berekend, niet gemeten.
 > Bandfoto rechtenvrij (zelf gemaakt). iOS-build pas na oordeel Apple build 90; Android mag eerder.
 
+> **14 nov 2026 (15:30) — Android versiecode 114 (EAS a81b6fda, commit 057e86c0) gepubliceerd op Play INTERN (telefoon-track `4701332039142933013`) door de operator:**
+> bevat de teller-fix gratis voorproef + intro pagina 2-4 (rijen, "Next" als tekst, nieuw horloge-beeld). EAS-auto-submit faalt nu 3x
+> bij het afronden ("Google service account cannot submit this app"; upload zelf lukt) → bundel handmatig uploaden in Play
+> (`release-android/phone-release-2026-11-14-114.aab`, 148 MB; te groot voor de browser-upload van Claude, operator sleept het).
+> Horloge-track = `4699760430326352419` (niet verwarren). Te testen door operator: intro op de A16 (past zonder scrollen?) en gratis
+> voorproef + horloge (teller gelijk?); Claude leest daarna het horloge-logboek (adb mdns, horloge `SM_R860`).
+
 ---
 
 ## 1. Repository en branches
