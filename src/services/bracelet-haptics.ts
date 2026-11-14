@@ -1421,6 +1421,17 @@ function sendPreviewToWatch(mode: BraceletMode, offsetSec: number): void {
   if (!getSetting('watchHaptics')) return;
   const spec = resolveSpec(mode);
   const meta = getModeMeta(mode);
+  /* Zelfde moment als `sentAtMs` hieronder. */
+  const sentAtMs =
+    (hasNativeWaveform() || (Platform.OS === 'ios' && isSessionAudioAvailable())) && lastAnchorWallMs > 0
+      ? lastAnchorWallMs
+      : Date.now();
+  /* 14 nov 2026 (operator: "horloge loopt 1 s achter in free", gemeten op de
+     Watch4: het horloge rekent het einde als sentAtMs + remainingSec, en
+     sentAtMs ligt het vaste startmoment (0,7–1,5 s) na het tikken). De
+     telefoon telt de 30 s vanaf het tikken; net als bij een sessie trekken
+     we dat wachtmoment af, zodat teller en einde op het horloge gelijk lopen. */
+  const remainingAtSent = PREVIEW_MAX_SECONDS - offsetSec - (sentAtMs - Date.now()) / 1000;
   const start = {
     title: meta.name,
     colorHex: meta.color,
@@ -1429,7 +1440,7 @@ function sendPreviewToWatch(mode: BraceletMode, offsetSec: number): void {
     holdSec: previewTiming(mode).holdSec,
     rampSec: previewTiming(mode).rampSec,
     curveOffsetSec: Math.round(offsetSec * 10) / 10,
-    remainingSec: Math.round((PREVIEW_MAX_SECONDS - offsetSec) * 10) / 10,
+    remainingSec: Math.round(remainingAtSent * 10) / 10,
     ...watchStrength(spec),
     strength: getHapticStrength(),
     /* Het moment dat de eerste tik op de telefoon voelbaar is. De
@@ -1439,10 +1450,7 @@ function sendPreviewToWatch(mode: BraceletMode, offsetSec: number): void {
        ~150 ms achter op de telefoon. */
     /* De voorproef loopt nu via de dienst, net als Premium: het anker
        bevat het vaste startmoment van de dienst al (NATIVE_START_LEAD_MS). */
-    sentAtMs:
-      (hasNativeWaveform() || (Platform.OS === 'ios' && isSessionAudioAvailable())) && lastAnchorWallMs > 0
-        ? lastAnchorWallMs
-        : Date.now(),
+    sentAtMs,
   };
   sendWearState(start);
   sendAppleState(start);
