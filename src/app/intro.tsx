@@ -28,7 +28,7 @@ import { breathWaveLook } from '@/components/LiquidWave';
 import { emitVisualPulse, rhythmFor } from '@/services/bracelet-haptics';
 import { SafeAreaView, useSafeAreaInsets } from '@/utils/safe-area';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { AudioLines, ChevronLeft, ChevronRight, Compass, Lightbulb, ListChecks, Mic, Moon, Radio, Repeat, Target, Vibrate, Wind, Zap } from 'lucide-react-native';
+import { AudioLines, ChevronLeft, ChevronRight, Compass, Eye, Lightbulb, ListChecks, Mic, Moon, Radio, Repeat, Scale, Target, Vibrate, Wind, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Image, type ImageSourcePropType, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -57,6 +57,8 @@ type Step = {
   Icon?: typeof Radio;
   /** 14 nov 2026 (operator: "te druk"): korte glasrijen (icoon + titel · één korte regel) i.p.v. een lopende alinea. Dan zijn `sub` en `body` leeg. */
   rows?: { Icon: typeof Radio; title: string; sub: string }[];
+  /** 14 nov 2026 (operator, slotscherm): drie glaskaarten met enkel een icoon en een korte regel, zonder foto in de kaart. */
+  cards?: { Icon: typeof Radio; label: string }[];
 };
 
 /* [OPERATOR]-teksten (25 okt 2026, tweede versie), in drie niveaus: kop (twee regels), subkop, body. Scherm 5 sluit de uitleg af.
@@ -126,7 +128,12 @@ const STEPS: Step[] = [
     key: 'start',
     eyebrow: 'YOUR LIFE. YOUR NEXT MOVE',
     title: 'Growth starts\nwith one moment',
-    sub: 'Take a breath. Find your balance. Understand yourself. Begin where you are.',
+    sub: 'Begin where you are', // de eerste drie zinnen staan nu als glaskaarten (cards)
+    cards: [
+      { Icon: Wind, label: 'Take a breath' },
+      { Icon: Scale, label: 'Find your balance' },
+      { Icon: Eye, label: 'Understand yourself' },
+    ],
     body: '',
     photo: 'https://vibezcore-audio.b-cdn.net/images/pic%20your%20move%20.png',
     photoRatio: 1,
@@ -138,14 +145,17 @@ const STEPS: Step[] = [
    ademen); de Audio Library toont echte schermen met een tik op The Inner Child. Het frame is bewust neutraal (geen Dynamic Island of ander Apple-ontwerp) en er
    staat niets in dat de app niet echt doet. Alles blijft onder 1 Hz en staat stil bij "beweging verminderen". */
 /* 31 okt 2026: ook gebruikt door de "How it works"-schermen (components/HowItWorks.tsx) — hier niets aan veranderd. */
-export function PhoneMockup({ mock, height: heightIn }: { mock: NonNullable<Step['mock']>; height: number }) {
+export function PhoneMockup({ mock, height: heightIn, stretch = 0 }: { mock: NonNullable<Step['mock']>; height: number; stretch?: number }) {
   const { width: winW } = useWindowDimensions();
   /* Telefoon + smartwatch vormen één groep die altijd binnen de veilige zone (28 dp links en rechts) past, op elk scherm. */
   const SAFE = 28;
   const groupRatio = mock.kind === 'state' ? 1.7 : 1;
   const maxW = (winW - SAFE * 2) / groupRatio;
-  const height = Math.min(heightIn, Math.round((maxW - 14) * (1047 / 540)));
-  const width = Math.round(height * (540 / 1047) + 14);
+  /* stretch (intro, 14 nov 2026): als de breedte de hoogte begrenst, wordt de telefoon `stretch` dp langer zodat zijn onderkant helemaal achter de donkere overgang valt. */
+  const capH = Math.round((maxW - 14) * (1047 / 540));
+  const baseH = Math.min(heightIn, capH);
+  const height = Math.min(heightIn, capH + stretch);
+  const width = Math.round(baseH * (540 / 1047) + 14);
   const groupW = mock.kind === 'state' ? Math.round(width * 1.66 + 8) : width;
   const w = width - 17;
   const h = height - 17;
@@ -542,8 +552,11 @@ export default function IntroScreen() {
   const panStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   /* Telefoon: 54% van de schermhoogte, onderaan zacht naar zwart onder de tekst. */
   const insets = useSafeAreaInsets();
-  const phoneH = Math.round(winH * 0.46); // groot; de onderste helft verdwijnt achter de tekstkaart (alleen de bovenste helft is zichtbaar)
-  const phoneTop = Math.round(insets.top + 50); // onder de bovenbalk (Back / stap / Skip)
+  /* 14 nov 2026 (operator: "onderkant van telefoon mag niet zichtbaar zijn"): bij de rijen-schermen staat de telefoon 24 dp lager en is hij 26 dp langer, dus
+     zijn onderkant ligt ~50 dp onder de bovenrand van de kaart, waar de overgang al bijna volledig donker is. */
+  const phoneExtra = cur.rows ? 26 : 0;
+  const phoneH = Math.round(winH * 0.46) + phoneExtra; // groot; de onderste helft verdwijnt achter de tekstkaart (alleen de bovenste helft is zichtbaar)
+  const phoneTop = Math.round(insets.top + 50) + (cur.rows ? 24 : 0); // onder de bovenbalk (Back / stap / Skip)
   const ctaLabel = step === 0 ? 'Get started' : last ? 'Take your first step' : 'Next'; // slotknop: operator-tekst 28 okt 2026
   const textNext = step > 0 && !last;
   /* Lichtbron achter de glaskaart in de kleur van de pagina (operator, 14 nov 2026): paars / wit / Bio-Teal; het glas zelf blijft kleurloos. */
@@ -561,7 +574,7 @@ export default function IntroScreen() {
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {<LinearGradient colors={[cur.mock.accent + (cur.mock.kind === 'audio' ? '12' : '30'), 'rgba(10,10,10,0)']} locations={[0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: Math.round(winH * 0.7) }} />}
           <Animated.View key={cur.key} entering={FadeIn.duration(450)} style={{ position: 'absolute', top: phoneTop, left: 0, right: 0, alignItems: 'center' }}>
-            <PhoneMockup mock={cur.mock} height={phoneH} />
+            <PhoneMockup mock={cur.mock} height={phoneH} stretch={phoneExtra} />
           </Animated.View>
         </View>
       ) : null}
@@ -626,6 +639,17 @@ export default function IntroScreen() {
             <Text style={s.eyebrow}>{cur.eyebrow}</Text>
             <Text style={[s.title, !Icon && s.titleBig]}>{cur.title}</Text>
           </Animated.View>
+          {cur.cards ? (
+            <Animated.View entering={enter(2)} style={s.cardRow}>
+              {cur.cards.map((c) => (
+                <View key={c.label} style={s.cardItem}>
+                  <VibezGlass radius={20} level="normal" style={StyleSheet.absoluteFill} />
+                  <c.Icon size={24} color="#ffffff" strokeWidth={1.6} />
+                  <Text style={s.cardLabel} numberOfLines={2}>{c.label}</Text>
+                </View>
+              ))}
+            </Animated.View>
+          ) : null}
           {cur.sub ? (
             <Animated.View entering={enter(2)}>
               <BalancedText style={s.sub}>{cur.sub}</BalancedText>
@@ -726,6 +750,9 @@ const s = StyleSheet.create({
   choice: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 52, paddingHorizontal: 20, borderRadius: 999, overflow: 'hidden' },
   choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
   stage: { marginTop: 4 },
+  cardRow: { flexDirection: 'row', gap: 10, marginTop: 12, marginBottom: 6 },
+  cardItem: { flex: 1, height: 96, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 8 },
+  cardLabel: { fontFamily: BrandFonts.semibold, fontSize: 13.5, lineHeight: 17, textAlign: 'center', color: '#ffffff' },
   glow: { position: 'absolute', left: -50, top: -50, width: 300, height: 250 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 44, paddingHorizontal: 16 },
   rowShort: { height: 40 },

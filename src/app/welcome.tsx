@@ -41,9 +41,6 @@ import { router } from 'expo-router';
 import { requestScrollTo } from '@/utils/scroll-intent';
 import { markTabOpenedByUser } from '@/utils/onboarding-gate';
 import { notePlanOfferTabTap } from '@/utils/plan-offer';
-import PremiumNote from '@/components/PremiumNote';
-import { useSubscription } from '@/hooks/useSubscription';
-import { useSetting } from '@/utils/settings';
 import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -304,13 +301,6 @@ export default function WelcomeScreen() {
      Kleine tekstlinks, dus 0.94 (icoon-/knop-schaal), geen aparte kaart.
      Operator ("kijk alle CTA's na"): ontbrak opacity(.85) + haptic-tik
      (huisstijl §5) — nu op allebei toegevoegd. */
-  /* 27 okt 2026 (operator: "dat mag"): wie als gast al een gratis sessie gebruikte, krijgt op het welkomstscherm de zachte
-     Premium-regel te zien (zelfde regel en kroonpil als onder de startknoppen). [TEKST] concept. */
-  const [breathFreeUsed] = useSetting('breathFreeSessionUsedAt');
-  const [stateFreeUsed] = useSetting('stateFreeSessionUsedAt');
-  /* 30 okt 2026 (operator: "bij premium blijft op welcome scherm full sessions with premium staan"): enkel voor wie geen Premium heeft. */
-  const { isPro, isLoading: subLoading } = useSubscription();
-  const freeUsed = !isPro && !subLoading && (breathFreeUsed != null || stateFreeUsed != null);
   const signInScale = useSharedValue(1);
   const onSignInPressIn = () => {
     signInScale.value = withSpring(0.94, SPRING_PRESS_IN);
@@ -408,11 +398,7 @@ export default function WelcomeScreen() {
         <View style={s.divider} />
 
         <View style={s.bottomLinks}>
-          {freeUsed ? (
-            <PremiumNote preview style={s.premiumLine}>
-              Full sessions with Premium
-            </PremiumNote>
-          ) : null}
+          {/* 14 nov 2026 (operator): de regel "Full sessions with Premium" staat niet meer op het welkomstscherm. */}
           {/* "Have a bracelet? Activate now" weg (operator, 14 okt 2026): de
               bracelet komt pas Early 2027 — de activeringspagina blijft
               bestaan voor de lancering, maar niemand wordt er nu heen
