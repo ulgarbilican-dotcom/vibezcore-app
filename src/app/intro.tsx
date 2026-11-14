@@ -544,7 +544,9 @@ export default function IntroScreen() {
   const glowColor = cur.mock?.accent ?? '#FFFFFF';
   /* Met rijen heeft de tekst iets meer hoogte nodig; korte schermen krijgen een hogere kaart en compactere rijen, zodat alles zonder scrollen past. */
   const shortScreen = winH < 760;
-  const cardFrac = cur.rows && shortScreen ? 0.62 : 0.57;
+  /* 14 nov 2026 (operator: "overlay lager, pauzeknop en cirkel in zicht"): met rijen is de tekst compacter, dus de kaart (en daarmee de donkere
+  overgang over de telefoon) begint lager: 50 % i.p.v. 57 %, korte schermen 58 %. */
+  const cardFrac = cur.rows ? (shortScreen ? 0.58 : 0.5) : 0.57;
 
   return (
     <View style={s.root}>
@@ -603,7 +605,7 @@ export default function IntroScreen() {
         <ScrollView
           key={step}
           /* 28 okt 2026 (operator, iPhone): de zwarte overgang hoger (kaart 52 → 57%) zodat de onderkant van de telefoon niet zichtbaar is; de tekst blijft waar hij stond. */
-          style={cur.mock ? { flex: 1, marginTop: Math.round(winH * 0.05) } : { flexGrow: 0, flexShrink: 1 }}
+          style={cur.mock ? { flex: 1, marginTop: cur.rows ? 0 : Math.round(winH * 0.05) } : { flexGrow: 0, flexShrink: 1 }}
           contentContainerStyle={[s.content, cur.mock ? { justifyContent: cur.rows ? 'center' : 'flex-start' } : cur.photo && s.contentBottom]}
           alwaysBounceVertical={false}
           showsVerticalScrollIndicator={false}
@@ -719,7 +721,7 @@ const s = StyleSheet.create({
   choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
   stage: { marginTop: 4 },
   glow: { position: 'absolute', left: -50, top: -50, width: 300, height: 250 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 50, paddingHorizontal: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 48, paddingHorizontal: 16 },
   rowShort: { height: 42 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.08)' },
   rowIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)' },
