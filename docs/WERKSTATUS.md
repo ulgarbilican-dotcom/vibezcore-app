@@ -28,6 +28,11 @@
 > Horloge-track = `4699760430326352419` (niet verwarren). Te testen door operator: intro op de A16 (past zonder scrollen?) en gratis
 > voorproef + horloge (teller gelijk?); Claude leest daarna het horloge-logboek (adb mdns, horloge `SM_R860`).
 
+> **14 nov 2026 (16:00) — intro pagina 2-4 herwerkt na test van Android 114 (code klaar, NOG NIET gebouwd):** subkop terug (stap 2 = operator-tekst
+> "Research-based, bottom-up haptic pulse patterns"; stap 3/4 = voorstel; "thinkers" i.p.v. tweede "minds"), alle rijen in ÉÉN glaskaart
+> (`VibezGlass`, dunne lijnen, rij 50 dp / 42 dp op korte schermen) met zachte witte lichtbron erachter (Skia-gloed), subkop in blok
+> (BalancedText), voetnoot weg op schermen < 760 dp. Typecheck schoon; past-zonder-scrollen enkel berekend. Volgende Android-build nodig om te zien.
+
 ---
 
 ## 1. Repository en branches

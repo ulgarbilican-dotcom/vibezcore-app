@@ -78,7 +78,7 @@ const STEPS: Step[] = [
     key: 'state',
     eyebrow: 'STATE CONTROL',
     title: 'Feel the pulse.\nFeel the shift',
-    sub: '',
+    sub: 'Research-based, bottom-up haptic pulse patterns', // operator 14 nov 2026: eerste deel van de oude alinea als subkop
     body: '', // (26 okt, operator) "Choose the state you want to move toward." weg: de tekst moet kunnen ademen en niet scrollen
     /* 14 nov 2026: vier korte regels (woorden van de operator: "Slow down", "Sleep · Drift off"); de lange alinea is weg. */
     rows: [
@@ -95,12 +95,12 @@ const STEPS: Step[] = [
     key: 'breath',
     eyebrow: 'GUIDED BREATHWORK',
     title: 'Follow the cues.\nLet your breathing lead',
-    sub: '',
+    sub: 'Clear spoken guidance and haptic cues',
     body: '',
     rows: [
-      { Icon: Mic, title: 'Spoken guidance', sub: 'Clear, step by step' },
-      { Icon: Vibrate, title: 'Haptic cues', sub: 'On your phone or watch' },
-      { Icon: ListChecks, title: 'Techniques', sub: 'Calm, focus, energy, sleep' },
+      { Icon: Mic, title: 'Spoken guidance', sub: 'Step by step' },
+      { Icon: Vibrate, title: 'Haptic cues', sub: 'Phone or watch' },
+      { Icon: ListChecks, title: 'Techniques', sub: 'Calm to sleep' },
     ],
     note: 'Smart Bead Bracelet · Launching Early 2027',
     mock: { kind: 'breath', accent: '#FFFFFF' }, // Breathwork · Clarity & Relax: ademt (levend)
@@ -110,11 +110,11 @@ const STEPS: Step[] = [
     key: 'audio',
     eyebrow: 'AUDIO LIBRARY',
     title: 'Learn from the minds\nthat changed how we see the world',
-    sub: '',
+    sub: 'The enduring ideas of history’s greatest thinkers', // 'thinkers': 'minds' stond al in de kop
     body: '',
     rows: [
-      { Icon: Lightbulb, title: 'Understand', sub: 'Clear, structured sessions' },
-      { Icon: Compass, title: 'Apply', sub: 'Ideas you can use today' },
+      { Icon: Lightbulb, title: 'Understand', sub: 'Clear sessions' },
+      { Icon: Compass, title: 'Apply', sub: 'Use them today' },
       { Icon: Repeat, title: 'Return to', sub: 'Insight that lasts' },
     ],
     mock: { kind: 'audio', accent: '#00A3A3', steps: [{ src: require('../../assets/intro/audio3.jpg'), ms: 1 }] }, // The Inner Child (Carl Jung) met audio & haptics
@@ -542,7 +542,7 @@ export default function IntroScreen() {
   const textNext = step > 0 && !last;
   /* Met rijen heeft de tekst iets meer hoogte nodig; korte schermen krijgen een hogere kaart en compactere rijen, zodat alles zonder scrollen past. */
   const shortScreen = winH < 760;
-  const cardFrac = cur.rows ? (shortScreen ? 0.66 : 0.62) : 0.57;
+  const cardFrac = cur.rows ? (shortScreen ? 0.7 : 0.66) : 0.57;
 
   return (
     <View style={s.root}>
@@ -616,28 +616,36 @@ export default function IntroScreen() {
             <Text style={s.eyebrow}>{cur.eyebrow}</Text>
             <Text style={[s.title, !Icon && s.titleBig]}>{cur.title}</Text>
           </Animated.View>
+          <Animated.View entering={enter(2)}>
+            <BalancedText style={[s.sub, cur.rows && s.subRows, cur.rows && shortScreen && s.subShort]}>{cur.sub}</BalancedText>
+          </Animated.View>
           {cur.rows ? (
-            <Animated.View entering={enter(2)} style={s.rows}>
-              {cur.rows.map((r) => (
-                <View key={r.title} style={[s.row, shortScreen && s.rowShort]}>
-                  <View style={s.rowIcon}>
-                    <r.Icon size={17} color="#ffffff" strokeWidth={1.8} />
+            /* 14 nov 2026 (operator: "één geheel", "zachte lichtbron erachter"): alle rijen in ÉÉN glaskaart (ons eigen glas, VibezGlass) met dunne
+               scheidingslijnen; achter de linkerbovenhoek een zachte witte gloed zodat het glas iets heeft om door te schijnen. */
+            <Animated.View entering={enter(3)} style={s.stage}>
+              <Canvas style={s.glow} pointerEvents="none">
+                <Circle cx={150} cy={125} r={135}>
+                  <RadialGradient c={vec(150, 125)} r={135} colors={['rgba(255,255,255,0.26)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']} positions={[0, 0.55, 1]} />
+                </Circle>
+              </Canvas>
+              <VibezGlass radius={20} level="normal">
+                {cur.rows.map((r, i) => (
+                  <View key={r.title} style={[s.row, shortScreen && s.rowShort, i > 0 && s.rowDivider]}>
+                    <View style={s.rowIcon}>
+                      <r.Icon size={17} color="#ffffff" strokeWidth={1.8} />
+                    </View>
+                    <Text style={s.rowTxt} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                      <Text style={s.rowTitle}>{r.title}</Text>
+                      <Text style={s.rowSub}>{`  ·  ${r.sub}`}</Text>
+                    </Text>
                   </View>
-                  <Text style={s.rowTxt}>
-                    <Text style={s.rowTitle}>{r.title}</Text>
-                    <Text style={s.rowSub}>{`  ·  ${r.sub}`}</Text>
-                  </Text>
-                </View>
-              ))}
+                ))}
+              </VibezGlass>
             </Animated.View>
-          ) : (
-            <Animated.View entering={enter(2)}>
-              <BalancedText style={s.sub}>{cur.sub}</BalancedText>
-            </Animated.View>
-          )}
+          ) : null}
           <Animated.View entering={enter(3)}>
             {cur.body ? <BalancedText style={s.body}>{cur.body}</BalancedText> : null}
-            {cur.note ? <Text style={s.note}>{cur.note}</Text> : null}
+            {cur.note && !(cur.rows && shortScreen) ? <Text style={[s.note, cur.rows && s.noteRows]}>{cur.note}</Text> : null}
           </Animated.View>
         </ScrollView>
 
@@ -705,13 +713,18 @@ const s = StyleSheet.create({
   ctaShimmer: { position: 'absolute', top: -20, bottom: -20, left: 0, width: 72 },
   choice: { flexDirection: 'row', alignItems: 'center', gap: 14, height: 52, paddingHorizontal: 20, borderRadius: 999, overflow: 'hidden' },
   choiceTxt: { flex: 1, color: '#ffffff', fontFamily: BrandFonts.medium, fontSize: 16, letterSpacing: -0.2 },
-  rows: { gap: 6, marginTop: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 11, minHeight: 44, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
-  rowShort: { minHeight: 38, paddingVertical: 5 },
-  rowIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  stage: { marginTop: 4 },
+  glow: { position: 'absolute', left: -50, top: -50, width: 300, height: 250 },
+  subRows: { marginBottom: 8 },
+  subShort: { fontSize: 15, lineHeight: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 13, height: 50, paddingHorizontal: 16 },
+  rowShort: { height: 42 },
+  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.08)' },
+  rowIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)' },
   rowTxt: { flex: 1, fontSize: 15, lineHeight: 20 },
+  noteRows: { marginTop: 8 },
   rowTitle: { color: '#ffffff', fontFamily: BrandFonts.semibold },
-  rowSub: { color: 'rgba(255,255,255,0.6)', fontFamily: BrandFonts.regular },
+  rowSub: { color: 'rgba(255,255,255,0.62)', fontFamily: BrandFonts.regular },
   linkWrap: { height: 52, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 },
   linkTxt: { color: '#ffffff', fontFamily: BrandFonts.semibold, fontSize: 16, letterSpacing: 0.1 },
   ctaTxt: { color: '#0a0a0a', fontFamily: BrandFonts.semibold, fontSize: 15, letterSpacing: 0.1 },
