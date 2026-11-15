@@ -2058,7 +2058,11 @@ function SlideGuidance({
         {/* Operator, 8 okt 2026 (onboarding aanscherpen): zeggen wat je
            hier kiest — begeleiding — en dat het niet vastligt. */}
         <Text style={s.header}>How do you want to be guided</Text>
-        <Text style={s.lead}>You can change this anytime</Text>
+        {/* 15 nov 2026 (operator: "extra tekst is goed"): wie een keuze zonder haptics maakt (Voice of Silent) leest dat haptics later aan kan.
+            De regel vervangt de subkop (zelfde plek), zodat de kaarten en de teaser niet verschuiven. */}
+        <Text style={s.lead}>
+          {chosenMode === 'voice' || chosenMode === 'silent' ? 'Haptics can be turned on anytime in your session settings' : 'You can change this anytime'}
+        </Text>
       </Animated.View>
 
       {/* Operator, 22 september 2026 ("ik vind het niet goed, ik wil
