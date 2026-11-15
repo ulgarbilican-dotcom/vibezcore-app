@@ -21,6 +21,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class ModesActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
   private lateinit var scroll: ScrollView
@@ -91,12 +96,15 @@ class ModesActivity : androidx.activity.ComponentActivity() {
 
   private fun pageFor(e: org.json.JSONObject, pageH: Int): View {
     val hex = e.optString("colorHex")
-    val c = try {
-      Color.parseColor(hex)
-    } catch (_: Exception) {
-      Color.parseColor("#00A3A3")
-    }
+    val c = accentColor(hex)
     val locked = e.optBoolean("locked")
+    /* 13 nov 2026 (Play WO-V16, gemeten op Galaxy Watch4 40 mm): label + figuur + naam + 2 regels "wanneer" waren 190 dp op een scherm
+       van 198 dp — "To unwind" stond 3 dp van de rand. Nu past alles binnen de veilige marge boven/onder; de figuur krijgt wat overblijft
+       (max. 112 dp zoals voorheen, op elk scherm even groot). */
+    /* 13 nov 2026 (audit 180–225 dp en lettergrootte 1,15): bovenaan het label en onderaan de gebruiksregel zijn smal-breed tekst dicht bij de rand;
+       daar is 1,35 x de gewone marge nodig, en de vaste tekstdelen groeien mee met de lettergrootte. */
+    val fs = resources.configuration.fontScale.coerceAtLeast(1f)
+    val figDp = (RoundFit.heightDp(this) - 2f * 1.35f * RoundFit.edgeDp(this) - 78f * fs).coerceIn(52f, 112f)
     val page = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER
@@ -126,7 +134,7 @@ class ModesActivity : androidx.activity.ComponentActivity() {
         color = c
         centerText = "%d:00".format(minutes)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-      }, LinearLayout.LayoutParams(dp(112f), dp(112f)))
+      }, LinearLayout.LayoutParams(dp(figDp), dp(figDp)))
     } else {
       if (artResFor(hex) != R.drawable.vz_art_tree) page.background = halo(hex, pageH)
       val figure = ImageView(this).apply {
@@ -134,7 +142,7 @@ class ModesActivity : androidx.activity.ComponentActivity() {
         scaleType = ImageView.ScaleType.FIT_CENTER
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
       }
-      val sz = dp(108f * artOpticalScale(hex))
+      val sz = dp(figDp * (108f / 112f) * artOpticalScale(hex))
       page.addView(figure, LinearLayout.LayoutParams(sz, sz))
       breathe(figure)
     }

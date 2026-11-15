@@ -291,7 +291,8 @@ class SessionRingView @JvmOverloads constructor(
       val p = it.next()
       val el = (now - p.startMs).toFloat()
       if (el < 0f) continue
-      val dur = min(2600f, max(500f, BeatBus.cycleMs.coerceAtLeast(1L) * 1.5f))
+      /* 4 nov 2026 (operator: "lijkt een dubbele ring, moet uitpulsen vanuit de binnenste ring, te dik"): weg vóór de volgende slag. */
+      val dur = min(2000f, max(350f, BeatBus.cycleMs.coerceAtLeast(1L) * 0.8f))
       val k = el / dur
       if (k >= 1f) {
         it.remove()
@@ -301,18 +302,18 @@ class SessionRingView @JvmOverloads constructor(
       /* 12 okt 2026 (operator: "buitenringen niet duidelijk"): dikker en
          helderder, tot net aan de rand van het scherm. Start op de grootte
          van de kloppende schijf (+7 %), zoals op de telefoon. */
-      val peakA = if (p.strong) 0.95f else 0.55f
-      val alpha = if (el < 90f) {
-        val q = el / 90f
+      val peakA = if (p.strong) 0.8f else 0.5f
+      val alpha = if (el < 50f) {
+        val q = el / 50f
         peakA * (1f - (1f - q) * (1f - q))
       } else {
-        val q = (el - 90f) / (dur - 90f)
-        peakA * (1f - q * q)
+        val q = (el - 50f) / (dur - 50f)
+        peakA * (1f - q) * (1f - q)
       }
       pulsePaint.color = color
       pulsePaint.alpha = (alpha * 255).toInt()
-      pulsePaint.strokeWidth = (if (p.strong) 4.5f else 3f) * density
-      canvas.drawCircle(cx, cy, base * (1.07f + 0.04f * ease), pulsePaint)
+      pulsePaint.strokeWidth = 2f * density
+      canvas.drawCircle(cx, cy, base * (1.02f + 0.11f * ease), pulsePaint)
     }
 
     // 5 · tekst — 14 okt 2026 (operator: "PAUSED moet boven Sharp Focus

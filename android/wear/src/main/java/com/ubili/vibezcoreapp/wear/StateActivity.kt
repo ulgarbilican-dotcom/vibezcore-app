@@ -24,6 +24,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 class StateActivity : androidx.activity.ComponentActivity() {
+  /* 13 nov 2026: lettergrootte van het systeem tot 1,15 volgen (schermenaudit) */
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(capFontScale(newBase))
+  }
+
   private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
   private var scrollView: ScrollView? = null
 
@@ -59,29 +64,38 @@ class StateActivity : androidx.activity.ComponentActivity() {
     val col = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
-      setPadding(dp(24f), dp(34f), dp(24f), dp(34f))
+      setPadding(dp(24f), dp(RoundFit.edgeDp(this@StateActivity) + Compact.topExtra(this@StateActivity, 2f)), dp(24f), dp(20f)) // 13 nov 2026: dezelfde maten als State Control, Start in beeld
     }
     scroll.addView(col)
 
     col.addView(TextView(this).apply {
       text = e.optString("name")
       setTextColor(Color.WHITE)
-      textSize = 18f
+      textSize = 17f
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-      bottomMargin = dp(10f)
+      topMargin = dp(1f)
+      bottomMargin = dp(if (manyTechs) 3f else 1f)
     })
+    /* 13 nov 2026 (operator-foto Sleep: "Full session with Premium" werd onderaan afgekapt): een toestand met maar ÉÉN techniek heeft
+       geen keuze, dus geen aparte knop: de techniek staat als kleine regel onder de naam. Dat scheelt een rij van 44 dp. */
+    if (!manyTechs) {
+      col.addView(TextView(this).apply {
+        text = e.optString("technique")
+        setTextColor(Color.argb(190, 255, 255, 255))
+        textSize = 11f
+        gravity = Gravity.CENTER
+        maxLines = 1
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(5f) })
+    }
 
     fun row(label: String, value: String, tag: String?, onTap: (() -> Unit)?) {
       val r = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16f), dp(6f), dp(14f), dp(6f))
-        background = GradientDrawable().apply {
-          cornerRadius = dp(20f).toFloat()
-          setColor(Color.argb(36, 255, 255, 255))
-        }
+        setPadding(dp(16f), dp(3f), dp(14f), dp(3f))
+        background = Glass.pill(this@StateActivity, 20f)
         // (operator: "knoppen allemaal even groot, buiten Start") vaste hoogte
         if (onTap != null) {
           isClickable = true
@@ -94,8 +108,8 @@ class StateActivity : androidx.activity.ComponentActivity() {
         // deze techniek klaarstaat ("Recommended" / "Last used")
         text = tag ?: label
         maxLines = 1
-        setTextColor(if (tag != null) color else Color.argb(140, 255, 255, 255))
-        textSize = 10f
+        setTextColor(if (tag != null) readable(color) else Color.argb(190, 255, 255, 255))
+        textSize = 11f
       })
       r.addView(TextView(this).apply {
         text = if (onTap != null) "$value  ›" else value
@@ -105,9 +119,10 @@ class StateActivity : androidx.activity.ComponentActivity() {
         // de knop hoger te maken
         maxLines = 1
         androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 10, 14, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(20f)))
-      col.addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52f)).apply {
-        bottomMargin = dp(6f)
+      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(18f)))
+      r.minimumHeight = dp(Compact.row(this@StateActivity))
+      col.addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = dp(Compact.gap(this@StateActivity))
       })
     }
 
@@ -115,12 +130,14 @@ class StateActivity : androidx.activity.ComponentActivity() {
       selected == recommended -> "Recommended"
       else -> "Last used"
     }
-    row(
-      "Technique",
-      e.optString("technique"),
-      if (manyTechs) techTag else null,
-      if (manyTechs) ({ startActivity(Intent(this, TechniqueActivity::class.java).putExtra("key", key)) }) else null,
-    )
+    if (manyTechs) {
+      row(
+        "Technique",
+        e.optString("technique"),
+        techTag,
+        { startActivity(Intent(this, TechniqueActivity::class.java).putExtra("key", key)) },
+      )
+    }
     row("Duration", dur, null) { startActivity(Intent(this, DurationActivity::class.java).putExtra("key", key)) }
 
     if (locked) {
@@ -130,24 +147,21 @@ class StateActivity : androidx.activity.ComponentActivity() {
         textSize = 14f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        background = GradientDrawable().apply {
-          cornerRadius = dp(22f).toFloat()
-          setColor(Color.argb(46, 255, 255, 255))
-        }
+        background = Glass.pill(this@StateActivity, 22f)
         contentDescription = "Preview ${e.optString("name")} for 30 seconds"
         setOnClickListener {
           startPreviewSession(this@StateActivity, e)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
-        topMargin = dp(6f)
+      }, LinearLayout.LayoutParams(dp(Compact.ctaWidth(this@StateActivity)), dp(Compact.cta(this@StateActivity))).apply {
+        topMargin = dp(Compact.gap(this@StateActivity))
       })
       col.addView(TextView(this).apply {
         text = "Full session with Premium"
         setTextColor(Color.argb(170, 255, 255, 255))
-        textSize = 11f
+        textSize = 10f
         gravity = Gravity.CENTER
-        setPadding(0, dp(8f), 0, 0)
+        setPadding(0, dp(3f), 0, 0)
       })
     } else {
       col.addView(TextView(this).apply {
@@ -165,8 +179,8 @@ class StateActivity : androidx.activity.ComponentActivity() {
           startLocalSession(this@StateActivity, e, durIdx)
           finish()
         }
-      }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply {
-        topMargin = dp(6f)
+      }, LinearLayout.LayoutParams(dp(Compact.ctaWidth(this@StateActivity)), dp(Compact.cta(this@StateActivity))).apply {
+        topMargin = dp(Compact.gap(this@StateActivity))
       })
     }
 
